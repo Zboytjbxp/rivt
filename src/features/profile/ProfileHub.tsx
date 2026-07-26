@@ -15,6 +15,7 @@
   FileText,
   GraduationCap,
   HardDrive,
+  ImagePlus,
   LogOut,
   Mail,
   MonitorSmartphone,
@@ -54,6 +55,17 @@ import {
   type RateCardVisibility,
 } from "../../lib/rateCard";
 import { tradeCodeByName } from "../work/work-mappings";
+import {
+  defaultDocumentBrand,
+  documentBrandContactLines,
+  documentStyleOptions,
+  fetchDocumentBrand,
+  removeDocumentLogo,
+  saveDocumentBrand,
+  uploadDocumentLogo,
+  type DocumentBrand,
+  type DocumentStyle,
+} from "../tools/document-brand-api";
 import { safetyQuizData, type SafetyQuiz, type SafetyQuizResult } from "./training-data";
 import "./profile-hub.css";
 
@@ -842,7 +854,7 @@ function DataExportButton() {
 
 // ── Business Settings Section ──────────────────────────────────────────────────
 
-interface BusinessInfo {
+interface LegacyBusinessInfo {
   companyName: string;
   licenseNumber: string;
   insuranceProvider: string;
@@ -852,11 +864,11 @@ interface BusinessInfo {
   businessPhone: string;
 }
 
-function readBusinessInfo(): BusinessInfo {
+function readLegacyBusinessInfo(): LegacyBusinessInfo {
   try {
     const stored = localStorage.getItem("rivt.business.v1");
     if (!stored) return { companyName: "", licenseNumber: "", insuranceProvider: "", insuranceExpiry: "", businessAddress: "", website: "", businessPhone: "" };
-    return JSON.parse(stored) as BusinessInfo;
+    return JSON.parse(stored) as LegacyBusinessInfo;
   } catch {
     return { companyName: "", licenseNumber: "", insuranceProvider: "", insuranceExpiry: "", businessAddress: "", website: "", businessPhone: "" };
   }
@@ -871,29 +883,153 @@ function insuranceStatus(expiryDate: string): "ok" | "soon" | "expired" {
   return "ok";
 }
 
-function BusinessSettingsSection() {
-  const [info, setInfo] = useState<BusinessInfo>(readBusinessInfo);
-  const [saved, setSaved] = useState(false);
+function BusinessSettingsSection({ fallbackName, fallbackEmail }: { fallbackName: string; fallbackEmail: string }) {
+  const [legacy] = useState(readLegacyBusinessInfo);
+  const [info, setInfo] = useState<DocumentBrand>(() => ({
+    ...defaultDocumentBrand(legacy.companyName || fallbackName, fallbackEmail),
+    businessPhone: legacy.businessPhone,
+    businessAddress: legacy.businessAddress,
+    website: legacy.website,
+    licenseNumber: legacy.licenseNumber,
+  }));
+  const [insuranceProvider, setInsuranceProvider] = useState(legacy.insuranceProvider);
+  const [insuranceExpiry, setInsuranceExpiry] = useState(legacy.insuranceExpiry);
+  const [state, setState] = useState<"loading" | "idle" | "saving" | "uploading" | "error">("loading");
+  const [message, setMessage] = useState("Loading your customer document settings...");
 
-  function save() {
-    try { localStorage.setItem("rivt.business.v1", JSON.stringify(info)); } catch { /* noop */ }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchDocumentBrand()
+      .then((brand) => {
+        if (cancelled) return;
+        const migrateLegacy = !brand.updatedAt;
+        setInfo({
+          ...brand,
+          businessName: migrateLegacy && legacy.companyName ? legacy.companyName : brand.businessName,
+          businessPhone: migrateLegacy && legacy.businessPhone ? legacy.businessPhone : brand.businessPhone,
+          businessAddress: migrateLegacy && legacy.businessAddress ? legacy.businessAddress : brand.businessAddress,
+          website: migrateLegacy && legacy.website ? legacy.website : brand.website,
+          licenseNumber: migrateLegacy && legacy.licenseNumber ? legacy.licenseNumber : brand.licenseNumber,
+        });
+        setState("idle");
+        setMessage(migrateLegacy && Object.values(legacy).some(Boolean)
+          ? "Review and save to sync the business details previously stored on this device."
+          : "These details appear on customer estimates, invoices, PDFs, and email.");
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setState("error");
+        setMessage(error instanceof Error ? error.message : "RIVT could not load document branding.");
+      });
+    return () => { cancelled = true; };
+  }, [legacy]);
+
+  async function save() {
+    if (!info.businessName.trim()) {
+      setState("error");
+      setMessage("Add the business or sender name customers should see.");
+      return;
+    }
+    setState("saving");
+    setMessage("Saving customer document settings...");
+    try {
+      const saved = await saveDocumentBrand(info);
+      setInfo(saved);
+      try {
+        localStorage.setItem("rivt.business.v1", JSON.stringify({
+          companyName: saved.businessName,
+          licenseNumber: saved.licenseNumber,
+          insuranceProvider,
+          insuranceExpiry,
+          businessAddress: saved.businessAddress,
+          website: saved.website,
+          businessPhone: saved.businessPhone,
+        }));
+      } catch {
+        // Insurance reference storage is optional; customer document branding is server-owned.
+      }
+      setState("idle");
+      setMessage("Customer document branding saved to your RIVT account.");
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "RIVT could not save document branding.");
+    }
   }
 
-  const insStatus = insuranceStatus(info.insuranceExpiry);
+  async function uploadLogo(file: File | null) {
+    if (!file) return;
+    setState("uploading");
+    setMessage("Uploading logo...");
+    try {
+      const saved = await uploadDocumentLogo(file);
+      setInfo(saved);
+      setState("idle");
+      setMessage("Logo added to customer documents.");
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "RIVT could not upload that logo.");
+    }
+  }
+
+  async function removeLogo() {
+    setState("uploading");
+    setMessage("Removing logo...");
+    try {
+      const saved = await removeDocumentLogo();
+      setInfo(saved);
+      setState("idle");
+      setMessage("Logo removed. Your business name remains on customer documents.");
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "RIVT could not remove that logo.");
+    }
+  }
+
+  const insStatus = insuranceStatus(insuranceExpiry);
+  const previewContact = documentBrandContactLines(info);
+  const busy = state === "saving" || state === "uploading";
+  const updateStyle = (key: "estimateStyle" | "invoiceStyle", value: DocumentStyle) => {
+    setInfo((current) => ({ ...current, [key]: value }));
+  };
 
   return (
     <section className="v2-profile-panel v2-profile-panel-wide v2-business-section">
       <header>
-        <span>Business</span>
-        <strong>Company &amp; insurance details</strong>
+        <span>Customer documents</span>
+        <strong>Business identity and layout</strong>
       </header>
+      <div className="v2-document-logo-editor">
+        <div className="v2-document-logo-preview">
+          {info.logoUrl
+            ? <img src={info.logoUrl} alt={`${info.businessName || "Business"} logo`} />
+            : <span aria-hidden="true">{(info.businessName || "R").slice(0, 2).toUpperCase()}</span>}
+        </div>
+        <div>
+          <strong>Business logo</strong>
+          <p>PNG, JPG, or WebP. Maximum 2 MB. It appears on customer previews and is embedded in delivered email.</p>
+          <span className="v2-document-logo-actions">
+            <label className="v2-secondary-button">
+              <ImagePlus size={16} />
+              {info.logoUrl ? "Replace logo" : "Upload logo"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => {
+                  void uploadLogo(event.target.files?.[0] ?? null);
+                  event.currentTarget.value = "";
+                }}
+                disabled={busy}
+              />
+            </label>
+            {info.logoUrl ? <button type="button" className="v2-text-button" onClick={() => void removeLogo()} disabled={busy}>Remove</button> : null}
+          </span>
+        </div>
+      </div>
       <div className="v2-business-form">
         <div className="v2-business-grid">
           <label>
             <span>Company name</span>
-            <input value={info.companyName} onChange={(e) => setInfo({ ...info, companyName: e.target.value })} placeholder="Acme Electric LLC" />
+            <input value={info.businessName} onChange={(e) => setInfo({ ...info, businessName: e.target.value })} placeholder="Your company or name" />
           </label>
           <label>
             <span>License number</span>
@@ -901,14 +1037,15 @@ function BusinessSettingsSection() {
           </label>
           <label>
             <span>Insurance provider</span>
-            <input value={info.insuranceProvider} onChange={(e) => setInfo({ ...info, insuranceProvider: e.target.value })} placeholder="Acuity, Travelers…" />
+            <input value={insuranceProvider} onChange={(e) => setInsuranceProvider(e.target.value)} placeholder="Private account reference" />
+            <small>Kept on this device for your reference. It is not shown as verified customer proof.</small>
           </label>
           <label>
             <span>Insurance expiry</span>
             <input
               type="date"
-              value={info.insuranceExpiry}
-              onChange={(e) => setInfo({ ...info, insuranceExpiry: e.target.value })}
+              value={insuranceExpiry}
+              onChange={(e) => setInsuranceExpiry(e.target.value)}
               className={insStatus !== "ok" ? `v2-business-input-warn is-${insStatus}` : ""}
             />
             {insStatus === "soon" && <small className="v2-business-warn">Expires within 60 days</small>}
@@ -919,6 +1056,10 @@ function BusinessSettingsSection() {
             <input value={info.businessAddress} onChange={(e) => setInfo({ ...info, businessAddress: e.target.value })} placeholder="123 Main St, Jacksonville, FL 32202" />
           </label>
           <label>
+            <span>Business email</span>
+            <input type="email" value={info.businessEmail} onChange={(e) => setInfo({ ...info, businessEmail: e.target.value })} placeholder="billing@yourcompany.com" />
+          </label>
+          <label>
             <span>Website / portfolio URL</span>
             <input type="url" value={info.website} onChange={(e) => setInfo({ ...info, website: e.target.value })} placeholder="https://acmeelectric.com" />
           </label>
@@ -927,28 +1068,60 @@ function BusinessSettingsSection() {
             <input type="tel" value={info.businessPhone} onChange={(e) => setInfo({ ...info, businessPhone: e.target.value })} placeholder="(904) 555-0100" />
           </label>
         </div>
-        {saved && <p className="v2-profile-action-message is-success" role="status">Business info saved.</p>}
-        <button type="button" className="v2-primary-button" onClick={save}>Save business info</button>
+        <fieldset className="v2-document-visibility">
+          <legend>Show on customer documents</legend>
+          <label><input type="checkbox" checked={info.showContact} onChange={(event) => setInfo({ ...info, showContact: event.target.checked })} />Email, phone, and website</label>
+          <label><input type="checkbox" checked={info.showAddress} onChange={(event) => setInfo({ ...info, showAddress: event.target.checked })} />Business address</label>
+          <label><input type="checkbox" checked={info.showLicense} onChange={(event) => setInfo({ ...info, showLicense: event.target.checked })} />License number</label>
+        </fieldset>
+        <div className="v2-document-style-settings">
+          <DocumentStyleChooser label="Estimate layout" value={info.estimateStyle} onChange={(value) => updateStyle("estimateStyle", value)} />
+          <DocumentStyleChooser label="Invoice layout" value={info.invoiceStyle} onChange={(value) => updateStyle("invoiceStyle", value)} />
+        </div>
+        <p className={`v2-profile-action-message ${state === "error" ? "is-error" : state === "idle" && info.updatedAt ? "is-success" : ""}`} role="status">{message}</p>
+        <button type="button" className="v2-primary-button" onClick={() => void save()} disabled={busy}>{state === "saving" ? "Saving..." : "Save customer document settings"}</button>
       </div>
 
-      {/* Business Card Preview */}
-      {info.companyName && (
-        <div className="v2-business-card-preview">
-          <div className="v2-biz-card">
-            <div className="v2-biz-card-logo">RIVT</div>
-            <div className="v2-biz-card-body">
-              <strong>{info.companyName}</strong>
-              {info.licenseNumber && <span>Lic #{info.licenseNumber}</span>}
-              {info.businessAddress && <span>{info.businessAddress}</span>}
-              {info.businessPhone && <span>{info.businessPhone}</span>}
-              {info.website && <a href={info.website} target="_blank" rel="noreferrer">{info.website.replace(/^https?:\/\//, "")}</a>}
-              {info.insuranceProvider && <span>Insured by {info.insuranceProvider}</span>}
-            </div>
+      <div className={`v2-business-card-preview is-${info.invoiceStyle}`}>
+        <div className="v2-biz-card">
+          <div className="v2-biz-card-logo">
+            {info.logoUrl ? <img src={info.logoUrl} alt="" /> : (info.businessName || "RIVT").slice(0, 2).toUpperCase()}
           </div>
-          <small>This is how your info appears to clients</small>
+          <div className="v2-biz-card-body">
+            <strong>{info.businessName || "Your business"}</strong>
+            <span>Invoice preview</span>
+            {previewContact.map((value) => <span key={value}>{value}</span>)}
+          </div>
         </div>
-      )}
+        <small>Customer-facing preview. Final estimates and invoices add the customer, work, totals, terms, and payment method.</small>
+      </div>
     </section>
+  );
+}
+
+function DocumentStyleChooser({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: DocumentStyle;
+  onChange: (value: DocumentStyle) => void;
+}) {
+  return (
+    <fieldset className="v2-document-style-chooser">
+      <legend>{label}</legend>
+      <div>
+        {documentStyleOptions.map((option) => (
+          <label key={option.id} className={value === option.id ? "is-active" : ""}>
+            <input type="radio" name={label} value={option.id} checked={value === option.id} onChange={() => onChange(option.id)} />
+            <span className={`v2-document-style-swatch is-${option.id}`} aria-hidden="true"><i /><i /><i /></span>
+            <strong>{option.name}</strong>
+            <small>{option.description}</small>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
@@ -1993,7 +2166,14 @@ export function ProfileHub({
           </section>
         ) : null}
         {/* Business Settings — Settings only */}
-        {view === "Settings" ? <div className="v2-settings-section-group" data-settings-section="business"><BusinessSettingsSection /></div> : null}
+        {view === "Settings" ? (
+          <div className="v2-settings-section-group" data-settings-section="business">
+            <BusinessSettingsSection
+              fallbackName={profile.organization || profile.displayName || "RIVT member"}
+              fallbackEmail={profile.email}
+            />
+          </div>
+        ) : null}
 
         {/* Cert tracker — Settings only */}
         {view === "Settings" ? <div className="v2-settings-section-group" data-settings-section="business"><CertTrackerSection /></div> : null}

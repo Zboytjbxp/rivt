@@ -3,6 +3,7 @@ import { ApiError, asyncRoute, validate, z } from "./api.js";
 const toolRecordTypeSchema = z.enum([
   "payment_record",
   "invoice_template",
+  "estimate_template",
   "invoice_draft",
   "estimate",
   "expense",
@@ -110,6 +111,63 @@ function expenseCsv(records) {
   return [["Date", "Category", "Amount", "Description"].map(escapeCsv).join(","), ...rows].join("\n");
 }
 
+function deliveryBrandFallback(actor) {
+  return {
+    businessName: actor.memberships?.find((membership) => ["owner", "admin"].includes(membership.role))?.organizationName
+      || actor.profile.displayName
+      || "RIVT member",
+    businessEmail: actor.account.email || "",
+    businessPhone: actor.profile.phoneE164 || "",
+    businessAddress: "",
+    website: "",
+    licenseNumber: "",
+    estimateStyle: "classic",
+    invoiceStyle: "classic",
+    showContact: true,
+    showAddress: true,
+    showLicense: true,
+  };
+}
+
+const emailPalette = {
+  accent: "#ff4b00",
+  background: "#f5f5f2",
+  border: "#deded8",
+  ink: "#151515",
+  muted: "#5f5f5a",
+  paper: "#ffffff",
+};
+
+function brandContactParts(brand) {
+  const parts = [];
+  if (brand.showContact && brand.businessPhone) parts.push(brand.businessPhone);
+  if (brand.showContact && brand.businessEmail) parts.push(brand.businessEmail);
+  if (brand.showContact && brand.website) parts.push(brand.website);
+  if (brand.showAddress && brand.businessAddress) parts.push(brand.businessAddress);
+  if (brand.showLicense && brand.licenseNumber) parts.push(`License ${brand.licenseNumber}`);
+  return parts;
+}
+
+function documentEmailShell({ brand, documentType, documentNumber, body, hasLogo }) {
+  const style = documentType === "Estimate" ? brand.estimateStyle : brand.invoiceStyle;
+  const logo = hasLogo
+    ? `<img src="cid:rivt-document-logo" alt="${escapeHtml(brand.businessName)} logo" style="display:block;max-width:150px;max-height:58px;object-fit:contain;margin:0 0 12px">`
+    : "";
+  const contact = brandContactParts(brand);
+  const contactHtml = contact.length
+    ? `<p style="margin:8px 0 0;font-size:12px;line-height:1.5">${contact.map(escapeHtml).join(" &middot; ")}</p>`
+    : "";
+  const headerStyles = style === "compact"
+    ? `background:${emailPalette.paper};color:${emailPalette.ink};border-bottom:3px solid ${emailPalette.accent}`
+    : style === "field"
+      ? `background:${emailPalette.ink};color:${emailPalette.paper};border-top:5px solid ${emailPalette.accent}`
+      : `background:${emailPalette.accent};color:${emailPalette.ink}`;
+  const typeStyles = style === "compact"
+    ? `color:${emailPalette.muted};font-size:12px;text-transform:uppercase;letter-spacing:.12em`
+    : "font-size:12px;text-transform:uppercase;letter-spacing:.12em;opacity:.78";
+  return `<!doctype html><html><body style="margin:0;background:${emailPalette.background};color:${emailPalette.ink};font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:${emailPalette.paper};border:1px solid ${emailPalette.border};border-radius:12px;overflow:hidden"><header style="padding:22px 24px;${headerStyles}">${logo}<strong style="display:block;font-size:20px;letter-spacing:-.01em">${escapeHtml(brand.businessName)}</strong><span style="display:block;margin-top:5px;${typeStyles}">${documentType} ${escapeHtml(documentNumber)}</span>${contactHtml}</header><div style="padding:24px">${body}<p style="margin:28px 0 0;padding-top:16px;border-top:1px solid ${emailPalette.border};color:${emailPalette.muted};font-size:11px">Created with RIVT.</p></div></section></main></body></html>`;
+}
+
 async function hasActiveProEntitlement(database, accountId) {
   const result = await database.query(
     `SELECT EXISTS (
@@ -125,7 +183,7 @@ async function hasActiveProEntitlement(database, accountId) {
   return Boolean(result.rows[0]?.active);
 }
 
-function estimateDeliverySnapshot(record, actor) {
+function estimateDeliverySnapshot(record, actor, documentBrand = null) {
   const payload = objectValue(record.payload);
   const recipientEmail = textValue(payload.recipientEmail, "", 320).toLowerCase();
   if (!z.email().safeParse(recipientEmail).success) {
@@ -160,13 +218,14 @@ function estimateDeliverySnapshot(record, actor) {
     note: textValue(payload.customerNote, "", 1_200),
     estimateDate: textValue(payload.estimateDate, record.record_date ? new Date(record.record_date).toISOString().slice(0, 10) : "", 20),
     validThrough: textValue(payload.validThrough, "", 20),
-    senderName: textValue(actor.profile.displayName, "RIVT member", 160),
+    senderName: textValue(documentBrand?.businessName, textValue(actor.profile.displayName, "RIVT member", 160), 160),
+    brand: documentBrand ?? deliveryBrandFallback(actor),
     totalCents,
     lines,
   };
 }
 
-function estimateEmailContent(snapshot) {
+function estimateEmailContent(snapshot, attachments = []) {
   const validThrough = snapshot.validThrough ? `Valid through ${snapshot.validThrough}.` : "Review the scope and terms before accepting.";
   const lineText = snapshot.lines.map((line) => `- ${line.description}: ${formatCurrency(line.totalCents)}`).join("\n");
   const text = [
@@ -187,11 +246,18 @@ function estimateEmailContent(snapshot) {
   const lineRows = snapshot.lines.map((line) => (
     `<tr><td style="padding:8px 0;border-bottom:1px solid #e7e7e7">${escapeHtml(line.description)}</td><td style="padding:8px 0;border-bottom:1px solid #e7e7e7;text-align:right;font-weight:700">${formatCurrency(line.totalCents)}</td></tr>`
   )).join("");
-  const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT ESTIMATE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.estimateNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 6px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an estimate for ${escapeHtml(snapshot.title)}.</p>${snapshot.estimateDate ? `<p style="margin:0 0 16px;color:#5f5f5a">Estimate date: ${escapeHtml(snapshot.estimateDate)}</p>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:16px;font-size:17px;font-weight:700">Estimated total</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0;color:#5f5f5a">${escapeHtml(validThrough)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}<p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">This is an estimate, not a payment request. Contact the sender to discuss changes or confirm acceptance.</p></div></section></main></body></html>`;
+  const body = `<p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 6px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an estimate for ${escapeHtml(snapshot.title)}.</p>${snapshot.estimateDate ? `<p style="margin:0 0 16px;color:${emailPalette.muted}">Estimate date: ${escapeHtml(snapshot.estimateDate)}</p>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:16px;font-size:17px;font-weight:700">Estimated total</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0;color:${emailPalette.muted}">${escapeHtml(validThrough)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}<p style="margin:24px 0 0;color:${emailPalette.muted};font-size:13px">This is an estimate, not a payment request. Contact the sender to discuss changes or confirm acceptance.</p>`;
+  const html = documentEmailShell({
+    brand: snapshot.brand,
+    documentType: "Estimate",
+    documentNumber: snapshot.estimateNumber,
+    body,
+    hasLogo: attachments.length > 0,
+  });
   return { text, html };
 }
 
-function invoiceDeliverySnapshot(record, actor, bankPaymentUrl = null) {
+function invoiceDeliverySnapshot(record, actor, bankPaymentUrl = null, documentBrand = null) {
   const payload = objectValue(record.payload);
   const recipientEmail = textValue(payload.recipientEmail, "", 320).toLowerCase();
   if (!z.email().safeParse(recipientEmail).success) {
@@ -225,7 +291,8 @@ function invoiceDeliverySnapshot(record, actor, bankPaymentUrl = null) {
     note: textValue(payload.customerNote, "", 1_200),
     workLabel: textValue(payload.workLabel, record.title, 320),
     terms: textValue(payload.terms, "Due on receipt", 160),
-    senderName: textValue(payload.payTo, textValue(actor.profile.displayName, "RIVT member", 160), 160),
+    senderName: textValue(payload.payTo, textValue(documentBrand?.businessName, textValue(actor.profile.displayName, "RIVT member", 160), 160), 160),
+    brand: documentBrand ?? deliveryBrandFallback(actor),
     paymentMethod: bankPaymentUrl
       ? "Secure bank payment"
       : textValue(payload.paymentMethod, "Contact the sender for payment instructions", 160),
@@ -237,7 +304,7 @@ function invoiceDeliverySnapshot(record, actor, bankPaymentUrl = null) {
   };
 }
 
-function invoiceEmailContent(snapshot) {
+function invoiceEmailContent(snapshot, attachments = []) {
   const lineText = snapshot.lines.map((line) => `- ${line.description}: ${formatCurrency(line.totalCents)}`).join("\n");
   const text = [
     `Hi ${snapshot.recipientName},`,
@@ -270,7 +337,14 @@ function invoiceEmailContent(snapshot) {
   const boundaryCopy = snapshot.bankPaymentUrl
     ? "Bank payment is handled by Stripe for the sender. RIVT does not hold or protect job funds."
     : "Payment is arranged directly with the sender. Reply to this email with any questions.";
-  const html = `<!doctype html><html><body style="margin:0;background:#f5f5f2;color:#151515;font-family:Arial,sans-serif"><main style="max-width:640px;margin:0 auto;padding:28px"><section style="background:#ffffff;border:1px solid #deded8;border-radius:12px;overflow:hidden"><header style="padding:22px 24px;background:#ff4b00;color:#111111"><strong style="font-size:20px;letter-spacing:0.04em">RIVT INVOICE</strong><div style="margin-top:6px;font-size:14px">${escapeHtml(snapshot.invoiceNumber)}</div></header><div style="padding:24px"><p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 6px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an invoice for ${escapeHtml(snapshot.workLabel)}.</p>${snapshot.issueDate ? `<p style="margin:0;color:#5f5f5a">Invoice date: ${escapeHtml(snapshot.issueDate)}</p>` : ""}${snapshot.dueDate ? `<p style="margin:4px 0 16px;color:#5f5f5a">Due date: ${escapeHtml(snapshot.dueDate)}</p>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:12px">Subtotal</td><td style="padding-top:12px;text-align:right">${formatCurrency(snapshot.subtotalCents)}</td></tr><tr><td style="padding-top:8px">Tax</td><td style="padding-top:8px;text-align:right">${formatCurrency(snapshot.taxCents)}</td></tr><tr><td style="padding-top:16px;font-size:17px;font-weight:700">Total due</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0"><strong>Terms:</strong> ${escapeHtml(snapshot.terms)}</p><p style="margin:8px 0 0"><strong>Payment method:</strong> ${escapeHtml(snapshot.paymentMethod)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}${bankPaymentHtml}<p style="margin:24px 0 0;color:#5f5f5a;font-size:13px">${escapeHtml(boundaryCopy)}</p></div></section></main></body></html>`;
+  const body = `<p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 6px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an invoice for ${escapeHtml(snapshot.workLabel)}.</p>${snapshot.issueDate ? `<p style="margin:0;color:${emailPalette.muted}">Invoice date: ${escapeHtml(snapshot.issueDate)}</p>` : ""}${snapshot.dueDate ? `<p style="margin:4px 0 16px;color:${emailPalette.muted}">Due date: ${escapeHtml(snapshot.dueDate)}</p>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:12px">Subtotal</td><td style="padding-top:12px;text-align:right">${formatCurrency(snapshot.subtotalCents)}</td></tr><tr><td style="padding-top:8px">Tax</td><td style="padding-top:8px;text-align:right">${formatCurrency(snapshot.taxCents)}</td></tr><tr><td style="padding-top:16px;font-size:17px;font-weight:700">Total due</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0"><strong>Terms:</strong> ${escapeHtml(snapshot.terms)}</p><p style="margin:8px 0 0"><strong>Payment method:</strong> ${escapeHtml(snapshot.paymentMethod)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}${bankPaymentHtml}<p style="margin:24px 0 0;color:${emailPalette.muted};font-size:13px">${escapeHtml(boundaryCopy)}</p>`;
+  const html = documentEmailShell({
+    brand: snapshot.brand,
+    documentType: "Invoice",
+    documentNumber: snapshot.invoiceNumber,
+    body,
+    hasLogo: attachments.length > 0,
+  });
   return { text, html };
 }
 
@@ -284,6 +358,7 @@ export function registerToolRecordRoutes({
   runIdempotentMutation,
   sendIdempotentResult,
   sendTransactionalEmail,
+  loadDocumentBrandForDelivery = null,
 }) {
   app.get("/api/v1/tool-records/expenses/export.csv", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     if (!await hasActiveProEntitlement(database, request.actor.account.id)) {
@@ -433,16 +508,20 @@ export function registerToolRecordRoutes({
       return;
     }
 
-    const snapshot = estimateDeliverySnapshot(record, request.actor);
+    const brandDelivery = loadDocumentBrandForDelivery
+      ? await loadDocumentBrandForDelivery(request.actor)
+      : { brand: deliveryBrandFallback(request.actor), attachments: [] };
+    const snapshot = estimateDeliverySnapshot(record, request.actor, brandDelivery.brand);
     const attemptedAt = new Date().toISOString();
     const attemptCount = integerValue(previousDelivery.attemptCount) + 1;
-    const message = estimateEmailContent(snapshot);
+    const message = estimateEmailContent(snapshot, brandDelivery.attachments);
     let delivery;
     try {
       delivery = await sendTransactionalEmail({
         to: snapshot.recipientEmail,
         subject: `${snapshot.senderName} sent estimate ${snapshot.estimateNumber}`,
         ...message,
+        attachments: brandDelivery.attachments,
         idempotencyKey: `estimate-${record.id}-${idempotencyKey}`.slice(0, 255),
       });
     } catch (error) {
@@ -551,7 +630,10 @@ export function registerToolRecordRoutes({
         bankPaymentUrl = `${appOrigin}/pay/${paymentLink.rows[0].id}`;
       }
     }
-    const snapshot = invoiceDeliverySnapshot(record, request.actor, bankPaymentUrl);
+    const brandDelivery = loadDocumentBrandForDelivery
+      ? await loadDocumentBrandForDelivery(request.actor)
+      : { brand: deliveryBrandFallback(request.actor), attachments: [] };
+    const snapshot = invoiceDeliverySnapshot(record, request.actor, bankPaymentUrl, brandDelivery.brand);
     const attemptedAt = new Date().toISOString();
     const attemptCount = integerValue(previousDelivery.attemptCount) + 1;
     let delivery;
@@ -559,7 +641,8 @@ export function registerToolRecordRoutes({
       delivery = await sendTransactionalEmail({
         to: snapshot.recipientEmail,
         subject: `${snapshot.senderName} sent invoice ${snapshot.invoiceNumber}`,
-        ...invoiceEmailContent(snapshot),
+        ...invoiceEmailContent(snapshot, brandDelivery.attachments),
+        attachments: brandDelivery.attachments,
         idempotencyKey: `invoice-${record.id}-${idempotencyKey}`.slice(0, 255),
       });
     } catch (error) {

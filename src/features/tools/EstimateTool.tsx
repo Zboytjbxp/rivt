@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, ChevronRight, Copy, FileText, LoaderCircle, Mail, Plus, Save } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, FileText, LoaderCircle, Mail, Plus, Save, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Panel } from "../../components/ui";
 import { requestKey } from "../../lib/api";
@@ -6,8 +6,16 @@ import type { Job } from "../../types";
 import { readPrimaryHourlyRate } from "../../lib/rateCard";
 import { getEstimatePriceSignal } from "./priceGuidance";
 import { centsToDollars, currency, toCents } from "./money";
-import { fetchToolRecords, sendEstimateByLocalId, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
+import { deleteToolRecordByLocalId, fetchToolRecords, sendEstimateByLocalId, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 import { toolContextLabel, toolContextRecordFields, toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
+import { DocumentBrandHeader, DocumentStylePicker } from "./DocumentBrandControls";
+import {
+  defaultDocumentBrand,
+  fetchDocumentBrand,
+  saveDocumentBrand,
+  type DocumentBrand,
+  type DocumentStyle,
+} from "./document-brand-api";
 
 function formatNumber(value: number, digits = 1) {
   return Number.isInteger(value) ? String(value) : value.toFixed(digits);
@@ -40,6 +48,23 @@ interface EstimatePrefs {
 }
 
 const estimatePrefsStorageKey = "rivt.estimatePrefs.v1";
+const estimateTemplateStorageKey = "rivt.estimateTemplates.v1";
+
+interface EstimateTemplate {
+  id: string;
+  name: string;
+  savedAt: string;
+  laborHours: number;
+  hourlyRate: number;
+  crewSize: number;
+  materials: number;
+  subCosts: number;
+  overheadPct: number;
+  marginPct: number;
+  contingencyPct: number;
+  scope: string;
+  customerNote: string;
+}
 
 interface EstimateDraftState {
   localId?: string;
@@ -158,6 +183,55 @@ function readEstimatePrefs(): EstimatePrefs {
   }
 }
 
+function isEstimateTemplate(value: unknown): value is EstimateTemplate {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<EstimateTemplate>;
+  return typeof candidate.id === "string"
+    && typeof candidate.name === "string"
+    && typeof candidate.savedAt === "string"
+    && typeof candidate.laborHours === "number"
+    && typeof candidate.hourlyRate === "number"
+    && typeof candidate.crewSize === "number"
+    && typeof candidate.materials === "number"
+    && typeof candidate.subCosts === "number"
+    && typeof candidate.overheadPct === "number"
+    && typeof candidate.marginPct === "number"
+    && typeof candidate.contingencyPct === "number"
+    && typeof candidate.scope === "string"
+    && typeof candidate.customerNote === "string";
+}
+
+function readEstimateTemplates(): EstimateTemplate[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(estimateTemplateStorageKey) || "[]") as unknown[];
+    return Array.isArray(parsed) ? parsed.filter(isEstimateTemplate).slice(0, 8) : [];
+  } catch {
+    return [];
+  }
+}
+
+function estimateTemplateFromServer(record: ServerToolRecord): EstimateTemplate | null {
+  if (!isEstimateTemplate(record.payload)) return null;
+  return {
+    ...record.payload,
+    id: record.localId,
+    name: record.payload.name || record.title,
+    savedAt: record.payload.savedAt || record.updatedAt || new Date().toISOString(),
+  };
+}
+
+function estimateTemplateToServerInput(template: EstimateTemplate) {
+  return {
+    recordType: "estimate_template" as const,
+    localId: template.id,
+    title: template.name || "Estimate template",
+    status: "active",
+    recordDate: template.savedAt.slice(0, 10),
+    amountCents: null,
+    payload: { ...template },
+  };
+}
+
 export function EstimateTool({
   activeJob,
   workContext,
@@ -197,7 +271,58 @@ export function EstimateTool({
   const [validationMessage, setValidationMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [step, setStep] = useState<"price" | "customer" | "review">("price");
+  const [documentBrand, setDocumentBrand] = useState<DocumentBrand>(() => defaultDocumentBrand());
+  const [brandMessage, setBrandMessage] = useState("Document style syncs to your RIVT account.");
+  const [templates, setTemplates] = useState<EstimateTemplate[]>(readEstimateTemplates);
+  const [templateName, setTemplateName] = useState("Standard estimate");
+  const [templateNotice, setTemplateNotice] = useState("");
+  const [templateSyncMessage, setTemplateSyncMessage] = useState("Templates sync to your RIVT account.");
   const sendIdempotencyKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchDocumentBrand()
+      .then((brand) => {
+        if (!cancelled) setDocumentBrand(brand);
+      })
+      .catch(() => {
+        if (!cancelled) setBrandMessage("Using the standard document style until account branding can load.");
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchToolRecords("estimate_template").then((serverRecords) => {
+      if (cancelled) return;
+      if (!serverRecords) {
+        setTemplateSyncMessage("Saved on this device. Account sync is currently unavailable.");
+        return;
+      }
+      const mapped = serverRecords
+        .map(estimateTemplateFromServer)
+        .filter((template): template is EstimateTemplate => Boolean(template))
+        .slice(0, 8);
+      if (mapped.length) {
+        setTemplates(mapped);
+        try { localStorage.setItem(estimateTemplateStorageKey, JSON.stringify(mapped)); } catch { /* optional cache */ }
+        setTemplateSyncMessage("Synced to your RIVT account.");
+        return;
+      }
+      const localTemplates = readEstimateTemplates();
+      if (localTemplates.length) {
+        void Promise.all(localTemplates.map((template) => upsertToolRecord(estimateTemplateToServerInput(template))))
+          .then((results) => {
+            if (!cancelled) {
+              setTemplateSyncMessage(results.some(Boolean)
+                ? "Local templates synced to your RIVT account."
+                : "Saved on this device. Account sync is currently unavailable.");
+            }
+          });
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     try {
@@ -292,6 +417,12 @@ export function EstimateTool({
     customerNote: customerNote.trim(),
     targetCents: toCents(target),
     customerLines,
+    documentBrand: {
+      businessName: documentBrand.businessName,
+      estimateStyle: documentBrand.estimateStyle,
+      logoUploadId: documentBrand.logoUploadId,
+      updatedAt: documentBrand.updatedAt,
+    },
   });
   const hasUnsentChanges = delivery?.status === "sent"
     && Boolean(lastSentFingerprint)
@@ -299,11 +430,11 @@ export function EstimateTool({
 
   useEffect(() => {
     sendIdempotencyKeyRef.current = null;
-  }, [customerNote, estimateDate, estimateNumber, recipientEmail, recipientName, scope, validThrough, target]);
+  }, [customerNote, documentBrand.updatedAt, estimateDate, estimateNumber, recipientEmail, recipientName, scope, validThrough, target]);
 
   async function copyCustomerEstimate() {
     const summary = [
-      `RIVT estimate ${estimateNumber}`,
+      `${documentBrand.businessName || "RIVT member"} estimate ${estimateNumber}`,
       `Date: ${estimateDate}`,
       `Prepared for: ${recipientName.trim() || "Customer"}`,
       `Scope: ${scope.trim() || "Estimate scope"}`,
@@ -322,6 +453,86 @@ export function EstimateTool({
     } catch {
       setSaveMessage("Copy failed. Select the estimate text and try again.");
     }
+  }
+
+  async function changeEstimateStyle(style: DocumentStyle) {
+    const previous = documentBrand;
+    const next = { ...documentBrand, estimateStyle: style };
+    setDocumentBrand(next);
+    setBrandMessage("Saving document style...");
+    try {
+      const saved = await saveDocumentBrand(next);
+      setDocumentBrand(saved);
+      setBrandMessage(`${style === "classic" ? "Classic" : style === "compact" ? "Compact" : "Field"} style saved for future estimates.`);
+    } catch {
+      setDocumentBrand(previous);
+      setBrandMessage("Document style could not be saved. Your previous style is still active.");
+    }
+  }
+
+  function persistEstimateTemplates(nextTemplates: EstimateTemplate[], notice: string, changedTemplate?: EstimateTemplate) {
+    const limited = nextTemplates.slice(0, 8);
+    setTemplates(limited);
+    setTemplateNotice(notice);
+    try {
+      localStorage.setItem(estimateTemplateStorageKey, JSON.stringify(limited));
+    } catch {
+      setTemplateNotice("Template could not be saved on this device.");
+    }
+    if (!changedTemplate) return;
+    void upsertToolRecord(estimateTemplateToServerInput(changedTemplate)).then((record) => {
+      setTemplateSyncMessage(record
+        ? "Synced to your RIVT account."
+        : "Saved on this device. Account sync is currently unavailable.");
+    });
+  }
+
+  function saveEstimateTemplate() {
+    const cleanName = templateName.trim() || "Estimate template";
+    const template: EstimateTemplate = {
+      id: crypto.randomUUID(),
+      name: cleanName,
+      savedAt: new Date().toISOString(),
+      laborHours,
+      hourlyRate,
+      crewSize,
+      materials,
+      subCosts,
+      overheadPct,
+      marginPct,
+      contingencyPct,
+      scope,
+      customerNote,
+    };
+    persistEstimateTemplates(
+      [template, ...templates.filter((item) => item.name.toLowerCase() !== cleanName.toLowerCase())],
+      "Template saved without customer identity or estimate number.",
+      template,
+    );
+  }
+
+  function loadEstimateTemplate(template: EstimateTemplate) {
+    setTemplateName(template.name);
+    setLaborHours(template.laborHours);
+    setHourlyRate(template.hourlyRate);
+    setCrewSize(template.crewSize);
+    setMaterials(template.materials);
+    setSubCosts(template.subCosts);
+    setOverheadPct(template.overheadPct);
+    setMarginPct(template.marginPct);
+    setContingencyPct(template.contingencyPct);
+    setScope(template.scope);
+    setCustomerNote(template.customerNote);
+    setTemplateNotice(`Loaded ${template.name}. Customer and estimate identity were kept separate.`);
+  }
+
+  function deleteEstimateTemplate(templateId: string) {
+    persistEstimateTemplates(templates.filter((template) => template.id !== templateId), "Template removed from this device.");
+    void deleteToolRecordByLocalId("estimate_template", templateId).then((ok) => {
+      setTemplateSyncMessage(ok
+        ? "Deleted from this device and your RIVT account."
+        : "Deleted on this device only. Account sync is currently unavailable.");
+    });
   }
 
   function printEstimate() {
@@ -530,6 +741,35 @@ export function EstimateTool({
             <label>Profit markup %<input type="number" min="0" value={marginPct} onChange={(event) => setMarginPct(Math.max(0, Number(event.target.value) || 0))} /></label>
             <label>Contingency %<input type="number" min="0" value={contingencyPct} onChange={(event) => setContingencyPct(Math.max(0, Number(event.target.value) || 0))} /></label>
           </div>
+          <details className="v2-tool-collapsible v2-invoice-template-tools" aria-label="Estimate templates">
+            <summary>
+              <span>Templates</span>
+              <small>{templates.length ? `${templates.length} saved` : "Optional"}</small>
+            </summary>
+            <section className="v2-invoice-template-bar">
+              <label>Template name<input value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Standard service estimate" /></label>
+              <button type="button" className="v2-primary-button" onClick={saveEstimateTemplate}><FileText size={14} />Save template</button>
+              <small>{templateSyncMessage}</small>
+            </section>
+            <small className="v2-invoice-template-boundary">
+              Templates save pricing setup, scope, and notes—not customer identity, dates, or estimate numbers.
+            </small>
+            {templateNotice ? <p className="v2-record-notice" role="status">{templateNotice}</p> : null}
+            {templates.length ? (
+              <div className="v2-invoice-template-list">
+                {templates.map((template) => (
+                  <article key={template.id}>
+                    <span>
+                      <strong>{template.name}</strong>
+                      <small>Saved {new Date(template.savedAt).toLocaleDateString()}</small>
+                    </span>
+                    <button type="button" onClick={() => loadEstimateTemplate(template)}>Load</button>
+                    <button type="button" aria-label={`Delete ${template.name}`} onClick={() => deleteEstimateTemplate(template.id)}><Trash2 size={14} /></button>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+          </details>
         </> : null}
 
         {step === "customer" ? <section className="v2-estimate-delivery" aria-labelledby="estimate-delivery-title">
@@ -546,6 +786,12 @@ export function EstimateTool({
             <label className="is-wide">Scope<textarea value={scope} onChange={(event) => setScope(event.target.value)} placeholder="Describe the work covered by this estimate." rows={3} /></label>
             <label className="is-wide">Customer note<textarea value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} placeholder="Optional note, exclusions, or next steps." rows={3} /></label>
           </div>
+          <DocumentStylePicker
+            label="Estimate appearance"
+            value={documentBrand.estimateStyle}
+            onChange={(style) => void changeEstimateStyle(style)}
+            footer={<small className="v2-document-style-status">{brandMessage} Logo and business details are managed in Profile → Business.</small>}
+          />
           {validationMessage ? <p className="v2-record-error" role="alert">{validationMessage}</p> : null}
         </section> : null}
 
@@ -555,11 +801,13 @@ export function EstimateTool({
             <strong id="estimate-review-title">{recipientEmail.trim() ? `Ready for ${recipientEmail}` : "Add an email before sending"}</strong>
             <small>RIVT emails this estimate. It does not request payment or claim online approval.</small>
           </div>
-          <article className="v2-invoice-print-preview v2-estimate-print-preview" aria-label="Printable estimate preview">
-            <header>
-              <div><strong>RIVT</strong><span>Estimate</span></div>
-              <aside><span>Estimate</span><strong>{estimateNumber}</strong></aside>
-            </header>
+          <article className={`v2-invoice-print-preview v2-estimate-print-preview is-template-${documentBrand.estimateStyle}`} aria-label="Printable estimate preview">
+            <DocumentBrandHeader
+              brand={documentBrand}
+              documentLabel="Estimate"
+              documentNumber={estimateNumber}
+              status="Estimate"
+            />
             <section className="v2-invoice-preview-meta">
               <div><span>Prepared for</span><strong>{recipientName || "Customer"}</strong></div>
               <div><span>Estimate date</span><strong>{estimateDate}</strong></div>
@@ -575,6 +823,7 @@ export function EstimateTool({
               {customerNote.trim() ? <p>{customerNote.trim()}</p> : null}
               <span>Estimate only</span>
               <p>This is not a payment request. Contact the sender to discuss changes or confirm acceptance.</p>
+              <small className="v2-document-powered-by">Created with RIVT.</small>
             </footer>
           </article>
           <div className="v2-invoice-preview-actions" aria-label="Estimate preview actions">

@@ -72,3 +72,49 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
 - Keep the connected webhook route and secret active while any payment remains open or processing.
 - Do not roll migrations 0030 or 0029 down after real connected accounts or payment records exist without an approved export/retention plan.
 - Application rollback must retain public status lookup and webhook processing until all outstanding ACH states are terminal.
+
+## Estimate/invoice document-branding extension
+
+### Product boundary
+
+- One authenticated account owns one customer-document identity. It is not a
+  public profile claim and does not verify licensing, insurance, or business
+  ownership.
+- Estimate and invoice layout choices affect presentation only. They do not
+  alter amounts, payment state, delivery state, or Stripe settlement.
+- Reusable templates contain work/pricing defaults only. They never retain a
+  former customer, recipient, document number, or date.
+
+### Server and storage
+
+- Migration `0032_document_branding` adds the account-owned brand profile,
+  `document-brand` upload scope, and server-owned `estimate_template` record
+  type with a reviewed down migration.
+- Logo upload accepts signature-checked PNG/JPG/WebP content up to 2 MB,
+  stores it in private managed object storage, and embeds it into Resend
+  delivery by content ID.
+- Replaced/removed logo rows are marked removed; their objects are deleted on
+  a best-effort basis. Customer delivery degrades to the saved business name
+  when the logo object cannot be read.
+
+### Acceptance
+
+- Preview, print/PDF, copied summary, and delivered HTML email use the same
+  server-owned business identity and selected Classic, Compact, or Field
+  layout.
+- Brand identity/style participates in the sent-document fingerprint.
+- Cross-account reads/templates fail closed; migration apply/rollback and
+  customer email branding are integration-tested.
+- Rendered desktop, 390px, and compact-phone Estimate/Invoice flows have no
+  horizontal overflow and retain reachable review/delivery actions.
+
+### Rollback
+
+- Roll application code back before rolling migration `0032` down.
+- Export any document-brand settings or estimate templates that must be
+  retained. The reviewed down migration deliberately deletes
+  `estimate_template` records because the prior application cannot validate
+  that type.
+- Object rows in `document-brand` scope are returned to `legacy` on rollback;
+  do not delete private logo objects during schema rollback without a
+  separately reviewed retention decision.

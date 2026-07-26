@@ -91,6 +91,10 @@ import { registerShopTalkModerationRoutes } from "./shop-talk-moderation.js";
 import { registerCommunityRoutes } from "./communities.js";
 import { registerNetworkRecordRoutes } from "./network-records.js";
 import { registerToolRecordRoutes } from "./tool-records.js";
+import {
+  loadDocumentBrandForDelivery,
+  registerDocumentBrandRoutes,
+} from "./document-brand.js";
 import { registerStandaloneProjectRoutes } from "./standalone-projects.js";
 import {
   pushProviderStatus,
@@ -5352,6 +5356,26 @@ registerToolRecordRoutes({
   runIdempotentMutation,
   sendIdempotentResult,
   sendTransactionalEmail,
+  loadDocumentBrandForDelivery: (actor) => loadDocumentBrandForDelivery(database, actor, {
+    s3Client,
+    s3Bucket,
+  }),
+});
+
+registerDocumentBrandRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  uploadRateLimit,
+  upload,
+  sha256Buffer,
+  detectUploadContent,
+  signedObjectUrl,
+  safeObjectName,
+  s3Client,
+  s3Bucket,
 });
 
 registerStandaloneProjectRoutes({

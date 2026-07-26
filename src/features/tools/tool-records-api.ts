@@ -3,6 +3,7 @@ import { apiPath, fetchWithTimeout, notifySessionExpired, requestKey, RivtApiErr
 export type ToolRecordType =
   | "payment_record"
   | "invoice_template"
+  | "estimate_template"
   | "invoice_draft"
   | "estimate"
   | "expense"

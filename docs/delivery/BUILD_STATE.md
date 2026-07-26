@@ -2,10 +2,52 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Estimate and Invoice document-integrity polish is locally verified and awaiting review; production remains on the prior invoice-payment release.
+Current phase: Account-owned estimate/invoice branding and reusable estimate templates are locally verified and awaiting review; production remains on the prior invoice-payment release.
 Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (estimate/invoice document-integrity extension)
 Repository branch: `codex/estimate-invoice-final-polish`
 Production feature release commit: `03c4336142bab09e12d649ffdf0bc0364716edb6`
+
+## Estimate + Invoice Branding and Templates (Locally Verified; Review Pending)
+
+- Migration `0032_document_branding` adds one account-owned document identity
+  for business name, contact details, license display, logo reference, and
+  separate Estimate/Invoice layout choices. The migration is reversible;
+  its rollback removes unsent estimate templates and document-brand records
+  before restoring the earlier upload and tool-record constraints.
+- Profile → Business now manages the customer-facing identity that actually
+  appears on estimates, invoices, print/PDF output, and delivered HTML email.
+  The former browser-only business-card claim has been removed. Existing
+  device details are offered for review and server save, not silently called
+  synced or public.
+- Logo upload is authenticated, account-scoped, limited to a verified PNG,
+  JPG, or WebP under 2 MB, stored in managed object storage, and embedded in
+  delivered email by content ID rather than linked to a short-lived signed
+  URL. Replaced or removed logo objects are marked removed and deleted from
+  managed storage on a best-effort basis.
+- Classic, Compact, and Field layouts are guided choices built from the
+  existing design tokens. The selected style is server-owned, appears in the
+  builder before delivery, survives future documents, and is included in the
+  sent-document fingerprint so a brand change cannot look already delivered.
+- Estimate now has account-synced reusable templates for real pricing setup,
+  scope, and notes. Templates intentionally exclude customer identity,
+  estimate numbers, and dates. Invoice templates likewise exclude customer
+  and payee identity; the account-owned document profile supplies the sender
+  identity.
+- Customer previews use the saved business identity while retaining a quiet
+  `Created with RIVT` trust mark. Customer email uses the same company,
+  contact, style, line items, totals, terms, notes, and payment boundary as
+  the reviewed document. No approval, payment, delivery, or logo success is
+  fabricated when the corresponding server action fails.
+- Verification passed: production build; application/security lint; 89
+  unit/frontend tests; targeted document-brand/tool-record and complete
+  migration lifecycle integration suites; fail-closed auth and jobs/discovery
+  E2E; rendered Tools QA at desktop, 390px, and compact-phone sizes; diff
+  check; and `npm audit --omit=dev` with zero known vulnerabilities.
+- The aggregate serial integration command was also attempted and is not
+  claimed green: it hit the repository's pre-existing silent
+  `push-notifications.integration.test.js` stall before reaching this packet.
+  The two database suites changed by this extension passed directly with no
+  skips. No production deployment is claimed for this branch.
 
 ## Estimate + Invoice Document Integrity (Locally Verified; Review Pending)
 
@@ -50,9 +92,11 @@ Production feature release commit: `03c4336142bab09e12d649ffdf0bc0364716edb6`
   authentication and jobs/discovery E2E at desktop and mobile, rendered
   Tools QA, diff check, and `npm audit --omit=dev` with zero known
   vulnerabilities.
-- No schema, migration, dependency, authorization, Stripe configuration, or
-  production-data change is included. This branch is not merged or deployed;
-  production remains on `03c4336142bab09e12d649ffdf0bc0364716edb6`.
+- The earlier integrity slice introduced no schema, dependency,
+  authorization, Stripe configuration, or production-data change. The active
+  branding extension above adds reviewed migration `0032`. This branch is
+  not merged or deployed; production remains on
+  `03c4336142bab09e12d649ffdf0bc0364716edb6`.
 
 ## Invoice Payment Clarity + Quick Use ACH (Deployed and Exact-Source Verified)
 

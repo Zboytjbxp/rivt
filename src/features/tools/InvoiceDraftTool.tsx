@@ -24,6 +24,14 @@ import {
   type StripeConnectStatus,
 } from "./project-api";
 import { toolContextLabel, toolContextRecordFields, toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
+import { DocumentBrandHeader, DocumentStylePicker } from "./DocumentBrandControls";
+import {
+  defaultDocumentBrand,
+  fetchDocumentBrand,
+  saveDocumentBrand,
+  type DocumentBrand,
+  type DocumentStyle,
+} from "./document-brand-api";
 
 function numericValue(value: number, fallback = 0) {
   return Number.isFinite(value) ? Math.max(0, value) : fallback;
@@ -320,6 +328,22 @@ export function InvoiceDraftTool({
   });
   const [validationMessage, setValidationMessage] = useState("");
   const [step, setStep] = useState<"items" | "customer" | "review">("items");
+  const [documentBrand, setDocumentBrand] = useState<DocumentBrand>(() => defaultDocumentBrand());
+  const [brandMessage, setBrandMessage] = useState("Document style syncs to your RIVT account.");
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchDocumentBrand()
+      .then((brand) => {
+        if (cancelled) return;
+        setDocumentBrand(brand);
+        setPayTo((current) => current.trim() ? current : brand.businessName);
+      })
+      .catch(() => {
+        if (!cancelled) setBrandMessage("Using the standard document style until account branding can load.");
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const subtotalCents = lines.reduce((sum, line) => sum + lineTotalCents(line), 0);
   const taxCents = Math.round(subtotalCents * (numericValue(taxPct) / 100));
@@ -355,6 +379,12 @@ export function InvoiceDraftTool({
       rateCents: toCents(numericValue(line.rate)),
       kind: line.kind ?? "other",
     })),
+    documentBrand: {
+      businessName: documentBrand.businessName,
+      invoiceStyle: documentBrand.invoiceStyle,
+      logoUploadId: documentBrand.logoUploadId,
+      updatedAt: documentBrand.updatedAt,
+    },
   });
   const hasUnsentChanges = delivery?.status === "sent"
     && Boolean(lastSentFingerprint)
@@ -376,7 +406,7 @@ export function InvoiceDraftTool({
     lineSignals.find(({ signal }) => signal)?.signal;
 
   const invoiceText = useMemo(() => [
-    `RIVT invoice ${invoiceNumber}`,
+    `${documentBrand.businessName || "RIVT member"} invoice ${invoiceNumber}`,
     `Invoice date: ${issueDate}`,
     dueDate ? `Due date: ${dueDate}` : "",
     `Work: ${toolContextLabel(workContext)}`,
@@ -395,7 +425,7 @@ export function InvoiceDraftTool({
     paymentChoice === "bank"
       ? "Bank payment is handled by Stripe for the sender. RIVT does not hold job funds."
       : "Payment is arranged directly with the sender using the instructions above.",
-  ].filter(Boolean).join("\n"), [bankPaymentUrl, billTo, customerNote, customerPaymentMethod, dueDate, invoiceNumber, issueDate, lines, payTo, paymentChoice, subtotal, tax, terms, total, workContext]);
+  ].filter(Boolean).join("\n"), [bankPaymentUrl, billTo, customerNote, customerPaymentMethod, documentBrand.businessName, dueDate, invoiceNumber, issueDate, lines, payTo, paymentChoice, subtotal, tax, terms, total, workContext]);
   const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(
     `RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${customerPaymentMethod || "Contact the sender for payment instructions"}.${bankPaymentUrl ? ` Pay: ${bankPaymentUrl}` : ""}`,
   )}`;
@@ -520,6 +550,21 @@ export function InvoiceDraftTool({
     return () => { cancelled = true; };
   }, []);
 
+  async function changeInvoiceStyle(style: DocumentStyle) {
+    const previous = documentBrand;
+    const next = { ...documentBrand, invoiceStyle: style };
+    setDocumentBrand(next);
+    setBrandMessage("Saving document style...");
+    try {
+      const saved = await saveDocumentBrand(next);
+      setDocumentBrand(saved);
+      setBrandMessage(`${style === "classic" ? "Classic" : style === "compact" ? "Compact" : "Field"} style saved for future invoices.`);
+    } catch {
+      setDocumentBrand(previous);
+      setBrandMessage("Document style could not be saved. Your previous style is still active.");
+    }
+  }
+
   function updateLine(id: string, field: keyof InvoiceLine, value: string | number) {
     setLines((current) => current.map((line) => {
       if (line.id !== id) return line;
@@ -561,7 +606,7 @@ export function InvoiceDraftTool({
       savedAt: new Date().toISOString(),
       invoiceNumber: "",
       billTo: "",
-      payTo,
+      payTo: "",
       terms,
       paymentMethod,
       recipientEmail: "",
@@ -1274,6 +1319,12 @@ export function InvoiceDraftTool({
             <label>Recipient phone<input type="tel" value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder="+1 904 555 0123" /></label>
             <label className="is-wide">Customer note<textarea value={customerNote} onChange={(event) => setCustomerNote(event.target.value)} placeholder="Optional note, reference, or thank-you." rows={3} /></label>
           </div>
+          <DocumentStylePicker
+            label="Invoice appearance"
+            value={documentBrand.invoiceStyle}
+            onChange={(style) => void changeInvoiceStyle(style)}
+            footer={<small className="v2-document-style-status">{brandMessage} Logo and business details are managed in Profile → Business.</small>}
+          />
           <p className="v2-tool-note">Choose bank payment or enter other payment instructions on the final review.</p>
           {validationMessage ? <p className="v2-record-error" role="alert">{validationMessage}</p> : null}
         </section> : null}
@@ -1369,17 +1420,13 @@ export function InvoiceDraftTool({
         </Panel>
 
         <Panel className="v2-tool-panel v2-invoice-preview-panel" eyebrow="Customer document" title="Preview before delivery">
-          <article className="v2-invoice-print-preview" aria-label="Printable invoice preview">
-              <header>
-                <div>
-                  <strong>RIVT</strong>
-                  <span>{delivery?.status === "sent" && !hasUnsentChanges ? "Invoice sent" : hasUnsentChanges ? "Invoice update draft" : "Invoice draft"}</span>
-                </div>
-                <aside>
-                  <span>Invoice</span>
-                  <strong>{invoiceNumber || "RIVT-DRAFT"}</strong>
-                </aside>
-              </header>
+          <article className={`v2-invoice-print-preview is-template-${documentBrand.invoiceStyle}`} aria-label="Printable invoice preview">
+              <DocumentBrandHeader
+                brand={documentBrand}
+                documentLabel="Invoice"
+                documentNumber={invoiceNumber || "DRAFT"}
+                status={delivery?.status === "sent" && !hasUnsentChanges ? "Invoice sent" : hasUnsentChanges ? "Invoice update draft" : "Invoice draft"}
+              />
               <section className="v2-invoice-preview-meta">
                 <div><span>Bill to</span><strong>{billTo || "Contractor / company"}</strong></div>
                 <div><span>Pay to</span><strong>{payTo || "Your company / name"}</strong></div>
@@ -1427,6 +1474,7 @@ export function InvoiceDraftTool({
                     <p>Use the sender's instructions above. RIVT records the invoice but does not collect this payment.</p>
                   </>
                 )}
+                <small className="v2-document-powered-by">Created with RIVT.</small>
               </footer>
           </article>
           <div className="v2-invoice-preview-actions" aria-label="Invoice preview actions">

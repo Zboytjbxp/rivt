@@ -223,6 +223,26 @@ if (!testDatabaseUrl) {
         "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'stripe_connect_accounts' AND column_name IN ('stripe_account_api_version', 'stripe_dashboard')",
       )).rows[0].count, 2);
 
+      assert.equal((await database.query("SELECT to_regclass('document_brand_profiles') AS table_name")).rows[0].table_name, "document_brand_profiles");
+      await database.query(
+        `INSERT INTO document_brand_profiles (account_id, business_name, estimate_style, invoice_style)
+         VALUES ($1, 'Migration Brand', 'compact', 'field')`,
+        [newUserId],
+      );
+      await database.query(
+        `INSERT INTO tool_records (account_id, record_type, local_id, title, status, payload)
+         VALUES ($1, 'estimate_template', 'migration-template', 'Migration template', 'active', '{}'::jsonb)`,
+        [newUserId],
+      );
+
+      const rolledBackDocumentBranding = await rollbackLatest(database);
+      assert.equal(rolledBackDocumentBranding.latestVersion, 31);
+      assert.equal((await database.query("SELECT to_regclass('document_brand_profiles') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM tool_records WHERE account_id = $1 AND record_type = 'estimate_template'",
+        [newUserId],
+      )).rows[0].count, 0);
+
       const rolledBackToolInvoicePayments = await rollbackLatest(database);
       assert.equal(rolledBackToolInvoicePayments.latestVersion, 30);
       assert.equal((await database.query("SELECT to_regclass('tool_invoice_payment_requests') AS table_name")).rows[0].table_name, null);

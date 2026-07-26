@@ -98,6 +98,75 @@ if (!testDatabaseUrl) {
     const owner = await createAccount(baseUrl, "contractor", "Tool Records Owner");
     const other = await createAccount(baseUrl, "contractor", "Tool Records Other");
 
+    const anonymousBrand = await requestJson(baseUrl, "/api/v1/document-brand");
+    assert.equal(anonymousBrand.response.status, 401);
+
+    const defaultBrand = await requestJson(baseUrl, "/api/v1/document-brand", { cookie: owner.cookie });
+    assert.equal(defaultBrand.response.status, 200);
+    assert.equal(defaultBrand.payload.data.brand.businessName, "Tool Records Owner LLC");
+    assert.equal(defaultBrand.payload.data.brand.invoiceStyle, "classic");
+
+    const savedBrand = await requestJson(baseUrl, "/api/v1/document-brand", {
+      method: "PUT",
+      cookie: owner.cookie,
+      body: {
+        businessName: "River City Cabinet Co.",
+        businessEmail: "office@rivercity.example",
+        businessPhone: "(904) 555-0199",
+        businessAddress: "Jacksonville, FL",
+        website: "https://rivercity.example",
+        licenseNumber: "CBC-12345",
+        estimateStyle: "compact",
+        invoiceStyle: "field",
+        showContact: true,
+        showAddress: true,
+        showLicense: true,
+      },
+    });
+    assert.equal(savedBrand.response.status, 200);
+    assert.equal(savedBrand.payload.data.brand.businessName, "River City Cabinet Co.");
+    assert.equal(savedBrand.payload.data.brand.invoiceStyle, "field");
+
+    const isolatedBrand = await requestJson(baseUrl, "/api/v1/document-brand", { cookie: other.cookie });
+    assert.equal(isolatedBrand.response.status, 200);
+    assert.notEqual(isolatedBrand.payload.data.brand.businessName, "River City Cabinet Co.");
+
+    const estimateTemplate = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "estimate_template",
+        localId: "estimate-template-standard",
+        title: "Standard cabinet estimate",
+        status: "active",
+        recordDate: "2026-07-14",
+        payload: {
+          id: "estimate-template-standard",
+          name: "Standard cabinet estimate",
+          savedAt: "2026-07-14T12:00:00.000Z",
+          laborHours: 24,
+          hourlyRate: 95,
+          crewSize: 2,
+          materials: 1200,
+          subCosts: 0,
+          overheadPct: 12,
+          marginPct: 18,
+          contingencyPct: 7,
+          scope: "Cabinet installation",
+          customerNote: "Final site measure required.",
+        },
+      },
+    });
+    assert.equal(estimateTemplate.response.status, 200);
+    const estimateTemplateList = await requestJson(baseUrl, "/api/v1/tool-records?type=estimate_template", { cookie: owner.cookie });
+    assert.equal(estimateTemplateList.response.status, 200);
+    assert.equal(estimateTemplateList.payload.data.records.length, 1);
+    assert.equal(estimateTemplateList.payload.data.records[0].localId, "estimate-template-standard");
+    const isolatedEstimateTemplates = await requestJson(baseUrl, "/api/v1/tool-records?type=estimate_template", { cookie: other.cookie });
+    assert.equal(isolatedEstimateTemplates.response.status, 200);
+    assert.equal(isolatedEstimateTemplates.payload.data.records.length, 0);
+
     const anonList = await requestJson(baseUrl, "/api/v1/tool-records?type=payment_record");
     assert.equal(anonList.response.status, 401);
 
@@ -410,6 +479,10 @@ if (!testDatabaseUrl) {
     assert.match(deliveredEstimate.text, /Estimate date: 2026-07-14/);
     assert.match(deliveredEstimate.text, /Materials are included/);
     assert.doesNotMatch(deliveredEstimate.text, /margin|overhead|contingency/i);
+    assert.match(deliveredEstimate.html, /River City Cabinet Co\./);
+    assert.match(deliveredEstimate.html, /office@rivercity\.example/);
+    assert.match(deliveredEstimate.html, /Created with RIVT\./);
+    assert.match(deliveredEstimate.html, /border-bottom:3px solid/);
 
     const sentReplay = await requestJson(baseUrl, "/api/v1/estimates/estimate%3Aemail-one/send", {
       method: "POST",
@@ -534,6 +607,10 @@ if (!testDatabaseUrl) {
     assert.match(deliveredInvoice.html, />Pay from a US bank account</);
     assert.doesNotMatch(deliveredInvoice.html, /checkout\.stripe\.com/);
     assert.doesNotMatch(deliveredInvoice.text, /margin|overhead|contingency/i);
+    assert.match(deliveredInvoice.html, /River City Cabinet Co\./);
+    assert.match(deliveredInvoice.html, /CBC-12345/);
+    assert.match(deliveredInvoice.html, /Created with RIVT\./);
+    assert.match(deliveredInvoice.html, /background:#151515/);
 
     const invoiceReplay = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
       method: "POST",

@@ -2434,3 +2434,29 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   rendered Tools QA, diff check, and a zero-vulnerability production
   dependency audit. The branch remains review-only and no deployment
   evidence is claimed.
+
+## Traceability Addendum - 2026-07-26 Customer Document Branding and Templates
+
+- `GA-UX-003` gains a single truthful customer-document identity: Profile →
+  Business now controls the company name, optional customer-visible contact
+  fields, license display, logo, and guided Estimate/Invoice layouts used by
+  preview, print/PDF, and delivered email.
+- `GA-UX-005` gains persistence and honesty evidence: branding is
+  account-owned rather than browser-only, upload and save failures remain
+  visible, estimate templates exclude recipient/document identity, and a
+  branding change makes a formerly sent document visibly unsent.
+- `GA-UX-006` gains rendered desktop, 390px, and compact-phone coverage for
+  Classic, Compact, and Field customer documents with tokenized app controls,
+  print-stable document colors, no horizontal overflow, and reachable
+  delivery actions.
+- `GA-DATA-001` gains migration `0032_document_branding`: account-scoped
+  document profiles, private raster-logo object references, and
+  `estimate_template` records have a reviewed rollback. Cross-account brand
+  and template reads are integration-tested.
+- `GA-OPS-007` gains local evidence from build, application/security lint,
+  89 unit/frontend tests, targeted account-isolation/email-branding and full
+  migration-lifecycle integration, fail-closed auth and jobs/discovery E2E,
+  rendered Tools QA, diff check, and zero production dependency
+  vulnerabilities. The aggregate integration command encountered the known
+  push-notification suite stall before this packet and is not represented as
+  passed. No deployment evidence is claimed.

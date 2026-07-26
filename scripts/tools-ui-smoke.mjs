@@ -448,6 +448,36 @@ async function configurePage(page) {
   await page.route("**/api/v1/standalone-projects", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { projects: [] } }) }),
   );
+  let documentBrand = {
+    businessName: "RIVT Test Crew",
+    businessEmail: "office@rivttest.example",
+    businessPhone: "(904) 555-0188",
+    businessAddress: "Jacksonville, FL",
+    website: "https://rivttest.example",
+    licenseNumber: "EC-TEST-01",
+    estimateStyle: "classic",
+    invoiceStyle: "classic",
+    showContact: true,
+    showAddress: true,
+    showLicense: true,
+    logoUploadId: null,
+    logoUrl: null,
+    updatedAt: "2026-07-26T12:00:00.000Z",
+  };
+  await page.route("**/api/v1/document-brand", (route) => {
+    if (route.request().method() === "PUT") {
+      documentBrand = {
+        ...documentBrand,
+        ...route.request().postDataJSON(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { brand: documentBrand } }),
+    });
+  });
   await page.route(/\/api\/v1\/tool-records(?:\/.*|\?.*)?$/, (route) => {
     const method = route.request().method();
     if (method === "GET") {
@@ -1277,16 +1307,24 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Labor hours").fill("8");
   await page.getByLabel("Hourly rate").fill("85.50");
   await page.getByLabel("Materials").fill("245.25");
+  await page.getByLabel("Estimate templates").getByText("Templates", { exact: true }).click();
+  await page.getByLabel("Template name").fill(`${viewportName} estimate template`);
+  await page.getByRole("button", { name: "Save template" }).click();
+  await page.getByText("Template saved without customer identity or estimate number.", { exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await page.getByLabel("Customer email").count(), 0, "Customer fields should stay out of the pricing step");
   await estimateSteps.getByRole("button", { name: "2 Customer" }).click();
   await page.getByLabel("Customer name").fill("Estimate Customer");
   await page.getByLabel("Customer email").fill("estimate@example.com");
   await page.getByLabel("Scope").fill("Install and test the agreed field work.");
+  await page.getByRole("radio", { name: /Compact/ }).first().click();
+  await page.getByText("Compact style saved for future estimates.", { exact: false }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Review", exact: true }).click();
   await page.waitForTimeout(100);
   const estimateValidationError = await page.locator(".v2-record-error").filter({ visible: true }).allTextContents();
   assert.equal(estimateValidationError.join(" "), "", `estimate should be review-ready: ${estimateValidationError.join(" ")}`);
   await page.getByLabel("Printable estimate preview").waitFor({ timeout: 15_000 });
+  await page.getByLabel("Printable estimate preview").getByText("RIVT Test Crew", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByLabel("Printable estimate preview").evaluate((node) => node.classList.contains("is-template-compact")), true);
   await page.getByText(/labor load/i).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Send email", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
@@ -1315,6 +1353,8 @@ async function runToolsFlow(page, viewportName) {
   await page.getByLabel("Pay to").fill("RIVT Test Contractor");
   await page.getByLabel("Recipient email").fill("billing@example.com");
   await page.getByLabel("Recipient phone").fill("+19045550123");
+  await page.getByRole("radio", { name: /Field/ }).last().click();
+  await page.getByText("Field style saved for future invoices.", { exact: false }).waitFor({ timeout: 15_000 });
   await invoiceDraftSteps.getByRole("button", { name: "1 Items" }).click();
   await page.getByLabel("Invoice templates").getByText("Templates", { exact: true }).click();
   await page.getByRole("button", { name: "Load" }).first().click();
@@ -1333,6 +1373,8 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("link", { name: "Text summary" }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Preview before delivery" }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Printable invoice preview").getByText("Total due", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByLabel("Printable invoice preview").getByText("RIVT Test Crew", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByLabel("Printable invoice preview").evaluate((node) => node.classList.contains("is-template-field")), true);
   await page.getByRole("heading", { name: "How should the customer pay?" }).waitFor({ timeout: 15_000 });
   await page.getByRole("radio", { name: /Pay securely by bank/ }).click();
   await page.getByRole("button", { name: "Create secure pay link" }).click();

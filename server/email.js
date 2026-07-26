@@ -23,14 +23,14 @@ export function emailProviderStatus() {
   };
 }
 
-export async function sendTransactionalEmail({ to, subject, text, html, idempotencyKey = null }) {
+export async function sendTransactionalEmail({ to, subject, text, html, attachments = [], idempotencyKey = null }) {
   const status = emailProviderStatus();
   if (!status.ok) {
     throw new ApiError(503, "EMAIL_PROVIDER_UNAVAILABLE", "Email delivery is temporarily unavailable.");
   }
 
   if (status.mode === "capture") {
-    capturedEmails.push({ to, subject, text, html, idempotencyKey, sentAt: new Date().toISOString() });
+    capturedEmails.push({ to, subject, text, html, attachments, idempotencyKey, sentAt: new Date().toISOString() });
     return { provider: "capture", id: `capture-${capturedEmails.length}` };
   }
 
@@ -43,7 +43,14 @@ export async function sendTransactionalEmail({ to, subject, text, html, idempote
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers,
-    body: JSON.stringify({ from: process.env.EMAIL_FROM, to: [to], subject, text, html }),
+    body: JSON.stringify({
+      from: process.env.EMAIL_FROM,
+      to: [to],
+      subject,
+      text,
+      html,
+      ...(attachments.length ? { attachments } : {}),
+    }),
   });
 
   if (!response.ok) {
