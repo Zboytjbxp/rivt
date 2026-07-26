@@ -226,6 +226,107 @@ async function verifyAuthConnectionRecovery(browser) {
   await context.close();
 }
 
+async function openDesktopContractorPreview(page) {
+  await page.goto(baseUrl, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: /Preview RIVT/i }).click();
+  await page.getByRole("heading", { name: /See RIVT after a year of real use/i }).waitFor({ timeout: 10_000 });
+  await page.getByRole("group", { name: "Choose preview role" }).getByRole("button", { name: /^Contractor/i }).click();
+  await page.getByRole("button", { name: /Open contractor demo/i }).click();
+  await page.waitForURL("**/app", { timeout: 10_000 });
+  await page.getByRole("heading", { name: /A year of jobs, crew, and records/i }).waitFor({ timeout: 10_000 });
+}
+
+async function verifyDesktopWorkspace(browser, theme) {
+  const context = await browser.newContext({
+    viewport: { width: 1440, height: 900 },
+    colorScheme: theme,
+    reducedMotion: "reduce",
+  });
+  await context.addInitScript((selectedTheme) => {
+    localStorage.setItem("rivt-theme-source", selectedTheme);
+    localStorage.setItem("rivt-theme-mode", selectedTheme);
+  }, theme);
+  const page = await context.newPage();
+  await configurePage(page);
+  await openDesktopContractorPreview(page);
+
+  assert.equal(
+    await page.evaluate(() => document.documentElement.dataset.theme),
+    theme,
+    `Desktop preview did not apply the ${theme} theme`,
+  );
+  await page.screenshot({
+    path: path.join(screenshotDir, `desktop-home-${theme}-1440.png`),
+    fullPage: false,
+  });
+
+  await page.getByRole("button", { name: "Work", exact: true }).click();
+  await page.locator(".v2-work-page").waitFor({ state: "visible", timeout: 10_000 });
+  assert.ok(
+    await page.locator(".v2-work-layout").evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length >= 2),
+    "Desktop Work did not retain its master-detail layout",
+  );
+  await page.screenshot({
+    path: path.join(screenshotDir, `desktop-work-${theme}-1440.png`),
+    fullPage: false,
+  });
+  await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight }));
+  assert.ok(await page.evaluate(() => window.scrollY > 0), "Desktop Work did not provide a scroll-reset test surface");
+  await page.getByRole("button", { name: "Camera", exact: true }).click();
+  await page.locator(".v2-camera-home").waitFor({ state: "visible", timeout: 10_000 });
+  await page.waitForTimeout(150);
+  assert.ok(await page.evaluate(() => window.scrollY <= 1), "Destination change preserved the prior page scroll position");
+  const albumCard = page.locator(".v2-camera-album-card").first();
+  if (await albumCard.count()) {
+    const albumBox = await albumCard.boundingBox();
+    assert.ok(albumBox && albumBox.width <= 260, "Desktop Camera album card still expands like a phone hero");
+  }
+  await page.screenshot({
+    path: path.join(screenshotDir, `desktop-camera-${theme}-1440.png`),
+    fullPage: false,
+  });
+
+  await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
+  await page.locator(".shop-talk-desktop-rail").waitFor({ state: "visible", timeout: 10_000 });
+  assert.equal(
+    await page.locator(".shop-talk-desktop-community-list > button").count() > 0,
+    true,
+    "Desktop Shop Talk did not render community shortcuts beside the global feed",
+  );
+  await page.screenshot({
+    path: path.join(screenshotDir, `desktop-shop-talk-${theme}-1440.png`),
+    fullPage: false,
+  });
+  await page.getByRole("button", { name: "Communities", exact: true }).click();
+  await page.locator(".shop-talk-community-layout.tab-communities").waitFor({ state: "visible", timeout: 10_000 });
+  assert.equal(
+    await page.locator(".shop-talk-community-layout.tab-communities > .shop-talk-detail").count(),
+    0,
+    "Communities tab still mounts the Trade News detail pane",
+  );
+
+  await page.getByRole("button", { name: "Tools", exact: true }).click();
+  await page.locator(".v2-tools-page").waitFor({ state: "visible", timeout: 10_000 });
+  const fieldCards = page.locator(".v2-tool-section-field .v2-tool-launch-card");
+  assert.ok(await fieldCards.count() >= 3, "Desktop Tools is missing core field launchers");
+  const firstRowY = await Promise.all([0, 1, 2].map(async (index) => {
+    const box = await fieldCards.nth(index).boundingBox();
+    return box?.y;
+  }));
+  assert.ok(firstRowY.every((value) => value === firstRowY[0]), "Desktop field tools did not render as a scan-friendly row");
+  await page.screenshot({
+    path: path.join(screenshotDir, `desktop-tools-${theme}-1440.png`),
+    fullPage: false,
+  });
+
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1),
+    false,
+    `Desktop ${theme} preview has horizontal overflow`,
+  );
+  await context.close();
+}
+
 try {
   await fs.rm(screenshotDir, { recursive: true, force: true });
   await fs.mkdir(screenshotDir, { recursive: true });
@@ -264,6 +365,8 @@ try {
   assert.deepEqual(consoleErrors, [], `Unexpected preview console errors:\n${consoleErrors.join("\n")}`);
   await verifyBootRecovery(browser);
   await verifyAuthConnectionRecovery(browser);
+  await verifyDesktopWorkspace(browser, "light");
+  await verifyDesktopWorkspace(browser, "dark");
   await browser.close();
   console.log(JSON.stringify({ ok: true, screenshotDir }, null, 2));
 } finally {

@@ -2,10 +2,44 @@
 
 Last updated: 2026-07-25 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Stripe Connect Accounts v2 is deployed fail-closed; sandbox ACH and connected-event coverage are verified, with human onboarding and live webhook activation still gated.
-Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md`
-Repository branch: `master` (source branch: `codex/stripe-connect-accounts-v2-sandbox-fix`)
+Current phase: Desktop release polish is locally complete; Stripe Connect Accounts v2 remains deployed fail-closed with human onboarding and live webhook activation gated.
+Active packet: `docs/delivery/packets/71_DESKTOP_RELEASE_POLISH.md`
+Repository branch: `codex/desktop-release-polish`
 Production feature release commit: `548ce531fe850679b47386e30287b990bd02b37b`
+
+## Desktop Release Polish (Complete Locally, Not Deployed)
+
+- The five-destination desktop shell keeps Home, Work, Camera, Shop Talk, and
+  Tools intact, with People remaining under Work.
+- Primary destination changes now reset document scroll, preventing Work or
+  another tall workspace from opening the next destination below its header.
+  Focused Work anchors also reserve the sticky top-bar height, so the active
+  job title remains visible. The update notice moves away from desktop page
+  headers while retaining its compact-screen placement.
+- Tools again uses the available width: three field launchers and two money
+  launchers form scan-friendly rows beneath the full-width shortcut tray.
+  Mobile keeps the proven one-hand list.
+- Camera is now a two-column desktop workbench with bounded album cards,
+  side-by-side job/private destinations, and a stable full-width action dock
+  instead of one empty album consuming the first screen.
+- Shop Talk fills the wide workspace with a real community-discovery rail.
+  Selected threads and Trade News retain their two-pane reading layouts, and
+  the Communities tab no longer mounts a hidden Trade News detail pane.
+- The sidebar active-job card and community icon tones now use shared theme
+  tokens, fixing light-theme contrast without pinning either theme.
+- Guest-preview QA now locks 1440x900 light and dark layouts, destination
+  scroll reset, Camera album bounds, the Shop Talk rail and Communities
+  composition, the three-card Tools row, and horizontal-overflow absence.
+- Verification passed: production build, lint, all 85 unit/frontend tests,
+  fail-closed authentication and jobs/discovery E2E, guest-preview rendered
+  QA, Tools rendered QA, Shop Talk/Trade News rendered QA, mobile-action QA,
+  and `npm audit --omit=dev` with zero known vulnerabilities.
+- Two gates are not claimed: the serial database integration command stalled
+  without output after clean restarts, and Work lifecycle rendered QA sees
+  fail-closed HTTP 503 responses from the locally disabled Stripe Connect
+  status route. No database or Work lifecycle pass is fabricated.
+- This branch is not merged or deployed. Production still serves the commit
+  recorded above and Packet 70's ACH activation gates remain unchanged.
 
 ## Stripe Connect Accounts v2 Correction (Deployed, Activation Gated)
 

@@ -10,6 +10,27 @@ Status values:
 
 Evidence must eventually link to implementation, automated tests, manual acceptance proof, and deployed build.
 
+## Traceability Addendum - 2026-07-25 Desktop Release Polish
+
+- `GA-UX-001` and `GA-UX-003` gain a wide-screen shell that preserves the
+  five primary destinations and keeps People under Work. Destination changes
+  reset document scroll, and focused Work anchors clear the sticky top bar.
+- `GA-UX-003` gains desktop-specific information hierarchy: Tools restores
+  field and money launcher rows, Camera bounds album cards inside a two-column
+  workbench, and the global Shop Talk feed uses its second column for real
+  community discovery rather than empty chrome.
+- `GA-UX-005` gains state and data honesty: Communities no longer mounts the
+  unrelated Trade News detail pane, and no desktop-only counts, activity, or
+  records are introduced.
+- `GA-UX-006` gains repeatable 1440x900 light/dark assertions for scroll
+  reset, horizontal overflow, Camera card bounds, Shop Talk composition, and
+  Tools grid geometry. Theme-specific sidebar and community colors now use
+  the shared `--v2-*` tokens.
+- Local verification passes build, lint, 85 unit/frontend tests, E2E,
+  guest-preview/Tools/Shop Talk/mobile rendered QA, and the production
+  dependency audit. The database integration stall and local Connect-status
+  503 boundary are recorded in Packet 71 and are not represented as passes.
+
 ## Traceability Addendum - 2026-07-25 Stripe Connect Accounts v2 Correction
 
 - A real Stripe sandbox request invalidated the original Accounts v1

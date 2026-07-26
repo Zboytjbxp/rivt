@@ -11955,6 +11955,87 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   letter-spacing: 0;
 }
 
+/* Desktop workspaces: preserve the one-hand mobile launcher while using wide
+   screens for scanning, comparison, and stable action placement. */
+@media (min-width: 1181px) {
+  .v2-tools-page .v2-tool-section-stack {
+    grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.75fr);
+    align-items: start;
+    gap: 22px;
+    min-height: 0;
+  }
+
+  .v2-tools-page .v2-field-tools-tray,
+  .v2-tools-page > .v2-tool-section-stack > .v2-tool-group {
+    grid-column: 1 / -1;
+  }
+
+  .v2-tools-page .v2-tool-section-field {
+    grid-column: 1;
+  }
+
+  .v2-tools-page .v2-tool-section-money {
+    grid-column: 2;
+  }
+
+  .v2-tools-page .v2-tool-launch-grid {
+    gap: 12px;
+  }
+
+  .v2-tools-page .v2-tool-section-field .v2-tool-launch-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .v2-tools-page .v2-tool-section-money .v2-tool-launch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .v2-tools-page .v2-tool-launch-card,
+  .v2-tools-page .v2-tool-launch-card.is-featured {
+    min-height: 116px;
+    padding: 16px;
+    border: 1px solid var(--v2-border);
+    border-radius: var(--v2-radius-lg);
+    background: var(--v2-surface-raised);
+  }
+
+  .v2-tools-page .v2-tool-launch-card:last-child {
+    border-bottom: 1px solid var(--v2-border);
+  }
+
+  .v2-tools-page .v2-tool-launch-card:hover {
+    border-color: color-mix(in srgb, var(--v2-accent) 50%, var(--v2-border));
+    background: var(--v2-surface);
+    transform: translateY(-1px);
+  }
+
+  .v2-camera-home {
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+    gap: 18px 22px;
+  }
+
+  .v2-camera-destination-strip,
+  .v2-camera-latest-panel,
+  .v2-camera-action-dock {
+    grid-column: 1 / -1;
+  }
+
+  .v2-camera-album-grid {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 240px));
+  }
+
+  .v2-camera-album-cover.is-empty {
+    min-height: 112px;
+    aspect-ratio: auto;
+  }
+
+  .v2-camera-action-dock {
+    position: sticky;
+    bottom: 18px;
+    z-index: 4;
+  }
+}
+
 .job-photos-private-albums > p,
 .job-photos-recent-captures > p,
 .job-photos-album-section > p,

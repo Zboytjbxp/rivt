@@ -3941,7 +3941,7 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
           onChange={updateFieldTools}
           onOpenMoreTools={openMoreTools}
         />
-        <section className="v2-tool-section" aria-label="Field tools">
+        <section className="v2-tool-section v2-tool-section-field" aria-label="Field tools">
           <div className="v2-tool-section-header is-simple">
             <strong>Field tools</strong>
             <small>Camera, Heavy 16th, and Jobsite</small>
@@ -3959,7 +3959,7 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
           </div>
         </section>
 
-        <section className="v2-tool-section" aria-label="Money tools">
+        <section className="v2-tool-section v2-tool-section-money" aria-label="Money tools">
           <div className="v2-tool-section-header is-simple">
             <strong>Money</strong>
             <small>Estimate and invoice</small>
