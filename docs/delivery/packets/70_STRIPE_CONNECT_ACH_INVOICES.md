@@ -118,3 +118,52 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
 - Object rows in `document-brand` scope are returned to `legacy` on rollback;
   do not delete private logo objects during schema rollback without a
   separately reviewed retention decision.
+
+## Customer-book continuity extension
+
+### Product boundary
+
+- A customer is an account-owned business/contact record for the
+  tradesperson using RIVT. It does not create a homeowner account, public
+  profile, marketplace identity, or permission to contact that person.
+- Selecting a customer copies a snapshot into the estimate or invoice. Later
+  edits to the customer book do not rewrite an already-reviewed document.
+- Customer notes are a private account log. RIVT never labels them sent,
+  received, or shared with the customer.
+
+### Server and storage
+
+- Migration `0033_customer_book` adds account-owned customers and optional
+  customer links on tool records and standalone projects. It migrates
+  existing client-contact tool records without deleting the legacy record.
+- Customer routes support account-scoped search, favorites, active/archive
+  status, recent use, private notes, and linked project/document activity.
+  Every project/document customer link is checked against the authenticated
+  account.
+- The reviewed down migration mirrors customer data back into legacy client
+  records before removing the new links/table, preserving the earlier
+  application's readable contact boundary.
+
+### Client and workflow
+
+- Estimate, Invoice, and standalone-project creation share one saved-customer
+  picker with recent/favorite ordering, search, and an inline new-customer
+  path.
+- Customer defaults can supply billing/service addresses, preferred contact
+  method, and payment terms without silently changing document totals or
+  delivery state.
+- Work -> People -> Customers provides search, favorite, edit,
+  archive/restore, duplicate email/phone warnings, and real linked activity.
+  Inbox -> Customer notes reuses the same customer records while retaining
+  explicit private-log copy.
+
+### Acceptance and rollback
+
+- Tests prove cross-account customer linking fails, archived customers remain
+  recoverable, linked activity is account-owned, and migration apply/rollback
+  preserves legacy client details.
+- Rendered Estimate, Invoice, customer-book, and customer-notes flows remain
+  usable without horizontal overflow at 390px.
+- Roll application code back before migration `0033`. Run the reviewed down
+  migration only after confirming any post-upgrade customer fields have been
+  mirrored into the retained legacy client records.

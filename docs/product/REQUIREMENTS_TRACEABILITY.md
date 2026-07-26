@@ -2460,3 +2460,32 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   vulnerabilities. The aggregate integration command encountered the known
   push-notification suite stall before this packet and is not represented as
   passed. No deployment evidence is claimed.
+
+## Traceability Addendum - 2026-07-26 Customer Book Continuity
+
+- `GA-DATA-001` gains migration `0033_customer_book`: customer identity,
+  contact details, address/default preferences, archive state, private notes,
+  and recent-use state are account-owned. Optional customer links on
+  standalone projects and tool records are ownership-validated, and the
+  reviewed rollback preserves legacy client-contact data.
+- `GA-UX-003` gains cross-workflow continuity: Estimate, Invoice, and
+  standalone-project creation share search, recent/favorite selection, and
+  inline customer creation instead of requiring repeated manual entry.
+- `GA-UX-005` gains document and communication honesty: saved documents retain
+  immutable customer snapshots, archive is reversible, linked activity is
+  computed from real records, and Customer notes explicitly remain private
+  rather than implying message delivery.
+- `GA-UX-006` gains rendered 390px evidence for the customer book, saved
+  customer selection in both money tools, and private customer notes with no
+  horizontal overflow.
+- `GA-AUTH-007` gains direct cross-account rejection evidence for customer
+  links and customer activity. No homeowner account, public customer
+  identity, or outbound-contact permission is introduced.
+- Requirement maturity does not change. Local evidence includes build,
+  application/security lint, 89 unit/frontend tests, targeted customer
+  ownership/tool-record integration, migration lifecycle, E2E, rendered
+  Tools/mobile-action QA, diff check, and a zero-vulnerability dependency
+  audit. The serial aggregate integration wrapper remained
+  buffered/non-diagnostic during a bounded four-minute attempt, so only the
+  directly passing affected suites are claimed. No deployment evidence is
+  claimed.

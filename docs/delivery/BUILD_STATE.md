@@ -2,10 +2,43 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Account-owned estimate/invoice branding and reusable estimate templates are locally verified and awaiting review; production remains on the prior invoice-payment release.
-Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (estimate/invoice document-integrity extension)
-Repository branch: `codex/estimate-invoice-final-polish`
+Current phase: Account-owned customer continuity across projects, estimates, invoices, and private notes is locally verified and awaiting review; production remains on the prior invoice-payment release.
+Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (customer-book continuity extension)
+Repository branch: `codex/customer-book-continuity`
 Production feature release commit: `03c4336142bab09e12d649ffdf0bc0364716edb6`
+
+## Customer Book Continuity (Locally Verified; Review Pending)
+
+- Migration `0033_customer_book` adds a canonical account-owned customer
+  record and optional customer links on standalone projects and tool records.
+  Existing client-contact records are migrated without deletion, and the
+  reviewed rollback mirrors customer data back before removing the new
+  schema.
+- Estimate, Invoice, and new standalone-project flows now share one searchable
+  saved-customer picker. Users can choose recent or favorite customers, add a
+  new customer inline, and reuse contact, billing/service address, preferred
+  contact, and default payment-term details.
+- Documents retain a customer snapshot as well as the canonical customer id.
+  Updating a customer later cannot rewrite a previously reviewed estimate or
+  invoice, while future documents still receive the corrected customer
+  details.
+- Work -> People -> Customers now provides a practical customer book with
+  favorites, duplicate email/phone warnings, archive/restore, and server-owned
+  recent project/document activity. Inbox -> Customer notes uses those same
+  customers but clearly remains a private log that sends nothing.
+- Server authorization rejects cross-account customer links and activity
+  reads. Customer usage/activity is derived from saved records rather than
+  fabricated counters, and archive is reversible rather than destructive.
+- Verification passed: production build; application and security lint; 89
+  unit/frontend tests; customer/tool-record ownership integration; full
+  migration lifecycle including preservation of the richer rollback payload;
+  fail-closed authentication and jobs/discovery E2E; rendered Tools QA; the
+  mobile-action/customer-book smoke at 390px with no horizontal overflow;
+  diff check; and `npm audit --omit=dev` with zero known vulnerabilities.
+- The repository-wide `npm run test` wrapper was attempted for four minutes
+  and is not claimed green because the serial integration runner remained
+  buffered/non-diagnostic. The two PostgreSQL suites changed by this extension
+  passed directly with no skips. No production deployment is claimed.
 
 ## Estimate + Invoice Branding and Templates (Locally Verified; Review Pending)
 
