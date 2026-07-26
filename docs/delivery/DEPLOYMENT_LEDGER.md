@@ -1,5 +1,37 @@
 # Deployment Ledger
 
+## 2026-07-26 - Estimate + Invoice Trust/Speed Continuity
+
+- Production source commit:
+  `fac181b52a0498a21748d032e2b79d4861f216fa`
+- Branch: `master` (source branch:
+  `codex/trust-speed-document-continuity`)
+- Railway application deployment:
+  `1d1291b9-73aa-4af2-a37f-d20ca45c367a`
+- Production: `https://rivt.pro`
+- Scope: preserve the exact account-owned Estimate/Invoice record in URLs and
+  browser history; distinguish device autosave from account save after edits;
+  keep offline recovery copy truthful; allow zero-value invoice drafts; add
+  invoice line-item Undo; and surface partial customer recent-use sync
+  outcomes.
+- Migration before/after: unchanged at `0033_customer_book`.
+- Automated gates: build, lint, 90 unit/frontend tests, fail-closed auth and
+  jobs/discovery E2E, rendered Tools QA at desktop/390px/compact-phone,
+  mobile-action QA, diff check, and a zero-vulnerability production dependency
+  audit passed. The aggregate and direct PostgreSQL runners were bounded and
+  stopped after producing no test event; no database integration pass is
+  claimed for this client-only slice.
+- Post-deploy proof: `/api/health` returned the exact feature source with
+  PostgreSQL/S3-compatible storage, configured Sentry/Web Push, configured
+  Stripe Connect Accounts v2, and ready migration `0033_customer_book`. The
+  exact-source production monitor passed in 475 ms with seven anonymous
+  private-route checks.
+- Provider/config change: only `SOURCE_COMMIT` advanced. No identity, payment,
+  email, storage, database, or rollout credential changed.
+- Rollback target:
+  `ed8a99a5277d16f8cb14eea5944e58cfa3d6442c`; source rollback only, leaving
+  migrations `0032` and `0033` in place.
+
 ## 2026-07-26 - Customer Book Continuity + Document Finish
 
 - Production source commit:

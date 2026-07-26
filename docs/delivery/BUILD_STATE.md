@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Account-owned document continuity and honest offline/save recovery are locally verified; production deployment is pending.
+Current phase: Account-owned document continuity and honest offline/save recovery are deployed and exact-source verified in production.
 Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (document-continuity hardening extension)
-Repository branch: `codex/trust-speed-document-continuity`
-Production feature release commit: `ed8a99a5277d16f8cb14eea5944e58cfa3d6442c`
+Repository branch: `master` (source branch: `codex/trust-speed-document-continuity`)
+Production feature release commit: `fac181b52a0498a21748d032e2b79d4861f216fa`
 
-## Estimate + Invoice Trust/Speed Continuity (Locally Verified)
+## Estimate + Invoice Trust/Speed Continuity (Deployed and Exact-Source Verified)
 
 - Saved Estimate and Invoice destinations now include the account-owned
   document local id in the URL. A refresh, copied link, browser back/forward,
@@ -43,6 +43,12 @@ Production feature release commit: `ed8a99a5277d16f8cb14eea5944e58cfa3d6442c`
   server route, schema, migration, authorization rule, provider setting, or
   stored production data; the existing authenticated tool-record API remains
   the account source of truth.
+- Railway deployment `1d1291b9-73aa-4af2-a37f-d20ca45c367a` serves exact
+  source `fac181b52a0498a21748d032e2b79d4861f216fa`. Live health reports ready
+  migration `0033_customer_book`, PostgreSQL/S3-compatible storage,
+  configured Sentry/Web Push, and configured Stripe Connect Accounts v2.
+  The exact-source production monitor passed in 475 ms with all seven
+  anonymous private-route checks healthy.
 
 ## Customer Book Continuity (Deployed and Exact-Source Verified)
 

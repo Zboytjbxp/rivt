@@ -2541,4 +2541,6 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   evidence includes build, lint, 90 unit/frontend tests, E2E, rendered Tools
   and mobile-action QA, diff check, and a zero-vulnerability dependency audit.
   The aggregate and direct database runners produced no test event during
-  bounded attempts, so no database integration pass is claimed.
+  bounded attempts, so no database integration pass is claimed. Production
+  source `fac181b52a0498a21748d032e2b79d4861f216fa` is exact-source verified
+  with migration `0033_customer_book` ready and the synthetic monitor passing.
