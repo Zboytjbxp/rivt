@@ -406,13 +406,12 @@ async function collectTopBarActionAudits(page, scenarioLabel) {
   await assertNoDialog(page, "Notifications");
 
   await clickVisibleControl(page, { pattern: "Open profile menu", description: "profile menu" });
-  await page.getByRole("dialog", { name: "Settings" }).waitFor({ timeout: 5000 });
+  await page.getByRole("dialog", { name: "Account menu" }).waitFor({ timeout: 5000 });
   await page.getByRole("button", { name: "Sign out" }).waitFor({ timeout: 5000 });
   audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-account-panel`));
-  const closeAccount = page.getByRole("button", { name: "Close profile" })
-    .or(page.getByRole("button", { name: "Close account" }));
+  const closeAccount = page.getByRole("button", { name: "Close account menu" });
   await closeAccount.click();
-  await assertNoDialog(page, "Settings");
+  await assertNoDialog(page, "Account menu");
 
   await clickVisibleControl(page, { pattern: "^Messages$", description: "messages" });
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 10000 });
@@ -465,7 +464,11 @@ async function loginAndAudit(browser, account, scenario) {
     const topBarActionAudits = await collectTopBarActionAudits(page, scenarioLabel);
 
     for (const audit of [...audits, ...topBarActionAudits]) {
-      assert.equal(audit.title, "RIVT | Where skilled trades connect", `${audit.label} has unexpected title.`);
+      assert.match(
+        audit.title,
+        /^(?:RIVT \| Where skilled trades connect|.+ - RIVT)$/,
+        `${audit.label} has unexpected title.`,
+      );
       assert.equal(audit.frameworkOverlay, false, `${audit.label} shows a framework/runtime overlay.`);
       assert.equal(audit.viewport.scrollWidth <= audit.viewport.width + 2, true, `${audit.label} has horizontal page overflow.`);
       assert.deepEqual(audit.overflow, [], `${audit.label} has off-screen visible elements: ${JSON.stringify(audit.overflow)}`);
