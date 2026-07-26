@@ -1,5 +1,38 @@
 # Deployment Ledger
 
+## 2026-07-26 - Invoice Payment Clarity + Quick Use ACH
+
+- Production source commit:
+  `03c4336142bab09e12d649ffdf0bc0364716edb6`
+- Branch: `master` (source branch: `codex/invoice-payment-clarity`)
+- Railway application deployment:
+  `2840ba54-936e-4ddf-bf79-697925171479`
+- Railway exact-source metadata deployment:
+  `df9a82ed-111f-4ccf-be23-2fe44670c30b`
+- Production: `https://rivt.pro`
+- Scope: replace the ambiguous Quick use `Direct payment` invoice with an
+  explicit secure-bank-payment or sender-instructions choice; add durable,
+  account-owned tool-invoice payment requests; include a short RIVT customer
+  pay URL in email/print; and process signed settlement, failure, refund, and
+  dispute events without claiming payment before Stripe settlement.
+- Migration before/after: `0030_stripe_connect_accounts_v2` /
+  `0031_tool_invoice_payment_requests`.
+- Automated gates: build, lint, security lint, 86 unit/frontend tests, all
+  19 serial PostgreSQL integration suites, fail-closed authentication and
+  jobs/discovery E2E, migration apply/rollback, rendered Tools QA at desktop,
+  390px, and compact-phone widths, and the zero-vulnerability production
+  dependency audit passed.
+- Post-deploy proof: `/api/health` returned the exact source, ready migration
+  `0031_tool_invoice_payment_requests`, PostgreSQL/S3-compatible storage,
+  configured Sentry/Web Push, and Stripe Connect Accounts v2 enabled,
+  configured, and webhook-configured. The production monitor passed with
+  seven anonymous private-route checks in 502 ms.
+- Rollback: set `STRIPE_CONNECT_ACH_ENABLED=false` to stop new link creation
+  while retaining webhook/status handling for outstanding payments. Do not
+  roll migration 0031 down while any tool-invoice payment request exists.
+- Remaining controlled proof: create one live Quick use customer page from
+  an onboarded merchant account and stop before submitting a real debit.
+
 ## 2026-07-25 - Desktop Release Polish
 
 - Production source commit:

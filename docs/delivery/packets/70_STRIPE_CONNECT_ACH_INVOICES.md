@@ -60,6 +60,11 @@ Let an invoice author offer a Stripe-hosted US bank-account payment option witho
   `0031_tool_invoice_payment_requests`, a server-owned email containing the
   short `/pay/{requestId}` URL, and refund/dispute-safe status updates.
 - Exact-source production monitor passes after deployment.
+- Production proof: source
+  `03c4336142bab09e12d649ffdf0bc0364716edb6` serves ready migration `0031`,
+  Stripe Connect Accounts v2 enabled/configured/webhook-configured, and a
+  passing exact-source monitor. Controlled live link creation from an
+  onboarded merchant remains pending; no real debit is required.
 
 ## Rollback
 

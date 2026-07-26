@@ -129,9 +129,15 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   delivery. Stripe invoices show and email a real pay action; other methods
   require exact sender instructions. The legacy ambiguous `Direct payment`
   fallback is not accepted as sufficient customer direction.
-- Local evidence includes build, lint, security lint, 86 unit/frontend tests,
-  migration apply/rollback, server-owned invoice email/redirect integration,
-  and rendered desktop/390px/compact Tools proof.
+- Evidence includes build, lint, security lint, 86 unit/frontend tests, all
+  19 serial database integration suites, fail-closed authentication and
+  jobs/discovery E2E, migration apply/rollback, server-owned invoice
+  email/redirect integration, rendered desktop/390px/compact Tools proof,
+  zero known production dependency vulnerabilities, exact-source production
+  health on migration `0031`, and a passing production monitor.
+- A controlled live Quick use payment-link creation from an onboarded
+  merchant remains required before claiming the provider path was physically
+  exercised in production; no real debit is required for that proof.
 
 ## Traceability Addendum - 2026-07-25 Jacksonville Launch-Readiness Closure
 

@@ -2,12 +2,12 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Invoice payment clarity and Quick use ACH support are locally verified and awaiting production deployment.
+Current phase: Invoice payment clarity and Quick use ACH support are deployed and exact-source verified.
 Active packet: `docs/delivery/packets/70_STRIPE_CONNECT_ACH_INVOICES.md` (payment-clarity extension)
-Repository branch: `codex/invoice-payment-clarity`
-Production feature release commit: pending deployment
+Repository branch: `master` (source branch `codex/invoice-payment-clarity`)
+Production feature release commit: `03c4336142bab09e12d649ffdf0bc0364716edb6`
 
-## Invoice Payment Clarity + Quick Use ACH (Locally Verified)
+## Invoice Payment Clarity + Quick Use ACH (Deployed and Exact-Source Verified)
 
 - Invoice Review now asks one explicit question before delivery: how the
   customer should pay. The sender chooses either a Stripe-hosted US bank
@@ -41,8 +41,17 @@ Production feature release commit: pending deployment
   tool-record/email integration (including the short public redirect and no
   leaked Stripe URL), rendered Tools QA across desktop, 390px, and compact
   phone layouts, and `npm audit --omit=dev` with zero known vulnerabilities.
-- Deployment, exact-source health, migration readiness, and a controlled
-  live Quick use payment-link smoke remain pending for this extension.
+- Railway application deployment
+  `2840ba54-936e-4ddf-bf79-697925171479` and exact-source metadata deployment
+  `df9a82ed-111f-4ccf-be23-2fe44670c30b` serve the release. Live health reports
+  exact source `03c4336142bab09e12d649ffdf0bc0364716edb6`, ready migration
+  `0031_tool_invoice_payment_requests`, PostgreSQL/S3-compatible storage,
+  configured Sentry/Web Push, and Stripe Connect Accounts v2 enabled,
+  configured, and webhook-configured. The production monitor passed with
+  seven anonymous private-route checks in 502 ms.
+- One controlled live Quick use payment-link creation from an onboarded
+  merchant account remains the only unclaimed provider proof. No real debit
+  was submitted or invented during deployment verification.
 
 ## Desktop Release Polish (Deployed and Live-Verified)
 
