@@ -278,7 +278,8 @@ async function collectUiAudit(page, label) {
         notifications: controls.some((control) => /notification|bell/i.test(control.name)),
         profile: controls.some((control) => /profile|account|avatar|sign out/i.test(control.name)),
       },
-      hasMoreNav: controls.some((control) => control.name === "More"),
+      hasMoreNav: [...document.querySelectorAll('[aria-label="Primary navigation"] button, [aria-label="Primary navigation"] a')]
+        .some((control) => visible(control) && textOf(control) === "More"),
       roleToggleVisible: [...document.querySelectorAll(".role-toggle")].some(visible),
       landmarks: {
         main: [...document.querySelectorAll("main,[role='main']")].some(visible),

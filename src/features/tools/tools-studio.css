@@ -11859,7 +11859,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   }
 
   .v2-tools-page .v2-field-tools-tray-header > button {
-    min-height: 36px;
+    min-height: 44px;
     padding-inline: 8px;
     border: 1px solid var(--v2-border);
     border-radius: var(--v2-radius-sm);
