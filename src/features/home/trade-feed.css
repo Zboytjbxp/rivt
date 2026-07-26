@@ -267,7 +267,7 @@
   height: 38px;
   flex: 0 0 auto;
   border-radius: var(--v2-radius-md);
-  background: var(--v2-accent);
+  background: var(--v2-accent-fill);
   color: var(--v2-on-accent);
 }
 
@@ -400,7 +400,7 @@
 .trade-feed-start-action {
   padding: 0 12px;
   border: 0;
-  background: var(--v2-accent);
+  background: var(--v2-accent-fill);
   color: var(--v2-on-accent);
   cursor: pointer;
 }
@@ -578,7 +578,7 @@
   flex: 0 0 auto;
 }
 
-.trade-post-avatar.is-tone-0 { background: var(--v2-accent); }
+.trade-post-avatar.is-tone-0 { background: var(--v2-accent-fill); }
 .trade-post-avatar.is-tone-1 { background: var(--v2-teal); }
 .trade-post-avatar.is-tone-2 { background: var(--v2-info); }
 .trade-post-avatar.is-tone-3 { background: var(--v2-warning); }
@@ -863,7 +863,7 @@
   }
 
   .trade-feed-community-count {
-    font-size: calc(11px * var(--v2-text-scale));
+    font-size: calc(12px * var(--v2-text-scale));
     min-height: 14px;
   }
 

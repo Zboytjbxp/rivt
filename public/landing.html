@@ -5,10 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>RIVT — Built for the Trade. Not the Desk.</title>
   <meta name="description" content="Time tracking, estimates, job photos, expense logging, and crew tools for field contractors and tradespeople. Free to use, with Pro at $99/year." />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Instrument+Sans:ital,wght@0,400..800;1,400..800&display=swap" rel="stylesheet" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="RIVT — Built for the Trade. Not the Desk." />
+  <meta property="og:description" content="Field work, estimates, job photos, expenses, and crew tools for skilled trades." />
+  <meta property="og:url" content="https://rivt.pro/" />
+  <meta property="og:image" content="https://rivt.pro/rivt-social-card.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="RIVT — Built for the Trade. Not the Desk." />
+  <meta name="twitter:description" content="Field work, estimates, job photos, expenses, and crew tools for skilled trades." />
+  <meta name="twitter:image" content="https://rivt.pro/rivt-social-card.png" />
+  <link rel="preload" href="/assets/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/assets/fonts/ibm-plex-mono-600-latin.woff2" as="font" type="font/woff2" crossorigin />
   <style>
+    @font-face {
+      font-family: "Instrument Sans";
+      src: url("/assets/fonts/instrument-sans-latin.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 400 800;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "IBM Plex Mono";
+      src: url("/assets/fonts/ibm-plex-mono-600-latin.woff2") format("woff2");
+      font-style: normal;
+      font-weight: 500 600;
+      font-display: swap;
+    }
     /* ── Custom Properties ─────────────────────────────────────── */
     :root {
       --accent:  #f97316;

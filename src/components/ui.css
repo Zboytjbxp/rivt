@@ -82,6 +82,64 @@
   transition: background 160ms ease, color 160ms ease, transform 80ms ease;
 }
 
+.v2-install-prompt {
+  position: fixed;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: var(--v2-z-toast);
+  display: grid;
+  width: min(440px, calc(100vw - 32px));
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-md);
+  color: var(--v2-text);
+}
+
+.v2-install-prompt-icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent-text);
+}
+
+.v2-install-prompt > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v2-install-prompt small {
+  color: var(--v2-text-muted);
+  line-height: 1.35;
+}
+
+@media (max-width: 900px) {
+  .v2-install-prompt {
+    right: 12px;
+    bottom: calc(82px + env(safe-area-inset-bottom));
+    width: calc(100vw - 24px);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .v2-install-prompt .v2-primary-button {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .v2-install-prompt > .v2-icon-button {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
 .v2-icon-button:hover {
   background: var(--v2-surface-muted);
   color: var(--v2-text);

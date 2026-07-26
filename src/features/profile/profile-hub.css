@@ -1086,8 +1086,8 @@
 
 /* Quiz option marker — reflects selection state */
 .v2-quiz-option.is-selected .v2-quiz-option-marker {
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
 }
 
 .v2-quiz-option.is-correct .v2-quiz-option-marker {
@@ -2279,7 +2279,7 @@
 .v2-document-style-chooser small {
   align-self: start;
   color: var(--v2-text-muted);
-  font-size: calc(11px * var(--v2-text-scale));
+  font-size: calc(12px * var(--v2-text-scale));
   line-height: 1.35;
 }
 
@@ -2363,7 +2363,7 @@
   width: 40px;
   height: 40px;
   border-radius: var(--v2-radius-md);
-  background: var(--v2-accent);
+  background: var(--v2-accent-fill);
   color: var(--v2-on-accent);
   font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-display, 900);

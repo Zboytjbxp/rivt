@@ -103,7 +103,7 @@
   place-items: center;
   padding: 0 5px;
   border-radius: var(--v2-radius-pill);
-  background: var(--v2-accent);
+  background: var(--v2-accent-fill);
   color: var(--v2-on-accent);
   font-size: var(--v2-text-xs);
   line-height: 1;
@@ -490,7 +490,7 @@
 
 .v2-workspace-arrival span {
   color: var(--v2-success);
-  font-size: calc(11px * var(--v2-text-scale));
+  font-size: calc(12px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1019,8 +1019,8 @@
 
 .v2-work-detail-actions .v2-primary-button {
   border-color: var(--v2-accent);
-  background: var(--v2-accent);
-  color: #ffffff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent)fff;
 }
 
 .v2-work-detail-actions .v2-destructive-button {
@@ -1405,8 +1405,8 @@
 
 .v2-match-actions .v2-primary-button {
   border-color: var(--v2-accent);
-  background: var(--v2-accent);
-  color: #ffffff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent)fff;
 }
 
 .v2-match-actions .v2-destructive-button {
@@ -1793,7 +1793,7 @@
     padding: 0 18px;
     border: 0;
     border-radius: var(--v2-radius-pill);
-    background: var(--v2-accent);
+    background: var(--v2-accent-fill);
     color: var(--v2-on-accent);
     font: inherit;
     font-size: calc(15px * var(--v2-text-scale));
@@ -2576,7 +2576,7 @@
 
 .v2-checklist-check[aria-pressed="true"] {
   border-color: var(--v2-accent);
-  background: var(--v2-accent);
+  background: var(--v2-accent-fill);
   color: var(--v2-on-accent);
 }
 
@@ -3169,8 +3169,8 @@
 .v2-status-step.is-done .v2-status-step-circle,
 .v2-status-step.is-current .v2-status-step-circle {
   border-color: var(--v2-accent);
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
 }
 
 .v2-status-step.is-future .v2-status-step-circle {

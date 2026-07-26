@@ -96,8 +96,8 @@
 
 .moderation-filter-row button.is-active {
   border-color: var(--v2-accent);
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
 }
 
 .moderation-summary-line {

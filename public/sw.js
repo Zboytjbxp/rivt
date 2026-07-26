@@ -2,8 +2,20 @@ const BUILD_ID = new URL(self.location.href).searchParams.get('build') || 'devel
 const CACHE = `rivt-assets-${BUILD_ID.replace(/[^a-z0-9_-]+/gi, '-').slice(-72)}`;
 const OFFLINE_DOCUMENT = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVT needs a connection</title><style>body{margin:0;display:grid;min-height:100vh;place-items:center;padding:24px;box-sizing:border-box;background:#ff4b00;color:#0b0b0b;font:16px/1.45 Arial,sans-serif}main{width:min(100%,380px)}h1{margin:10px 0;font-size:34px;line-height:1}strong{letter-spacing:.12em}</style></head><body><main><strong>RIVT</strong><h1>Connect to open RIVT.</h1><p>This app update needs a connection before it can open safely. Your server-backed account and records are not affected.</p></main></body></html>`;
 
+async function precacheAppShell() {
+  const cache = await caches.open(CACHE);
+  const response = await fetch('/app', { cache: 'no-store' });
+  if (!response.ok) throw new Error(`App shell returned ${response.status}`);
+  const html = await response.clone().text();
+  await cache.put('/', response.clone());
+  await cache.put('/app', response);
+  const assetPaths = [...html.matchAll(/(?:src|href)=["'](\/assets\/[^"'?#]+(?:\?[^"']*)?)["']/g)]
+    .map((match) => match[1]);
+  await Promise.allSettled([...new Set(assetPaths)].map((assetPath) => cache.add(assetPath)));
+}
+
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE));
+  e.waitUntil(precacheAppShell().catch(() => caches.open(CACHE)));
   self.skipWaiting();
 });
 
@@ -22,22 +34,42 @@ self.addEventListener('fetch', e => {
   if (e.request.mode === 'navigate') {
     e.respondWith(
       fetch(e.request, { cache: 'no-store' })
-        .catch(() => new Response(OFFLINE_DOCUMENT, {
-          headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
-          status: 503,
-        }))
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            void caches.open(CACHE).then((cache) => {
+              void cache.put('/', clone);
+            });
+          }
+          return response;
+        })
+        .catch(async () => (
+          await caches.match('/app')
+          || await caches.match('/')
+          || new Response(OFFLINE_DOCUMENT, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+            status: 503,
+          })
+        ))
     );
     return;
   }
-  if (!url.pathname.startsWith('/assets/')) return;
+  if (!url.pathname.startsWith('/assets/') && !url.pathname.startsWith('/brand/')) return;
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request).then((response) => {
-      if (response.ok && response.type === 'basic') {
-        const clone = response.clone();
-        void caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+    caches.match(e.request).then((cached) => {
+      const refreshed = fetch(e.request).then((response) => {
+        if (response.ok && response.type === 'basic') {
+          const clone = response.clone();
+          void caches.open(CACHE).then((cache) => cache.put(e.request, clone));
+        }
+        return response;
+      });
+      if (cached) {
+        void refreshed.catch(() => undefined);
+        return cached;
       }
-      return response;
-    }))
+      return refreshed;
+    })
   );
 });
 

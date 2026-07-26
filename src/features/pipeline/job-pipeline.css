@@ -73,7 +73,7 @@
 }
 .v2-pipeline-move-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .v2-pipeline-move-fwd {
-  background: var(--v2-accent); color: white; border-color: var(--v2-accent);
+  background: var(--v2-accent-fill); color: var(--v2-on-accent); border-color: var(--v2-accent);
 }
 .v2-pipeline-empty {
   padding: 20px 12px; text-align: center; color: var(--v2-text-muted);

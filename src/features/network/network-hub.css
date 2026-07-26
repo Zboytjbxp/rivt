@@ -746,8 +746,8 @@
 }
 
 .v2-crew-view-toggle button.active {
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
   border-color: var(--v2-accent);
 }
 
@@ -822,8 +822,8 @@
   height: 18px;
   padding: 0 4px;
   border-radius: var(--v2-radius-pill);
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
   font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   font-variant-numeric: tabular-nums;
@@ -1168,7 +1168,7 @@
 .v2-client-form textarea { resize: vertical; min-height: 72px; }
 .v2-client-duplicate { margin: 0; padding: 10px 12px; border-radius: var(--v2-radius-sm); background: var(--v2-warning-soft); color: var(--v2-warning); font-size: var(--v2-text-sm); }
 .v2-client-form-btns { display: flex; gap: 8px; }
-.v2-client-save-btn { flex: 1; padding: 10px; background: var(--v2-accent); color: var(--v2-on-accent); border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); font-family: inherit; font-size: calc(14px * var(--v2-text-scale)); cursor: pointer; }
+.v2-client-save-btn { flex: 1; padding: 10px; background: var(--v2-accent-fill); color: var(--v2-on-accent); border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); font-family: inherit; font-size: calc(14px * var(--v2-text-scale)); cursor: pointer; }
 .v2-client-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .v2-client-cancel-btn { padding: 10px 16px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); color: var(--v2-text-muted); font-family: inherit; font-size: calc(14px * var(--v2-text-scale)); cursor: pointer; }
 .v2-client-toolbar { display: flex; align-items: center; gap: 10px; padding: 0 16px 12px; }
@@ -1285,8 +1285,8 @@
 }
 
 .v2-crew-trade-pill.active {
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
   border-color: var(--v2-accent);
 }
 
@@ -1450,8 +1450,8 @@
   gap: 4px;
   flex: 1;
   padding: 7px 10px;
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
   border: none;
   border-radius: var(--v2-radius-sm);
   font: inherit;

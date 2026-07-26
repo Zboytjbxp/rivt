@@ -245,7 +245,7 @@
 /* Pro badge used in settings */
 .v2-pro-badge {
   display: inline-flex; align-items: center; gap: 4px;
-  background: var(--v2-accent); color: white; font-size: calc(13px * var(--v2-text-scale));
+  background: var(--v2-accent-fill); color: var(--v2-on-accent); font-size: calc(13px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold); padding: 2px 8px; border-radius: var(--v2-radius-pill);
   letter-spacing: 0.05em; text-transform: uppercase;
 }
@@ -375,8 +375,8 @@
   width: 100%;
   min-height: 46px;
   padding: 12px;
-  background: var(--v2-accent);
-  color: white;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
   border: none;
   border-radius: var(--v2-radius-md);
   font-size: calc(14px * var(--v2-text-scale));

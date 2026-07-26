@@ -170,8 +170,8 @@
   height: 24px;
   place-items: center;
   border-radius: var(--v2-radius-pill);
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
   font-size: calc(13px * var(--v2-text-scale));
 }
 
@@ -300,8 +300,8 @@
 
 .v2-inbox-composer-actions .v2-primary-button {
   border-color: var(--v2-accent);
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
 }
 
 .v2-inbox-item {
@@ -687,8 +687,8 @@
 }
 
 .v2-msg-template-add-form button:first-of-type {
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
 }
 
 /* ─── Feature 4: Emoji Reactions ─────────────────────────────────────────── */
@@ -719,7 +719,7 @@
 
 .v2-msg-reaction-private {
   color: var(--v2-text-muted);
-  font-size: calc(11px * var(--v2-text-scale));
+  font-size: calc(12px * var(--v2-text-scale));
   line-height: 1;
 }
 
@@ -909,11 +909,11 @@
 .v2-jobnotes-bubble-time { font-size: calc(13px * var(--v2-text-scale)); color: var(--v2-text-muted); margin-top: 4px; }
 .v2-jobnotes-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--v2-text-muted); font-size: calc(14px * var(--v2-text-scale)); padding: 40px; text-align: center; }
 .v2-jobnotes-chips { padding: 8px 16px; display: flex; gap: 6px; overflow-x: auto; border-top: 1px solid var(--v2-border); }
-.v2-jobnotes-chip { padding: 6px 12px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: 20px; font-size: calc(13px * var(--v2-text-scale)); color: var(--v2-text-muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+.v2-jobnotes-chip { min-height: 44px; padding: 6px 12px; background: var(--v2-surface-muted); border: 1px solid var(--v2-border); border-radius: 20px; font-size: calc(13px * var(--v2-text-scale)); color: var(--v2-text-muted); cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .v2-jobnotes-chip:active { background: var(--v2-accent-soft); color: var(--v2-accent); border-color: var(--v2-accent); }
 .v2-jobnotes-input-row { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--v2-border); background: var(--v2-surface); }
 .v2-jobnotes-input { flex: 1; padding: 10px 12px; border: 1px solid var(--v2-border); border-radius: var(--v2-radius-sm); background: var(--v2-surface-muted); color: var(--v2-text); font-size: calc(14px * var(--v2-text-scale)); }
-.v2-jobnotes-send-btn { padding: 10px 16px; background: var(--v2-accent); color: white; border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.v2-jobnotes-send-btn { padding: 10px 16px; background: var(--v2-accent-fill); color: var(--v2-on-accent); border: none; border-radius: var(--v2-radius-sm); font-weight: var(--v2-weight-bold); cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap; }
 .v2-jobnotes-no-jobs { padding: 40px 20px; text-align: center; color: var(--v2-text-muted); font-size: calc(14px * var(--v2-text-scale)); }
 
 /* ─── Inbox tab bar (Messages / Clients) ─────────────────────────────────── */
@@ -1126,8 +1126,8 @@
 }
 
 .v2-ct-bubble.is-mine .v2-ct-text {
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
   border-bottom-right-radius: 4px;
 }
 
@@ -1211,8 +1211,8 @@
   height: 36px;
   border: none;
   border-radius: 50%;
-  background: var(--v2-accent);
-  color: #fff;
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
   cursor: pointer;
   flex-shrink: 0;
   transition: opacity 0.12s;

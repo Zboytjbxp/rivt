@@ -1,3 +1,19 @@
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("/assets/fonts/instrument-sans-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("/assets/fonts/ibm-plex-mono-600-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500 600;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light;
   font-family:
@@ -41,7 +57,7 @@
   --v2-surface-strong: #0b0b0b;
   --text: #0d1114;
   --muted: #5f686e;
-  --faint: #88959b;
+  --faint: #5f6668;
   --v2-text-secondary: var(--muted);
   --border: #e3e8ea;
   --border-strong: #cad3d7;
@@ -121,7 +137,7 @@ body::selection {
   --v2-surface-strong: #f2f5f6;
   --text: #f2f5f6;
   --muted: #a4b0ac;
-  --faint: #788681;
+  --faint: #a4b0ac;
   --border: rgba(242, 245, 246, 0.09);
   --border-strong: rgba(242, 245, 246, 0.16);
   --accent-soft: #392015;
@@ -565,7 +581,7 @@ textarea:focus-visible {
 
 .auth-intro-account-action span {
   color: rgba(11, 11, 11, 0.58);
-  font-size: calc(10px * var(--v2-text-scale));
+  font-size: calc(12px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   letter-spacing: 0.12em;
   line-height: 1.1;
@@ -1570,7 +1586,7 @@ textarea:focus-visible {
 
 .route-error-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
@@ -1586,7 +1602,7 @@ textarea:focus-visible {
 
 .route-error-actions button:first-child {
   border-color: var(--v2-accent);
-  background: var(--v2-accent);
+  background: var(--v2-accent-fill);
   color: var(--v2-on-accent, #fff);
 }
 
@@ -1676,7 +1692,7 @@ textarea:focus-visible {
 
 .appearance-mode-control button small {
   color: var(--muted);
-  font-size: calc(11px * var(--v2-text-scale));
+  font-size: calc(12px * var(--v2-text-scale));
   line-height: 1.2;
 }
 
@@ -11735,7 +11751,7 @@ html[data-rivt-compact-device="true"] .auth-preview-roles {
   }
 
   .auth-preview-roles button small {
-    font-size: calc(11px * var(--v2-text-scale));
+    font-size: calc(12px * var(--v2-text-scale));
   }
 
   .auth-preview-actions .secondary-action {
@@ -11790,14 +11806,14 @@ html[data-rivt-compact-device="true"] .auth-preview-roles {
   .guest-switch {
     min-height: 36px;
     padding-inline: 8px;
-    font-size: calc(11px * var(--v2-text-scale));
+    font-size: calc(12px * var(--v2-text-scale));
   }
 
   .guest-banner .primary-action,
   .guest-exit {
     min-height: 36px;
     padding-inline: 8px;
-    font-size: calc(11px * var(--v2-text-scale));
+    font-size: calc(12px * var(--v2-text-scale));
   }
 }
 
