@@ -2,12 +2,44 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Canonical contacts foundation is deployed and exact-source verified.
-Active packet: `docs/delivery/packets/77_CANONICAL_CONTACTS_FOUNDATION.md`
-Repository branch: `master` (source branch:
-`codex/canonical-contacts-foundation`)
+Current phase: Contact workflow integration is in local verification.
+Active packet: `docs/delivery/packets/78_CONTACT_WORKFLOW_INTEGRATION.md`
+Repository branch: `codex/contact-workflow-integration`
 Production feature release commit:
 `fe405c0c650ea44134f780c0b308041089cf139d`
+
+## Contact workflow integration
+
+- Added one shared, role-aware Contact picker and reused it for Estimate,
+  Invoice, and Materials instead of creating another customer or supplier
+  silo.
+- Estimate and Invoice continue to preserve compatibility customer IDs and
+  immutable document snapshots while their selection/creation flow now uses
+  the canonical Contacts directory.
+- Materials price entries can retain a canonical Supplier contact ID. Manual
+  supplier text remains a transparent one-time-entry option and is not
+  presented as a saved Contact.
+- Replaced canonical jobs' device-only site-contact state with authenticated,
+  account-owned job links for relationship role, per-role primary status, and
+  job-specific private notes. Removing a link does not delete the Contact.
+- Older device-only site contacts remain visible with an explicit
+  record-by-record move action. The local copy is removed only after the
+  canonical Contact and job link save successfully.
+- Kept the message boundary honest: RIVT Messages is for real RIVT account
+  conversations. A private external Contact is not shown as messageable when
+  no account/delivery channel exists.
+- No migration is added; this packet activates the reviewed
+  `contact_job_links` schema from `0036_canonical_contacts`.
+- Local gates pass: production build, application/security lint, 103
+  unit/frontend tests, all 21 serial PostgreSQL integration suites,
+  fail-closed authentication plus Jobs/discovery E2E, focused Tools,
+  mobile-action, and Work-lifecycle rendered QA, diff integrity, and a
+  zero-vulnerability production dependency audit.
+- The first serial aggregate run exposed a test-fixture query that still
+  treated email as an `accounts` column. The fixture was corrected to resolve
+  email through `auth_identities`; the affected Contacts suite then passed
+  independently and in the clean 21-suite aggregate rerun.
+- Deployment evidence remains pending and is not claimed here.
 
 ## Canonical contacts foundation
 

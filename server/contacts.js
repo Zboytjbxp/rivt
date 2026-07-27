@@ -110,6 +110,13 @@ const contactListSchema = z.object({
   limit: z.coerce.number().int().min(1).max(250).default(200),
 });
 
+const jobContactLinkSchema = z.object({
+  contactId: z.uuid(),
+  relationshipRole: z.string().trim().min(1).max(80),
+  notes: z.string().trim().max(1000).default(""),
+  isPrimary: z.boolean().default(false),
+});
+
 function normalizeMethod(kind, value) {
   const trimmed = String(value ?? "").trim();
   if (kind === "email") return trimmed.toLowerCase();
@@ -864,6 +871,66 @@ function mapContactActivity(row) {
   };
 }
 
+function mapContactJobLink(row) {
+  return {
+    id: row.link_id,
+    relationshipRole: row.relationship_role,
+    notes: row.link_notes || "",
+    isPrimary: Boolean(row.link_is_primary),
+    createdAt: row.link_created_at ? new Date(row.link_created_at).toISOString() : null,
+    updatedAt: row.link_updated_at ? new Date(row.link_updated_at).toISOString() : null,
+    contact: mapContact(row),
+  };
+}
+
+async function assertJobContactAccess(client, accountId, jobId) {
+  const result = await client.query(
+    `SELECT job.id
+     FROM jobs job
+     WHERE job.id = $1
+       AND (
+         job.created_by_account_id = $2
+         OR EXISTS (
+           SELECT 1
+           FROM active_work work
+           WHERE work.job_id = job.id
+             AND (
+               work.contractor_account_id = $2
+               OR work.tradesperson_account_id = $2
+             )
+         )
+       )`,
+    [jobId, accountId],
+  );
+  if (!result.rowCount) {
+    throw new ApiError(404, "JOB_NOT_FOUND", "That job is not available to this account.");
+  }
+}
+
+async function readJobContactLink(client, accountId, jobId, linkId) {
+  const result = await client.query(
+    `SELECT
+       link.id AS link_id,
+       link.relationship_role,
+       link.notes AS link_notes,
+       link.is_primary AS link_is_primary,
+       link.created_at AS link_created_at,
+       link.updated_at AS link_updated_at,
+       contact_row.*
+     FROM contact_job_links link
+     INNER JOIN LATERAL (
+       ${contactProjectionSql}
+       WHERE contact.id = link.contact_id
+         AND contact.account_id = link.account_id
+     ) contact_row ON true
+     WHERE link.account_id = $1
+       AND link.job_id = $2
+       AND link.id = $3`,
+    [accountId, jobId, linkId],
+  );
+  return result.rows[0] ? mapContactJobLink(result.rows[0]) : null;
+}
+
 export function registerContactRoutes({
   app,
   database,
@@ -1064,6 +1131,139 @@ export function registerContactRoutes({
           status: 200,
           body: {
             data: { contact },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
+  app.get("/api/v1/jobs/:jobId/contacts", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const jobId = validate(z.uuid(), request.params.jobId);
+    await assertJobContactAccess(database, request.actor.account.id, jobId);
+    const result = await database.query(
+      `SELECT
+         link.id AS link_id,
+         link.relationship_role,
+         link.notes AS link_notes,
+         link.is_primary AS link_is_primary,
+         link.created_at AS link_created_at,
+         link.updated_at AS link_updated_at,
+         contact_row.*
+       FROM contact_job_links link
+       INNER JOIN LATERAL (
+         ${contactProjectionSql}
+         WHERE contact.id = link.contact_id
+           AND contact.account_id = link.account_id
+       ) contact_row ON true
+       WHERE link.account_id = $1
+         AND link.job_id = $2
+       ORDER BY
+         link.is_primary DESC,
+         lower(link.relationship_role),
+         lower(contact_row.company),
+         lower(contact_row.name),
+         link.id`,
+      [request.actor.account.id, jobId],
+    );
+    response.json({
+      data: { links: result.rows.map(mapContactJobLink) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  app.post("/api/v1/jobs/:jobId/contacts", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const jobId = validate(z.uuid(), request.params.jobId);
+    const input = validate(jobContactLinkSchema, request.body);
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `contacts.job-link:${jobId}:${input.contactId}:${input.relationshipRole}`,
+      async (client) => {
+        await assertJobContactAccess(client, request.actor.account.id, jobId);
+        const ownedContact = await client.query(
+          `SELECT id
+           FROM contacts
+           WHERE id = $1
+             AND account_id = $2
+             AND status = 'active'`,
+          [input.contactId, request.actor.account.id],
+        );
+        if (!ownedContact.rowCount) {
+          throw new ApiError(404, "CONTACT_NOT_FOUND", "That active contact does not exist.");
+        }
+        if (input.isPrimary) {
+          await client.query(
+            `UPDATE contact_job_links
+             SET is_primary = false, updated_at = now()
+             WHERE account_id = $1
+               AND job_id = $2
+               AND lower(relationship_role) = lower($3)`,
+            [request.actor.account.id, jobId, input.relationshipRole],
+          );
+        }
+        const saved = await client.query(
+          `INSERT INTO contact_job_links (
+             account_id, contact_id, job_id, relationship_role, notes, is_primary
+           ) VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (account_id, contact_id, job_id, relationship_role)
+           DO UPDATE SET
+             notes = EXCLUDED.notes,
+             is_primary = EXCLUDED.is_primary,
+             updated_at = now()
+           RETURNING id`,
+          [
+            request.actor.account.id,
+            input.contactId,
+            jobId,
+            input.relationshipRole,
+            input.notes,
+            input.isPrimary,
+          ],
+        );
+        const link = await readJobContactLink(
+          client,
+          request.actor.account.id,
+          jobId,
+          saved.rows[0].id,
+        );
+        return {
+          status: 200,
+          body: {
+            data: { link },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
+  app.delete("/api/v1/jobs/:jobId/contacts/:linkId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const jobId = validate(z.uuid(), request.params.jobId);
+    const linkId = validate(z.uuid(), request.params.linkId);
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `contacts.job-unlink:${jobId}:${linkId}`,
+      async (client) => {
+        await assertJobContactAccess(client, request.actor.account.id, jobId);
+        const removed = await client.query(
+          `DELETE FROM contact_job_links
+           WHERE id = $1
+             AND job_id = $2
+             AND account_id = $3
+           RETURNING id`,
+          [linkId, jobId, request.actor.account.id],
+        );
+        if (!removed.rowCount) {
+          throw new ApiError(404, "CONTACT_LINK_NOT_FOUND", "That job contact link does not exist.");
+        }
+        return {
+          status: 200,
+          body: {
+            data: { deleted: true },
             meta: { requestId: request.requestId },
           },
         };

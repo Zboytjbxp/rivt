@@ -11,6 +11,8 @@ const projectRoot = process.cwd();
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
 const screenshotDir = path.join(os.tmpdir(), "rivt-tools-pass");
 const quickEntryHoldMs = 380;
+const supplierContactId = "dededede-dede-dede-dede-dededededede";
+let savedPriceBookPayload = null;
 
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
   cwd: projectRoot,
@@ -497,6 +499,92 @@ async function configurePage(page) {
     createdAt: "2026-07-20T12:00:00.000Z",
     updatedAt: "2026-07-25T12:00:00.000Z",
   }];
+  const contactFromCustomer = (customer) => ({
+    id: customer.id,
+    entityType: customer.company ? "company" : "person",
+    name: customer.name,
+    company: customer.company,
+    notes: customer.notes,
+    favorite: customer.favorite,
+    status: customer.status,
+    linkedAccountId: null,
+    lastUsedAt: customer.lastUsedAt,
+    roles: [{
+      role: "customer",
+      status: "active",
+      details: {
+        preferredContactMethod: customer.preferredContactMethod,
+        defaultTerms: customer.defaultTerms,
+      },
+    }],
+    methods: [
+      { id: "contact-email-miller", kind: "email", label: "Primary", value: customer.email, isPrimary: true },
+      { id: "contact-phone-miller", kind: "phone", label: "Primary", value: customer.phone, isPrimary: true },
+    ],
+    addresses: [
+      { id: "contact-billing-miller", kind: "billing", label: "Billing", address: customer.billingAddress, isPrimary: true },
+      { id: "contact-service-miller", kind: "service", label: "Service", address: customer.serviceAddress, isPrimary: true },
+    ],
+    tags: [],
+    createdAt: customer.createdAt,
+    updatedAt: customer.updatedAt,
+  });
+  const supplierContact = {
+      id: supplierContactId,
+      entityType: "company",
+      name: "Morgan Lee",
+      company: "First Coast Fasteners",
+      notes: "",
+      favorite: true,
+      status: "active",
+      linkedAccountId: null,
+      lastUsedAt: "2026-07-25T12:00:00.000Z",
+      roles: [{ role: "supplier", status: "active", details: { paymentTerms: "Net 30" } }],
+      methods: [{ id: "contact-email-supplier", kind: "email", label: "Orders", value: "orders@firstcoast.example", isPrimary: true }],
+      addresses: [],
+      tags: ["fasteners"],
+      createdAt: "2026-07-20T12:00:00.000Z",
+      updatedAt: "2026-07-25T12:00:00.000Z",
+  };
+  let contacts = [contactFromCustomer(customers[0]), supplierContact];
+  await page.route(/\/api\/v1\/contacts(?:\/[^/?]+(?:\/used)?|\?.*)?$/, (route) => {
+    const url = new URL(route.request().url());
+    const method = route.request().method();
+    const idMatch = url.pathname.match(/\/api\/v1\/contacts\/([^/]+)(?:\/used)?$/);
+    if (method === "GET" && idMatch) {
+      const contact = contacts.find((candidate) => candidate.id === idMatch[1]) ?? null;
+      return route.fulfill({
+        status: contact ? 200 : 404,
+        contentType: "application/json",
+        body: JSON.stringify(contact ? { data: { contact } } : { error: { code: "CONTACT_NOT_FOUND" } }),
+      });
+    }
+    if (method === "GET") {
+      const role = url.searchParams.get("role");
+      const listed = role
+        ? contacts.filter((contact) => contact.roles.some((candidate) => candidate.role === role))
+        : contacts;
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { contacts: listed } }) });
+    }
+    if (method === "POST" && url.pathname.endsWith("/used") && idMatch) {
+      const contact = contacts.find((candidate) => candidate.id === idMatch[1]) ?? null;
+      return route.fulfill({ status: contact ? 200 : 404, contentType: "application/json", body: JSON.stringify({ data: { contact } }) });
+    }
+    if (method === "POST") {
+      const input = route.request().postDataJSON();
+      const contact = {
+        id: "efefefef-efef-efef-efef-efefefefefef",
+        ...input,
+        linkedAccountId: null,
+        lastUsedAt: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      contacts = [contact, ...contacts];
+      return route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ data: { contact } }) });
+    }
+    return route.fulfill({ status: 404, contentType: "application/json", body: JSON.stringify({ error: { code: "NOT_FOUND" } }) });
+  });
   await page.route(/\/api\/v1\/customers(?:\/[^/?]+(?:\/activity|\/used)?|\?.*)?$/, (route) => {
     const url = new URL(route.request().url());
     const method = route.request().method();
@@ -581,6 +669,7 @@ async function configurePage(page) {
     }
     if (method === "POST") {
       const input = route.request().postDataJSON();
+      if (input?.recordType === "price_book") savedPriceBookPayload = input.payload;
       return route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -1005,6 +1094,15 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("heading", { name: "Price library", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("3/4 plywood", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Local yard", { exact: true }).waitFor({ timeout: 15_000 });
+  const supplierPicker = page.getByLabel("Saved supplier selection");
+  await supplierPicker.getByRole("button", { name: /Select a saved contact/ }).click();
+  await supplierPicker.getByRole("button", { name: /First Coast Fasteners/ }).click();
+  assert.equal(await page.getByLabel("Supplier name").inputValue(), "First Coast Fasteners", "supplier picker should retain the canonical supplier name");
+  await page.getByLabel("Material / item").fill("Concrete anchors");
+  await page.getByLabel("Price ($)").fill("18.49");
+  await page.getByRole("button", { name: "Save price" }).click();
+  await page.getByText("First Coast Fasteners · Saved supplier", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(savedPriceBookPayload?.supplierContactId, supplierContactId, "price records should retain the canonical supplier contact id");
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-materials.png`), fullPage: true });
   await page.getByLabel("Materials").getByRole("button", { name: "Tools" }).click();
@@ -1428,7 +1526,7 @@ async function runToolsFlow(page, viewportName) {
   assert.equal(await page.getByLabel("Customer email").count(), 0, "Customer fields should stay out of the pricing step");
   await estimateSteps.getByRole("button", { name: "2 Customer" }).click();
   const estimateCustomerPicker = page.getByLabel("Customer selection");
-  await estimateCustomerPicker.getByRole("button", { name: /Select a saved customer/ }).click();
+  await estimateCustomerPicker.getByRole("button", { name: /Select a saved contact/ }).click();
   await estimateCustomerPicker.getByRole("button", { name: /Miller Property Group/ }).click();
   assert.equal(await page.getByLabel("Customer name").inputValue(), "Miller Property Group", "saved customer should fill the estimate recipient");
   assert.equal(await page.getByLabel("Customer email").inputValue(), "jamie@miller.example", "saved customer email should fill the estimate");
@@ -1477,7 +1575,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByRole("button", { name: "Load" }).first().waitFor({ timeout: 15_000 });
   await invoiceDraftSteps.getByRole("button", { name: "2 Customer" }).click();
   const invoiceCustomerPicker = page.getByLabel("Customer selection");
-  await invoiceCustomerPicker.getByRole("button", { name: /Select a saved customer/ }).click();
+  await invoiceCustomerPicker.getByRole("button", { name: /Select a saved contact/ }).click();
   await invoiceCustomerPicker.getByRole("button", { name: /Miller Property Group/ }).click();
   assert.equal(await page.getByLabel("Bill to").inputValue(), "Miller Property Group", "saved customer should fill the invoice recipient");
   assert.equal(await page.getByLabel("Recipient email").inputValue(), "jamie@miller.example", "saved customer email should fill the invoice");

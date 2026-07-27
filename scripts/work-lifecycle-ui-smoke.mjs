@@ -28,6 +28,26 @@ const applicationId = "6732973b-7378-46fb-9a1c-b693e1d350dc";
 const offerId = "011ab327-f24d-49f7-9791-bf9247800c26";
 const activeWorkId = "8a68c4fc-8401-4403-a865-fdbde5d3ea58";
 const projectId = "d4af9856-a962-4533-8813-91064b4b18a4";
+const savedContact = {
+  id: "b37a5210-16ad-4c1a-ac18-d0f7c8a2cc91",
+  entityType: "company",
+  name: "Jordan Reyes",
+  company: "River City Inspections",
+  notes: "",
+  favorite: true,
+  status: "active",
+  linkedAccountId: null,
+  lastUsedAt: "2026-07-27T12:00:00.000Z",
+  roles: [{ role: "other", status: "active", details: {} }],
+  methods: [
+    { id: "ca9aebae-e8ef-4c1b-9609-cc7301150944", kind: "phone", label: "Mobile", value: "+19045550144", isPrimary: true },
+    { id: "b9e4556a-4458-4df8-acb7-737d8dc18a43", kind: "email", label: "Work", value: "jordan@rivercity.example", isPrimary: true },
+  ],
+  addresses: [],
+  tags: ["inspector"],
+  createdAt: "2026-07-26T12:00:00.000Z",
+  updatedAt: "2026-07-27T12:00:00.000Z",
+};
 
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
   cwd: projectRoot,
@@ -361,6 +381,7 @@ function jobById(state, jobId) {
 }
 
 async function configurePage(page, account, state) {
+  let jobContactLinks = [];
   await page.addInitScript(() => {
     window.localStorage.setItem("rivt.localSetupDone.v1", "true");
   });
@@ -458,6 +479,43 @@ async function configurePage(page, account, state) {
       reputation: { reactionsGiven: 0, upvotesGiven: 0, downvotesGiven: 0, targetsReacted: 0, lastReactedAt: null },
     },
   })));
+  await page.route(/\/api\/v1\/contacts(?:\/[^/?]+(?:\/used)?|\?.*)?$/, (route) => {
+    const url = new URL(route.request().url());
+    const idMatch = url.pathname.match(/\/api\/v1\/contacts\/([^/]+)(?:\/used)?$/);
+    if (route.request().method() === "GET" && idMatch) {
+      return route.fulfill(json({ data: { contact: idMatch[1] === savedContact.id ? savedContact : null } }, idMatch[1] === savedContact.id ? 200 : 404));
+    }
+    if (route.request().method() === "POST" && url.pathname.endsWith("/used")) {
+      return route.fulfill(json({ data: { contact: savedContact } }));
+    }
+    return route.fulfill(json({ data: { contacts: [savedContact] } }));
+  });
+  await page.route(/\/api\/v1\/jobs\/[0-9a-f-]{36}\/contacts(?:\/[0-9a-f-]{36})?$/, (route) => {
+    const url = new URL(route.request().url());
+    const jobId = url.pathname.split("/")[4];
+    const method = route.request().method();
+    if (method === "GET") return route.fulfill(json({ data: { links: jobContactLinks } }));
+    if (method === "POST") {
+      const input = route.request().postDataJSON();
+      const link = {
+        id: "c39304f7-264b-424d-9df9-830791d8b6f0",
+        relationshipRole: input.relationshipRole,
+        notes: input.notes,
+        isPrimary: input.isPrimary,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        contact: savedContact,
+      };
+      jobContactLinks = [link];
+      assert.equal(jobId, openJobId, "job contact link should use the canonical job id");
+      return route.fulfill(json({ data: { link } }));
+    }
+    if (method === "DELETE") {
+      jobContactLinks = [];
+      return route.fulfill(json({ data: { deleted: true } }));
+    }
+    return route.fulfill(json({ error: { code: "NOT_FOUND" } }, 404));
+  });
 
   await page.route(/\/api\/v1\/jobs\/[0-9a-f-]{36}\/application-draft$/, async (route) => {
     const jobId = new URL(route.request().url()).pathname.split("/").at(-2);
@@ -793,8 +851,14 @@ async function runTradespersonOfferFlow(page) {
   if (await mobileWorkspaceSelect.isVisible()) await mobileWorkspaceSelect.selectOption("people");
   else await workspaceNav.getByRole("button", { name: "People", exact: true }).click();
   await page.getByRole("heading", { name: "Site contacts", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("These site contacts are private notes saved on this device.", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByText("Job contact links and notes sync privately to your RIVT account.", { exact: false }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "People & customers", exact: true }).waitFor({ timeout: 15_000 });
+  const siteContactPicker = page.getByLabel("Saved contact selection");
+  await siteContactPicker.getByRole("button", { name: /Select a saved contact/ }).click();
+  await siteContactPicker.getByRole("button", { name: /River City Inspections/ }).click();
+  await page.getByRole("button", { name: "Link to job", exact: true }).click();
+  await page.locator(".v2-site-contact-card").getByText("River City Inspections", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Job contacts synced to your RIVT account.", { exact: false }).or(page.getByText("River City Inspections linked to this job.", { exact: true })).waitFor({ timeout: 15_000 });
   await page.screenshot({ path: path.join(screenshotDir, "active-work-people.png"), fullPage: true });
   if (await mobileWorkspaceSelect.isVisible()) await mobileWorkspaceSelect.selectOption("today");
   else await workspaceNav.getByRole("button", { name: "Today", exact: true }).click();

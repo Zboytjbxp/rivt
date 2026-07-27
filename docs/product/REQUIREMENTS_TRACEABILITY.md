@@ -2743,3 +2743,30 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `fe405c0c650ea44134f780c0b308041089cf139d` with
   `0036_canonical_contacts` ready; the seven-check synthetic monitor,
   anonymous Contacts authorization check, and live-bundle inspection pass.
+
+## Traceability Addendum - 2026-07-27 Contact Workflow Integration
+
+- `GA-UX-003` gains shared relationship selection at the point of work:
+  Estimate and Invoice select Customers, Materials selects Suppliers, and
+  canonical jobs select site relationships from one Contacts directory.
+- `GA-DATA-001` gains real use of the existing
+  `0036_canonical_contacts.contact_job_links` model. Job links retain an
+  account-owned Contact ID, job ID, relationship role, primary flag, and
+  job-specific private notes without duplicating the Contact.
+- `GA-UX-005` gains explicit continuity and honesty: document snapshots remain
+  immutable, a typed supplier is not represented as saved, old device-only
+  job contacts require an explicit move, unlink never means delete, and job
+  links do not imply sharing with crew or another account.
+- `GA-AUTH-007` gains server enforcement for job-contact list/write/delete:
+  access requires the job creator or accepted active-work participant and the
+  linked Contact must belong to the caller's account.
+- `GA-UX-006` gains rendered Tools and Work lifecycle evidence for canonical
+  Customer selection, Supplier selection, and job-contact linking on mobile.
+- Requirement maturity does not change. No new migration, public-contact
+  exposure, public-profile linkage, or outbound message delivery is added.
+  Local evidence includes production build, application/security lint, 103
+  unit/frontend tests, all 21 serial PostgreSQL integration suites,
+  fail-closed authentication plus Jobs/discovery E2E, focused Tools,
+  mobile-action, and Work-lifecycle rendered QA, diff integrity, and a
+  zero-vulnerability production dependency audit. Production evidence is
+  recorded only after deployment.

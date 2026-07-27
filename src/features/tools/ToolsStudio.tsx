@@ -68,6 +68,11 @@ import {
   mileageRateLabelForDate,
   mileageRateSummaryForYear,
 } from "./mileage-rates";
+import { ContactPicker } from "../contacts/ContactPicker";
+import {
+  contactDisplayName,
+  type ContactRecord,
+} from "../network/contacts-api";
 import "./tools-studio.css";
 
 export type { ToolMode } from "./tool-catalog";
@@ -543,6 +548,7 @@ interface PriceEntry {
   unit: string;
   price: number;
   supplier: string;
+  supplierContactId?: string | null;
   notes: string;
   updatedAt: string;
 }
@@ -640,6 +646,7 @@ function PriceBookTool() {
   const [unit, setUnit] = useState("");
   const [price, setPrice] = useState("");
   const [supplier, setSupplier] = useState("");
+  const [supplierContactId, setSupplierContactId] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [notice, setNotice] = useState("");
   const [copiedId, setCopiedId] = useState("");
@@ -664,6 +671,7 @@ function PriceBookTool() {
       unit: unit.trim() || "ea",
       price: parseFloat(price) || 0,
       supplier: supplier.trim(),
+      supplierContactId,
       notes: notes.trim(),
       updatedAt: new Date().toISOString(),
     };
@@ -671,7 +679,7 @@ function PriceBookTool() {
       ? entries.map((e, i) => i === existingIndex ? entry : e)
       : [entry, ...entries];
     persistPriceEntries(next, entry);
-    setName(""); setUnit(""); setPrice(""); setSupplier(""); setNotes("");
+    setName(""); setUnit(""); setPrice(""); setSupplier(""); setSupplierContactId(null); setNotes("");
     setNotice(existingIndex >= 0 ? "Price updated." : "Price saved.");
     setTimeout(() => setNotice(""), 2500);
   }
@@ -700,9 +708,22 @@ function PriceBookTool() {
           <label>Material / item<input value={name} onChange={(e) => setName(e.target.value)} placeholder="2x6x8 lumber, 12/2 Romex, conduit…" /></label>
           <label>Unit<input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="ea, ft, sq ft, sheet, lb…" /></label>
           <label>Price ($)<input type="number" min="0" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0.00" /></label>
-          <label>Supplier<input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder="Home Depot, local yard…" /></label>
+          <label>Supplier name<input value={supplier} onChange={(e) => {
+            setSupplier(e.target.value);
+            if (supplierContactId) setSupplierContactId(null);
+          }} placeholder="Optional one-time supplier name" /></label>
           <label className="is-wide">Notes<input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="SKU, grade, size spec, date checked…" /></label>
         </div>
+        <ContactPicker
+          role="supplier"
+          label="Saved supplier"
+          selectedContactId={supplierContactId}
+          onSelect={(contact: ContactRecord | null) => {
+            setSupplierContactId(contact?.id ?? null);
+            if (contact) setSupplier(contactDisplayName(contact));
+          }}
+          helper="Link this price to a supplier in Contacts, or leave it as one-time text."
+        />
         {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
         <p className="v2-record-notice" role="status">{syncMessage}</p>
         <button type="button" className="v2-primary-button" disabled={!name.trim() || !price} onClick={addEntry}><Package2 size={14} />Save price</button>
@@ -724,7 +745,7 @@ function PriceBookTool() {
                 </div>
                 {(entry.supplier || entry.notes) ? (
                   <div className="v2-price-entry-meta">
-                    {entry.supplier ? <small>{entry.supplier}</small> : null}
+                    {entry.supplier ? <small>{entry.supplier}{entry.supplierContactId ? " · Saved supplier" : ""}</small> : null}
                     {entry.notes ? <small>{entry.notes}</small> : null}
                   </div>
                 ) : null}

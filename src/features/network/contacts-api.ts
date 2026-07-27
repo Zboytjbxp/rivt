@@ -82,6 +82,16 @@ export interface ContactMutationResult {
   error: string | null;
 }
 
+export interface ContactJobLink {
+  id: string;
+  relationshipRole: string;
+  notes: string;
+  isPrimary: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+  contact: ContactRecord;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -212,6 +222,11 @@ export async function fetchContacts(options: {
   return result.ok ? result.contacts : null;
 }
 
+export async function fetchContact(contactId: string): Promise<ContactRecord | null> {
+  const result = await contactRequest(`/api/v1/contacts/${encodeURIComponent(contactId)}`);
+  return result.ok ? result.contact : null;
+}
+
 export async function createContact(input: ContactInput): Promise<ContactMutationResult> {
   const result = await contactRequest("/api/v1/contacts", {
     method: "POST",
@@ -245,4 +260,115 @@ export async function updateContact(
     duplicateCandidates: result.duplicateCandidates,
     error: result.error,
   };
+}
+
+export async function markContactUsed(contactId: string): Promise<ContactRecord | null> {
+  const result = await contactRequest(`/api/v1/contacts/${encodeURIComponent(contactId)}/used`, {
+    method: "POST",
+    headers: { "Idempotency-Key": requestKey() },
+  });
+  return result.ok ? result.contact : null;
+}
+
+function normalizeJobLink(value: unknown): ContactJobLink | null {
+  if (!isRecord(value) || typeof value.id !== "string") return null;
+  const contact = normalizeContact(value.contact);
+  if (!contact || typeof value.relationshipRole !== "string") return null;
+  return {
+    id: value.id,
+    relationshipRole: value.relationshipRole,
+    notes: typeof value.notes === "string" ? value.notes : "",
+    isPrimary: value.isPrimary === true,
+    createdAt: typeof value.createdAt === "string" ? value.createdAt : null,
+    updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null,
+    contact,
+  };
+}
+
+async function contactJobLinkRequest(
+  path: string,
+  options: RequestInit = {},
+): Promise<{ links: ContactJobLink[]; link: ContactJobLink | null; error: string | null }> {
+  try {
+    const response = await fetchWithTimeout(apiPath(path), {
+      credentials: "include",
+      ...options,
+    });
+    if (response.status === 401) notifySessionExpired();
+    const body = await response.json().catch(() => null) as {
+      data?: { links?: unknown[]; link?: unknown };
+      error?: { message?: string };
+    } | null;
+    return {
+      links: Array.isArray(body?.data?.links)
+        ? body!.data!.links!.map(normalizeJobLink).filter((link): link is ContactJobLink => Boolean(link))
+        : [],
+      link: normalizeJobLink(body?.data?.link),
+      error: response.ok ? null : body?.error?.message ?? "RIVT could not update the job contacts.",
+    };
+  } catch {
+    return {
+      links: [],
+      link: null,
+      error: "RIVT could not reach the job contacts.",
+    };
+  }
+}
+
+export async function fetchJobContactLinks(jobId: string): Promise<ContactJobLink[] | null> {
+  const result = await contactJobLinkRequest(`/api/v1/jobs/${encodeURIComponent(jobId)}/contacts`);
+  return result.error ? null : result.links;
+}
+
+export async function saveJobContactLink(
+  jobId: string,
+  input: {
+    contactId: string;
+    relationshipRole: string;
+    notes: string;
+    isPrimary: boolean;
+  },
+): Promise<{ link: ContactJobLink | null; error: string | null }> {
+  const result = await contactJobLinkRequest(`/api/v1/jobs/${encodeURIComponent(jobId)}/contacts`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": requestKey(),
+    },
+    body: JSON.stringify(input),
+  });
+  return { link: result.link, error: result.error };
+}
+
+export async function deleteJobContactLink(jobId: string, linkId: string): Promise<boolean> {
+  const result = await contactJobLinkRequest(
+    `/api/v1/jobs/${encodeURIComponent(jobId)}/contacts/${encodeURIComponent(linkId)}`,
+    {
+      method: "DELETE",
+      headers: { "Idempotency-Key": requestKey() },
+    },
+  );
+  return !result.error;
+}
+
+export function contactDisplayName(contact: Pick<ContactRecord, "name" | "company">) {
+  return contact.company.trim() || contact.name.trim();
+}
+
+export function contactMethodValue(
+  contact: Pick<ContactRecord, "methods">,
+  kind: ContactMethodKind,
+) {
+  return contact.methods.find((method) => method.kind === kind && method.isPrimary)?.value
+    ?? contact.methods.find((method) => method.kind === kind)?.value
+    ?? "";
+}
+
+export function contactAddressValue(
+  contact: Pick<ContactRecord, "addresses">,
+  kind: ContactAddressKind,
+) {
+  return contact.addresses.find((address) => address.kind === kind && address.isPrimary)?.address
+    ?? contact.addresses.find((address) => address.kind === kind)?.address
+    ?? "";
 }

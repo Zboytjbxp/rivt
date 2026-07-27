@@ -223,6 +223,60 @@ if (!testDatabaseUrl) {
     assert.equal(projectedCustomers.response.status, 200);
     assert.ok(projectedCustomers.payload.data.customers.some(({ id }) => id === supplierId));
 
+    const ownerRows = await database.query(
+      `SELECT account.id AS account_id, organization_member.organization_id
+       FROM accounts account
+       INNER JOIN auth_identities identity
+         ON identity.account_id = account.id
+       INNER JOIN organization_memberships organization_member
+         ON organization_member.account_id = account.id
+       WHERE identity.email = $1
+       LIMIT 1`,
+      [owner.email],
+    );
+    const jobId = randomUUID();
+    await database.query(
+      `INSERT INTO jobs (
+         id, organization_id, created_by_account_id, title, trade_code,
+         summary, scope_description, status
+       ) VALUES ($1, $2, $3, $4, 'carpentry', '', '', 'draft')`,
+      [
+        jobId,
+        ownerRows.rows[0].organization_id,
+        ownerRows.rows[0].account_id,
+        "Contacts integration job",
+      ],
+    );
+
+    const linked = await requestJson(baseUrl, `/api/v1/jobs/${jobId}/contacts`, {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        contactId: supplierId,
+        relationshipRole: "Supplier",
+        notes: "Call Morgan before pickup",
+        isPrimary: true,
+      },
+    });
+    assert.equal(linked.response.status, 200);
+    assert.equal(linked.payload.data.link.contact.id, supplierId);
+    assert.equal(linked.payload.data.link.relationshipRole, "Supplier");
+    assert.equal(linked.payload.data.link.isPrimary, true);
+    const linkId = linked.payload.data.link.id;
+
+    const jobContacts = await requestJson(baseUrl, `/api/v1/jobs/${jobId}/contacts`, {
+      cookie: owner.cookie,
+    });
+    assert.equal(jobContacts.response.status, 200);
+    assert.equal(jobContacts.payload.data.links.length, 1);
+    assert.equal(jobContacts.payload.data.links[0].notes, "Call Morgan before pickup");
+
+    const otherJobContacts = await requestJson(baseUrl, `/api/v1/jobs/${jobId}/contacts`, {
+      cookie: other.cookie,
+    });
+    assert.equal(otherJobContacts.response.status, 404);
+
     const duplicate = await requestJson(baseUrl, "/api/v1/contacts", {
       method: "POST",
       cookie: owner.cookie,
@@ -304,7 +358,24 @@ if (!testDatabaseUrl) {
       cookie: owner.cookie,
     });
     assert.equal(activity.response.status, 200);
-    assert.deepEqual(activity.payload.data.activity, []);
+    assert.ok(activity.payload.data.activity.some((item) =>
+      item.kind === "job" && item.title === "Contacts integration job"
+    ));
+
+    const removedLink = await requestJson(
+      baseUrl,
+      `/api/v1/jobs/${jobId}/contacts/${linkId}`,
+      {
+        method: "DELETE",
+        cookie: owner.cookie,
+        idempotencyKey: randomUUID(),
+      },
+    );
+    assert.equal(removedLink.response.status, 200);
+    const emptyJobContacts = await requestJson(baseUrl, `/api/v1/jobs/${jobId}/contacts`, {
+      cookie: owner.cookie,
+    });
+    assert.deepEqual(emptyJobContacts.payload.data.links, []);
 
     const archived = await requestJson(baseUrl, `/api/v1/contacts/${supplierId}`, {
       method: "PUT",

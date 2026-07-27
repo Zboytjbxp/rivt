@@ -68,6 +68,20 @@ import "./work-workspace.css";
 import { getProjectForActiveWork, type ProjectRecord } from "../tools/project-api";
 import { JobCloseoutPanel } from "./JobCloseoutPanel";
 import { trackProductEvent } from "../../lib/analytics";
+import { ContactPicker } from "../contacts/ContactPicker";
+import {
+  contactDisplayName,
+  contactMethodValue,
+  createContact,
+  deleteJobContactLink,
+  fetchContact,
+  fetchJobContactLinks,
+  saveJobContactLink,
+  updateContact,
+  type ContactJobLink,
+  type ContactRecord,
+  type ContactRole as DirectoryContactRole,
+} from "../network/contacts-api";
 
 type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
@@ -851,85 +865,209 @@ function persistSiteContacts(jobId: number, contacts: SiteContact[]) {
   try { localStorage.setItem(`rivt.contacts.${jobId}.v1`, JSON.stringify(contacts.slice(0, 50))); } catch { /* noop */ }
 }
 
-function SiteContacts({ jobId }: { jobId: number }) {
-  const [contacts, setContacts] = useState<SiteContact[]>(() => readSiteContacts(jobId));
+function SiteContacts({ jobId, canonicalJobId }: { jobId: number; canonicalJobId: string | null }) {
+  const [links, setLinks] = useState<ContactJobLink[]>([]);
+  const [legacyContacts, setLegacyContacts] = useState<SiteContact[]>(() => readSiteContacts(jobId));
+  const [selectedContact, setSelectedContact] = useState<ContactRecord | null>(null);
   const [role, setRole] = useState<ContactRole>("GC");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
-  const [_copiedId, setCopiedId] = useState("");
+  const [isPrimary, setIsPrimary] = useState(false);
+  const [loading, setLoading] = useState(Boolean(canonicalJobId));
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState(
+    canonicalJobId ? "Loading job contacts…" : "This preview job is not connected to an account record.",
+  );
 
-  function addContact() {
-    if (!name.trim()) return;
-    const contact: SiteContact = {
-      id: crypto.randomUUID(),
-      role,
-      name: name.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
+  useEffect(() => {
+    if (!canonicalJobId) return;
+    let cancelled = false;
+    void fetchJobContactLinks(canonicalJobId).then((result) => {
+      if (cancelled) return;
+      setLoading(false);
+      if (!result) {
+        setStatus("Job contacts could not be loaded. Check your connection.");
+        return;
+      }
+      setLinks(result);
+      setStatus(result.length ? "Job contacts synced to your RIVT account." : "No contacts linked to this job yet.");
+    });
+    return () => { cancelled = true; };
+  }, [canonicalJobId]);
+
+  async function addContact() {
+    if (!canonicalJobId || !selectedContact) return;
+    setSaving(true);
+    const result = await saveJobContactLink(canonicalJobId, {
+      contactId: selectedContact.id,
+      relationshipRole: role,
       notes: notes.trim(),
-    };
-    const next = [...contacts, contact];
-    setContacts(next);
-    persistSiteContacts(jobId, next);
-    setName(""); setPhone(""); setEmail(""); setNotes("");
+      isPrimary,
+    });
+    setSaving(false);
+    if (!result.link) {
+      setStatus(result.error ?? "RIVT could not link this contact.");
+      return;
+    }
+    setLinks((current) => [
+      result.link!,
+      ...current.filter((candidate) => candidate.id !== result.link!.id),
+    ]);
+    setSelectedContact(null);
+    setNotes("");
+    setIsPrimary(false);
+    setStatus(`${contactDisplayName(result.link.contact)} linked to this job.`);
   }
 
-  function removeContact(id: string) {
-    const next = contacts.filter((c) => c.id !== id);
-    setContacts(next);
-    persistSiteContacts(jobId, next);
+  async function removeContact(linkId: string) {
+    if (!canonicalJobId) return;
+    const removed = await deleteJobContactLink(canonicalJobId, linkId);
+    if (!removed) {
+      setStatus("That job contact could not be removed.");
+      return;
+    }
+    setLinks((current) => current.filter((link) => link.id !== linkId));
+    setStatus("Contact removed from this job. The contact remains in Contacts.");
   }
 
-  async function copyContact(c: SiteContact) {
-    const text = [c.name, c.role, c.phone, c.email, c.notes].filter(Boolean).join(" · ");
+  async function copyContact(link: ContactJobLink) {
+    const text = [
+      contactDisplayName(link.contact),
+      link.relationshipRole,
+      contactMethodValue(link.contact, "phone"),
+      contactMethodValue(link.contact, "email"),
+      link.notes,
+    ].filter(Boolean).join(" · ");
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedId(c.id);
-      setTimeout(() => setCopiedId(""), 2000);
+      setStatus("Contact details copied.");
     } catch { /* noop */ }
+  }
+
+  async function importLegacyContact(legacy: SiteContact) {
+    if (!canonicalJobId) return;
+    setSaving(true);
+    const directoryRole: DirectoryContactRole = legacy.role === "Supplier"
+      ? "supplier"
+      : legacy.role === "Sub"
+        ? "subcontractor"
+        : "other";
+    const created = await createContact({
+      entityType: ["Supplier", "GC"].includes(legacy.role) ? "company" : "person",
+      name: legacy.name,
+      company: "",
+      notes: legacy.notes,
+      favorite: false,
+      status: "active",
+      roles: [{ role: directoryRole, status: "active", details: {} }],
+      methods: [
+        ...(legacy.email ? [{ kind: "email" as const, label: "Primary", value: legacy.email, isPrimary: true }] : []),
+        ...(legacy.phone ? [{ kind: "phone" as const, label: "Primary", value: legacy.phone, isPrimary: true }] : []),
+      ],
+      addresses: [],
+      tags: ["imported-from-job"],
+    });
+    let contact = created.contact;
+    if (!contact && created.duplicateCandidates[0]) {
+      const existing = await fetchContact(created.duplicateCandidates[0].id);
+      if (existing) {
+        const hasRole = existing.roles.some((candidate) => candidate.role === directoryRole);
+        contact = hasRole
+          ? existing
+          : (await updateContact(existing.id, {
+              roles: [...existing.roles, { role: directoryRole, status: "active", details: {} }],
+            })).contact;
+      }
+    }
+    if (!contact) {
+      setSaving(false);
+      setStatus(created.error ?? "This device contact could not be moved into Contacts.");
+      return;
+    }
+    const linked = await saveJobContactLink(canonicalJobId, {
+      contactId: contact.id,
+      relationshipRole: legacy.role,
+      notes: legacy.notes,
+      isPrimary: false,
+    });
+    setSaving(false);
+    if (!linked.link) {
+      setStatus(linked.error ?? "The saved contact could not be linked to this job.");
+      return;
+    }
+    setLinks((current) => [
+      linked.link!,
+      ...current.filter((candidate) => candidate.id !== linked.link!.id),
+    ]);
+    const remaining = legacyContacts.filter((candidate) => candidate.id !== legacy.id);
+    setLegacyContacts(remaining);
+    persistSiteContacts(jobId, remaining);
+    setStatus(`${legacy.name} moved into account-synced Contacts.`);
   }
 
   return (
     <div className="v2-site-contacts">
       <div className="v2-site-contact-form">
+        <ContactPicker
+          selectedContactId={selectedContact?.id ?? null}
+          onSelect={setSelectedContact}
+          label="Saved contact"
+          helper="Search every role in your account-synced Contacts directory."
+        />
         <div className="v2-site-contact-inputs">
           <label>Role
             <select value={role} onChange={(e) => setRole(e.target.value as ContactRole)}>
               {CONTACT_ROLES.map((r) => <option key={r}>{r}</option>)}
             </select>
           </label>
-          <label>Name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name or company" /></label>
-          <label>Phone<input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+1 904 555 0123" /></label>
-          <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" /></label>
+          <label className="v2-site-contact-primary">
+            <input type="checkbox" checked={isPrimary} onChange={(event) => setIsPrimary(event.target.checked)} />
+            Primary {role}
+          </label>
         </div>
-        <input className="v2-site-contact-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Notes (hours, gate code, preferred contact method…)" />
-        <button type="button" className="v2-primary-button" disabled={!name.trim()} onClick={addContact}><Plus size={14} />Add contact</button>
+        <input className="v2-site-contact-notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Job-specific notes (hours, gate instructions, preferred contact method…)" />
+        <button type="button" className="v2-primary-button" disabled={!canonicalJobId || !selectedContact || saving} onClick={() => void addContact()}>
+          <Plus size={14} />{saving ? "Saving…" : "Link to job"}
+        </button>
       </div>
-      {contacts.length ? (
+      <p className="v2-client-sync-note" role="status">{status}</p>
+      {loading ? <p className="v2-muted-copy">Loading job contacts…</p> : links.length ? (
         <div className="v2-site-contact-list">
-          {contacts.map((c) => (
-            <article key={c.id} className="v2-site-contact-card">
+          {links.map((link) => {
+            const phone = contactMethodValue(link.contact, "phone");
+            const email = contactMethodValue(link.contact, "email");
+            return (
+            <article key={link.id} className="v2-site-contact-card">
               <div className="v2-site-contact-card-head">
-                <span className="v2-contact-role-pill">{c.role}</span>
-                <strong>{c.name}</strong>
-                <button type="button" title="Copy contact" onClick={() => void copyContact(c)}>
+                <span className="v2-contact-role-pill">{link.relationshipRole}{link.isPrimary ? " · Primary" : ""}</span>
+                <strong>{contactDisplayName(link.contact)}</strong>
+                <button type="button" title="Copy contact" onClick={() => void copyContact(link)}>
                   <Copy size={13} />
                 </button>
-                <button type="button" aria-label="Delete contact" onClick={() => removeContact(c.id)}><Trash2 size={13} /></button>
+                <button type="button" aria-label={`Remove ${contactDisplayName(link.contact)} from this job`} onClick={() => void removeContact(link.id)}><Trash2 size={13} /></button>
               </div>
               <div className="v2-site-contact-links">
-                {c.phone ? <a href={`tel:${c.phone}`} className="v2-contact-link"><Phone size={13} />{c.phone}</a> : null}
-                {c.email ? <a href={`mailto:${c.email}`} className="v2-contact-link">{c.email}</a> : null}
+                {phone ? <a href={`tel:${phone}`} className="v2-contact-link"><Phone size={13} />{phone}</a> : null}
+                {email ? <a href={`mailto:${email}`} className="v2-contact-link">{email}</a> : null}
               </div>
-              {c.notes ? <small>{c.notes}</small> : null}
+              {link.notes ? <small>{link.notes}</small> : null}
             </article>
-          ))}
+          )})}
         </div>
       ) : (
-        <p className="v2-muted-copy">No site contacts yet. Add GC, owner, inspector, and supplier contacts here for quick access on the job.</p>
+        <p className="v2-muted-copy">No job contacts yet. Choose a saved contact above; removing a job link never deletes the contact.</p>
       )}
+      {legacyContacts.length ? (
+        <section className="v2-site-contact-legacy">
+          <strong>Move older device contacts</strong>
+          <p className="v2-muted-copy">These were saved only on this device by an earlier RIVT version. Move them individually into your synced Contacts directory.</p>
+          {legacyContacts.map((legacy) => (
+            <div key={legacy.id}>
+              <span><strong>{legacy.name}</strong><small>{legacy.role}</small></span>
+              <button type="button" disabled={!canonicalJobId || saving} onClick={() => void importLegacyContact(legacy)}>Move to Contacts</button>
+            </div>
+          ))}
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -2468,8 +2606,8 @@ export function WorkWorkspace({
                     </div>
                     <button type="button" className="v2-secondary-button" onClick={onOpenPeople}><Users size={16} />People & customers</button>
                   </div>
-                  <p className="v2-work-local-boundary">These site contacts are private notes saved on this device. They are not shared with the crew or synced to your account yet.</p>
-                  <SiteContacts jobId={detailJob.id} />
+                  <p className="v2-work-local-boundary">Job contact links and notes sync privately to your RIVT account. They are not automatically shared with the crew.</p>
+                  <SiteContacts jobId={detailJob.id} canonicalJobId={detailJob.canonical?.id ?? null} />
                 </section>
               </div>
             ) : null}

@@ -1,0 +1,201 @@
+.v2-contact-picker {
+  display: grid;
+  gap: 0.65rem;
+  position: relative;
+}
+
+.v2-contact-picker-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.v2-contact-picker-label > span {
+  color: var(--v2-text);
+  font-weight: 750;
+}
+
+.v2-contact-picker-label small,
+.v2-contact-picker-selected small,
+.v2-contact-picker-trigger small,
+.v2-contact-picker-panel header small,
+.v2-contact-picker-results small,
+.v2-contact-picker-create small {
+  color: var(--v2-text-muted);
+}
+
+.v2-contact-picker-label small {
+  text-align: right;
+}
+
+.v2-contact-picker-trigger,
+.v2-contact-picker-selected {
+  align-items: center;
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  color: var(--v2-text);
+  display: grid;
+  gap: 0.7rem;
+  min-height: 4rem;
+  padding: 0.75rem;
+  text-align: left;
+  width: 100%;
+}
+
+.v2-contact-picker-trigger {
+  grid-template-columns: auto 1fr;
+}
+
+.v2-contact-picker-trigger span,
+.v2-contact-picker-selected > span:nth-child(2) {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.v2-contact-picker-selected {
+  grid-template-columns: 2.4rem minmax(0, 1fr) auto;
+}
+
+.v2-contact-picker-selected > span:first-child {
+  align-items: center;
+  background: var(--v2-accent-soft);
+  border-radius: var(--v2-radius-sm);
+  color: var(--v2-accent-text);
+  display: flex;
+  height: 2.4rem;
+  justify-content: center;
+}
+
+.v2-contact-picker-selected > button,
+.v2-contact-picker-panel button {
+  min-height: 2.75rem;
+}
+
+.v2-contact-picker-panel {
+  background: var(--v2-surface-raised);
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-lg);
+  box-shadow: var(--v2-shadow-lg);
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  position: relative;
+  z-index: 3;
+}
+
+.v2-contact-picker-panel header,
+.v2-contact-picker-create > div:first-child,
+.v2-contact-picker-create-actions,
+.v2-contact-picker-actions {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.v2-contact-picker-panel header > div,
+.v2-contact-picker-create > div:first-child {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.v2-contact-picker-search {
+  align-items: center;
+  background: var(--v2-surface);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  display: flex;
+  gap: 0.5rem;
+  padding-inline: 0.7rem;
+}
+
+.v2-contact-picker-search input {
+  border: 0;
+  min-height: 2.9rem;
+  width: 100%;
+}
+
+.v2-contact-picker-results {
+  display: grid;
+  gap: 0.25rem;
+  max-height: min(22rem, 48dvh);
+  overflow-y: auto;
+}
+
+.v2-contact-picker-results > button {
+  align-items: center;
+  border-bottom: 1px solid var(--v2-border);
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  padding: 0.65rem 0.25rem;
+  text-align: left;
+}
+
+.v2-contact-picker-results > button > span:nth-child(2) {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.v2-contact-picker-create {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.v2-contact-picker-create-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.v2-contact-picker-create-grid label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.v2-contact-picker-create-grid label:nth-child(n + 4) {
+  grid-column: span 1;
+}
+
+.v2-contact-picker-duplicate {
+  background: var(--v2-warning-soft);
+  border-radius: var(--v2-radius-md);
+  color: var(--v2-warning-text);
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.v2-contact-picker-actions {
+  border-top: 1px solid var(--v2-border);
+  padding-top: 0.65rem;
+}
+
+@media (max-width: 620px) {
+  .v2-contact-picker-label {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .v2-contact-picker-label small {
+    text-align: left;
+  }
+
+  .v2-contact-picker-create-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .v2-contact-picker-create-grid label:nth-child(n + 4) {
+    grid-column: auto;
+  }
+
+  .v2-contact-picker-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
