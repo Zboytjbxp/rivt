@@ -234,6 +234,22 @@ if (!testDatabaseUrl) {
       assert.equal((await database.query(
         "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'shop_talk_answers' AND column_name = 'public_web_consent_at'",
       )).rows[0].count, 1);
+      const budgetFloorOrganization = await database.query(
+        `INSERT INTO organizations (name, created_by_account_id)
+         VALUES ('Budget Floor Migration', $1)
+         RETURNING id`,
+        [newUserId],
+      );
+      const budgetFloorOrganizationId = budgetFloorOrganization.rows[0].id;
+      await database.query(
+        `INSERT INTO jobs (
+           organization_id, created_by_account_id, title, trade_code,
+           budget_cents, budget_unit, compensation_type
+         )
+         VALUES ($1, $2, 'Budget floor migration check', 'electrical', 3500, 'hourly', 'hourly')`,
+        [budgetFloorOrganizationId, newUserId],
+      );
+      await database.query("DELETE FROM jobs WHERE title = 'Budget floor migration check'");
       await database.query(
         `INSERT INTO document_brand_profiles (account_id, business_name, estimate_style, invoice_style)
          VALUES ($1, 'Migration Brand', 'compact', 'field')`,
@@ -255,6 +271,20 @@ if (!testDatabaseUrl) {
            'email', 'Net 15', true
          )`,
         [newUserId],
+      );
+
+      const rolledBackBudgetFloor = await rollbackLatest(database);
+      assert.equal(rolledBackBudgetFloor.latestVersion, 34);
+      await assert.rejects(
+        database.query(
+          `INSERT INTO jobs (
+             organization_id, created_by_account_id, title, trade_code,
+             budget_cents, budget_unit, compensation_type
+           )
+           VALUES ($1, $2, 'Old budget floor check', 'electrical', 3500, 'hourly', 'hourly')`,
+          [budgetFloorOrganizationId, newUserId],
+        ),
+        /jobs_budget_cents_check/,
       );
 
       const rolledBackPublicDiscovery = await rollbackLatest(database);
