@@ -15,7 +15,11 @@
   production dependency audit.
 - Requirement maturity does not change. This is a presentation-only packet:
   it changes no tool behavior, records, authorization, schema, migrations, or
-  production data. No deployment evidence is claimed.
+  production data. Railway application deployment
+  `45b170ce-a430-4900-a8ec-98d7d7dc41d9` plus metadata deployment
+  `e901b8e1-bf63-43af-9463-cb9a27c2d293` serve exact feature source
+  `19916b3e71cfdac6a72abdea70b9b12ae91ef98f`; the exact-source production
+  monitor passed with seven anonymous private-route checks and controls off.
 
 ## Packet 72 — Public Jobs and Shop Talk discovery evidence
 

@@ -1,5 +1,36 @@
 # Deployment Ledger
 
+## 2026-07-27 - Tools Icon Language
+
+- Production feature source commit:
+  `19916b3e71cfdac6a72abdea70b9b12ae91ef98f`
+- Branch: `master` (source branch: `codex/tool-icon-language`)
+- Railway application deployment:
+  `45b170ce-a430-4900-a8ec-98d7d7dc41d9`
+- Railway exact-source metadata deployment:
+  `e901b8e1-bf63-43af-9463-cb9a27c2d293`
+- Production: `https://rivt.pro`
+- Scope: distinct Phosphor duotone identities for Camera, Estimate, Invoice,
+  Jobsite, and Materials; custom RIVT tape-measure and clock/cost marks for
+  Heavy 16th and Time & costs; tokenized responsive icon containers; and
+  rendered guards for seven unique decorative icon identities.
+- Migration before/after: unchanged at `0035_job_budget_floor`.
+- Automated gates: production build, lint, all unit/frontend tests, all 20
+  serial PostgreSQL integration suites, fail-closed authentication and
+  Jobs/discovery E2E, desktop/390px/320px rendered Tools QA in light and dark
+  themes, diff check, and zero known production dependency vulnerabilities
+  passed.
+- Post-deploy proof: `/api/health` returned exact feature source `19916b3`,
+  ready migration `0035_job_budget_floor`, PostgreSQL/S3-compatible storage,
+  and configured Sentry/Web Push/Stripe Connect. The exact-source production
+  monitor passed in 545 ms with seven anonymous private-route checks and
+  normal operational controls.
+- Provider/config change: only `SOURCE_COMMIT` advanced to the immutable
+  feature SHA. No auth, payment, email, storage, analytics, moderation, or
+  rollout credential changed.
+- Rollback target:
+  `cc57e7a931ffbda7e4bb786ea400fb137fcbd4f4`; source rollback only.
+
 ## 2026-07-26 - Public Jobs and Shop Talk Discovery
 
 - Production source commit:

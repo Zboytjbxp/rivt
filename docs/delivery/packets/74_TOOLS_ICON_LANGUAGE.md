@@ -56,4 +56,10 @@ Lucide metaphors.
 - Light and dark launcher screenshots are captured outside the repository
   under `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
 - The production dependency audit reports zero known vulnerabilities.
-- No deployment evidence is claimed in this packet.
+- Railway application deployment `45b170ce-a430-4900-a8ec-98d7d7dc41d9`
+  and metadata deployment `e901b8e1-bf63-43af-9463-cb9a27c2d293`
+  succeeded. `/api/health` serves exact feature source
+  `19916b3e71cfdac6a72abdea70b9b12ae91ef98f` with ready migration `0035`,
+  PostgreSQL, and S3-compatible storage; the exact-source production monitor
+  passed with operational controls off and seven anonymous private-route
+  checks.
