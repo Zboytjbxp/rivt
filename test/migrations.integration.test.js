@@ -225,6 +225,9 @@ if (!testDatabaseUrl) {
 
       assert.equal((await database.query("SELECT to_regclass('document_brand_profiles') AS table_name")).rows[0].table_name, "document_brand_profiles");
       assert.equal((await database.query("SELECT to_regclass('customers') AS table_name")).rows[0].table_name, "customers");
+      assert.equal((await database.query("SELECT to_regclass('contacts') AS table_name")).rows[0].table_name, "contacts");
+      assert.equal((await database.query("SELECT to_regclass('contact_roles') AS table_name")).rows[0].table_name, "contact_roles");
+      assert.equal((await database.query("SELECT to_regclass('contact_methods') AS table_name")).rows[0].table_name, "contact_methods");
       assert.equal((await database.query(
         "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'jobs' AND column_name IN ('public_web_visibility', 'public_web_published_at')",
       )).rows[0].count, 2);
@@ -272,6 +275,44 @@ if (!testDatabaseUrl) {
          )`,
         [newUserId],
       );
+      const rollbackContact = await database.query(
+        `INSERT INTO contacts (
+           account_id, entity_type, name, company, notes, favorite
+         ) VALUES (
+           $1, 'company', 'Morgan Supply Desk', 'First Coast Fasteners',
+           'Canonical-only supplier migration check', true
+         )
+         RETURNING id`,
+        [newUserId],
+      );
+      const rollbackContactId = rollbackContact.rows[0].id;
+      await database.query(
+        `INSERT INTO contact_roles (
+           contact_id, account_id, role, status, details
+         ) VALUES (
+           $1, $2, 'supplier', 'active',
+           '{"accountNumber":"JAX-204","paymentTerms":"Net 30"}'::jsonb
+         )`,
+        [rollbackContactId, newUserId],
+      );
+      await database.query(
+        `INSERT INTO contact_methods (
+           contact_id, account_id, kind, label, value, normalized_value,
+           is_primary
+         ) VALUES (
+           $1, $2, 'email', 'orders', 'orders@firstcoast.example',
+           'orders@firstcoast.example', true
+         )`,
+        [rollbackContactId, newUserId],
+      );
+
+      const rolledBackContacts = await rollbackLatest(database);
+      assert.equal(rolledBackContacts.latestVersion, 35);
+      assert.equal((await database.query("SELECT to_regclass('contacts') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM contact_rollback_archive WHERE contact_id = $1",
+        [rollbackContactId],
+      )).rows[0].count, 1);
 
       const rolledBackBudgetFloor = await rollbackLatest(database);
       assert.equal(rolledBackBudgetFloor.latestVersion, 34);
@@ -475,6 +516,20 @@ if (!testDatabaseUrl) {
       const reapplied = await migrateUp(database);
       assert.equal(reapplied.latestVersion, latestMigrationVersion);
       assert.equal((await database.query("SELECT count(*)::int AS count FROM accounts")).rows[0].count, 2);
+      assert.equal((await database.query(
+        `SELECT count(*)::int AS count
+         FROM contacts contact
+         INNER JOIN contact_roles role
+           ON role.contact_id = contact.id
+          AND role.role = 'supplier'
+          AND role.status = 'active'
+         WHERE contact.id = $1
+           AND contact.account_id = $2`,
+        [rollbackContactId, newUserId],
+      )).rows[0].count, 1);
+      assert.equal((await database.query(
+        "SELECT to_regclass('contact_rollback_archive') AS table_name",
+      )).rows[0].table_name, null);
 
       const stored = await database.query("SELECT checksum FROM schema_migrations WHERE version = 14");
       await database.query("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 14");

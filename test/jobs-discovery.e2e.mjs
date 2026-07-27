@@ -301,6 +301,11 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
     contentType: "application/json",
     body: JSON.stringify({ data: { records: [] }, meta: { requestId: "e2e-network-records" } }),
   }));
+  await page.route(/\/api\/v1\/contacts(?:\?.*)?$/, (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ data: { contacts: [] }, meta: { requestId: "e2e-contacts" } }),
+  }));
   await page.route(/\/api\/v1\/active-work\/?(?:\?.*)?$/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { activeWork }, meta: { requestId: "e2e-active-work" } }) }));
   await page.route("**/api/v1/shop-talk/posts", (route) => route.fulfill({
     status: 200,
@@ -487,7 +492,7 @@ async function assertTopBarActions(page) {
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
   await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("riley");
   await page.getByRole("button", { name: /Riley Harper/i }).click();
-  await page.getByRole("heading", { name: "People", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Contacts", exact: true }).waitFor();
   await page.getByText("Search result", { exact: true }).waitFor();
   await page.getByRole("heading", { name: "Riley Harper", exact: true }).waitFor();
 

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ApiError, asyncRoute, validate, z } from "./api.js";
+import { syncContactFromCustomer } from "./contacts.js";
 
 const localIdSchema = z.string().trim().min(1).max(120).regex(/^[A-Za-z0-9:_-]+$/);
 const customerMessageSchema = z.object({
@@ -220,6 +221,7 @@ export function registerCustomerRoutes({
             JSON.stringify(input.threadMessages),
           ],
         );
+        await syncContactFromCustomer(client, upserted.rows[0]);
         await mirrorLegacyClientRecord(client, upserted.rows[0]);
         return {
           status: 200,
@@ -278,6 +280,7 @@ export function registerCustomerRoutes({
         if (!updated.rowCount) {
           throw new ApiError(404, "CUSTOMER_NOT_FOUND", "That customer does not exist.");
         }
+        await syncContactFromCustomer(client, updated.rows[0]);
         await mirrorLegacyClientRecord(client, updated.rows[0]);
         return {
           status: 200,
@@ -308,6 +311,7 @@ export function registerCustomerRoutes({
         if (!updated.rowCount) {
           throw new ApiError(404, "CUSTOMER_NOT_FOUND", "That customer does not exist.");
         }
+        await syncContactFromCustomer(client, updated.rows[0]);
         await mirrorLegacyClientRecord(client, updated.rows[0]);
         return {
           status: 200,

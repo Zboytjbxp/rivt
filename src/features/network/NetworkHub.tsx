@@ -8,10 +8,12 @@ import {
   ChevronRight,
   Copy,
   FileText,
+  Globe2,
   Mail,
   MapPin,
   MessageSquareText,
   Phone,
+  PackageOpen,
   Plus,
   Save,
   Search,
@@ -42,6 +44,15 @@ import {
   type NetworkRecordInput,
   type ServerNetworkRecord,
 } from "./network-records-api";
+import {
+  createContact,
+  fetchContacts,
+  updateContact,
+  type ContactInput,
+  type ContactRecord,
+  type ContactRole,
+  type ContactRoleRecord,
+} from "./contacts-api";
 import {
   approveWorkReview,
   disputeWorkReview,
@@ -1663,7 +1674,650 @@ function ReviewsView({
   );
 }
 
-type NetworkTab = "People" | "Subs" | "Reviews" | "Customers";
+const contactRoleLabels: Record<ContactRole, string> = {
+  crew: "Crew",
+  subcontractor: "Sub",
+  customer: "Customer",
+  supplier: "Supplier",
+  other: "Other",
+};
+
+interface ContactFormState {
+  entityType: "person" | "company";
+  name: string;
+  company: string;
+  email: string;
+  phone: string;
+  website: string;
+  billingAddress: string;
+  serviceAddress: string;
+  mailingAddress: string;
+  notes: string;
+  tags: string;
+  roles: ContactRole[];
+  trade: string;
+  license: string;
+  licenseExpiry: string;
+  hourlyRate: string;
+  availability: "available" | "busy" | "unavailable";
+  preferredContactMethod: "none" | "email" | "phone" | "sms";
+  defaultTerms: string;
+  supplierAccountNumber: string;
+  supplierRepresentative: string;
+  supplierTerms: string;
+  otherLabel: string;
+}
+
+function contactRoleDetails(contact: ContactRecord | null, role: ContactRole) {
+  return contact?.roles.find((candidate) => candidate.role === role)?.details ?? {};
+}
+
+function contactMethodValue(contact: ContactRecord | null, kind: "email" | "phone" | "website") {
+  const matches = contact?.methods.filter((method) => method.kind === kind) ?? [];
+  return (matches.find((method) => method.isPrimary) ?? matches[0])?.value ?? "";
+}
+
+function contactAddressValue(contact: ContactRecord | null, kind: "billing" | "service" | "mailing") {
+  const matches = contact?.addresses.filter((address) => address.kind === kind) ?? [];
+  return (matches.find((address) => address.isPrimary) ?? matches[0])?.address ?? "";
+}
+
+function stringDetail(details: Record<string, unknown>, key: string) {
+  return typeof details[key] === "string" ? details[key] : "";
+}
+
+function contactFormState(contact: ContactRecord | null, initialRole?: ContactRole): ContactFormState {
+  const fieldRole = contact?.roles.find(({ role }) => role === "subcontractor")
+    ? "subcontractor"
+    : "crew";
+  const fieldDetails = contactRoleDetails(contact, fieldRole);
+  const customerDetails = contactRoleDetails(contact, "customer");
+  const supplierDetails = contactRoleDetails(contact, "supplier");
+  const otherDetails = contactRoleDetails(contact, "other");
+  const hourlyRate = typeof fieldDetails.hourlyRate === "number"
+    ? String(fieldDetails.hourlyRate)
+    : "";
+  return {
+    entityType: contact?.entityType ?? (initialRole === "supplier" ? "company" : "person"),
+    name: contact?.name ?? "",
+    company: contact?.company ?? "",
+    email: contactMethodValue(contact, "email"),
+    phone: contactMethodValue(contact, "phone"),
+    website: contactMethodValue(contact, "website"),
+    billingAddress: contactAddressValue(contact, "billing"),
+    serviceAddress: contactAddressValue(contact, "service"),
+    mailingAddress: contactAddressValue(contact, "mailing"),
+    notes: contact?.notes ?? "",
+    tags: contact?.tags.join(", ") ?? "",
+    roles: contact
+      ? contact.roles.filter(({ status }) => status === "active").map(({ role }) => role)
+      : initialRole ? [initialRole] : [],
+    trade: stringDetail(fieldDetails, "trade"),
+    license: stringDetail(fieldDetails, "license"),
+    licenseExpiry: stringDetail(fieldDetails, "licenseExpiry"),
+    hourlyRate,
+    availability: fieldDetails.availability === "busy" || fieldDetails.availability === "unavailable"
+      ? fieldDetails.availability
+      : "available",
+    preferredContactMethod: ["email", "phone", "sms"].includes(String(customerDetails.preferredContactMethod))
+      ? customerDetails.preferredContactMethod as ContactFormState["preferredContactMethod"]
+      : "none",
+    defaultTerms: stringDetail(customerDetails, "defaultTerms"),
+    supplierAccountNumber: stringDetail(supplierDetails, "accountNumber"),
+    supplierRepresentative: stringDetail(supplierDetails, "representative"),
+    supplierTerms: stringDetail(supplierDetails, "paymentTerms"),
+    otherLabel: stringDetail(otherDetails, "label"),
+  };
+}
+
+function contactInputFromForm(form: ContactFormState, existing: ContactRecord | null): ContactInput {
+  const previousRoleDetails = new Map(
+    (existing?.roles ?? []).map(({ role, details }) => [role, details]),
+  );
+  const roleRecord = (role: ContactRole, details: Record<string, unknown>): ContactRoleRecord => ({
+    role,
+    status: "active",
+    details: {
+      ...(previousRoleDetails.get(role) ?? {}),
+      ...details,
+    },
+  });
+  const roles = form.roles.map((role) => {
+    if (role === "crew" || role === "subcontractor") {
+      return roleRecord(role, {
+        trade: form.trade.trim(),
+        license: form.license.trim(),
+        licenseExpiry: form.licenseExpiry,
+        hourlyRate: form.hourlyRate ? Number(form.hourlyRate) : undefined,
+        availability: form.availability,
+      });
+    }
+    if (role === "customer") {
+      return roleRecord(role, {
+        preferredContactMethod: form.preferredContactMethod,
+        defaultTerms: form.defaultTerms.trim(),
+      });
+    }
+    if (role === "supplier") {
+      return roleRecord(role, {
+        accountNumber: form.supplierAccountNumber.trim(),
+        representative: form.supplierRepresentative.trim(),
+        paymentTerms: form.supplierTerms.trim(),
+      });
+    }
+    return roleRecord(role, { label: form.otherLabel.trim() });
+  });
+  return {
+    entityType: form.entityType,
+    name: form.name.trim(),
+    company: form.company.trim(),
+    notes: form.notes.trim(),
+    favorite: existing?.favorite ?? false,
+    status: existing?.status ?? "active",
+    roles,
+    methods: [
+      form.email.trim() ? {
+        kind: "email" as const,
+        label: "work",
+        value: form.email.trim(),
+        isPrimary: true,
+      } : null,
+      form.phone.trim() ? {
+        kind: "phone" as const,
+        label: "mobile",
+        value: form.phone.trim(),
+        isPrimary: true,
+      } : null,
+      form.website.trim() ? {
+        kind: "website" as const,
+        label: "website",
+        value: form.website.trim(),
+        isPrimary: true,
+      } : null,
+      ...(existing?.methods.filter((method) => !method.isPrimary) ?? []),
+    ].filter((method): method is NonNullable<typeof method> => Boolean(method)),
+    addresses: [
+      form.billingAddress.trim() ? {
+        kind: "billing" as const,
+        label: "Billing",
+        address: form.billingAddress.trim(),
+        isPrimary: true,
+      } : null,
+      form.serviceAddress.trim() ? {
+        kind: "service" as const,
+        label: "Service",
+        address: form.serviceAddress.trim(),
+        isPrimary: true,
+      } : null,
+      form.mailingAddress.trim() ? {
+        kind: "mailing" as const,
+        label: "Mailing",
+        address: form.mailingAddress.trim(),
+        isPrimary: true,
+      } : null,
+      ...(existing?.addresses.filter((address) => !address.isPrimary) ?? []),
+    ].filter((address): address is NonNullable<typeof address> => Boolean(address)),
+    tags: form.tags.split(",").map((tag) => tag.trim().toLowerCase()).filter(Boolean),
+  };
+}
+
+function ContactEditor({
+  contact,
+  initialRole,
+  onSaved,
+  onCancel,
+}: {
+  contact: ContactRecord | null;
+  initialRole?: ContactRole;
+  onSaved: (contact: ContactRecord) => void;
+  onCancel: () => void;
+}) {
+  const [form, setForm] = useState(() => contactFormState(contact, initialRole));
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  function field<K extends keyof ContactFormState>(key: K, value: ContactFormState[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleRole(role: ContactRole) {
+    field(
+      "roles",
+      form.roles.includes(role)
+        ? form.roles.filter((candidate) => candidate !== role)
+        : [...form.roles, role],
+    );
+  }
+
+  async function save() {
+    if (!form.name.trim() || !form.roles.length) return;
+    setSaving(true);
+    setMessage("");
+    const input = contactInputFromForm(form, contact);
+    const result = contact
+      ? await updateContact(contact.id, input)
+      : await createContact(input);
+    setSaving(false);
+    if (result.contact) {
+      onSaved(result.contact);
+      return;
+    }
+    if (result.duplicateCandidates.length) {
+      const candidate = result.duplicateCandidates[0];
+      setMessage(
+        `${candidate.company || candidate.name} already uses that email or phone. Edit the existing contact instead.`,
+      );
+      return;
+    }
+    setMessage(result.error ?? "RIVT could not save this contact.");
+  }
+
+  const hasFieldRole = form.roles.includes("crew") || form.roles.includes("subcontractor");
+  return (
+    <section className="v2-contact-editor" aria-label={contact ? "Edit contact" : "Add contact"}>
+      <header>
+        <div>
+          <strong>{contact ? "Edit contact" : "Add contact"}</strong>
+          <small>One contact can have more than one role.</small>
+        </div>
+        <button type="button" onClick={onCancel} aria-label="Close contact editor"><X size={18} /></button>
+      </header>
+
+      <div className="v2-contact-role-picker" aria-label="Contact roles">
+        {(Object.keys(contactRoleLabels) as ContactRole[]).map((role) => (
+          <button
+            key={role}
+            type="button"
+            className={form.roles.includes(role) ? "is-active" : ""}
+            aria-pressed={form.roles.includes(role)}
+            onClick={() => toggleRole(role)}
+          >
+            {contactRoleLabels[role]}
+          </button>
+        ))}
+      </div>
+      {!form.roles.length ? <p className="v2-contact-form-message">Choose at least one role.</p> : null}
+
+      <div className="v2-contact-form-grid">
+        <label>
+          <span>Record type</span>
+          <select value={form.entityType} onChange={(event) => field("entityType", event.target.value as ContactFormState["entityType"])}>
+            <option value="person">Person</option>
+            <option value="company">Company</option>
+          </select>
+        </label>
+        <label>
+          <span>{form.entityType === "company" ? "Primary contact *" : "Name *"}</span>
+          <input value={form.name} onChange={(event) => field("name", event.target.value)} />
+        </label>
+        <label>
+          <span>Company</span>
+          <input value={form.company} onChange={(event) => field("company", event.target.value)} />
+        </label>
+        <label>
+          <span>Email</span>
+          <input type="email" value={form.email} onChange={(event) => field("email", event.target.value)} />
+        </label>
+        <label>
+          <span>Phone</span>
+          <input type="tel" value={form.phone} onChange={(event) => field("phone", event.target.value)} />
+        </label>
+        <label>
+          <span>Website</span>
+          <input type="url" value={form.website} onChange={(event) => field("website", event.target.value)} placeholder="https://" />
+        </label>
+
+        {hasFieldRole ? (
+          <>
+            <label>
+              <span>Trade</span>
+              <input value={form.trade} onChange={(event) => field("trade", event.target.value)} />
+            </label>
+            <label>
+              <span>Availability</span>
+              <select value={form.availability} onChange={(event) => field("availability", event.target.value as ContactFormState["availability"])}>
+                <option value="available">Available</option>
+                <option value="busy">Busy</option>
+                <option value="unavailable">Unavailable</option>
+              </select>
+            </label>
+            <label>
+              <span>License</span>
+              <input value={form.license} onChange={(event) => field("license", event.target.value)} />
+            </label>
+            <label>
+              <span>License expiry</span>
+              <input type="date" value={form.licenseExpiry} onChange={(event) => field("licenseExpiry", event.target.value)} />
+            </label>
+            <label>
+              <span>Hourly rate</span>
+              <input type="number" min="0" step="0.01" value={form.hourlyRate} onChange={(event) => field("hourlyRate", event.target.value)} />
+            </label>
+          </>
+        ) : null}
+
+        {form.roles.includes("customer") ? (
+          <>
+            <label>
+              <span>Preferred contact</span>
+              <select value={form.preferredContactMethod} onChange={(event) => field("preferredContactMethod", event.target.value as ContactFormState["preferredContactMethod"])}>
+                <option value="none">Not set</option>
+                <option value="email">Email</option>
+                <option value="phone">Phone</option>
+                <option value="sms">Text</option>
+              </select>
+            </label>
+            <label>
+              <span>Default terms</span>
+              <input value={form.defaultTerms} onChange={(event) => field("defaultTerms", event.target.value)} />
+            </label>
+            <label className="is-wide">
+              <span>Billing address</span>
+              <input value={form.billingAddress} onChange={(event) => field("billingAddress", event.target.value)} />
+            </label>
+            <label className="is-wide">
+              <span>Service address</span>
+              <input value={form.serviceAddress} onChange={(event) => field("serviceAddress", event.target.value)} />
+            </label>
+          </>
+        ) : null}
+
+        {form.roles.includes("supplier") ? (
+          <>
+            <label>
+              <span>Supplier account number</span>
+              <input value={form.supplierAccountNumber} onChange={(event) => field("supplierAccountNumber", event.target.value)} />
+            </label>
+            <label>
+              <span>Sales representative</span>
+              <input value={form.supplierRepresentative} onChange={(event) => field("supplierRepresentative", event.target.value)} />
+            </label>
+            <label>
+              <span>Payment terms</span>
+              <input value={form.supplierTerms} onChange={(event) => field("supplierTerms", event.target.value)} placeholder="Net 30, COD…" />
+            </label>
+            <label className="is-wide">
+              <span>Mailing or branch address</span>
+              <input value={form.mailingAddress} onChange={(event) => field("mailingAddress", event.target.value)} />
+            </label>
+          </>
+        ) : null}
+
+        {form.roles.includes("other") ? (
+          <label>
+            <span>Relationship label</span>
+            <input value={form.otherLabel} onChange={(event) => field("otherLabel", event.target.value)} placeholder="Inspector, architect…" />
+          </label>
+        ) : null}
+        <label className="is-wide">
+          <span>Tags</span>
+          <input value={form.tags} onChange={(event) => field("tags", event.target.value)} placeholder="preferred, jacksonville, emergency" />
+        </label>
+        <label className="is-wide">
+          <span>Private notes</span>
+          <textarea rows={3} value={form.notes} onChange={(event) => field("notes", event.target.value)} />
+        </label>
+      </div>
+
+      {message ? <p className="v2-contact-form-message" role="status">{message}</p> : null}
+      <footer>
+        <button type="button" onClick={onCancel}>Cancel</button>
+        <button
+          type="button"
+          className="v2-primary-button"
+          disabled={saving || !form.name.trim() || !form.roles.length}
+          onClick={() => void save()}
+        >
+          {saving ? "Saving…" : "Save contact"}
+        </button>
+      </footer>
+    </section>
+  );
+}
+
+function contactRoleSummary(contact: ContactRecord) {
+  return contact.roles
+    .filter(({ status }) => status === "active")
+    .map(({ role, details }) => {
+      if ((role === "crew" || role === "subcontractor") && typeof details.trade === "string" && details.trade) {
+        return `${contactRoleLabels[role]} · ${details.trade}`;
+      }
+      if (role === "other" && typeof details.label === "string" && details.label) return details.label;
+      return contactRoleLabels[role];
+    });
+}
+
+const demoContactRecords: ContactRecord[] = demoCrewMembers.map((member) => ({
+  id: member.id,
+  entityType: "person",
+  name: member.name,
+  company: "",
+  notes: member.notes ?? "",
+  favorite: false,
+  status: "active",
+  linkedAccountId: null,
+  lastUsedAt: null,
+  roles: [{
+    role: member.type === "sub" ? "subcontractor" : "crew",
+    status: "active",
+    details: {
+      trade: member.trade,
+      license: member.license,
+      licenseExpiry: member.licenseExpiry,
+      hourlyRate: member.hourlyRate,
+      availability: member.availability,
+      currentJobId: member.currentJobId,
+    },
+  }],
+  methods: [
+    member.email ? {
+      id: `${member.id}-email`,
+      kind: "email" as const,
+      label: "work",
+      value: member.email,
+      isPrimary: true,
+    } : null,
+    member.phone ? {
+      id: `${member.id}-phone`,
+      kind: "phone" as const,
+      label: "mobile",
+      value: member.phone,
+      isPrimary: true,
+    } : null,
+  ].filter((method): method is NonNullable<typeof method> => Boolean(method)),
+  addresses: [],
+  tags: ["sample"],
+  createdAt: member.addedAt,
+  updatedAt: member.addedAt,
+}));
+
+function ContactDirectoryView({
+  role,
+  isDemo = false,
+}: {
+  role?: ContactRole;
+  isDemo?: boolean;
+}) {
+  const [contacts, setContacts] = useState<ContactRecord[]>(
+    () => isDemo ? demoContactRecords : [],
+  );
+  const [loading, setLoading] = useState(!isDemo);
+  const [message, setMessage] = useState(isDemo ? "Sample relationship directory." : "");
+  const [query, setQuery] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
+  const [editing, setEditing] = useState<ContactRecord | null | "new">(null);
+
+  useEffect(() => {
+    if (isDemo) return;
+    let cancelled = false;
+    void fetchContacts({ role, status: showArchived ? "all" : "active" }).then((result) => {
+      if (cancelled) return;
+      setLoading(false);
+      if (!result) {
+        setMessage("RIVT could not sync the relationship directory.");
+        return;
+      }
+      setContacts(result);
+      setMessage("Synced to your RIVT account.");
+    });
+    return () => { cancelled = true; };
+  }, [isDemo, role, showArchived]);
+
+  const visible = contacts.filter((contact) => {
+    if (!showArchived && contact.status === "archived") return false;
+    const needle = query.trim().toLowerCase();
+    if (!needle) return true;
+    return [
+      contact.name,
+      contact.company,
+      ...contact.tags,
+      ...contact.methods.map(({ value }) => value),
+      ...contactRoleSummary(contact),
+    ].some((value) => value.toLowerCase().includes(needle));
+  });
+
+  function replace(saved: ContactRecord) {
+    setContacts((current) => {
+      const exists = current.some(({ id }) => id === saved.id);
+      return exists
+        ? current.map((contact) => contact.id === saved.id ? saved : contact)
+        : [saved, ...current];
+    });
+    setEditing(null);
+    setMessage("Contact synced to your RIVT account.");
+  }
+
+  async function toggleArchive(contact: ContactRecord) {
+    const nextStatus = contact.status === "archived" ? "active" : "archived";
+    const result = await updateContact(contact.id, { status: nextStatus });
+    if (result.contact) {
+      replace(result.contact);
+      return;
+    }
+    setMessage(result.error ?? "RIVT could not update this contact.");
+  }
+
+  async function toggleFavorite(contact: ContactRecord) {
+    const result = await updateContact(contact.id, { favorite: !contact.favorite });
+    if (result.contact) {
+      replace(result.contact);
+      return;
+    }
+    setMessage(result.error ?? "RIVT could not update this contact.");
+  }
+
+  return (
+    <section className="v2-contact-directory" aria-label={role === "supplier" ? "Suppliers" : "All contacts"}>
+      <header className="v2-contact-directory-header">
+        <div>
+          <strong>{role === "supplier" ? `Suppliers (${visible.length})` : `All contacts (${visible.length})`}</strong>
+          <small>{role === "supplier" ? "Companies and representatives you buy from." : "People and companies, organized by relationship."}</small>
+        </div>
+        {!isDemo ? (
+          <button type="button" onClick={() => setEditing("new")}>
+            <Plus size={16} /> Add contact
+          </button>
+        ) : null}
+      </header>
+      <p className="v2-client-sync-note" role="status">{message}</p>
+
+      {editing === "new" ? (
+        <ContactEditor
+          contact={null}
+          initialRole={role}
+          onSaved={replace}
+          onCancel={() => setEditing(null)}
+        />
+      ) : null}
+
+      <div className="v2-contact-directory-toolbar">
+        <label>
+          <Search size={17} aria-hidden="true" />
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search names, companies, trades, or tags" />
+        </label>
+        <button
+          type="button"
+          className={showArchived ? "is-active" : ""}
+          aria-pressed={showArchived}
+          onClick={() => setShowArchived((current) => !current)}
+        >
+          <Archive size={16} /> Archived
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="v2-contact-skeletons" aria-label="Loading contacts">
+          <span /><span /><span />
+        </div>
+      ) : visible.length === 0 ? (
+        <EmptyState
+          icon={role === "supplier" ? <PackageOpen size={22} /> : <Users size={22} />}
+          title={query.trim() ? "No contacts match that search" : role === "supplier" ? "No suppliers yet" : "No contacts yet"}
+          description={query.trim() ? "Try another name, company, trade, or tag." : role === "supplier" ? "Save suppliers, branches, and sales representatives here." : "Add a crew member, sub, customer, supplier, or another trade relationship."}
+          action={!isDemo && !query.trim()
+            ? <button type="button" onClick={() => setEditing("new")}>Add contact</button>
+            : undefined}
+          compact
+        />
+      ) : (
+        <div className="v2-contact-list">
+          {visible.map((contact) => {
+            const email = contactMethodValue(contact, "email");
+            const phone = contactMethodValue(contact, "phone");
+            const website = contactMethodValue(contact, "website");
+            const roleLabels = contactRoleSummary(contact);
+            const supplierDetails = contactRoleDetails(contact, "supplier");
+            return (
+              <article key={contact.id} className="v2-contact-card">
+                <div className="v2-contact-card-main">
+                  <Avatar name={contact.company || contact.name} size="md" className="v2-network-avatar" />
+                  <div>
+                    <strong>{contact.company || contact.name}</strong>
+                    {contact.company && contact.name ? <small>{contact.name}</small> : null}
+                    <div className="v2-contact-role-row">
+                      {roleLabels.map((label) => <span key={label}>{label}</span>)}
+                    </div>
+                  </div>
+                  {contact.favorite ? <Star size={17} fill="currentColor" aria-label="Favorite contact" /> : null}
+                </div>
+                <div className="v2-contact-card-links">
+                  {phone ? <a href={`tel:${phone}`}><Phone size={15} /> {phone}</a> : null}
+                  {email ? <a href={`mailto:${email}`}><Mail size={15} /> {email}</a> : null}
+                  {website ? <a href={website} target="_blank" rel="noreferrer"><Globe2 size={15} /> Website</a> : null}
+                </div>
+                {contact.roles.some(({ role: candidate }) => candidate === "supplier") ? (
+                  <div className="v2-contact-supplier-meta">
+                    {stringDetail(supplierDetails, "representative") ? <span>Rep: {stringDetail(supplierDetails, "representative")}</span> : null}
+                    {stringDetail(supplierDetails, "accountNumber") ? <span>Account: {stringDetail(supplierDetails, "accountNumber")}</span> : null}
+                    {stringDetail(supplierDetails, "paymentTerms") ? <span>{stringDetail(supplierDetails, "paymentTerms")}</span> : null}
+                  </div>
+                ) : null}
+                {contact.tags.length ? <p className="v2-contact-tags">{contact.tags.join(" · ")}</p> : null}
+                {contact.notes ? <p className="v2-contact-notes">{contact.notes}</p> : null}
+                {editing === contact ? (
+                  <ContactEditor contact={contact} onSaved={replace} onCancel={() => setEditing(null)} />
+                ) : (
+                  <footer>
+                    <button type="button" onClick={() => void toggleFavorite(contact)}>
+                      <Star size={15} fill={contact.favorite ? "currentColor" : "none"} />
+                      {contact.favorite ? "Unfavorite" : "Favorite"}
+                    </button>
+                    <button type="button" onClick={() => setEditing(contact)}>Edit</button>
+                    <button type="button" onClick={() => void toggleArchive(contact)}>
+                      {contact.status === "archived" ? "Restore" : "Archive"}
+                    </button>
+                  </footer>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+type NetworkTab = "All" | "Crew" | "Subs" | "Reviews" | "Customers" | "Suppliers";
 
 export function NetworkHub({
   view,
@@ -1684,40 +2338,50 @@ export function NetworkHub({
 }: NetworkHubProps) {
   // Internal tab state — derive initial tab from the incoming view prop
   const [activeTab, setActiveTab] = useState<NetworkTab>(() =>
-    view === "Reviews" ? "Reviews" : "People"
+    view === "Reviews" ? "Reviews" : "All"
   );
 
   const visibleTab: NetworkTab = view === "Reviews"
     ? "Reviews"
-    : activeTab === "Reviews" ? "People" : activeTab;
+    : activeTab === "Reviews" ? "All" : activeTab;
 
 
   // Tab bar shared across all views
   const tabBar = (
-    <div className="v2-network-tab-bar">
-      {(["People", "Subs", "Reviews", "Customers"] as NetworkTab[]).map((tab) => (
+    <div className="v2-network-tab-bar" aria-label="Relationship views">
+      {(["All", "Crew", "Subs", "Customers", "Suppliers"] as NetworkTab[]).map((tab) => (
         <button
           key={tab}
           type="button"
           className={`v2-network-tab-btn${visibleTab === tab ? " active" : ""}`}
           onClick={() => {
             setActiveTab(tab);
-            if (tab === "Reviews") onOpenReviews();
-            else if (tab === "People") onOpenPeople();
+            onOpenPeople();
           }}
         >
           {tab}
         </button>
       ))}
+      <span className="v2-network-tab-separator" aria-hidden="true" />
+      <button
+        type="button"
+        className={`v2-network-tab-btn is-reputation${visibleTab === "Reviews" ? " active" : ""}`}
+        onClick={() => {
+          setActiveTab("Reviews");
+          onOpenReviews();
+        }}
+      >
+        Reviews
+      </button>
     </div>
   );
 
   const pageHeader = (
     <>
-      <PageHeader className="v2-network-header" title="People" />
+      <PageHeader className="v2-network-header" title="Contacts" />
       <nav className="v2-people-work-switcher" aria-label="Work views">
         <button type="button" onClick={onOpenWork}>Jobs</button>
-        <button type="button" className="is-active" aria-current="page">People</button>
+        <button type="button" className="is-active" aria-current="page">Contacts</button>
       </nav>
     </>
   );
@@ -1728,6 +2392,16 @@ export function NetworkHub({
         {pageHeader}
         {tabBar}
         <ClientBookView />
+      </section>
+    );
+  }
+
+  if (visibleTab === "Suppliers") {
+    return (
+      <section className="v2-network-page" aria-label="Suppliers">
+        {pageHeader}
+        {tabBar}
+        <ContactDirectoryView role="supplier" isDemo={isDemo} />
       </section>
     );
   }
@@ -1764,9 +2438,20 @@ export function NetworkHub({
     );
   }
 
-  // People tab
+  if (visibleTab === "All") {
+    return (
+      <section className="v2-network-page" aria-label="All contacts">
+        {pageHeader}
+        {tabBar}
+        {profileFocus ? <ProfileSearchSpotlight profile={profileFocus} onDismiss={onClearProfileFocus} /> : null}
+        <ContactDirectoryView isDemo={isDemo} />
+      </section>
+    );
+  }
+
+  // Crew tab
   return (
-    <section className="v2-network-page" aria-label="People">
+    <section className="v2-network-page" aria-label="Crew">
       {pageHeader}
       {tabBar}
       {profileFocus ? <ProfileSearchSpotlight profile={profileFocus} onDismiss={onClearProfileFocus} /> : null}
@@ -1774,7 +2459,7 @@ export function NetworkHub({
       <div className="v2-crew-workbench">
         <CrewManager
           crewType="crew"
-          labelOverride="People"
+          labelOverride="Crew"
           isDemo={isDemo}
           workOptions={workOptions}
           workOptionsLoading={workOptionsLoading}

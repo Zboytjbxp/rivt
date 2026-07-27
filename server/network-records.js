@@ -1,4 +1,8 @@
 import { ApiError, asyncRoute, validate, z } from "./api.js";
+import {
+  removeContactRoleForNetworkRecord,
+  syncContactFromNetworkRecord,
+} from "./contacts.js";
 
 const networkRecordTypeSchema = z.enum([
   "crew_member",
@@ -101,6 +105,7 @@ export function registerNetworkRecordRoutes({
             JSON.stringify(input.payload),
           ],
         );
+        await syncContactFromNetworkRecord(client, upserted.rows[0]);
         return {
           status: 200,
           body: {
@@ -127,12 +132,13 @@ export function registerNetworkRecordRoutes({
              AND record_type = $2
              AND local_id = $3
              AND deleted_at IS NULL
-           RETURNING id`,
+           RETURNING *`,
           [request.actor.account.id, params.recordType, params.localId],
         );
         if (!deleted.rowCount) {
           throw new ApiError(404, "NETWORK_RECORD_NOT_FOUND", "That network record does not exist.");
         }
+        await removeContactRoleForNetworkRecord(client, deleted.rows[0]);
         return {
           status: 200,
           body: {

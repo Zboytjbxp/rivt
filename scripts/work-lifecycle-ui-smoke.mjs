@@ -742,8 +742,8 @@ async function runTradespersonApplicationFlow(page) {
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
-  const workPeopleSwitcher = page.getByRole("navigation", { name: "Work and people" });
-  await workPeopleSwitcher.getByRole("button", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
+  const workPeopleSwitcher = page.getByRole("navigation", { name: "Work and contacts" });
+  await workPeopleSwitcher.getByRole("button", { name: "Contacts", exact: true }).waitFor({ timeout: 15_000 });
   await clickJob(page, "Warehouse panel assist");
   await page.getByLabel("Message to contractor").fill("I can start Wednesday and bring tester, labels, and basic hand tools.");
   await page.getByRole("button", { name: "Save draft" }).click();

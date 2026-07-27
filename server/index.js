@@ -103,6 +103,7 @@ import {
 } from "./document-brand.js";
 import { registerStandaloneProjectRoutes } from "./standalone-projects.js";
 import { registerCustomerRoutes } from "./customers.js";
+import { registerContactRoutes } from "./contacts.js";
 import {
   pushProviderStatus,
   queuePushDeliveries,
@@ -5472,6 +5473,16 @@ registerStandaloneProjectRoutes({
 });
 
 registerCustomerRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  runIdempotentMutation,
+  sendIdempotentResult,
+});
+
+registerContactRoutes({
   app,
   database,
   requireV1AuthenticatedUser,

@@ -132,6 +132,56 @@ const savedCustomer = {
   updatedAt: "2026-07-25T12:00:00.000Z",
 };
 
+const savedContacts = [
+  {
+    id: savedCustomer.id,
+    entityType: "company",
+    name: savedCustomer.name,
+    company: savedCustomer.company,
+    notes: savedCustomer.notes,
+    favorite: true,
+    status: "active",
+    linkedAccountId: null,
+    lastUsedAt: savedCustomer.lastUsedAt,
+    roles: [{
+      role: "customer",
+      status: "active",
+      details: {
+        preferredContactMethod: savedCustomer.preferredContactMethod,
+        defaultTerms: savedCustomer.defaultTerms,
+      },
+    }],
+    methods: [
+      { id: "10101010-1010-4010-8010-101010101010", kind: "email", label: "work", value: savedCustomer.email, isPrimary: true },
+      { id: "20202020-2020-4020-8020-202020202020", kind: "phone", label: "mobile", value: savedCustomer.phone, isPrimary: true },
+    ],
+    addresses: [
+      { id: "30303030-3030-4030-8030-303030303030", kind: "billing", label: "Billing", address: savedCustomer.billingAddress, isPrimary: true },
+      { id: "40404040-4040-4040-8040-404040404040", kind: "service", label: "Service", address: savedCustomer.serviceAddress, isPrimary: true },
+    ],
+    tags: ["preferred"],
+    createdAt: savedCustomer.createdAt,
+    updatedAt: savedCustomer.updatedAt,
+  },
+  {
+    id: crewMemberRecord.id,
+    entityType: "person",
+    name: "Elena Torres",
+    company: "",
+    notes: "",
+    favorite: false,
+    status: "active",
+    linkedAccountId: null,
+    lastUsedAt: null,
+    roles: [{ role: "crew", status: "active", details: { trade: "Electrical", availability: "available" } }],
+    methods: [],
+    addresses: [],
+    tags: [],
+    createdAt: crewMemberRecord.createdAt,
+    updatedAt: crewMemberRecord.updatedAt,
+  },
+];
+
 const defaultPrivateAlbum = {
   id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
   accountId: account.id,
@@ -219,6 +269,18 @@ async function configurePage(page) {
   routeResponse("**/api/v1/offers", { data: { offers: [] } });
   routeResponse("**/api/v1/standalone-projects", { data: { projects: [standaloneProject] } });
   routeResponse("**/api/v1/customers?**", { data: { customers: [savedCustomer] } });
+  void page.route(/\/api\/v1\/contacts(?:\?.*)?$/, (route) => {
+    const url = new URL(route.request().url());
+    const role = url.searchParams.get("role");
+    const contacts = role
+      ? savedContacts.filter((contact) => contact.roles.some((candidate) => candidate.role === role))
+      : savedContacts;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: { contacts } }),
+    });
+  });
   routeResponse("**/api/v1/customers/*/activity", {
     data: {
       activity: [{
@@ -462,7 +524,7 @@ async function runMobileFlow(page) {
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Work");
-  const workSwitcher = page.getByRole("navigation", { name: "Work and people" });
+  const workSwitcher = page.getByRole("navigation", { name: "Work and contacts" });
   assert.equal(await workSwitcher.locator('svg[data-app-icon="jobs"]').count(), 1, "Work should identify the Jobs section");
   assert.equal(await workSwitcher.locator('svg[data-app-icon="people"]').count(), 1, "Work should distinguish People from Jobs");
   await page.locator(".v2-work-create-fab").waitFor({ timeout: 15_000 });
@@ -530,9 +592,20 @@ async function runMobileFlow(page) {
   await page.getByLabel("Camera").getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Work", exact: true }).click();
-  await page.getByRole("navigation", { name: "Work and people" }).getByRole("button", { name: "People", exact: true }).click();
-  await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
-  await assertNoHorizontalOverflow(page, "People");
+  await page.getByRole("navigation", { name: "Work and contacts" }).getByRole("button", { name: "Contacts", exact: true }).click();
+  await page.getByRole("heading", { name: "Contacts", exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Contacts");
+  await page.getByText("All contacts (2)", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await assertNoHorizontalOverflow(page, "Contacts desktop");
+  await page.screenshot({ path: path.join(screenshotDir, "desktop-contacts.png"), fullPage: true });
+  await page.setViewportSize({ width: 320, height: 568 });
+  await assertNoHorizontalOverflow(page, "Contacts compact phone");
+  await page.screenshot({ path: path.join(screenshotDir, "compact-contacts.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Suppliers", exact: true }).click();
+  await page.getByText("No suppliers yet", { exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Suppliers");
   assert.equal(
     await page.evaluate(() => localStorage.getItem("rivt.jobs.v1")),
     null,
@@ -546,7 +619,7 @@ async function runMobileFlow(page) {
   await page.getByText("Miller kitchen", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Customer book");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-customer-book.png"), fullPage: true });
-  await page.locator(".v2-network-tab-bar").getByRole("button", { name: "People", exact: true }).click();
+  await page.locator(".v2-network-tab-bar").getByRole("button", { name: "Crew", exact: true }).click();
   const elenaCard = page.locator(".v2-crew-card-wrapper").filter({ hasText: "Elena Torres" });
   await elenaCard.getByRole("button", { name: "Assign to Job", exact: true }).click();
   const assignmentDialog = page.getByRole("dialog", { name: "Assign Elena Torres to work" });
@@ -641,8 +714,9 @@ async function runMobileFlow(page) {
     assert.equal(await page.getByRole("button", { name: "Enable device alerts", exact: true }).count(), 0);
   await assertNoHorizontalOverflow(page, "Settings route");
   await page.getByRole("button", { name: "Work", exact: true }).click();
-  await page.getByRole("navigation", { name: "Work and people" }).getByRole("button", { name: "People", exact: true }).click();
-  await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("navigation", { name: "Work and contacts" }).getByRole("button", { name: "Contacts", exact: true }).click();
+  await page.getByRole("heading", { name: "Contacts", exact: true }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-network-tab-bar").getByRole("button", { name: "Crew", exact: true }).click();
   await page.locator(".v2-crew-invite-fold > summary").click();
   await page.getByRole("button", { name: "Plan invite", exact: true }).click();
   await page.getByPlaceholder("Name or company").fill("First Coast Electric");

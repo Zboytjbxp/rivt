@@ -1930,14 +1930,14 @@ export function WorkWorkspace({
         </div>
       </header>
 
-      <nav className="v2-people-work-switcher" aria-label="Work and people">
+      <nav className="v2-people-work-switcher" aria-label="Work and contacts">
         <button type="button" className="is-active" aria-current="page">
           <JobsSectionIcon active aria-hidden="true" />
           Jobs
         </button>
         <button type="button" onClick={onOpenPeople}>
           <PeopleSectionIcon aria-hidden="true" />
-          People
+          Contacts
         </button>
       </nav>
 

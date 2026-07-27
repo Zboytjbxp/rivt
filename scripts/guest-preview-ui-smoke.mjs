@@ -123,7 +123,8 @@ async function openPreview(page, roleLabel, expectedHeading) {
       window.history.pushState({}, "", "/app/work/people");
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
-    await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 10_000 });
+    await page.getByRole("heading", { name: "Contacts", exact: true }).waitFor({ timeout: 10_000 });
+    await page.locator(".v2-network-tab-bar").getByRole("button", { name: "Crew", exact: true }).click();
     const elenaCard = page.locator(".v2-crew-card-wrapper").filter({ hasText: "Elena Torres" });
     await elenaCard.getByRole("button", { name: "Assign to Job", exact: true }).click();
     const assignmentDialog = page.getByRole("dialog", { name: "Assign Elena Torres to work" });
@@ -307,8 +308,8 @@ async function verifyDesktopWorkspace(browser, theme) {
 
   await page.getByRole("button", { name: "Tools", exact: true }).click();
   await page.locator(".v2-tools-page").waitFor({ state: "visible", timeout: 10_000 });
-  const fieldCards = page.locator(".v2-tool-section-field .v2-tool-launch-card");
-  assert.ok(await fieldCards.count() >= 3, "Desktop Tools is missing core field launchers");
+  const fieldCards = page.locator(".v2-tool-launch-grid .v2-tool-launch-card");
+  assert.ok(await fieldCards.count() >= 7, "Desktop Tools is missing core launchers");
   const firstRowY = await Promise.all([0, 1, 2].map(async (index) => {
     const box = await fieldCards.nth(index).boundingBox();
     return box?.y;
