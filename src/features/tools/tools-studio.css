@@ -12970,7 +12970,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   }
 }
 
-/* Unified Tools launcher: every app appears once, with pinned tools reordered in place. */
+/* Unified Tools launcher: every app appears once in a stable, scan-friendly order. */
 .v2-tools-launcher {
   display: grid;
   gap: 12px;
@@ -12978,15 +12978,6 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 }
 
 .v2-tools-launcher-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.v2-tools-launcher-header > span {
-  display: grid;
-  gap: 3px;
   min-width: 0;
 }
 
@@ -12995,32 +12986,6 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   font-size: calc(18px * var(--v2-text-scale));
   font-weight: var(--v2-weight-bold);
   line-height: 1.15;
-}
-
-.v2-tools-launcher-header small,
-.v2-tools-pin-limit {
-  margin: 0;
-  color: var(--v2-text-muted);
-  font-size: calc(13px * var(--v2-text-scale));
-  line-height: 1.35;
-}
-
-.v2-tools-customize {
-  min-height: 44px;
-  padding: 0 12px;
-  border: 1px solid var(--v2-border);
-  border-radius: var(--v2-radius-md);
-  background: var(--v2-surface-muted);
-  color: var(--v2-text);
-  font: inherit;
-  font-size: calc(13px * var(--v2-text-scale));
-  font-weight: var(--v2-weight-bold);
-  cursor: pointer;
-}
-
-.v2-tools-customize:hover {
-  border-color: color-mix(in srgb, var(--v2-accent) 48%, var(--v2-border));
-  background: var(--v2-accent-soft);
 }
 
 .v2-tools-page .v2-tool-launch-grid {
@@ -13034,7 +12999,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   position: relative;
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr);
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
   gap: 8px 11px;
   min-width: 0;
   min-height: 142px;
@@ -13062,43 +13027,6 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   transform: translateY(1px);
 }
 
-.v2-tools-page .v2-tool-launch-card.is-pinned {
-  border-color: color-mix(in srgb, var(--v2-accent) 45%, var(--v2-border));
-}
-
-.v2-tools-page .v2-tool-launch-card:disabled {
-  opacity: 0.48;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.v2-tool-card-topline {
-  display: flex;
-  grid-column: 1 / -1;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-  color: var(--v2-text-subtle);
-  font-size: calc(11px * var(--v2-text-scale));
-  font-weight: var(--v2-weight-bold);
-  letter-spacing: 0.06em;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-.v2-tools-page .v2-tool-card-topline em {
-  display: inline-flex;
-  min-height: 0;
-  align-items: center;
-  justify-self: auto;
-  color: var(--v2-accent-text);
-  font-size: calc(11px * var(--v2-text-scale));
-  font-style: normal;
-  letter-spacing: 0;
-  line-height: 1.2;
-  text-transform: none;
-}
 
 .v2-tools-page .v2-tool-card-icon {
   display: grid;
@@ -13201,14 +13129,6 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 }
 
 @media (max-width: 360px) {
-  .v2-tools-launcher-header {
-    align-items: flex-start;
-  }
-
-  .v2-tools-launcher-header small {
-    max-width: 25ch;
-  }
-
   .v2-tools-page .v2-tool-launch-card,
   .v2-tools-page .v2-tool-launch-card.is-featured {
     grid-template-columns: 38px minmax(0, 1fr);

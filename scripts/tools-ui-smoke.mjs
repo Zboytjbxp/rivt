@@ -910,16 +910,16 @@ async function runToolsFlow(page, viewportName) {
     "Decorative launcher icons should stay hidden from assistive technology because the card text supplies the name",
   );
   assert.equal(await page.locator(".v2-field-tools-tray, .v2-tool-group").count(), 0, "Tools hub should not repeat launchers in a fixed tray or More tools drawer");
-  if (isHandsetViewport) {
-    await page.getByRole("button", { name: "Customize", exact: true }).click();
-    await page.getByRole("button", { name: "Unpin Camera", exact: true }).click();
-    await page.getByRole("button", { name: "Pin Materials", exact: true }).click();
-    await page.getByRole("button", { name: "Done", exact: true }).click();
-    const launcherNames = await allTools.locator(".v2-tool-launch-card").evaluateAll((buttons) =>
+  assert.equal(await page.getByRole("button", { name: "Customize", exact: true }).count(), 0, "Tools should not expose unnecessary launcher customization");
+  assert.equal(await page.locator(".v2-tool-card-topline").count(), 0, "Tool cards should not repeat Field, Business, or pinned labels");
+  assert.equal(await page.getByText("Pinned", { exact: true }).count(), 0, "Tool cards should not advertise a removed pinned state");
+  assert.deepEqual(
+    await allTools.locator(".v2-tool-launch-card").evaluateAll((buttons) =>
       buttons.map((button) => button.getAttribute("aria-label")),
-    );
-    assert.ok(launcherNames.slice(0, 3).includes("Open Materials"), "customized pinned tools should reorder within the single launcher");
-  }
+    ),
+    ["Open Camera", "Open Estimate", "Open Heavy 16th", "Open Invoice", "Open Jobsite", "Open Materials", "Open Time & costs"],
+    "Tools should stay in one stable, field-ready order",
+  );
   assert.equal(await page.getByRole("button", { name: /Safety/i }).count(), 0, "Safety should live inside Jobsite instead of appearing as a separate launcher");
   assert.equal(await page.getByRole("button", { name: /Punch list/i }).count(), 0, "Punch should live inside Jobsite instead of appearing as a separate launcher");
   assert.equal(

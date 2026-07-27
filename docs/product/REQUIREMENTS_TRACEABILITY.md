@@ -1,5 +1,25 @@
 # Gate A Requirements Traceability
 
+## Packet 76 — Tools launcher-subtraction evidence
+
+- `GA-UX-003` gains a quieter fixed Tools information architecture: all seven
+  apps remain visible once, while device-only pin management and broad
+  Field/Business labels no longer compete with tool identity.
+- `GA-UX-005` gains honesty evidence: the launcher no longer presents
+  Customize as though it changes tool capabilities when it only changed local
+  ordering. Every card remains a named button and its adjacent icon remains
+  decorative.
+- `GA-UX-006` gains desktop, 390px, and 320px rendered evidence in light and
+  dark themes for the fixed order, absent management chrome, unique
+  launchers, and no horizontal overflow.
+- `GA-OPS-007` gains a production build, clean lint, 103 unit/frontend tests,
+  all 20 serial PostgreSQL integration suites, fail-closed authentication and
+  Jobs/discovery E2E, focused rendered Tools QA, diff integrity, and a
+  zero-vulnerability production dependency audit.
+- Requirement maturity does not change. This packet changes no tool behavior,
+  record, authorization, API, schema, migration, or production data.
+  Production deployment evidence remains pending.
+
 ## Packet 75 — App icon-system evidence
 
 - `GA-UX-003` gains one coherent recognition system across Home, Work,

@@ -103,7 +103,6 @@ interface ToolsStudioProps {
 
 type LaunchableToolMode = PublicToolMode;
 type ToolIcon = typeof Calculator;
-const fieldToolsStorageKey = "rivt.fieldTools.v1";
 const toolContextStorageKey = "rivt.toolContexts.v1";
 const cameraAlbumDestinationStorageKey = "rivt.cameraAlbumDestination.v1";
 const contextualToolModes = new Set<PublicToolMode>(["estimate", "invoice", "job-photos"]);
@@ -187,39 +186,21 @@ function ToolCard({
   iconKey,
   title,
   summary,
-  category,
-  pinned,
-  editing,
-  pinLimitReached,
-  onlyPinnedTool,
   onAction,
-  onTogglePinned,
 }: {
   icon: ToolIdentityIcon;
   iconKey: string;
   title: string;
   summary: string;
-  category: string;
-  pinned: boolean;
-  editing: boolean;
-  pinLimitReached: boolean;
-  onlyPinnedTool: boolean;
   onAction: () => void;
-  onTogglePinned: () => void;
 }) {
   return (
     <button
       type="button"
-      className={pinned ? "v2-tool-launch-card is-pinned" : "v2-tool-launch-card"}
-      onClick={editing ? onTogglePinned : onAction}
-      aria-label={editing ? `${pinned ? "Unpin" : "Pin"} ${title}` : `Open ${title}`}
-      aria-pressed={editing ? pinned : undefined}
-      disabled={editing && ((!pinned && pinLimitReached) || (pinned && onlyPinnedTool))}
+      className="v2-tool-launch-card"
+      onClick={onAction}
+      aria-label={`Open ${title}`}
     >
-      <span className="v2-tool-card-topline">
-        <span>{category}</span>
-        {pinned ? <em>Pinned</em> : null}
-      </span>
       <span className="v2-tool-card-icon" data-tool-icon={iconKey}>
         <Icon className="v2-tool-identity-icon" size={28} aria-hidden="true" />
       </span>
@@ -228,7 +209,7 @@ function ToolCard({
         <small>{summary}</small>
       </span>
       <span className="v2-tool-card-action" aria-hidden="true">
-        {editing ? (pinned ? "Remove" : "Pin") : <ArrowRight size={15} />}
+        <ArrowRight size={15} />
       </span>
     </button>
   );
@@ -285,51 +266,15 @@ function allToolLaunchers(): ToolLauncher[] {
   return [...PRIMARY_TOOL_LAUNCHERS, ...UTILITY_TOOL_LAUNCHERS];
 }
 
-function launcherCategory(mode: LaunchableToolMode) {
-  return FIELD_TOOL_MODES.has(mode) ? "Field" : "Business";
-}
-
-const defaultFieldTools: LaunchableToolMode[] = ["job-photos", "calculator", "jobsite"];
-
-function readFieldTools(): LaunchableToolMode[] {
-  try {
-    const stored = localStorage.getItem(fieldToolsStorageKey);
-    if (!stored) return defaultFieldTools;
-    const parsed = JSON.parse(stored) as unknown;
-    if (!Array.isArray(parsed)) return defaultFieldTools;
-    const allowed = new Set(allToolLaunchers().map((tool) => tool.mode));
-    const normalized = parsed.map((mode) => {
-      if (mode === "price-book") return "materials";
-      if (["time-tracker", "expense-logger", "mileage", "tax-summary"].includes(String(mode))) return "time-costs";
-      if (mode === "payments") return "invoice";
-      if (["daily-log", "punch-list", "safety-checklist"].includes(String(mode))) return "jobsite";
-      return mode;
-    });
-    const valid = normalized.filter((mode): mode is LaunchableToolMode => typeof mode === "string" && allowed.has(mode as LaunchableToolMode));
-    const unique = [...new Set(valid)];
-    return unique.length ? unique.slice(0, 3) : defaultFieldTools;
-  } catch {
-    return defaultFieldTools;
-  }
-}
-
-function persistFieldTools(tools: LaunchableToolMode[]) {
-  try {
-    localStorage.setItem(fieldToolsStorageKey, JSON.stringify(tools.slice(0, 3)));
-  } catch {
-    // Field-tool shortcuts are a device preference only.
-  }
-}
-
 const mileageKey = "rivt.mileage.v1";
 
 const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
   {
-    mode: "calculator",
-    icon: HeavySixteenthToolIcon,
-    iconKey: "heavy-sixteenth",
-    title: "Heavy 16th",
-    summary: "Fractions and cut math.",
+    mode: "job-photos",
+    icon: CameraToolIcon,
+    iconKey: "camera",
+    title: "Camera",
+    summary: "Project photos and proof.",
   },
   {
     mode: "estimate",
@@ -337,6 +282,13 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
     iconKey: "estimate",
     title: "Estimate",
     summary: "Build a price range.",
+  },
+  {
+    mode: "calculator",
+    icon: HeavySixteenthToolIcon,
+    iconKey: "heavy-sixteenth",
+    title: "Heavy 16th",
+    summary: "Fractions and cut math.",
   },
   {
     mode: "invoice",
@@ -351,13 +303,6 @@ const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
     iconKey: "jobsite",
     title: "Jobsite",
     summary: "Log, punch, and safety.",
-  },
-  {
-    mode: "job-photos",
-    icon: CameraToolIcon,
-    iconKey: "camera",
-    title: "Camera",
-    summary: "Project photos and proof.",
   },
 ];
 
@@ -377,12 +322,6 @@ const UTILITY_TOOL_LAUNCHERS: ToolLauncher[] = [
     summary: "Time, expenses, mileage, and summary.",
   },
 ];
-
-const FIELD_TOOL_MODES = new Set<LaunchableToolMode>([
-  "job-photos",
-  "calculator",
-  "jobsite",
-]);
 
 interface MileageEntry {
   id: string;
@@ -2974,8 +2913,6 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
   const activeInvoiceView = invoiceViewForMode(openTool) ?? invoiceView;
   const [jobsiteView, setJobsiteView] = useState<JobsiteView>(() => jobsiteViewForMode(openTool) ?? "log");
   const activeJobsiteView = jobsiteViewForMode(openTool) ?? jobsiteView;
-  const [fieldTools, setFieldTools] = useState(readFieldTools);
-  const [launcherEditing, setLauncherEditing] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
   const [cameraCaptureOpen, setCameraCaptureOpen] = useState(false);
   const [cameraAlbums, setCameraAlbums] = useState<PhotoAlbum[]>([]);
@@ -3242,20 +3179,6 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
 
   function openToolFromHub(tool: LaunchableToolMode) {
     setActiveTool(tool);
-  }
-
-  function updateFieldTools(nextTools: LaunchableToolMode[]) {
-    setFieldTools(nextTools);
-    persistFieldTools(nextTools);
-  }
-
-  function togglePinnedTool(mode: LaunchableToolMode) {
-    if (fieldTools.includes(mode)) {
-      if (fieldTools.length === 1) return;
-      updateFieldTools(fieldTools.filter((tool) => tool !== mode));
-      return;
-    }
-    if (fieldTools.length < 3) updateFieldTools([...fieldTools, mode]);
   }
 
   function handleConvertEstimateToInvoice(draft: EstimateInvoiceDraft) {
@@ -3861,41 +3784,17 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
 
       <div className="v2-tools-launcher">
         <div className="v2-tools-launcher-header">
-          <span>
-            <strong>Your toolbox</strong>
-            <small>{launcherEditing ? "Choose up to three tools to keep first." : "Every tool is here. Pinned tools stay first."}</small>
-          </span>
-          <button
-            type="button"
-            className="v2-tools-customize"
-            onClick={() => setLauncherEditing((editing) => !editing)}
-          >
-            {launcherEditing ? "Done" : "Customize"}
-          </button>
+          <strong>Your toolbox</strong>
         </div>
-        {launcherEditing && fieldTools.length >= 3 ? (
-          <p className="v2-tools-pin-limit" role="status">Three tools are pinned. Unpin one to choose another.</p>
-        ) : null}
         <div className="v2-tool-launch-grid" role="group" aria-label="All tools">
-          {[
-            ...fieldTools
-              .map((mode) => allToolLaunchers().find((tool) => tool.mode === mode))
-              .filter((tool): tool is ToolLauncher => Boolean(tool)),
-            ...allToolLaunchers().filter((tool) => !fieldTools.includes(tool.mode)),
-          ].map((tool) => (
+          {allToolLaunchers().map((tool) => (
             <ToolCard
               key={tool.mode}
               icon={tool.icon}
               iconKey={tool.iconKey}
               title={tool.title}
               summary={tool.summary}
-              category={launcherCategory(tool.mode)}
-              pinned={fieldTools.includes(tool.mode)}
-              editing={launcherEditing}
-              pinLimitReached={fieldTools.length >= 3}
-              onlyPinnedTool={fieldTools.length === 1}
               onAction={() => openToolFromHub(tool.mode)}
-              onTogglePinned={() => togglePinnedTool(tool.mode)}
             />
           ))}
         </div>

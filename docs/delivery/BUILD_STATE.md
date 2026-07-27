@@ -2,10 +2,32 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: App-wide icon-system polish is deployed and exact-source verified.
-Active packet: `docs/delivery/packets/75_APP_ICON_SYSTEM.md`
-Repository branch: `master` (source branch: `codex/app-icon-system`)
+Current phase: Tools launcher subtraction is locally verified and awaiting review/deploy.
+Active packet: `docs/delivery/packets/76_TOOLS_LAUNCHER_SUBTRACTION.md`
+Repository branch: `codex/tools-launcher-subtraction`
 Production feature release commit: `9f79fa59333dc9e27387f0ec7034939ec9854dbe`
+
+## Tools launcher subtraction
+
+- Removed device-only launcher customization, pin/pinned states, category
+  labels, pin limits, and pin-order instructions. These controls only changed
+  local ordering and did not configure or unlock any tool.
+- The seven tool apps remain visible exactly once in a stable order: Camera,
+  Estimate, Heavy 16th, Invoice, Jobsite, Materials, and Time & costs.
+- Cards retain their identity icons, names, summaries, routes, context
+  selection, and full-button accessible labels. Existing tool records and
+  saved work are unchanged.
+- The retired `rivt.fieldTools.v1` preference is no longer read or written;
+  any existing browser value is inert and remains device-only.
+- Build, lint, and focused Tools rendered QA pass at desktop, 390px, and
+  320px in light/dark themes. The smoke now locks the stable order, launcher
+  uniqueness, absent management chrome, decorative-icon boundary, and no
+  horizontal overflow.
+- Full repository gates pass: build, lint, 103 unit/frontend tests, all 20
+  serial PostgreSQL integration suites, fail-closed authentication plus
+  Jobs/discovery E2E, focused rendered Tools QA, diff integrity, and a
+  zero-vulnerability production dependency audit.
+- Deployment evidence remains pending.
 
 ## App icon system
 
