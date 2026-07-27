@@ -3016,6 +3016,8 @@ function activeWorkSummaryJob(work: CanonicalActiveWork): Job | null {
       applicationDeadline: null,
       budgetUnit: work.job.budget?.unit ?? "fixed",
       compensationType: work.job.budget?.unit === "hourly" ? "hourly" : "fixed",
+      publicWebVisibility: "members",
+      publicWebPublishedAt: null,
       createdAt: work.createdAt,
       updatedAt: work.updatedAt,
       events: [],

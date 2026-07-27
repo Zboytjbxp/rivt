@@ -9,13 +9,16 @@ import {
   CheckCircle2,
   ExternalLink,
   Flag,
+  Globe2,
   ImagePlus,
+  LockKeyhole,
   MessageCircle,
   Newspaper,
   Plus,
   RefreshCw,
   Search,
   Send,
+  Share2,
   SlidersHorizontal,
   ThumbsDown,
   ThumbsUp,
@@ -122,6 +125,8 @@ export interface CommunityPost {
   communityName?: string;
   communityAudience?: CommunityAudience;
   viewerCanDelete?: boolean;
+  webVisibility?: "members" | "public";
+  publicWebPublishedAt?: string | null;
 }
 
 export type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
@@ -450,6 +455,7 @@ function postBelongsToCommunity(post: CommunityPost, community: CommunityDisplay
 function ShopTalkNewPostModal({
   profile,
   selectedJobTrade,
+  allowPublicWeb,
   initialFlair = "Question",
   initialTitle = "",
   initialBody = "",
@@ -461,6 +467,7 @@ function ShopTalkNewPostModal({
 }: {
   profile: AccountProfile;
   selectedJobTrade: Trade | "General";
+  allowPublicWeb: boolean;
   initialFlair?: PostFlair;
   initialTitle?: string;
   initialBody?: string;
@@ -468,7 +475,7 @@ function ShopTalkNewPostModal({
   communities: CommunityDisplay[];
   initialCommunitySlug?: string | null;
   onClose: () => void;
-  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null) => void;
+  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null, webVisibility?: "members" | "public") => void;
 }) {
   const posterDefaultTrade = profile.specialties[0] ?? selectedJobTrade;
   const initialPostCommunitySlug = initialCommunitySlug ?? communities[0]?.slug ?? null;
@@ -484,6 +491,9 @@ function ShopTalkNewPostModal({
   const [subRate, setSubRate] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
+  const [webVisibility, setWebVisibility] = useState<"members" | "public">("members");
+  const selectedPostCommunity = communities.find((community) => community.slug === selectedPostCommunitySlug) ?? null;
+  const publicWebAllowed = allowPublicWeb && selectedPostCommunity?.audience === "public";
   const canSubmit = title.trim().length > 0 && (
     body.trim().length > 0
     || Boolean(photoFile)
@@ -563,6 +573,7 @@ function ShopTalkNewPostModal({
                 const nextCommunity = communities.find((community) => community.slug === nextSlug) ?? null;
                 setSelectedPostCommunitySlug(nextSlug);
                 setTrade(inferCommunityDefaultTrade(nextCommunity, posterDefaultTrade));
+                if (nextCommunity?.audience !== "public") setWebVisibility("members");
               }}
             >
               {communities.map((community) => (
@@ -570,6 +581,34 @@ function ShopTalkNewPostModal({
               ))}
             </select>
           </label>
+
+          <fieldset className="shop-post-visibility">
+            <legend>Who can discover this post?</legend>
+            <label className={webVisibility === "members" ? "is-selected" : ""}>
+              <input
+                type="radio"
+                name="shop-post-visibility"
+                checked={webVisibility === "members"}
+                onChange={() => setWebVisibility("members")}
+              />
+              <span><LockKeyhole size={16} /><strong>RIVT members</strong><small>Requires sign-in.</small></span>
+            </label>
+            <label className={webVisibility === "public" ? "is-selected" : ""}>
+              <input
+                type="radio"
+                name="shop-post-visibility"
+                checked={webVisibility === "public"}
+                disabled={!publicWebAllowed}
+                onChange={() => setWebVisibility("public")}
+              />
+              <span><Globe2 size={16} /><strong>Public web</strong><small>Shareable and searchable. Your name, post, photo, and consenting answers can be seen without signing in.</small></span>
+            </label>
+            {!allowPublicWeb ? (
+              <p>Sign in to publish a post on the public web.</p>
+            ) : !publicWebAllowed ? (
+              <p>This community is role-limited, so its posts stay inside RIVT.</p>
+            ) : null}
+          </fieldset>
 
           <label className="input-control">
             <span>Trade</span>
@@ -700,6 +739,7 @@ function ShopTalkNewPostModal({
                   postType === "sub-request" ? subRate : undefined,
                   selectedPostCommunitySlug,
                   photoFile,
+                  webVisibility,
                 );
                 onClose();
               }
@@ -741,6 +781,7 @@ export function ShopTalkView({
   onReportCommunity,
   onNewPost,
   onDeletePost,
+  onSetPostWebVisibility,
   onCommunityCreated,
   onLoadPost,
   role,
@@ -769,8 +810,9 @@ export function ShopTalkView({
   onReportPost: (postId: string, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
   onReportAnswer: (postId: string, answerId: string, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
   onReportCommunity: (community: CommunityDisplay, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
-  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null) => void | Promise<void>;
+  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null, webVisibility?: "members" | "public") => void | Promise<void>;
   onDeletePost: (postId: string) => boolean | Promise<boolean>;
+  onSetPostWebVisibility: (postId: string, webVisibility: "members" | "public") => boolean | Promise<boolean>;
   onCommunityCreated: (community: ServerCommunity) => void;
   onLoadPost: (postId: string) => Promise<CommunityPost | null>;
   role: Role;
@@ -803,6 +845,9 @@ export function ShopTalkView({
   const [duplicateCommunityCandidates, setDuplicateCommunityCandidates] = useState<ServerCommunity[]>([]);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
   const [deleteConfirmPostId, setDeleteConfirmPostId] = useState<string | null>(null);
+  const [visibilityConfirmPostId, setVisibilityConfirmPostId] = useState<string | null>(null);
+  const [visibilityBusyPostId, setVisibilityBusyPostId] = useState<string | null>(null);
+  const [publicShareNotice, setPublicShareNotice] = useState("");
   const [selectedCommunitySlug, setSelectedCommunitySlug] = useState<string | null>(initialCommunitySlug ?? null);
   const [talkQuery, setTalkQuery] = useState(() => initialQuery.trim());
   const [newsQuery, setNewsQuery] = useState("");
@@ -1238,6 +1283,11 @@ export function ShopTalkView({
     selectedPost.viewerCanDelete === true
     || (selectedPost.viewerCanDelete == null && selectedPost.author === profile.displayName)
   ));
+  const canManageSelectedPostVisibility = Boolean(
+    selectedPost
+    && !selectedPost.badge
+    && selectedPost.viewerCanDelete === true,
+  );
   const SelectedCommunityIcon = selectedCommunity?.icon;
   async function handleDeleteSelectedPost() {
     if (!selectedPost) return;
@@ -1251,6 +1301,36 @@ export function ShopTalkView({
       }
     } finally {
       setDeletingPostId(null);
+    }
+  }
+
+  async function changeSelectedPostVisibility(webVisibility: "members" | "public") {
+    if (!selectedPost) return;
+    setVisibilityBusyPostId(selectedPost.id);
+    try {
+      const changed = await onSetPostWebVisibility(selectedPost.id, webVisibility);
+      if (changed) setVisibilityConfirmPostId(null);
+    } finally {
+      setVisibilityBusyPostId(null);
+    }
+  }
+
+  async function shareSelectedPublicPost() {
+    if (!selectedPost || selectedPost.webVisibility !== "public") return;
+    const url = `${window.location.origin}/shop-talk/${selectedPost.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: selectedPost.title, text: `${selectedPost.trade} discussion on RIVT`, url });
+        setPublicShareNotice("Shared");
+      } else {
+        await navigator.clipboard.writeText(url);
+        setPublicShareNotice("Public link copied");
+      }
+      window.setTimeout(() => setPublicShareNotice(""), 2200);
+    } catch (cause) {
+      if (cause instanceof DOMException && cause.name === "AbortError") return;
+      setPublicShareNotice("Could not share this link");
+      window.setTimeout(() => setPublicShareNotice(""), 2200);
     }
   }
 
@@ -1301,6 +1381,7 @@ export function ShopTalkView({
         <ShopTalkNewPostModal
           profile={profile}
           selectedJobTrade={selectedJobTrade}
+          allowPublicWeb={!isGuest}
           communities={communities}
           initialCommunitySlug={selectedCommunitySlug}
           initialFlair={newsDiscussContext ? "Discussion" : "Question"}
@@ -1308,8 +1389,8 @@ export function ShopTalkView({
           initialBody=""
           articleContext={newsDiscussContext}
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
-          onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile) => {
-            void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile);
+          onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile, webVisibility) => {
+            void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile, webVisibility);
             setNewPostOpen(false);
             setNewsDiscussContext(null);
           }}
@@ -1581,7 +1662,7 @@ export function ShopTalkView({
                   </label>
                   <div className="community-audience-picker" aria-label="Community audience">
                     {([
-                      ["public", "Public"],
+                      ["public", "All RIVT"],
                       ["contractors", "Contractors only"],
                       ["tradespeople", "Tradespeople only"],
                     ] as const satisfies Array<[CommunityAudience, string]>).map(([audience, label]) => (
@@ -1865,6 +1946,9 @@ export function ShopTalkView({
                       <span className={selectedPost.status === "Verified Fix" ? "state-pill verified" : "state-pill"}>
                         {selectedPost.status}
                       </span>
+                      {selectedPost.webVisibility === "public" ? (
+                        <span className="state-pill is-public"><Globe2 size={13} /> Public</span>
+                      ) : null}
                       <button
                         type="button"
                         className={bookmarkedIds.has(selectedPost.id) ? "shop-detail-bookmark active" : "shop-detail-bookmark"}
@@ -1873,6 +1957,33 @@ export function ShopTalkView({
                       >
                         {bookmarkedIds.has(selectedPost.id) ? <BookmarkCheck size={17} /> : <Bookmark size={17} />}
                       </button>
+                      {selectedPost.webVisibility === "public" ? (
+                        <button
+                          type="button"
+                          className="shop-detail-share"
+                          aria-label="Share public post"
+                          onClick={() => void shareSelectedPublicPost()}
+                        >
+                          <Share2 size={16} />
+                        </button>
+                      ) : null}
+                      {canManageSelectedPostVisibility ? (
+                        <button
+                          type="button"
+                          className="shop-detail-visibility"
+                          aria-label={selectedPost.webVisibility === "public" ? "Make this post RIVT members only" : "Publish this post on the public web"}
+                          disabled={visibilityBusyPostId === selectedPost.id}
+                          onClick={() => {
+                            if (selectedPost.webVisibility === "public") {
+                              void changeSelectedPostVisibility("members");
+                            } else {
+                              setVisibilityConfirmPostId(selectedPost.id);
+                            }
+                          }}
+                        >
+                          {selectedPost.webVisibility === "public" ? <LockKeyhole size={16} /> : <Globe2 size={16} />}
+                        </button>
+                      ) : null}
                       {canDeleteSelectedPost && (
                         <button
                           type="button"
@@ -1892,6 +2003,7 @@ export function ShopTalkView({
                     {` · ${selectedPost.trade} · ${selectedPost.createdAt}`}
                   </p>
                   <h2>{selectedPost.title}</h2>
+                  {publicShareNotice ? <p className="shop-public-share-notice" role="status">{publicShareNotice}</p> : null}
                   {selectedPostContent?.content ? <p className="shop-question-body">{selectedPostContent.content}</p> : null}
                   {selectedPostContent?.article ? (
                     <aside className="shop-question-article" aria-label="Linked article">
@@ -2051,6 +2163,12 @@ export function ShopTalkView({
                         <X size={16} />
                       </button>
                     </div>
+                    {selectedPost.webVisibility === "public" ? (
+                      <p className="answer-public-disclosure">
+                        <Globe2 size={15} />
+                        This thread is public. Your name and answer will be visible without signing in.
+                      </p>
+                    ) : null}
                     <textarea
                       ref={answerComposerInputRef}
                       value={answerDraft}
@@ -2187,6 +2305,46 @@ export function ShopTalkView({
           </article>
         ) : null}
       </section>
+      {visibilityConfirmPostId && selectedPost?.id === visibilityConfirmPostId ? (
+        <DialogBackdrop className="shop-delete-backdrop" onClose={() => {
+          if (visibilityBusyPostId !== visibilityConfirmPostId) setVisibilityConfirmPostId(null);
+        }}>
+          <DialogSurface
+            className="shop-public-dialog"
+            labelledBy="shop-public-title"
+            onClose={() => {
+              if (visibilityBusyPostId !== visibilityConfirmPostId) setVisibilityConfirmPostId(null);
+            }}
+          >
+            <span className="shop-public-dialog-icon"><Globe2 size={20} aria-hidden="true" /></span>
+            <div>
+              <span>Public web</span>
+              <h2 id="shop-public-title">Publish this discussion publicly?</h2>
+              <p>Your display name, post text, attached photo, and future answers from people who consent will be visible without signing in and may appear in search results.</p>
+              <p>Do not publish contact details, exact jobsite addresses, client information, or identifying paperwork.</p>
+            </div>
+            <div className="shop-delete-actions">
+              <button
+                type="button"
+                className="secondary-action"
+                disabled={visibilityBusyPostId === visibilityConfirmPostId}
+                onClick={() => setVisibilityConfirmPostId(null)}
+              >
+                Keep member-only
+              </button>
+              <button
+                type="button"
+                className="primary-action"
+                disabled={visibilityBusyPostId === visibilityConfirmPostId}
+                onClick={() => void changeSelectedPostVisibility("public")}
+              >
+                <Globe2 size={15} />
+                {visibilityBusyPostId === visibilityConfirmPostId ? "Publishing..." : "Publish publicly"}
+              </button>
+            </div>
+          </DialogSurface>
+        </DialogBackdrop>
+      ) : null}
       {deleteConfirmPostId && selectedPost?.id === deleteConfirmPostId ? (
         <DialogBackdrop className="shop-delete-backdrop" onClose={() => {
           if (deletingPostId !== deleteConfirmPostId) setDeleteConfirmPostId(null);

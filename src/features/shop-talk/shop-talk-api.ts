@@ -14,6 +14,7 @@ export interface ShopTalkPostInput {
   flair?: string | null;
   postType?: "question" | "sub-request" | "safety" | "general";
   communitySlug?: string;
+  webVisibility?: "members" | "public";
 }
 
 export interface ServerShopTalkAnswer {
@@ -58,6 +59,8 @@ export interface ServerShopTalkPost {
   thumbnailUrl?: string | null;
   thumbnailAlt?: string | null;
   viewerCanDelete?: boolean;
+  webVisibility?: "members" | "public";
+  publicWebPublishedAt?: string | null;
 }
 
 export type ShopTalkReportReason = "spam" | "harassment" | "unsafe_advice" | "misinformation" | "privacy" | "duplicate" | "other";
@@ -91,9 +94,14 @@ export async function createShopTalkPost(input: ShopTalkPostInput): Promise<Serv
   return body.data?.post ?? null;
 }
 
-export async function uploadShopTalkPostPhoto(postId: string, file: File): Promise<ServerShopTalkPost | null> {
+export async function uploadShopTalkPostPhoto(
+  postId: string,
+  file: File,
+  publicVisibilityAcknowledged = false,
+): Promise<ServerShopTalkPost | null> {
   const formData = new FormData();
   formData.append("file", file);
+  if (publicVisibilityAcknowledged) formData.append("publicVisibilityAcknowledged", "true");
   const response = await fetchWithTimeout(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/media`), {
     method: "POST",
     credentials: "include",
@@ -114,6 +122,27 @@ export async function deleteShopTalkPost(postId: string): Promise<boolean> {
   return true;
 }
 
+export async function setShopTalkPostVisibility(
+  postId: string,
+  webVisibility: "members" | "public",
+  mediaAcknowledged = false,
+): Promise<ServerShopTalkPost | null> {
+  const response = await fetchWithTimeout(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/visibility`), {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": crypto.randomUUID(),
+    },
+    body: JSON.stringify({ webVisibility, mediaAcknowledged }),
+  });
+  const body = await readShopTalkResponse<{ data?: { post?: ServerShopTalkPost } }>(
+    response,
+    "RIVT could not change that post's public visibility.",
+  );
+  return body.data?.post ?? null;
+}
+
 /** Fetch the newest visible Shop Talk posts. */
 export async function fetchShopTalkPosts(communitySlug?: string | null): Promise<ServerShopTalkPost[]> {
   const suffix = communitySlug ? `?community=${encodeURIComponent(communitySlug)}` : "";
@@ -129,7 +158,11 @@ export async function fetchShopTalkPost(postId: string): Promise<ServerShopTalkP
   return body.data?.post ?? null;
 }
 
-export async function createShopTalkAnswer(postId: string, body: string): Promise<ServerShopTalkAnswer | null> {
+export async function createShopTalkAnswer(
+  postId: string,
+  body: string,
+  publicVisibilityAcknowledged = false,
+): Promise<ServerShopTalkAnswer | null> {
   const response = await fetchWithTimeout(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}/answers`), {
     method: "POST",
     credentials: "include",
@@ -137,7 +170,7 @@ export async function createShopTalkAnswer(postId: string, body: string): Promis
       "Content-Type": "application/json",
       "Idempotency-Key": crypto.randomUUID(),
     },
-    body: JSON.stringify({ body }),
+    body: JSON.stringify({ body, publicVisibilityAcknowledged }),
   });
   const payload = await readShopTalkResponse<{ data?: { answer?: ServerShopTalkAnswer } }>(response, "RIVT could not save that answer.");
   return payload.data?.answer ?? null;

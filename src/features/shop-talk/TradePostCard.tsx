@@ -62,7 +62,9 @@ export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote
   const [shareResult, setShareResult] = useState<"copied" | "shared" | null>(null);
 
   function handleShare() {
-    const url = `${window.location.origin}/app?post=${post.id}`;
+    const url = post.webVisibility === "public"
+      ? `${window.location.origin}/shop-talk/${post.id}`
+      : `${window.location.origin}/app?post=${post.id}`;
     const showResult = (result: "copied" | "shared") => {
       setShareResult(result);
       window.setTimeout(() => setShareResult(null), 1600);

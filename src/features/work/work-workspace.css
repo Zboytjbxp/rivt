@@ -785,6 +785,61 @@
   padding: 22px 26px 16px;
 }
 
+.v2-job-discovery-row {
+  min-height: 48px;
+  margin: 0 18px 10px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  color: var(--v2-text-muted);
+  background: var(--v2-surface-muted);
+  font-size: var(--v2-text-caption);
+}
+
+.v2-job-discovery-row > span {
+  flex: 1;
+}
+
+.v2-job-discovery-row button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-inline: 10px;
+  border: 0;
+  border-radius: var(--v2-radius-sm);
+  color: var(--v2-accent-text);
+  background: transparent;
+  font: inherit;
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.v2-job-discovery-row button:hover,
+.v2-job-discovery-row button:focus-visible {
+  background: var(--v2-accent-soft);
+}
+
+.v2-job-discovery-row small {
+  color: var(--v2-text);
+  font-weight: var(--v2-weight-semibold);
+}
+
+@media (max-width: 640px) {
+  .v2-job-discovery-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .v2-job-discovery-row button {
+    min-height: 44px;
+    justify-content: center;
+  }
+}
+
 .v2-work-detail-header h2 {
   max-width: 760px;
   margin: 4px 0;

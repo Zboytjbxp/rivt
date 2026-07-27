@@ -107,6 +107,9 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
   const [budget, setBudget] = useState(job?.pay ? String(job.pay) : "");
   const [duration, setDuration] = useState(job?.durationHours ? String(job.durationHours) : "");
   const [insuranceRequired, setInsuranceRequired] = useState(job?.insuranceRequired ?? false);
+  const [publicWebVisibility, setPublicWebVisibility] = useState<"members" | "public">(
+    job?.canonical?.publicWebVisibility ?? "members",
+  );
   const [tools, setTools] = useState(joinList(job?.tools));
   const [materials, setMaterials] = useState(joinList(job?.canonical?.materials));
   const [deliverables, setDeliverables] = useState(joinList(job?.deliverables));
@@ -157,6 +160,7 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
     preferredStartDate: optionalDate(preferredStartDate),
     applicationDeadline: optionalDateTime(applicationDeadline),
     insuranceRequired,
+    publicWebVisibility,
     tools: splitList(tools),
     materials: splitList(materials),
     deliverables: splitList(deliverables),
@@ -171,7 +175,7 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
       countryCode: "US",
       accessNotes: accessNotes.trim(),
     } : null,
-  }), [accessNotes, addressLine1, addressLine2, applicationDeadline, budget, city, compensationType, deliverables, difficulty, duration, insuranceRequired, materials, organizationId, postalCode, postalPrefix, preferredStartDate, region, scopeDescription, summary, title, tools, tradeName, workType]);
+  }), [accessNotes, addressLine1, addressLine2, applicationDeadline, budget, city, compensationType, deliverables, difficulty, duration, insuranceRequired, materials, organizationId, postalCode, postalPrefix, preferredStartDate, publicWebVisibility, region, scopeDescription, summary, title, tools, tradeName, workType]);
 
   async function persistDraft() {
     if (!canSaveBasics) throw new Error("Add a job title and public city/state before saving.");
@@ -288,6 +292,33 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
           {step === 2 ? (
             <section className="job-editor-section">
               <div className="job-editor-intro"><h3>Schedule and private location</h3><p>The public listing shows only city and state. The exact address remains restricted.</p></div>
+              <fieldset className="job-visibility-options">
+                <legend>Who can discover this job?</legend>
+                <label className={publicWebVisibility === "members" ? "is-selected" : ""}>
+                  <input
+                    type="radio"
+                    name="public-web-visibility"
+                    checked={publicWebVisibility === "members"}
+                    onChange={() => setPublicWebVisibility("members")}
+                  />
+                  <span>
+                    <strong>RIVT members</strong>
+                    <small>Visible only after sign-in. Best for private network hiring.</small>
+                  </span>
+                </label>
+                <label className={publicWebVisibility === "public" ? "is-selected" : ""}>
+                  <input
+                    type="radio"
+                    name="public-web-visibility"
+                    checked={publicWebVisibility === "public"}
+                    onChange={() => setPublicWebVisibility("public")}
+                  />
+                  <span>
+                    <strong>Public web</strong>
+                    <small>Creates a shareable, searchable page. Only city/state, scope, requirements, and compensation are shown.</small>
+                  </span>
+                </label>
+              </fieldset>
               <div className="privacy-callout"><MapPin size={18} /><div><strong>Exact address is private</strong><span>Only the job owner can access it during this packet.</span></div></div>
               <label>Address line 1<span className="required-mark" aria-hidden="true">*</span><input value={addressLine1} onChange={(event) => setAddressLine1(event.target.value)} autoComplete="street-address" /></label>
               <label>Address line 2 <span className="optional-label">Optional</span><input value={addressLine2} onChange={(event) => setAddressLine2(event.target.value)} /></label>
@@ -308,7 +339,9 @@ export function JobEditorModal({ organizationId, job, defaultLocation, onClose, 
                 <strong>{canPublish ? "Ready to publish" : "Finish these before publishing"}</strong>
                 <span>
                   {canPublish
-                    ? "Your public listing and private jobsite details are complete."
+                    ? publicWebVisibility === "public"
+                      ? "The public page is ready. Exact address and contact details remain private."
+                      : "The RIVT-member listing and private jobsite details are complete."
                     : publishBlockers.join(" · ")}
                 </span>
               </div>

@@ -1,5 +1,37 @@
 # Gate A Requirements Traceability
 
+## Packet 72 — Public Jobs and Shop Talk discovery evidence
+
+- `GA-FND-003` gains additive migration `0034_public_discovery`: jobs and Shop
+  Talk posts default to member-only web visibility, answers require their own
+  public consent timestamp, and the reviewed rollback removes only those new
+  fields and indexes.
+- `GA-FND-004` gains server-authorized publication evidence: only a job/post
+  owner can change visibility; role-limited communities cannot publish
+  publicly; member-only answers cannot be retroactively exposed; hidden,
+  closed, inactive, and unauthorized records remain absent.
+- `GA-UX-003` gains a real acquisition/read path for RIVT's defining
+  surfaces: indexable public Job and Shop Talk list/detail pages lead
+  interested visitors into the authenticated apply and discussion workflows.
+- `GA-UX-005` gains privacy and honesty evidence: no existing record is
+  auto-published; exact addresses, contact/account identifiers, private
+  communities, and unconsented answers are omitted; public media and public
+  answers require explicit acknowledgement; guest/sample posts cannot claim
+  public publication.
+- `GA-UX-006` gains mobile/desktop light/dark public-page evidence with no
+  horizontal overflow, canonical/social/structured metadata, and honest
+  empty/unavailable states.
+- `GA-OPS-007` gains 103 passing unit/frontend checks, all 20 serial
+  PostgreSQL integration suites, E2E, five rendered UI suites, direct
+  responsive browser inspection, diff check, and a zero-vulnerability
+  production dependency audit. The integration command completed in 21
+  minutes with zero failures, including public publication, messaging and
+  notifications, Work/Shop Talk lifecycles, and migration rollback/reapply.
+  No deployment evidence is claimed.
+- Requirement maturity does not change until branch review, aggregate launch
+  gates, merge, deployment, migration readiness, live privacy checks, and
+  exact-source monitoring are complete.
+
 ## Packet 71 — Pre-launch activation and accessibility evidence
 
 - `GA-UX-001`, `GA-UX-002`, and `GA-OPS-007` gain local evidence for a

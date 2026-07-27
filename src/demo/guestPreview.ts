@@ -167,6 +167,8 @@ function demoJob(input: GuestPreviewInput, overrides: Partial<Job> = {}): Job {
       applicationDeadline: "2026-07-10",
       budgetUnit: "fixed",
       compensationType: "fixed",
+      publicWebVisibility: "members",
+      publicWebPublishedAt: null,
       createdAt,
       updatedAt: createdAt,
       events: [

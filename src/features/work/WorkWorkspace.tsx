@@ -18,6 +18,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Share2,
   ShieldCheck,
   Trash2,
   Users,
@@ -1278,6 +1279,7 @@ export function WorkWorkspace({
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>(readSavedSearches);
   const [savedSearchNotice, setSavedSearchNotice] = useState("");
   const [saveTemplateNotice, setSaveTemplateNotice] = useState("");
+  const [publicLinkNotice, setPublicLinkNotice] = useState("");
   const [activeProject, setActiveProject] = useState<ProjectRecord | null>(null);
   const [closeoutOpen, setCloseoutOpen] = useState(() => Boolean(openCloseoutOnMount));
   const [addressCopied, setAddressCopied] = useState(false);
@@ -1787,6 +1789,25 @@ export function WorkWorkspace({
     }
   }
 
+  async function sharePublicJob(job: Job) {
+    if (!job.canonical || job.canonical.publicWebVisibility !== "public" || job.status !== "Open") return;
+    const url = `${window.location.origin}/jobs/${job.canonical.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: job.title, text: `${job.trade} work in ${job.location}`, url });
+        setPublicLinkNotice("Shared");
+      } else {
+        await navigator.clipboard.writeText(url);
+        setPublicLinkNotice("Public link copied");
+      }
+      window.setTimeout(() => setPublicLinkNotice(""), 2200);
+    } catch (cause) {
+      if (cause instanceof DOMException && cause.name === "AbortError") return;
+      setPublicLinkNotice("Could not share this link");
+      window.setTimeout(() => setPublicLinkNotice(""), 2200);
+    }
+  }
+
   useEffect(() => {
     if (isDemo) return;
     if (!activeWork?.id) return;
@@ -2118,6 +2139,21 @@ export function WorkWorkspace({
               <div><span className="v2-detail-trade">{detailJob.trade}</span><h2 ref={detailHeadingRef} tabIndex={-1}>{detailJob.title}</h2><p><MapPin size={14} /> {detailJob.location} · {activeWork ? `${role === "contractor" ? "Contractor" : "Tradesperson"} workspace` : `${detailJob.status === "Draft" ? "Last saved" : "Posted"} ${detailJob.posted}`}</p></div>
               {activeWork ? <StatusPill tone={completionStatus === "confirmed" ? "success" : completionStatus === "disputed" ? "danger" : "warning"} className="v2-work-status">{lifecycleLabel}</StatusPill> : role === "tradesperson" && detailJob.match > 0 ? <div className="v2-match-score"><strong>{detailJob.match}%</strong><span>match</span></div> : <StatusPill tone={statusTone(detailJob.status)} className={`v2-work-status status-${detailJob.status.toLowerCase()}`}>{detailJob.status}</StatusPill>}
             </header>
+            {!activeWork && detailJob.canonical ? (
+              <div className="v2-job-discovery-row">
+                <span>
+                  {detailJob.canonical.publicWebVisibility === "public"
+                    ? detailJob.status === "Open" ? "Public web page is live" : "Public web page will appear while this job is open"
+                    : "Visible to signed-in RIVT members only"}
+                </span>
+                {detailJob.canonical.publicWebVisibility === "public" && detailJob.status === "Open" ? (
+                  <button type="button" onClick={() => void sharePublicJob(detailJob)}>
+                    <Share2 size={15} /> Share public link
+                  </button>
+                ) : null}
+                {publicLinkNotice ? <small role="status">{publicLinkNotice}</small> : null}
+              </div>
+            ) : null}
 
             {activeWork && workspaceTab === "today" && workspaceArrivalVisible ? (
               <section className="v2-workspace-arrival" role="status">

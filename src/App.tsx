@@ -88,6 +88,7 @@ import {
   fetchShopTalkPost,
   fetchShopTalkPosts,
   reportShopTalkTarget,
+  setShopTalkPostVisibility,
   uploadShopTalkPostPhoto,
   verifyShopTalkAnswer,
   type ServerShopTalkAnswer,
@@ -497,6 +498,8 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
     communitySlug: post.communitySlug,
     communityName: post.communityName,
     communityAudience: post.communityAudience,
+    webVisibility: post.webVisibility ?? "members",
+    publicWebPublishedAt: post.publicWebPublishedAt ?? null,
     viewerCanDelete: post.viewerCanDelete,
     ...(thumbnailUrl ? { thumbnailUrl } : {}),
     ...(thumbnailUrl ? { thumbnailAlt: post.thumbnailAlt ?? firstMedia?.altText ?? firstMedia?.originalName ?? post.title } : {}),
@@ -1751,7 +1754,7 @@ function App() {
     if (!isGuest && authUser && onboardingComplete && !postId.startsWith("local-") && !postId.startsWith("prompt-")) {
       let serverAnswer: ServerShopTalkAnswer | null;
       try {
-        serverAnswer = await createShopTalkAnswer(postId, body);
+        serverAnswer = await createShopTalkAnswer(postId, body, post.webVisibility === "public");
       } catch (cause) {
         addActivity("Shop Talk answer not saved", cause instanceof Error ? cause.message : "Your answer could not reach the server.", "error");
         return;
@@ -1940,6 +1943,7 @@ function App() {
     subRate?: string,
     communitySlugOverride?: string | null,
     photoFile?: File | null,
+    webVisibility: "members" | "public" = "members",
   ) {
     const localThumbnailUrl = photoFile ? URL.createObjectURL(photoFile) : undefined;
     const localPost: CommunityPost = {
@@ -1957,6 +1961,7 @@ function App() {
       status: "Open",
       type: postType,
       communitySlug: communitySlugOverride ?? defaultShopTalkCommunitySlug(trade),
+      webVisibility,
       ...(localThumbnailUrl ? { thumbnailUrl: localThumbnailUrl, thumbnailAlt: photoFile?.name ?? title } : {}),
       ...(subTrade ? { subTrade } : {}),
       ...(subLocation ? { subLocation } : {}),
@@ -1974,6 +1979,7 @@ function App() {
           flair,
           postType,
           communitySlug: communitySlugOverride ?? undefined,
+          webVisibility,
         });
         if (!serverPost) {
           addActivity(
@@ -1986,7 +1992,7 @@ function App() {
         let mediaPost: ServerShopTalkPost | null = null;
         if (photoFile) {
           try {
-            mediaPost = await uploadShopTalkPostPhoto(serverPost.id, photoFile);
+            mediaPost = await uploadShopTalkPostPhoto(serverPost.id, photoFile, webVisibility === "public");
           } catch (cause) {
             photoUploadFailed = true;
             addActivity(
@@ -2016,8 +2022,37 @@ function App() {
       photoUploadFailed ? "Shop Talk post created without photo" : "Shop Talk post created",
       photoUploadFailed
         ? `"${title}" posted, but the photo could not be uploaded. Try editing or reposting with the image.`
-        : `"${title}" posted to Shop Talk${photoFile ? " with a photo" : ""}.`,
+        : `"${title}" posted to Shop Talk${webVisibility === "public" ? " and the public web" : ""}${photoFile ? " with a photo" : ""}.`,
     );
+  }
+
+  async function handleShopTalkVisibility(postId: string, webVisibility: "members" | "public") {
+    const target = communityPosts.find((post) => post.id === postId);
+    if (!target || target.badge || postId.startsWith("local-") || postId.startsWith("prompt-")) return false;
+    try {
+      const updated = await setShopTalkPostVisibility(
+        postId,
+        webVisibility,
+        webVisibility === "public" && Boolean(target.thumbnailUrl),
+      );
+      if (!updated) throw new Error("RIVT did not return the updated post.");
+      const nextPost = toCommunityPostViewModel(updated);
+      setCommunityPosts((current) => current.map((post) => post.id === postId ? nextPost : post));
+      addActivity(
+        webVisibility === "public" ? "Shop Talk post published publicly" : "Shop Talk post made member-only",
+        webVisibility === "public"
+          ? `"${target.title}" now has a public page you can share.`
+          : `"${target.title}" is no longer visible on the public web.`,
+      );
+      return true;
+    } catch (cause) {
+      addActivity(
+        "Shop Talk visibility was not changed",
+        cause instanceof Error ? cause.message : "RIVT could not update that post.",
+        "error",
+      );
+      return false;
+    }
   }
 
   async function handleDeleteShopTalkPost(postId: string) {
@@ -2062,7 +2097,12 @@ function App() {
     setSelectedId(job.id);
     setEditingJob(job);
     if (published) {
-      addActivity("Job published", `${job.title} is now visible to tradespeople in ${job.location}.`);
+      addActivity(
+        "Job published",
+        job.canonical?.publicWebVisibility === "public"
+          ? `${job.title} is visible to RIVT tradespeople and has a public page with the private jobsite details removed.`
+          : `${job.title} is now visible to signed-in RIVT tradespeople in ${job.location}.`,
+      );
       trackProductEvent("job_posted");
     }
   }
@@ -2919,6 +2959,7 @@ function App() {
             onReportCommunity={handleReportCommunity}
             onNewPost={handleNewShopTalkPost}
             onDeletePost={handleDeleteShopTalkPost}
+            onSetPostWebVisibility={handleShopTalkVisibility}
             onCommunityCreated={handleCommunityCreated}
             onLoadPost={loadShopTalkPost}
           />

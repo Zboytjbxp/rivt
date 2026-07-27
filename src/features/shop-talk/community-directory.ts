@@ -62,13 +62,13 @@ export function formatMemberCount(memberCount: number) {
 export function communityAudienceLabel(audience: CommunityAudience = "public") {
   if (audience === "contractors") return "Contractors only";
   if (audience === "tradespeople") return "Tradespeople only";
-  return "Public";
+  return "All RIVT";
 }
 
 export function communityAudienceDescription(audience: CommunityAudience = "public") {
   if (audience === "contractors") return "Only contractor accounts can join, post, or answer.";
   if (audience === "tradespeople") return "Only tradesperson accounts can join, post, or answer.";
-  return "Anyone in RIVT can join, post, and answer.";
+  return "Any signed-in RIVT member can join, post, and answer. Individual authors choose whether a post also appears on the public web.";
 }
 
 export function roleCanAccessCommunity(audience: CommunityAudience = "public", role?: Role) {

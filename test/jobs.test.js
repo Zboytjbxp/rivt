@@ -116,6 +116,11 @@ test("job compensation accepts realistic hourly rates and rejects zero-dollar pr
     privateLocation: null,
   });
   assert.equal(job.budgetCents, 3500);
+  assert.equal(job.publicWebVisibility, "members");
+  assert.equal(createJobSchema.parse({
+    ...job,
+    publicWebVisibility: "public",
+  }).publicWebVisibility, "public");
   assert.throws(() => applicationSubmitSchema.parse({
     message: "Available for this work.",
     proposedStartDate: null,
@@ -156,6 +161,8 @@ test("public job mapping never invents or leaks a private address", () => {
     closed_at: null,
     created_at: new Date(),
     updated_at: new Date(),
+    public_web_visibility: "public",
+    public_web_published_at: new Date(),
     address_line1: "100 Private Street",
   };
   const actor = {
@@ -165,6 +172,8 @@ test("public job mapping never invents or leaks a private address", () => {
   const mapped = mapJobRecord(row, { actor });
   assert.equal(mapped.matchScore, 100);
   assert.equal("privateLocation" in mapped, false);
+  assert.equal(mapped.publicWebVisibility, "public");
+  assert.ok(mapped.publicWebPublishedAt);
   assert.equal(JSON.stringify(mapped).includes("Private Street"), false);
   assert.equal(calculateMatchScore(row, actor), 100);
 });

@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { ApiError, asyncRoute, validate, z } from "./api.js";
 import { detectUploadContent, mediaKindForMime } from "./projects.js";
 import { emitProductEvent } from "./product-analytics.js";
+import { assertPublicContentSafe } from "./public-discovery.js";
 
 const shopTalkTargetSchema = z.object({
   targetType: z.enum(["thread", "answer"]),
@@ -28,6 +29,11 @@ const shopTalkPostParamsSchema = z.object({
 const shopTalkAnswerParamsSchema = z.object({
   postId: z.uuid(),
   answerId: z.uuid(),
+});
+
+const shopTalkVisibilitySchema = z.object({
+  webVisibility: z.enum(["members", "public"]),
+  mediaAcknowledged: z.boolean().optional().default(false),
 });
 
 function shopTalkTargetSubject(target) {
@@ -190,10 +196,12 @@ const shopTalkPostCreateSchema = z.object({
   flair: z.enum(["Question", "Discussion", "Code Talk", "Compliance", "Tip", "Humor"]).nullable().optional(),
   postType: z.enum(["question", "sub-request", "safety", "general"]).optional().default("general"),
   communitySlug: z.string().trim().min(1).max(60).regex(/^[a-z0-9-]+$/).optional(),
+  webVisibility: z.enum(["members", "public"]).optional().default("members"),
 });
 
 const shopTalkAnswerCreateSchema = z.object({
   body: z.string().trim().min(1).max(1000),
+  publicVisibilityAcknowledged: z.boolean().optional().default(false),
 });
 
 function defaultCommunitySlugForTrade(trade) {
@@ -288,6 +296,8 @@ function mapShopTalkPostRow(row, viewerAccountId = null) {
     communitySlug: row.community_slug,
     communityName: row.community_name,
     communityAudience: row.community_audience ?? "public",
+    webVisibility: row.public_web_visibility ?? "members",
+    publicWebPublishedAt: row.public_web_published_at ?? null,
     answers: Array.isArray(row.answers) ? row.answers.map(mapShopTalkAnswerRow) : [],
     media,
     thumbnailUrl: media[0]?.signedUrl ?? null,
@@ -431,7 +441,10 @@ async function fetchShopTalkPostRows(client, { actor, communitySlug = null, post
             post.body,
             post.status,
             post.created_at,
+            post.updated_at,
             post.moderation_status,
+            post.public_web_visibility,
+            post.public_web_published_at,
             post.community_id,
             community.slug AS community_slug,
             community.name AS community_name,
@@ -562,11 +575,25 @@ export function registerShopTalkRoutes({
           input.communitySlug ?? defaultCommunitySlugForTrade(input.trade),
           request.actor,
         );
+        if (input.webVisibility === "public") {
+          if (community.audience !== "public") {
+            throw new ApiError(
+              422,
+              "SHOP_TALK_PUBLIC_COMMUNITY_REQUIRED",
+              "Public-web posts must be placed in a community open to all RIVT members.",
+            );
+          }
+          assertPublicContentSafe([input.title, input.body]);
+        }
         const inserted = await client.query(
           `INSERT INTO shop_talk_posts (
-             author_account_id, author_name, community_id, trade, flair, post_type, title, body
-           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           RETURNING id, author_account_id, author_name, community_id, trade, flair, post_type, title, body, status, created_at, moderation_status`,
+             author_account_id, author_name, community_id, trade, flair, post_type, title, body,
+             public_web_visibility, public_web_published_at
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
+             CASE WHEN $9 = 'public' THEN now() ELSE NULL END)
+           RETURNING id, author_account_id, author_name, community_id, trade, flair, post_type,
+                     title, body, status, created_at, updated_at, moderation_status,
+                     public_web_visibility, public_web_published_at`,
           [
             request.actor.account.id,
             authorName,
@@ -576,12 +603,23 @@ export function registerShopTalkRoutes({
             input.postType,
             input.title,
             input.body,
+            input.webVisibility,
           ],
         );
         inserted.rows[0].community_slug = community.slug;
         inserted.rows[0].community_name = community.name;
         inserted.rows[0].community_audience = community.audience;
         inserted.rows[0].answers = [];
+        await client.query(
+          `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+           VALUES ($1, $2, 'shop_talk.post_created', 'shop_talk_post', $3, $4::jsonb)`,
+          [
+            request.requestId,
+            request.actor.account.id,
+            inserted.rows[0].id,
+            JSON.stringify({ webVisibility: input.webVisibility, communitySlug: community.slug }),
+          ],
+        );
         return {
           status: 201,
           body: {
@@ -606,6 +644,123 @@ export function registerShopTalkRoutes({
     }
     sendIdempotentResult(response, result);
   }));
+
+  app.patch(
+    "/api/v1/shop-talk/posts/:postId/visibility",
+    requireV1AuthenticatedUser,
+    requireV1Actor,
+    writeRateLimit,
+    asyncRoute(async (request, response) => {
+      const { postId } = validate(shopTalkPostParamsSchema, request.params);
+      const input = validate(shopTalkVisibilitySchema, request.body);
+      const result = await runIdempotentMutation(
+        request,
+        request.actor.account.id,
+        `shop-talk.post.visibility:${postId}`,
+        async (client) => {
+          const found = await client.query(
+            `SELECT post.id, post.author_account_id, post.title, post.body,
+                    post.public_web_visibility,
+                    community.audience AS community_audience,
+                    media_count.count AS media_count,
+                    answer_count.count AS answers_without_public_consent
+             FROM shop_talk_posts post
+             JOIN communities community ON community.id = post.community_id
+             CROSS JOIN LATERAL (
+               SELECT count(*)::int AS count
+               FROM shop_talk_post_media media
+               WHERE media.post_id = post.id
+                 AND media.status = 'active'
+             ) media_count
+             CROSS JOIN LATERAL (
+               SELECT count(*)::int AS count
+               FROM shop_talk_answers answer
+               WHERE answer.post_id = post.id
+                 AND answer.deleted_at IS NULL
+                 AND answer.moderation_status <> 'hidden'
+                 AND answer.public_web_consent_at IS NULL
+             ) answer_count
+             WHERE post.id = $1
+               AND post.moderation_status <> 'hidden'
+               AND community.archived_at IS NULL
+               AND community.moderation_status <> 'hidden'
+             FOR UPDATE OF post`,
+            [postId],
+          );
+          if (!found.rowCount) {
+            throw new ApiError(404, "SHOP_TALK_POST_NOT_FOUND", "That Shop Talk post does not exist.");
+          }
+          const post = found.rows[0];
+          if (post.author_account_id !== request.actor.account.id) {
+            throw new ApiError(403, "SHOP_TALK_VISIBILITY_FORBIDDEN", "Only the post author can change public visibility.");
+          }
+          if (input.webVisibility === "public") {
+            if (post.community_audience !== "public") {
+              throw new ApiError(
+                422,
+                "SHOP_TALK_PUBLIC_COMMUNITY_REQUIRED",
+                "Move this post to a community open to all RIVT members before publishing it on the web.",
+              );
+            }
+            if (Number(post.answers_without_public_consent ?? 0) > 0) {
+              throw new ApiError(
+                409,
+                "SHOP_TALK_ANSWER_CONSENT_REQUIRED",
+                "This member-only thread has answers that were not submitted for public display, so it cannot be published on the web.",
+              );
+            }
+            if (Number(post.media_count ?? 0) > 0 && !input.mediaAcknowledged) {
+              throw new ApiError(
+                422,
+                "SHOP_TALK_PUBLIC_MEDIA_ACKNOWLEDGEMENT_REQUIRED",
+                "Confirm that the attached photo is safe to show on the public web.",
+              );
+            }
+            assertPublicContentSafe([post.title, post.body]);
+          }
+
+          await client.query(
+            `UPDATE shop_talk_posts
+             SET public_web_visibility = $2,
+                 public_web_published_at = CASE
+                   WHEN $2 = 'public' THEN COALESCE(public_web_published_at, now())
+                   ELSE public_web_published_at
+                 END,
+                 updated_at = now()
+             WHERE id = $1`,
+            [postId, input.webVisibility],
+          );
+          await client.query(
+            `INSERT INTO audit_events (request_id, actor_account_id, action, subject_type, subject_id, metadata)
+             VALUES ($1, $2, 'shop_talk.post_visibility_changed', 'shop_talk_post', $3, $4::jsonb)`,
+            [
+              request.requestId,
+              request.actor.account.id,
+              postId,
+              JSON.stringify({
+                from: post.public_web_visibility ?? "members",
+                to: input.webVisibility,
+                mediaAcknowledged: Boolean(input.mediaAcknowledged),
+              }),
+            ],
+          );
+          const [updated] = await fetchShopTalkPostRows(client, { actor: request.actor, postId });
+          return {
+            status: 200,
+            body: {
+              data: {
+                post: updated
+                  ? await mapShopTalkPostRowWithMedia(updated, signedObjectUrl, request.actor.account.id)
+                  : null,
+              },
+              meta: { requestId: request.requestId },
+            },
+          };
+        },
+      );
+      sendIdempotentResult(response, result);
+    }),
+  );
 
   app.post(
     "/api/v1/shop-talk/posts/:postId/media",
@@ -639,7 +794,7 @@ export function registerShopTalkRoutes({
         `shop-talk.post.media:${postId}`,
         async (client) => {
           const post = await client.query(
-            `SELECT id, author_account_id, title, moderation_status
+            `SELECT id, author_account_id, title, moderation_status, public_web_visibility
              FROM shop_talk_posts
              WHERE id = $1
                AND moderation_status <> 'hidden'`,
@@ -650,6 +805,16 @@ export function registerShopTalkRoutes({
           }
           if (post.rows[0].author_account_id !== request.actor.account.id) {
             throw new ApiError(403, "SHOP_TALK_MEDIA_FORBIDDEN", "Only the post author can add a photo to this post.");
+          }
+          if (
+            post.rows[0].public_web_visibility === "public"
+            && String(request.body?.publicVisibilityAcknowledged ?? "").toLowerCase() !== "true"
+          ) {
+            throw new ApiError(
+              422,
+              "SHOP_TALK_PUBLIC_MEDIA_ACKNOWLEDGEMENT_REQUIRED",
+              "Confirm that this photo is safe to show on the public web.",
+            );
           }
 
           const uploadId = randomUUID();
@@ -843,6 +1008,7 @@ export function registerShopTalkRoutes({
                   post.title,
                   post.author_account_id,
                   post.moderation_status,
+                  post.public_web_visibility,
                   community.slug AS community_slug,
                   community.name AS community_name,
                   community.moderation_status AS community_moderation_status
@@ -866,16 +1032,27 @@ export function registerShopTalkRoutes({
         if (post.rows[0].moderation_status === "locked" || post.rows[0].community_moderation_status === "locked") {
           throw new ApiError(409, "SHOP_TALK_LOCKED", "This conversation is locked and cannot receive new answers.");
         }
+        const answerWillBePublic = post.rows[0].public_web_visibility === "public";
+        if (answerWillBePublic && !input.publicVisibilityAcknowledged) {
+          throw new ApiError(
+            422,
+            "SHOP_TALK_PUBLIC_ANSWER_ACKNOWLEDGEMENT_REQUIRED",
+            "Confirm that this answer may appear on the public web.",
+          );
+        }
+        if (answerWillBePublic) assertPublicContentSafe([input.body]);
         const profile = await client.query(
           "SELECT display_name FROM profiles WHERE account_id = $1",
           [request.actor.account.id],
         );
         const authorName = (profile.rows[0]?.display_name || "").trim() || "RIVT member";
         const inserted = await client.query(
-          `INSERT INTO shop_talk_answers (post_id, author_account_id, author_name, body)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO shop_talk_answers (
+             post_id, author_account_id, author_name, body, public_web_consent_at
+           )
+           VALUES ($1, $2, $3, $4, CASE WHEN $5 THEN now() ELSE NULL END)
            RETURNING id, author_name, body, verified_fix, created_at, moderation_status`,
-          [postId, request.actor.account.id, authorName, input.body],
+          [postId, request.actor.account.id, authorName, input.body, answerWillBePublic],
         );
         await client.query(
           `UPDATE shop_talk_posts
@@ -891,7 +1068,7 @@ export function registerShopTalkRoutes({
             request.requestId,
             request.actor.account.id,
             inserted.rows[0].id,
-            JSON.stringify({ postId }),
+            JSON.stringify({ postId, publicWebConsent: answerWillBePublic }),
           ],
         );
         await notifyShopTalkPostAuthor(client, {

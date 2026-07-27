@@ -2,10 +2,46 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Pre-launch activation, accessibility, performance, and install hardening is implemented locally and awaiting review/deployment.
-Active packet: `docs/delivery/packets/71_PRE_LAUNCH_PERFECT_PASS.md`
-Repository branch: `codex/pre-launch-perfect-pass`
+Current phase: Privacy-safe public Jobs and Shop Talk discovery is implemented locally and awaiting review/deployment.
+Active packet: `docs/delivery/packets/72_PUBLIC_JOBS_SHOP_TALK.md`
+Repository branch: `codex/public-jobs-shop-talk`
 Production feature release commit: `fac181b52a0498a21748d032e2b79d4861f216fa` (production remains on the prior verified release)
+
+## Public Jobs and Shop Talk discovery
+
+- Jobs and Shop Talk now have an explicit owner-controlled `RIVT members` or
+  `Public web` publication choice. Existing records and omitted choices remain
+  member-only; no production record is automatically made public.
+- Public job projections expose city/region, scope, requirements, schedule, and
+  compensation context while omitting exact jobsite addresses, contact
+  details, account identifiers, applications, and private lifecycle records.
+- Public Shop Talk is limited to all-RIVT communities. Replies appear publicly
+  only when their own author answers a public thread with an explicit
+  disclosure; a member-only thread with older unconsented replies cannot be
+  retroactively published.
+- Public media requires an owner acknowledgement. Public editable copy is
+  rejected when it contains a recognizable email, phone number, or street
+  address. Guest/sample posts cannot claim public publication.
+- Added rate-limited read-only APIs and server-rendered `/jobs`,
+  `/jobs/:id`, `/shop-talk`, and `/shop-talk/:id` pages with canonical and
+  social metadata, JSON-LD, tokenized light/dark responsive UI, honest empty
+  and unavailable states, and a dynamic sitemap.
+- Work and Shop Talk expose owner visibility, share, and publication
+  disclosures without weakening authenticated apply/answer/vote/report or
+  moderation authorization.
+- Migration `0034_public_discovery` is additive and reversible. Its lifecycle
+  test verifies the new fields, rolls them back, preserves migration
+  `0033_customer_book`, and reapplies the full chain.
+- Local gates passed: build, lint, 103 unit/frontend tests, all 20 serial
+  PostgreSQL integration suites, E2E, Work/Shop Talk/Tools/mobile/guest
+  rendered QA, browser inspection at mobile/desktop in both themes, diff
+  check, and zero known production dependency vulnerabilities.
+- The official integration command completed in 21 minutes with zero failures,
+  including messaging/notifications, public discovery, and the full migration
+  lifecycle. The earlier 15-minute aggregate wrapper attempt was only too
+  short; it is not represented as a product failure or a pass.
+- No merge, deployment, indexing, migration application, or production
+  visibility change is claimed.
 
 ## Pre-launch activation, accessibility, measurement, performance, and PWA
 

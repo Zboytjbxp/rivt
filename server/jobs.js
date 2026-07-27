@@ -4,6 +4,7 @@ const difficultyValues = ["easy", "moderate", "challenging", "advanced", "expert
 const workTypeValues = ["side_work", "emergency", "multi_day", "inspection_prep"];
 const statusValues = ["draft", "open", "paused", "closed"];
 const compensationTypeValues = ["fixed", "hourly", "open_to_offers", "request_quotes"];
+const publicWebVisibilityValues = ["members", "public"];
 
 const textList = z.array(z.string().trim().min(1).max(160)).max(30).default([])
   .transform((items) => [...new Set(items)]);
@@ -39,6 +40,7 @@ const editableJobFields = {
   preferredStartDate: z.iso.date().nullable().default(null),
   applicationDeadline: z.iso.datetime({ offset: true }).nullable().default(null),
   insuranceRequired: z.boolean().default(false),
+  publicWebVisibility: z.enum(publicWebVisibilityValues).default("members"),
   tools: textList,
   materials: textList,
   deliverables: textList,
@@ -67,6 +69,7 @@ export const updateJobSchema = z.object({
   preferredStartDate: editableJobFields.preferredStartDate.optional(),
   applicationDeadline: editableJobFields.applicationDeadline.optional(),
   insuranceRequired: editableJobFields.insuranceRequired.optional(),
+  publicWebVisibility: editableJobFields.publicWebVisibility.optional(),
   tools: textList.optional(),
   materials: textList.optional(),
   deliverables: textList.optional(),
@@ -265,6 +268,8 @@ export function mapJobRecord(row, { includePrivateLocation = false, actor = null
     },
     requirements: requirementsByKind(requirements),
     addressPrivacy: "Exact address is shared only after an accepted work relationship.",
+    publicWebVisibility: row.public_web_visibility ?? "members",
+    publicWebPublishedAt: isoDateTime(row.public_web_published_at),
     matchScore: calculateMatchScore(row, actor),
     version: row.version,
     publishedAt: isoDateTime(row.published_at),
@@ -314,4 +319,4 @@ export function jobSelectSql({ includePrivateLocation = false } = {}) {
   `;
 }
 
-export { difficultyValues, statusValues, workTypeValues };
+export { difficultyValues, publicWebVisibilityValues, statusValues, workTypeValues };

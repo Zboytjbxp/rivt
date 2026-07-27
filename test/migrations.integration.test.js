@@ -225,6 +225,15 @@ if (!testDatabaseUrl) {
 
       assert.equal((await database.query("SELECT to_regclass('document_brand_profiles') AS table_name")).rows[0].table_name, "document_brand_profiles");
       assert.equal((await database.query("SELECT to_regclass('customers') AS table_name")).rows[0].table_name, "customers");
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'jobs' AND column_name IN ('public_web_visibility', 'public_web_published_at')",
+      )).rows[0].count, 2);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'shop_talk_posts' AND column_name IN ('public_web_visibility', 'public_web_published_at')",
+      )).rows[0].count, 2);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'shop_talk_answers' AND column_name = 'public_web_consent_at'",
+      )).rows[0].count, 1);
       await database.query(
         `INSERT INTO document_brand_profiles (account_id, business_name, estimate_style, invoice_style)
          VALUES ($1, 'Migration Brand', 'compact', 'field')`,
@@ -247,6 +256,18 @@ if (!testDatabaseUrl) {
          )`,
         [newUserId],
       );
+
+      const rolledBackPublicDiscovery = await rollbackLatest(database);
+      assert.equal(rolledBackPublicDiscovery.latestVersion, 33);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'jobs' AND column_name IN ('public_web_visibility', 'public_web_published_at')",
+      )).rows[0].count, 0);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'shop_talk_posts' AND column_name IN ('public_web_visibility', 'public_web_published_at')",
+      )).rows[0].count, 0);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'shop_talk_answers' AND column_name = 'public_web_consent_at'",
+      )).rows[0].count, 0);
 
       const rolledBackCustomerBook = await rollbackLatest(database);
       assert.equal(rolledBackCustomerBook.latestVersion, 32);

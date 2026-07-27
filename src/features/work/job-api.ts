@@ -6,6 +6,7 @@ export type CanonicalDifficulty = "easy" | "moderate" | "challenging" | "advance
 export type CanonicalWorkType = "side_work" | "emergency" | "multi_day" | "inspection_prep";
 export type CanonicalCompensationType = "fixed" | "hourly" | "open_to_offers" | "request_quotes";
 export type CompensationUnit = "fixed" | "hourly";
+export type PublicWebVisibility = "members" | "public";
 
 export interface CanonicalRateCardEntry {
   tradeCode: string;
@@ -50,6 +51,8 @@ export interface CanonicalJob {
     certificationCodes: string[];
   };
   addressPrivacy: string;
+  publicWebVisibility: PublicWebVisibility;
+  publicWebPublishedAt: string | null;
   matchScore: number | null;
   version: number;
   publishedAt: string | null;
@@ -82,6 +85,7 @@ export interface JobEditorInput {
   preferredStartDate: string | null;
   applicationDeadline: string | null;
   insuranceRequired: boolean;
+  publicWebVisibility: PublicWebVisibility;
   tools: string[];
   materials: string[];
   deliverables: string[];
@@ -510,6 +514,8 @@ export function toJobViewModel(job: CanonicalJob): Job {
       applicationDeadline: job.applicationDeadline,
       budgetUnit: job.budget?.unit ?? "fixed",
       compensationType: job.compensationType,
+      publicWebVisibility: job.publicWebVisibility,
+      publicWebPublishedAt: job.publicWebPublishedAt,
       createdAt: job.createdAt,
       updatedAt: job.updatedAt,
       events: job.events,

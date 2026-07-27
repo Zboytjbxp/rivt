@@ -103,6 +103,8 @@ export interface Job {
     applicationDeadline: string | null;
     budgetUnit: "fixed" | "hourly";
     compensationType: "fixed" | "hourly" | "open_to_offers" | "request_quotes";
+    publicWebVisibility: "members" | "public";
+    publicWebPublishedAt: string | null;
     createdAt: string;
     updatedAt: string;
     events: Array<{

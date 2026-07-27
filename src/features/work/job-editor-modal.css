@@ -123,6 +123,58 @@
   border: 0;
 }
 
+.job-visibility-options {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  border: 0;
+}
+
+.job-visibility-options legend {
+  width: 100%;
+  margin-bottom: 8px;
+  font-weight: var(--v2-weight-bold);
+}
+
+.job-visibility-options > label {
+  min-height: 92px;
+  padding: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface);
+  cursor: pointer;
+}
+
+.job-visibility-options > label.is-selected {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+}
+
+.job-visibility-options input {
+  margin-top: 3px;
+}
+
+.job-visibility-options span {
+  display: grid;
+  gap: 4px;
+}
+
+.job-visibility-options small {
+  color: var(--v2-text-muted);
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .job-visibility-options {
+    grid-template-columns: 1fr;
+  }
+}
+
 .job-compensation-options legend {
   grid-column: 1 / -1;
   margin-bottom: 2px;

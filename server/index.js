@@ -89,6 +89,10 @@ import { emitProductEvent } from "./product-analytics.js";
 import { createReferralToken, referralLinksConfigured, verifyReferralToken } from "./referrals.js";
 import { createNewsRouter } from "./news.js";
 import { registerShopTalkRoutes } from "./shop-talk.js";
+import {
+  assertPublicContentSafe,
+  registerPublicDiscoveryRoutes,
+} from "./public-discovery.js";
 import { registerShopTalkModerationRoutes } from "./shop-talk-moderation.js";
 import { registerCommunityRoutes } from "./communities.js";
 import { registerNetworkRecordRoutes } from "./network-records.js";
@@ -729,6 +733,14 @@ const publicPaymentRateLimit = createDurableRateLimiter({
   windowMs: 60 * 1000,
   max: Number(process.env.PUBLIC_PAYMENT_RATE_LIMIT ?? 30),
   namespace: "invoice-payment-public",
+});
+
+const publicDiscoveryRateLimit = createDurableRateLimiter({
+  database,
+  databaseAvailable: () => Boolean(database),
+  windowMs: 60 * 1000,
+  max: Number(process.env.PUBLIC_DISCOVERY_RATE_LIMIT ?? 90),
+  namespace: "public-discovery",
 });
 
 const clientErrorSchema = z.object({
@@ -1669,6 +1681,31 @@ async function loadJobRequirements(client, jobIds) {
     grouped.set(row.job_id, current);
   }
   return grouped;
+}
+
+function publicJobContentValues(job, requirements = []) {
+  return [
+    job.title,
+    job.summary,
+    job.scopeDescription ?? job.scope_description,
+    ...requirements.map((requirement) => (
+      typeof requirement === "string" ? requirement : requirement.value
+    )),
+  ];
+}
+
+function nextJobRequirementValues(currentRows, input) {
+  const fields = {
+    tool: "tools",
+    material: "materials",
+    deliverable: "deliverables",
+    certification: "certificationCodes",
+  };
+  return Object.entries(fields).flatMap(([kind, field]) => (
+    Object.prototype.hasOwnProperty.call(input, field)
+      ? input[field]
+      : currentRows.filter((row) => row.kind === kind).map((row) => row.value)
+  ));
 }
 
 async function loadJobEvents(client, jobId) {
@@ -3346,17 +3383,27 @@ app.post("/api/v1/jobs", requireV1AuthenticatedUser, requireV1Actor, writeRateLi
     const trade = await client.query("SELECT code FROM trades WHERE code = $1 AND active = true", [input.tradeCode]);
     if (!trade.rowCount) throw new ApiError(422, "TRADE_INVALID", "The selected trade is unavailable.");
     const compensation = normalizeJobCompensation(input);
+    if (input.publicWebVisibility === "public") {
+      assertPublicContentSafe(publicJobContentValues(input, [
+        ...input.tools,
+        ...input.materials,
+        ...input.deliverables,
+        ...input.certificationCodes,
+      ]));
+    }
 
     const inserted = await client.query(
       `INSERT INTO jobs (
          organization_id, created_by_account_id, title, trade_code, summary,
          scope_description, difficulty, work_type, budget_cents, budget_unit, compensation_type,
-         duration_hours, preferred_start_date, application_deadline, insurance_required
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+         duration_hours, preferred_start_date, application_deadline, insurance_required,
+         public_web_visibility
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
        RETURNING id`,
       [input.organizationId, request.actor.account.id, input.title, input.tradeCode, input.summary,
         input.scopeDescription, input.difficulty, input.workType, compensation.budgetCents, compensation.budgetUnit, compensation.compensationType,
-        input.durationHours, input.preferredStartDate, input.applicationDeadline, input.insuranceRequired],
+        input.durationHours, input.preferredStartDate, input.applicationDeadline, input.insuranceRequired,
+        input.publicWebVisibility],
     );
     const jobId = inserted.rows[0].id;
     await client.query(
@@ -3381,9 +3428,10 @@ app.post("/api/v1/jobs", requireV1AuthenticatedUser, requireV1Actor, writeRateLi
       [jobId, request.actor.account.id],
     );
     await client.query(
-      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id)
-       VALUES ($1, $2::uuid, $3::uuid, 'job.draft_created', 'job', ($4::uuid)::text)`,
-      [request.requestId, request.actor.account.id, input.organizationId, jobId],
+      `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+       VALUES ($1, $2::uuid, $3::uuid, 'job.draft_created', 'job', ($4::uuid)::text, $5::jsonb)`,
+      [request.requestId, request.actor.account.id, input.organizationId, jobId,
+        JSON.stringify({ publicWebVisibility: input.publicWebVisibility })],
     );
     const row = (await client.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1`, [jobId])).rows[0];
     const job = await mapJobDetail(client, row, request.actor, true);
@@ -3505,12 +3553,26 @@ app.patch("/api/v1/jobs/:id", requireV1AuthenticatedUser, requireV1Actor, writeR
       budgetCents: has("budgetCents") ? input.budgetCents : current.budget_cents,
       budgetUnit: input.budgetUnit ?? current.budget_unit,
     });
+    const nextPublicWebVisibility = input.publicWebVisibility ?? current.public_web_visibility ?? "members";
+    const currentRequirementRows = (await loadJobRequirements(client, [jobId])).get(jobId) ?? [];
+    if (nextPublicWebVisibility === "public") {
+      assertPublicContentSafe(publicJobContentValues({
+        title: input.title ?? current.title,
+        summary: input.summary ?? current.summary,
+        scopeDescription: input.scopeDescription ?? current.scope_description,
+      }, nextJobRequirementValues(currentRequirementRows, input)));
+    }
     const updated = await client.query(
       `UPDATE jobs SET
          title = $2, trade_code = $3, summary = $4, scope_description = $5,
          difficulty = $6, work_type = $7, budget_cents = $8, budget_unit = $9,
          compensation_type = $10, duration_hours = $11, preferred_start_date = $12, application_deadline = $13,
-         insurance_required = $14, version = version + 1, updated_at = now()
+         insurance_required = $14, public_web_visibility = $15,
+         public_web_published_at = CASE
+           WHEN $15 = 'public' THEN COALESCE(public_web_published_at, now())
+           ELSE public_web_published_at
+         END,
+         version = version + 1, updated_at = now()
        WHERE id = $1 RETURNING version`,
       [jobId, input.title ?? current.title, input.tradeCode ?? current.trade_code,
         input.summary ?? current.summary, input.scopeDescription ?? current.scope_description,
@@ -3521,7 +3583,8 @@ app.patch("/api/v1/jobs/:id", requireV1AuthenticatedUser, requireV1Actor, writeR
         has("durationHours") ? input.durationHours : current.duration_hours,
         has("preferredStartDate") ? input.preferredStartDate : current.preferred_start_date,
         has("applicationDeadline") ? input.applicationDeadline : current.application_deadline,
-        input.insuranceRequired ?? current.insurance_required],
+        input.insuranceRequired ?? current.insurance_required,
+        nextPublicWebVisibility],
     );
     if (input.publicLocation) {
       await client.query(
@@ -3559,7 +3622,11 @@ app.patch("/api/v1/jobs/:id", requireV1AuthenticatedUser, requireV1Actor, writeR
       `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
        VALUES ($1, $2::uuid, $3::uuid, 'job.updated', 'job', ($4::uuid)::text, $5::jsonb)`,
       [request.requestId, request.actor.account.id, current.organization_id, jobId,
-        JSON.stringify({ version: updated.rows[0].version })],
+        JSON.stringify({
+          version: updated.rows[0].version,
+          publicWebVisibility: nextPublicWebVisibility,
+          previousPublicWebVisibility: current.public_web_visibility ?? "members",
+        })],
     );
     const row = (await client.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1`, [jobId])).rows[0];
     const job = await mapJobDetail(client, row, request.actor, true);
@@ -3582,6 +3649,10 @@ async function transitionJob(request, response, action) {
         throw new ApiError(409, "CONSENT_VERSION_CHANGED", "The consent agreement changed. Review the current version.");
       }
       assertPublishableJob(current);
+      if ((current.public_web_visibility ?? "members") === "public") {
+        const requirements = (await loadJobRequirements(client, [jobId])).get(jobId) ?? [];
+        assertPublicContentSafe(publicJobContentValues(current, requirements));
+      }
       const publishedToday = await client.query(
         `SELECT count(*)::int AS count FROM job_status_events
          WHERE actor_account_id = $1 AND event_type = 'published' AND occurred_at > now() - interval '24 hours'`,
@@ -3606,6 +3677,11 @@ async function transitionJob(request, response, action) {
     await client.query(
       `UPDATE jobs SET status = $2, version = version + 1, updated_at = now(),
          published_at = CASE WHEN $2 = 'open' THEN COALESCE(published_at, now()) ELSE published_at END,
+         public_web_published_at = CASE
+           WHEN $2 = 'open' AND public_web_visibility = 'public'
+             THEN COALESCE(public_web_published_at, now())
+           ELSE public_web_published_at
+         END,
          paused_at = CASE WHEN $2 = 'paused' THEN now() WHEN $2 = 'open' THEN NULL ELSE paused_at END,
          closed_at = CASE WHEN $2 = 'closed' THEN now() ELSE closed_at END
        WHERE id = $1`,
@@ -3620,7 +3696,11 @@ async function transitionJob(request, response, action) {
       `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
        VALUES ($1, $2::uuid, $3::uuid, $4, 'job', ($5::uuid)::text, $6::jsonb)`,
       [request.requestId, request.actor.account.id, current.organization_id, `job.${eventType}`, jobId,
-        JSON.stringify({ fromStatus: current.status, toStatus: nextStatus })],
+        JSON.stringify({
+          fromStatus: current.status,
+          toStatus: nextStatus,
+          publicWebVisibility: current.public_web_visibility ?? "members",
+        })],
     );
     const row = (await client.query(`${jobSelectSql({ includePrivateLocation: true })} WHERE j.id = $1`, [jobId])).rows[0];
     if (action === "publish") {
@@ -6018,6 +6098,16 @@ registerStripeConnectRoutes({
   publicPaymentRateLimit,
   runIdempotentMutation,
   sendIdempotentResult,
+});
+
+registerPublicDiscoveryRoutes({
+  app,
+  database,
+  ensureDatabaseReady,
+  rateLimit: publicDiscoveryRateLimit,
+  appOrigin: productionOrigin,
+  distDir,
+  signedObjectUrl,
 });
 
 if (existsSync(distDir)) {
