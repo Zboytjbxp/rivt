@@ -47,7 +47,7 @@ Packet 79 closes the short-term-list problem:
   tracked RIVT referrals;
 - server authorization and reversible relationship integrity.
 
-Status: **Locally verified; production deployment in progress.**
+Status: **Production deployed and exact-source verified at `8d2a1a7`.**
 
 ### Next 1 — Work workspace records
 

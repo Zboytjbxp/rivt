@@ -1,5 +1,43 @@
 # Deployment Ledger
 
+## 2026-07-27 - Contacts Completion
+
+- Production feature source commit:
+  `8d2a1a79c0377d269c840e3181594426bd959cad`
+- Branch: `master` (source branch: `codex/contacts-completion`)
+- Railway application deployment:
+  `cc44a6b7-828d-494d-991d-eb04a5c4663c`
+- Railway exact-source metadata deployment:
+  `1b1ae222-e08b-4887-8cd9-1c6bc08808c5`
+- Production: `https://rivt.pro`
+- Scope: one canonical multi-role Contact directory across All, Crew, Subs,
+  Customers, and Suppliers; authenticated job and private-project
+  relationships; unified real activity; quoted CSV portability; tracked
+  copy-only Crew/Sub referrals; supplier Contact authorization; responsive
+  320-390px actions; and removal of the routed planning-only invite ledger.
+- Migration before/after:
+  `0036_canonical_contacts` -> `0037_contact_link_integrity`. The migration
+  repairs case-only relationship duplicates and conflicting primary flags,
+  then adds reversible case-insensitive relationship and one-primary
+  integrity indexes.
+- Automated gates: production build, lint, 104 unit/frontend tests, all 21
+  serial PostgreSQL integration suites, fail-closed authentication and
+  Jobs/discovery E2E, five responsive rendered UI suites, diff check, and
+  zero known production dependency vulnerabilities passed.
+- Post-deploy proof: `/api/health` returned exact source `8d2a1a7`, ready
+  migration `0037_contact_link_integrity`, PostgreSQL/S3-compatible storage,
+  and configured Sentry/Web Push/Stripe Connect. The production monitor
+  passed in 506 ms with seven anonymous private-route checks. Live
+  `assets/NetworkHub-BK31-Ebg.js` contains canonical Contacts, CSV import,
+  and tracked referral behavior and omits the retired planning-only invite;
+  Contacts and project-Contact routes return `401` anonymously.
+- Provider/config change: only `SOURCE_COMMIT` advanced to the immutable
+  feature SHA. No auth, payment, email, storage, analytics, moderation, or
+  rollout credential changed.
+- Rollback target:
+  `8fb745a06127cdef5bca6062ef34d547173f3a24`; source rollback plus reviewed
+  migration 37 rollback if the new integrity indexes must be removed.
+
 ## 2026-07-27 - Tools Launcher Subtraction
 
 - Production feature source commit:

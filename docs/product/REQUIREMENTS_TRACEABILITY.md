@@ -28,8 +28,12 @@
   fail-closed authentication and job-discovery E2E, authenticated Contacts,
   guest, Work, Tools, and Shop Talk rendered QA, zero production dependency
   vulnerabilities, and clean diff integrity.
-- Packet 79 is **locally verified** and remains in progress until merge,
-  deployment, live migration, and exact-source monitor evidence are recorded.
+- Packet 79 is **Verified**. Railway application deployment
+  `cc44a6b7-828d-494d-991d-eb04a5c4663c` and exact-source deployment
+  `1b1ae222-e08b-4887-8cd9-1c6bc08808c5` serve commit `8d2a1a7`;
+  production migration `0037_contact_link_integrity` is ready; the production
+  monitor passes; and live Contacts/project-Contact routes fail closed for
+  anonymous callers.
 
 ## Packet 76 — Tools launcher-subtraction evidence
 

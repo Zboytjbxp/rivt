@@ -2,11 +2,11 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Contacts completion is locally verified and ready for
-deployment.
+Current phase: Contacts completion is deployed and exact-source verified.
 Active packet: `docs/delivery/packets/79_CONTACTS_COMPLETION.md`
-Repository branch: `codex/contacts-completion`
-Production feature release commit: pending merge and deploy
+Repository branch: `master` (source branch: `codex/contacts-completion`)
+Production feature release commit:
+`8d2a1a79c0377d269c840e3181594426bd959cad`
 
 ## Contacts completion
 
@@ -38,12 +38,24 @@ Production feature release commit: pending merge and deploy
   evidence-based definition of product completion. It records the ordered
   completion train after Contacts instead of treating a passing launch
   readiness script as proof that every surface is finished.
-- Local verification is complete: production build and lint pass; 104
+- Verification is complete: production build and lint pass; 104
   unit/frontend tests and all 21 database integration suites pass; fail-closed
   authentication and job-discovery E2E pass; authenticated Contacts, guest,
   Work, Tools, and Shop Talk rendered QA pass; the dependency audit reports
-  zero production vulnerabilities; and diff integrity passes. Production
-  merge, migration, and exact-source evidence are pending.
+  zero production vulnerabilities; and diff integrity passes.
+- Railway application deployment
+  `cc44a6b7-828d-494d-991d-eb04a5c4663c` and exact-source metadata
+  deployment `1b1ae222-e08b-4887-8cd9-1c6bc08808c5` succeeded. Production
+  migration `0037_contact_link_integrity` is ready with no pending
+  migrations.
+- `https://rivt.pro/api/health` reports exact source `8d2a1a7`, PostgreSQL,
+  S3-compatible storage, configured Sentry/Web Push/Stripe Connect, and
+  normal engagement controls. The production monitor passed in 506 ms with
+  seven anonymous private-route checks.
+- Live bundle `assets/NetworkHub-BK31-Ebg.js` contains canonical Contact,
+  CSV import, and tracked referral behavior and does not contain the retired
+  planning-only invite action. Contacts and project-Contact routes reject
+  anonymous access with `401`.
 
 ## Contact workflow integration
 
