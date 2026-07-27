@@ -25,7 +25,11 @@
 
 .v2-work-mode-switcher button,
 .v2-people-work-switcher button {
-  min-height: 36px;
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   padding: 0 15px;
   border: 0;
   border-radius: var(--v2-radius-pill);

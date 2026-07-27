@@ -96,6 +96,11 @@
   transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
+.v2-primary-nav button svg,
+.v2-mobile-nav button svg {
+  flex: 0 0 auto;
+}
+
 .v2-primary-nav button:hover {
   background: var(--v2-surface-muted);
   color: var(--v2-text);
@@ -107,7 +112,7 @@
 
 .v2-primary-nav button.is-active {
   background: var(--v2-accent-soft);
-  color: var(--v2-accent);
+  color: var(--v2-accent-text);
   box-shadow: inset 3px 0 0 var(--v2-accent);
 }
 
@@ -1039,11 +1044,11 @@ html[data-rivt-immersive-tool] .guest-banner {
   }
 
   .v2-mobile-nav button.is-active {
-    color: var(--v2-accent);
+    color: var(--v2-accent-text);
   }
 
   .v2-mobile-nav button.is-active svg {
-    fill: color-mix(in srgb, var(--v2-accent) 18%, transparent);
+    filter: drop-shadow(0 2px 5px color-mix(in srgb, var(--v2-accent) 24%, transparent));
   }
 
   .v2-search-panel {

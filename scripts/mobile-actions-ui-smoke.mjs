@@ -419,6 +419,26 @@ async function runMobileFlow(page) {
   assert.equal(await page.locator(".trade-feed-fab").count(), 0, "Home should not own a generic creation FAB");
   assert.equal(await page.locator(".v2-sidebar").isVisible(), false, "iPhone SE should not render the desktop sidebar");
   assert.equal(await page.locator(".v2-mobile-nav").isVisible(), true, "iPhone SE should render the mobile nav");
+  const mobileIdentityIcons = await page.locator(".v2-mobile-nav svg[data-app-icon]").evaluateAll((icons) => (
+    icons.map((icon) => icon.getAttribute("data-app-icon"))
+  ));
+  assert.deepEqual(
+    mobileIdentityIcons,
+    ["home", "work", "camera", "shop-talk", "tools"],
+    "mobile navigation should expose five distinct destination identities in product order",
+  );
+  const commandIcons = await page.locator(".v2-topbar-actions svg[data-command-icon]").evaluateAll((icons) => (
+    icons.map((icon) => icon.getAttribute("data-command-icon"))
+  ));
+  assert.deepEqual(
+    commandIcons,
+    ["search", "messages", "notifications"],
+    "top-bar commands should remain distinct from destination identity icons",
+  );
+  for (const label of ["Search", "Messages", "Notifications"]) {
+    const command = page.locator(".v2-topbar-actions").getByRole("button", { name: label, exact: true });
+    assert.equal(await command.getAttribute("title"), label, `${label} icon-only command should provide a visible hover tooltip`);
+  }
   await page.screenshot({ path: path.join(screenshotDir, "mobile-home-iphone-se.png"), fullPage: false });
   await page.setViewportSize({ width: 390, height: 844 });
   assert.equal(await page.locator(".v2-weather-drive-widget").count(), 0, "Home should not render the static forecast widget");
@@ -442,6 +462,9 @@ async function runMobileFlow(page) {
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Work");
+  const workSwitcher = page.getByRole("navigation", { name: "Work and people" });
+  assert.equal(await workSwitcher.locator('svg[data-app-icon="jobs"]').count(), 1, "Work should identify the Jobs section");
+  assert.equal(await workSwitcher.locator('svg[data-app-icon="people"]').count(), 1, "Work should distinguish People from Jobs");
   await page.locator(".v2-work-create-fab").waitFor({ timeout: 15_000 });
   await assertControlCenterClickable(page, ".v2-work-create-fab", "Work post-job action");
 
@@ -758,6 +781,14 @@ async function runMobileFlow(page) {
       await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
       await page.getByRole("button", { name: "Feed", exact: true }).waitFor({ timeout: 15_000 });
       await assertNoHorizontalOverflow(page, `Shop Talk ${viewport.width}x${viewport.height} ${scale}`);
+      const shopTalkIdentityIcons = await page.locator(".shop-talk-primary-tabs svg[data-app-icon]").evaluateAll((icons) => (
+        icons.map((icon) => icon.getAttribute("data-app-icon"))
+      ));
+      assert.deepEqual(
+        shopTalkIdentityIcons,
+        ["feed", "communities", "trade-news"],
+        `Shop Talk section icons should remain distinct at ${viewport.width}x${viewport.height} ${scale}`,
+      );
       const filterButton = page.getByRole("button", { name: "Filters", exact: true });
       const filterBox = await filterButton.boundingBox();
       assert.ok(filterBox && filterBox.width <= 48, `Filters should remain icon-only at ${viewport.width}x${viewport.height} ${scale}`);
@@ -822,6 +853,13 @@ async function runMobileFlow(page) {
           return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
         });
         assert.ok(contrast >= 4.5, `${theme} primary action contrast should meet AA; received ${contrast.toFixed(2)}:1`);
+      }
+      if (surface.name === "shop-talk") {
+        const postActionBox = await page.getByRole("button", { name: "Post", exact: true }).boundingBox();
+        assert.ok(
+          postActionBox && postActionBox.width >= 72,
+          `Shop Talk Post action should not clip in ${theme} mode: ${JSON.stringify(postActionBox)}`,
+        );
       }
       await page.screenshot({
         path: path.join(screenshotDir, `final-${theme}-${surface.name}.png`),

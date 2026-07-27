@@ -1,32 +1,37 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Bell,
-  BriefcaseBusiness,
-  Camera,
   ChevronDown,
   HardHat,
-  Home,
-  MessageCircle,
-  Search,
-  Wrench,
   X,
 } from "lucide-react";
 import type { AppShellProps, PrimaryDestination, ProfileSearchResult, SearchTarget, ShellSearchItem } from "./types";
 import { Avatar, DialogBackdrop, DialogSurface } from "../components/ui";
 import { apiPath, fetchWithTimeout } from "../lib/api";
+import {
+  CameraDestinationIcon,
+  HomeDestinationIcon,
+  MessagesCommandIcon,
+  NotificationsCommandIcon,
+  SearchCommandIcon,
+  ShopTalkDestinationIcon,
+  ToolsDestinationIcon,
+  WorkDestinationIcon,
+  type AppIconProps,
+} from "./app-icons";
+import type { ComponentType } from "react";
 import "./tokens.css";
 import "./app-shell.css";
 
 const primaryNavigation: Array<{
   destination: PrimaryDestination;
   label: string;
-  icon: typeof Home;
+  icon: ComponentType<AppIconProps>;
 }> = [
-  { destination: "home", label: "Home", icon: Home },
-  { destination: "work", label: "Work", icon: BriefcaseBusiness },
-  { destination: "camera", label: "Camera", icon: Camera },
-  { destination: "shop-talk", label: "Shop Talk", icon: MessageCircle },
-  { destination: "tools", label: "Tools", icon: Wrench },
+  { destination: "home", label: "Home", icon: HomeDestinationIcon },
+  { destination: "work", label: "Work", icon: WorkDestinationIcon },
+  { destination: "camera", label: "Camera", icon: CameraDestinationIcon },
+  { destination: "shop-talk", label: "Shop Talk", icon: ShopTalkDestinationIcon },
+  { destination: "tools", label: "Tools", icon: ToolsDestinationIcon },
 ];
 const SEARCH_RECENTS_KEY = "rivt.search.recent.v1";
 const searchableTools: Array<ShellSearchItem & { keywords: string }> = [
@@ -221,7 +226,7 @@ export function AppShell({
               aria-current={activeDestination === destination ? "page" : undefined}
               onClick={() => onNavigate(destination)}
             >
-              <Icon size={19} strokeWidth={1.8} />
+              <Icon active={activeDestination === destination} aria-hidden="true" />
               <span>{label}</span>
             </button>
           ))}
@@ -267,7 +272,7 @@ export function AppShell({
               submitSearch("work");
             }}
           >
-            <Search size={17} />
+            <SearchCommandIcon size={18} aria-hidden="true" />
             <input
               value={searchValue}
               onChange={(event) => handleSearchValueChange(event.target.value)}
@@ -279,15 +284,15 @@ export function AppShell({
           </form>
 
           <div className="v2-topbar-actions">
-            <button type="button" className="v2-icon-button v2-mobile-search" aria-label="Search" onClick={openSearch}>
-              <Search size={19} />
+            <button type="button" className="v2-icon-button v2-mobile-search" aria-label="Search" title="Search" onClick={openSearch}>
+              <SearchCommandIcon aria-hidden="true" />
             </button>
-            <button type="button" className="v2-icon-button" aria-label="Messages" onClick={onOpenMessages}>
-              <MessageCircle size={19} />
+            <button type="button" className="v2-icon-button" aria-label="Messages" title="Messages" onClick={onOpenMessages}>
+              <MessagesCommandIcon aria-hidden="true" />
               {messageCount > 0 ? <span>{messageCount > 9 ? "9+" : messageCount}</span> : null}
             </button>
-            <button type="button" className="v2-icon-button" aria-label="Notifications" onClick={onOpenNotifications}>
-              <Bell size={19} />
+            <button type="button" className="v2-icon-button" aria-label="Notifications" title="Notifications" onClick={onOpenNotifications}>
+              <NotificationsCommandIcon aria-hidden="true" />
               {notificationCount > 0 ? <span>{notificationCount > 9 ? "9+" : notificationCount}</span> : null}
             </button>
             <button
@@ -309,12 +314,12 @@ export function AppShell({
         {searchOpen ? (
           <DialogBackdrop className="v2-search-scrim" onClose={() => setSearchOpen(false)}>
             <DialogSurface className="v2-search-panel" label="Search RIVT" onClose={() => setSearchOpen(false)}>
-              <button type="button" className="v2-modal-close v2-icon-button" onClick={() => setSearchOpen(false)} aria-label="Close search">
+              <button type="button" className="v2-modal-close v2-icon-button" onClick={() => setSearchOpen(false)} aria-label="Close search" title="Close search">
                 <X size={18} />
               </button>
               <div className="v2-search-panel-inner">
                 <label className="v2-search-panel-input">
-                  <Search size={19} />
+                  <SearchCommandIcon aria-hidden="true" />
                   <input
                     autoFocus
                     value={searchValue}
@@ -344,7 +349,7 @@ export function AppShell({
                           setSearchOpen(false);
                         }}
                       >
-                        <Search size={17} />
+                        <SearchCommandIcon size={18} aria-hidden="true" />
                         <span>
                           <strong>{item.query}</strong>
                           <small>{item.target === "shop-talk" ? "Shop Talk" : item.target === "tools" ? "Tools" : "Work"}</small>
@@ -387,7 +392,7 @@ export function AppShell({
                     <header><span>Work</span><small>Jobs in your current work list</small></header>
                     {localJobResults.map((item) => (
                       <button key={item.id} type="button" className="v2-search-local-result" onClick={() => openLocalResult(item, "work")}>
-                        <BriefcaseBusiness size={18} />
+                        <WorkDestinationIcon aria-hidden="true" />
                         <span><strong>{item.title}</strong><small>{item.subtitle}</small></span>
                       </button>
                     ))}
@@ -398,7 +403,7 @@ export function AppShell({
                     <header><span>Shop Talk</span><small>Questions and discussions</small></header>
                     {localPostResults.map((item) => (
                       <button key={item.id} type="button" className="v2-search-local-result" onClick={() => openLocalResult(item, "shop-talk")}>
-                        <MessageCircle size={18} />
+                        <ShopTalkDestinationIcon aria-hidden="true" />
                         <span><strong>{item.title}</strong><small>{item.subtitle}</small></span>
                       </button>
                     ))}
@@ -409,7 +414,7 @@ export function AppShell({
                     <header><span>Tools</span><small>Open the tool directly</small></header>
                     {localToolResults.map((item) => (
                       <button key={item.id} type="button" className="v2-search-local-result" onClick={() => openLocalResult(item, "tools")}>
-                        <Wrench size={18} />
+                        <ToolsDestinationIcon aria-hidden="true" />
                         <span><strong>{item.title}</strong><small>{item.subtitle}</small></span>
                       </button>
                     ))}
@@ -418,14 +423,14 @@ export function AppShell({
 
                 <div className="v2-search-command-list" aria-label="Search destinations">
                   <button type="button" onClick={() => submitSearch("work")} disabled={!canSubmitSearch}>
-                    <BriefcaseBusiness size={18} />
+                    <WorkDestinationIcon aria-hidden="true" />
                     <span>
                       <strong>Search work</strong>
                       <small>Jobs, trades, locations, scopes</small>
                     </span>
                   </button>
                   <button type="button" onClick={() => submitSearch("shop-talk")} disabled={!canSubmitSearch}>
-                    <MessageCircle size={18} />
+                    <ShopTalkDestinationIcon aria-hidden="true" />
                     <span>
                       <strong>Search Shop Talk</strong>
                       <small>Questions, fixes, trade news</small>
@@ -437,7 +442,7 @@ export function AppShell({
                     onSearch(query, "tools");
                     setSearchOpen(false);
                   }}>
-                    <Wrench size={18} />
+                    <ToolsDestinationIcon aria-hidden="true" />
                     <span>
                       <strong>Open Tools</strong>
                       <small>Calculator, estimate, invoice, records</small>
@@ -470,7 +475,7 @@ export function AppShell({
             onClick={() => onNavigate(destination)}
             tabIndex={mobileNavHidden ? -1 : undefined}
           >
-            <Icon size={19} strokeWidth={1.9} />
+            <Icon active={activeDestination === destination} size={23} aria-hidden="true" />
             <span>{label}</span>
           </button>
         ))}

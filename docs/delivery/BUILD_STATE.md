@@ -2,10 +2,41 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Tools icon-language polish is deployed and exact-source verified.
-Active packet: `docs/delivery/packets/74_TOOLS_ICON_LANGUAGE.md`
-Repository branch: `master`
+Current phase: App-wide icon-system polish is locally verified and awaiting review/deploy.
+Active packet: `docs/delivery/packets/75_APP_ICON_SYSTEM.md`
+Repository branch: `codex/app-icon-system`
 Production feature release commit: `19916b3e71cfdac6a72abdea70b9b12ae91ef98f`
+
+## App icon system
+
+- Established a semantic two-layer icon system instead of forcing one icon
+  library across the product: Phosphor identities now mark destinations and
+  major feature sections, while Lucide remains the familiar command language
+  for ordinary actions.
+- Home, Work, Camera, Shop Talk, and Tools now have distinct identities in
+  the desktop sidebar, mobile navigation, and global search. Selected
+  destinations use a restrained duotone state.
+- Work now distinguishes Jobs from People with labeled section icons and
+  44px targets. Shop Talk now distinguishes Feed, Communities, and Trade News
+  across all supported text scales.
+- Search, messages, and notifications use distinct command icons; icon-only
+  top-bar controls keep accessible labels and hover tooltips. The audit also
+  repaired unlabeled customer/template cancel controls, punch-item delete,
+  and checklist completion controls.
+- No route, navigation order, feature behavior, record, API, authorization
+  rule, schema, migration, or production data changed. Packet 74's Tools
+  launcher identities remain intact.
+- Local gates pass: build, lint, 103 unit/frontend tests, all 20 serial
+  PostgreSQL integration suites, fail-closed authentication plus
+  Jobs/discovery E2E, mobile-actions/Work/Shop Talk/Tools rendered QA, and a
+  zero-vulnerability production dependency audit.
+- Rendered evidence covers desktop, 390px, 320px, Standard/Large/Extra Large
+  text, and light/dark themes. Automated guards lock five primary
+  destinations, three top-bar commands, Jobs/People, Feed/Communities/Trade
+  News, icon-only labels/tooltips, no overflow, and the Shop Talk Post action
+  width.
+- This branch is not yet represented as merged or deployed. Production still
+  serves feature source `19916b3e71cfdac6a72abdea70b9b12ae91ef98f`.
 
 ## Tools icon language
 

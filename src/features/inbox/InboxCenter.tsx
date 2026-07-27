@@ -375,7 +375,7 @@ function CustomerNotesTab() {
               placeholder="Customer name"
             />
             <button type="button" className="v2-client-save-btn" disabled={!newName.trim()} onClick={addContact}>Add</button>
-            <button type="button" className="v2-client-cancel-btn" onClick={() => { setAddingName(false); setNewName(""); }}><X size={14} /></button>
+            <button type="button" className="v2-client-cancel-btn" aria-label="Cancel adding customer" title="Cancel" onClick={() => { setAddingName(false); setNewName(""); }}><X size={14} /></button>
           </div>
         ) : (
           <button type="button" className="v2-client-add-btn" onClick={() => setAddingName(true)}>
@@ -902,7 +902,7 @@ export function InboxCenter({
                             placeholder="New template text…"
                           />
                           <button type="button" onClick={addTemplate}>Save</button>
-                          <button type="button" onClick={() => { setAddingTemplate(false); setNewTemplateDraft(""); }}>
+                          <button type="button" aria-label="Cancel adding template" title="Cancel" onClick={() => { setAddingTemplate(false); setNewTemplateDraft(""); }}>
                             <X size={12} />
                           </button>
                         </span>

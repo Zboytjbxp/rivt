@@ -50,6 +50,11 @@ import {
 } from "./community-utils";
 import { apiPath, fetchWithTimeout } from "../../lib/api";
 import { DialogBackdrop, DialogSurface } from "../../components/ui";
+import {
+  CommunitiesSectionIcon,
+  FeedSectionIcon,
+  TradeNewsSectionIcon,
+} from "../../app-shell/app-icons";
 import { ZoomableImage } from "../../components/ZoomableImage";
 import {
   buildArticleDiscussionBody,
@@ -1406,7 +1411,7 @@ export function ShopTalkView({
             className={activeTab === "talk" ? "active" : ""}
             onClick={() => setActiveTab("talk")}
           >
-            <MessageCircle size={14} />
+            <FeedSectionIcon active={activeTab === "talk"} aria-hidden="true" />
             Feed
           </button>
           <button
@@ -1414,7 +1419,7 @@ export function ShopTalkView({
             className={activeTab === "communities" ? "active" : ""}
             onClick={() => setActiveTab("communities")}
           >
-            <UsersRound size={14} />
+            <CommunitiesSectionIcon active={activeTab === "communities"} aria-hidden="true" />
             Communities
           </button>
           <button
@@ -1422,7 +1427,7 @@ export function ShopTalkView({
             className={activeTab === "news" ? "active" : ""}
             onClick={() => void activateNews()}
           >
-            <Newspaper size={14} />
+            <TradeNewsSectionIcon active={activeTab === "news"} aria-hidden="true" />
             Trade News
           </button>
         </div>

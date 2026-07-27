@@ -1172,7 +1172,7 @@ function PunchListTool() {
               <CheckCircle2 size={13} /> Mark resolved
             </button>
           )}
-          <button type="button" className="v2-destructive-button" onClick={() => deleteItem(item.id)}>
+          <button type="button" className="v2-destructive-button" aria-label={`Delete ${item.description}`} title="Delete item" onClick={() => deleteItem(item.id)}>
             <Trash2 size={13} />
           </button>
         </div>

@@ -1,5 +1,28 @@
 # Gate A Requirements Traceability
 
+## Packet 75 — App icon-system evidence
+
+- `GA-UX-003` gains one coherent recognition system across Home, Work,
+  Camera, Shop Talk, and Tools: distinct destination identities, distinct
+  Work and Shop Talk section identities, and a separate command layer for
+  global search, messages, and notifications.
+- `GA-UX-005` gains icon-only honesty/accessibility evidence: top-bar
+  commands expose labels and tooltips, decorative artwork is hidden beside
+  visible text, and previously unnamed cancel/delete/checklist controls now
+  expose their actual action.
+- `GA-UX-006` gains rendered desktop, 390px, and 320px evidence across
+  Standard/Large/Extra Large text and light/dark themes for unique icon
+  identity, 44px Work switcher targets, contained navigation, no horizontal
+  overflow, and a non-clipping Shop Talk Post action.
+- `GA-OPS-007` gains a production build, clean lint, 103 unit/frontend
+  checks, all 20 serial PostgreSQL integration suites, fail-closed
+  authentication and Jobs/discovery E2E, four focused rendered UI suites,
+  diff integrity, and a zero-vulnerability production dependency audit.
+- Requirement maturity does not change. This is a presentation and
+  accessibility packet with no behavior, authorization, schema, migration,
+  or production-data change. Deployment evidence remains pending review and
+  merge.
+
 ## Packet 74 — Tools icon-language evidence
 
 - `GA-UX-003` gains a clearer tool-recognition layer: each of the seven

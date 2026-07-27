@@ -498,15 +498,24 @@
 
 .shop-talk-tabs button {
   justify-content: center;
+  gap: 7px;
   border: 0;
   border-radius: var(--v2-radius-md);
   color: var(--muted);
+}
+
+.shop-talk-tabs button svg {
+  flex: 0 0 auto;
 }
 
 .shop-talk-tabs button.active {
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 8px 18px rgba(13, 17, 20, 0.055);
+}
+
+.shop-talk-tabs button.active svg {
+  color: var(--v2-accent-text);
 }
 
 .shop-talk-primary-tabs {

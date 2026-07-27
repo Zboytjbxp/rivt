@@ -527,7 +527,7 @@ test("Profile hub renders without crashing", async () => {
 test("App shell renders without crashing", async () => {
   const { AppShell } = await loadModule("/src/app-shell/AppShell.tsx");
 
-  assertSmokeRender(
+  const html = assertSmokeRender(
     React.createElement(
       AppShell,
       {
@@ -557,6 +557,19 @@ test("App shell renders without crashing", async () => {
     ),
     /Smoke content/,
   );
+
+  for (const destination of ["home", "work", "camera", "shop-talk", "tools"]) {
+    assert.equal(
+      html.match(new RegExp(`data-app-icon="${destination}"`, "g"))?.length,
+      2,
+      `${destination} should have one sidebar and one mobile identity icon`,
+    );
+  }
+  for (const command of ["search", "messages", "notifications"]) {
+    assert.match(html, new RegExp(`data-command-icon="${command}"`));
+  }
+  assert.match(html, /aria-label="Messages"[^>]*title="Messages"/);
+  assert.match(html, /aria-label="Notifications"[^>]*title="Notifications"/);
 });
 
 test("Moderation console renders without crashing", async () => {

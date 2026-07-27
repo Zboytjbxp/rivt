@@ -41,6 +41,7 @@ import { difficultyOptions, tradeOptions, workTypeOptions } from "../../data";
 import { EmptyState, StatusPill } from "../../components/ui";
 import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { usePersona } from "../persona/usePersona";
+import { JobsSectionIcon, PeopleSectionIcon } from "../../app-shell/app-icons";
 import {
   acceptOffer,
   cancelActiveWork,
@@ -626,7 +627,14 @@ function JobChecklist({ jobId }: { jobId: number }) {
         <div className="v2-checklist-list">
           {items.map((item) => (
             <div key={item.id} className={`v2-checklist-item${item.done ? " is-done" : ""}`}>
-              <button type="button" className="v2-checklist-check" onClick={() => toggleItem(item.id)} aria-pressed={item.done}>
+              <button
+                type="button"
+                className="v2-checklist-check"
+                onClick={() => toggleItem(item.id)}
+                aria-label={`${item.done ? "Mark incomplete" : "Mark complete"}: ${item.text}`}
+                title={item.done ? "Mark incomplete" : "Mark complete"}
+                aria-pressed={item.done}
+              >
                 <Check size={13} />
               </button>
               <span>{item.text}</span>
@@ -1923,8 +1931,14 @@ export function WorkWorkspace({
       </header>
 
       <nav className="v2-people-work-switcher" aria-label="Work and people">
-        <button type="button" className="is-active" aria-current="page">Jobs</button>
-        <button type="button" onClick={onOpenPeople}>People</button>
+        <button type="button" className="is-active" aria-current="page">
+          <JobsSectionIcon active aria-hidden="true" />
+          Jobs
+        </button>
+        <button type="button" onClick={onOpenPeople}>
+          <PeopleSectionIcon aria-hidden="true" />
+          People
+        </button>
       </nav>
 
       <nav className="v2-work-stage-switcher" aria-label="Work stages">
