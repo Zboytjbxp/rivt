@@ -2768,5 +2768,8 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   unit/frontend tests, all 21 serial PostgreSQL integration suites,
   fail-closed authentication plus Jobs/discovery E2E, focused Tools,
   mobile-action, and Work-lifecycle rendered QA, diff integrity, and a
-  zero-vulnerability production dependency audit. Production evidence is
-  recorded only after deployment.
+  zero-vulnerability production dependency audit. Production exact-source
+  health reports `32db9cd56451e51db076eaa5a3d1c74b610db86b` with
+  `0036_canonical_contacts` ready; the seven-check synthetic monitor,
+  anonymous job-contact authorization check, and live Contact/Work/Tools
+  bundle inspection pass.

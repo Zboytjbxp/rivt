@@ -2,11 +2,12 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Contact workflow integration is in local verification.
+Current phase: Contact workflow integration is deployed and exact-source verified.
 Active packet: `docs/delivery/packets/78_CONTACT_WORKFLOW_INTEGRATION.md`
-Repository branch: `codex/contact-workflow-integration`
+Repository branch: `master` (source branch:
+`codex/contact-workflow-integration`)
 Production feature release commit:
-`fe405c0c650ea44134f780c0b308041089cf139d`
+`32db9cd56451e51db076eaa5a3d1c74b610db86b`
 
 ## Contact workflow integration
 
@@ -39,7 +40,17 @@ Production feature release commit:
   treated email as an `accounts` column. The fixture was corrected to resolve
   email through `auth_identities`; the affected Contacts suite then passed
   independently and in the clean 21-suite aggregate rerun.
-- Deployment evidence remains pending and is not claimed here.
+- Fast-forward merge to `master` deployed through Railway application build
+  `da47c7c7-557f-4fbd-ac60-7f108b155819` and exact-source metadata release
+  `f81c142c-e2cc-42cc-b3b0-e68635a89f95`.
+- Live health reports exact source
+  `32db9cd56451e51db076eaa5a3d1c74b610db86b`, ready migration
+  `0036_canonical_contacts`, PostgreSQL, S3-compatible storage, and configured
+  Sentry, Web Push, and Stripe Connect Accounts v2. The production monitor
+  passed in 474 ms with all seven anonymous private-route checks healthy and
+  operational controls off. Anonymous job-contact access returned `401`;
+  the live Contact picker, Work, and Tools chunks contain the shipped
+  workflow markers.
 
 ## Canonical contacts foundation
 

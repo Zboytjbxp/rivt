@@ -3171,3 +3171,42 @@ Add one entry per staging/production deployment.
   private-route checks healthy and operational controls disabled. Anonymous
   `/api/v1/contacts` returned `401`, and live entry bundle
   `assets/index-DfWIcuJQ.js` contains the Contacts release.
+
+# Current Production - Contact Workflow Integration
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-27 America/New_York
+- Deployer: Codex through `codex/contact-workflow-integration`,
+  fast-forward merge to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `32db9cd56451e51db076eaa5a3d1c74b610db86b`
+- Railway deployments: application source build
+  `da47c7c7-557f-4fbd-ac60-7f108b155819`; exact-source release
+  `f81c142c-e2cc-42cc-b3b0-e68635a89f95`
+- Migration version before/after: unchanged
+  (`0036_canonical_contacts`)
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, Stripe Connect,
+  email, moderation, and rollout controls were preserved.
+- Rollback target:
+  `8845801712d16a595ee31b4600a7e6a5798c085a`; no database rollback is
+  required.
+- Automated gates: production build, application/security lint, 103
+  unit/frontend tests, all 21 serial PostgreSQL integration suites,
+  fail-closed authentication plus Jobs/discovery E2E, focused Tools,
+  mobile-action, and Work-lifecycle rendered QA, diff integrity, and a
+  zero-vulnerability production dependency audit passed.
+- Product evidence: Estimate and Invoice select Customers through the shared
+  canonical picker; Materials retains a canonical Supplier ID; canonical
+  jobs use account-owned relationship links with private notes and per-role
+  primary status; older device contacts require explicit successful
+  migration; unlink does not delete; external Contacts are not falsely
+  presented as RIVT message recipients.
+- Post-deploy proof: live `/api/health` returned exact source
+  `32db9cd56451e51db076eaa5a3d1c74b610db86b` with
+  `0036_canonical_contacts` ready, PostgreSQL and S3-compatible storage
+  healthy, and configured Sentry, Web Push, and Stripe Connect Accounts v2.
+  The production monitor passed in 474 ms with all seven anonymous
+  private-route checks healthy and operational controls disabled. Anonymous
+  job-contact access returned `401`; the live Contact picker, Work, and Tools
+  chunks contain the shipped workflow markers.
