@@ -2622,10 +2622,13 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   evidence for the unified tool launcher, persistent pin ordering, Work/People
   switcher, and first-class active-job People workspace.
 - Requirement maturity does not change. This packet introduces no schema,
-  authorization, seed data, production-data, or deployment change. A
+  authorization, seed data, or production-data change. A
   server-owned site-contact model remains a separate reviewed migration and
   rollback packet. Local evidence includes production build, lint, 103
   unit/frontend tests, all 20 serial PostgreSQL integration suites,
   fail-closed auth and Jobs/discovery E2E at desktop/mobile widths, focused
   rendered QA, diff integrity, and a zero-vulnerability production dependency
-  audit.
+  audit. Production exact-source health, the seven-check synthetic monitor,
+  and live frontend-chunk inspection confirm the packet is deployed at
+  `5ed3bf7f77180b02caecb15cbc3d7042b91a0c6c`; no authenticated production
+  click-path is claimed because its test credential is not configured here.

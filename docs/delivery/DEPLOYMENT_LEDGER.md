@@ -3003,3 +3003,37 @@ Add one entry per staging/production deployment.
   PostgreSQL and S3-compatible storage healthy. The production monitor passed
   in 535 ms with all seven anonymous private-route checks healthy and
   operational controls disabled.
+
+# Current Production - Tools and Work People Discovery
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-27 America/New_York
+- Deployer: Codex through `codex/tools-work-people-discovery`, fast-forward
+  merge to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `5ed3bf7f77180b02caecb15cbc3d7042b91a0c6c`
+- Railway deployments: application source build
+  `8a7acec4-b00a-4753-8160-62977951f6a8`; exact-source release
+  `7abc855e-abee-4dcf-9dd1-a682700bcbb1`
+- Migration version before/after: unchanged (`0035_job_budget_floor`)
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, Stripe Connect,
+  email, moderation, and rollout controls were preserved.
+- Rollback target:
+  `e6d94ec9986c4215d9dd455ffcc9bb9ae424c15f`; no database rollback is
+  required.
+- Automated gates: production build, lint, 103 unit/frontend tests, all 20
+  serial PostgreSQL integration suites, fail-closed auth and Jobs/discovery
+  E2E at desktop/mobile widths, Tools/Work/mobile rendered QA, diff integrity,
+  and a dependency audit with zero known vulnerabilities passed.
+- Product evidence: every tool appears exactly once in one responsive
+  launcher; pinning only changes ordering; Work exposes a Jobs/People
+  switcher; active jobs expose a first-class People workspace; and device-only
+  site-contact notes disclose that they are not account-synced or crew-shared.
+- Post-deploy proof: live `/api/health` returned the exact feature source with
+  PostgreSQL and S3-compatible storage healthy. The production monitor passed
+  in 498 ms with all seven anonymous private-route checks healthy and
+  operational controls disabled. Inspection of 21 production JavaScript
+  chunks confirmed the new Tools and Work/People copy is present and the
+  retired `More tools` helper is absent. No authenticated live click-path is
+  claimed because its test password is not configured in this workspace.

@@ -1,11 +1,11 @@
 # RIVT Build State
 
-Last updated: 2026-07-26 America/New_York
+Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Tools and Work people discovery is implemented on a review branch; production remains on the exact-source public discovery release.
+Current phase: Tools and Work people discovery is deployed and exact-source verified.
 Active packet: `docs/delivery/packets/73_TOOLS_WORK_PEOPLE_DISCOVERY.md`
-Repository branch: `codex/tools-work-people-discovery`
-Production feature release commit: `8682f206706a91e1585982e774996111e8695157`
+Repository branch: `master`
+Production feature release commit: `5ed3bf7f77180b02caecb15cbc3d7042b91a0c6c`
 
 ## Tools and Work people discovery
 
@@ -29,8 +29,20 @@ Production feature release commit: `8682f206706a91e1585982e774996111e8695157`
   desktop/mobile widths, diff integrity, and the zero-vulnerability
   production dependency audit pass.
 - Server-owned job contacts remain intentionally deferred to a migration and
-  authorization packet. No contact sync, production data change, deployment,
-  or production verification is claimed here.
+  authorization packet. No contact sync or production data change is claimed.
+- Fast-forward merge to `master` deployed through Railway application build
+  `8a7acec4-b00a-4753-8160-62977951f6a8` and exact-source release
+  `7abc855e-abee-4dcf-9dd1-a682700bcbb1`.
+- Live health reports exact source
+  `5ed3bf7f77180b02caecb15cbc3d7042b91a0c6c`, ready migration
+  `0035_job_budget_floor`, PostgreSQL, and S3-compatible storage. The
+  production monitor passed in 498 ms with all seven anonymous private-route
+  checks healthy and emergency controls off.
+- Equivalent targeted frontend proof inspected 21 live JavaScript chunks and
+  confirmed the unified Tools copy, Work/People switcher, and device-only
+  contact disclosure are present while the retired `More tools` helper copy
+  is absent. An authenticated click-path was not claimed because its live test
+  password is not configured in this workspace.
 
 ## Public Jobs and Shop Talk discovery
 
