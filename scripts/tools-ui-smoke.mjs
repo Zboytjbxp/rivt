@@ -896,6 +896,19 @@ async function runToolsFlow(page, viewportName) {
     assert.equal(await toolTile(toolName).count(), 1, `${toolName} should appear exactly once in the unified launcher`);
   }
   assert.equal(await page.locator(".v2-tool-launch-card").count(), 7, "Tools hub should expose all seven tool groups without a hidden drawer");
+  const toolIdentityKeys = await page.locator(".v2-tool-card-icon").evaluateAll((icons) =>
+    icons.map((icon) => icon.getAttribute("data-tool-icon")),
+  );
+  assert.deepEqual(
+    [...new Set(toolIdentityKeys)].sort(),
+    ["camera", "estimate", "heavy-sixteenth", "invoice", "jobsite", "materials", "time-costs"],
+    "Each launcher should have its own recognizable tool identity instead of recycling generic symbols",
+  );
+  assert.equal(
+    await page.locator(".v2-tool-card-icon svg[aria-hidden='true']").count(),
+    7,
+    "Decorative launcher icons should stay hidden from assistive technology because the card text supplies the name",
+  );
   assert.equal(await page.locator(".v2-field-tools-tray, .v2-tool-group").count(), 0, "Tools hub should not repeat launchers in a fixed tray or More tools drawer");
   if (isHandsetViewport) {
     await page.getByRole("button", { name: "Customize", exact: true }).click();
@@ -928,6 +941,26 @@ async function runToolsFlow(page, viewportName) {
   }
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
+  const toolsHubTheme = await page.evaluate(() => ({
+    source: localStorage.getItem("rivt-theme-source"),
+    mode: localStorage.getItem("rivt-theme-mode"),
+  }));
+  await page.evaluate(() => {
+    localStorage.setItem("rivt-theme-source", "dark");
+    localStorage.setItem("rivt-theme-mode", "dark");
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("group", { name: "All tools", exact: true }).waitFor({ timeout: 15_000 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub-dark.png`), fullPage: true });
+  await page.evaluate(({ source, mode }) => {
+    if (source) localStorage.setItem("rivt-theme-source", source);
+    else localStorage.removeItem("rivt-theme-source");
+    if (mode) localStorage.setItem("rivt-theme-mode", mode);
+    else localStorage.removeItem("rivt-theme-mode");
+  }, toolsHubTheme);
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByRole("group", { name: "All tools", exact: true }).waitFor({ timeout: 15_000 });
 
   await toolTile("Time & costs").click();
   await page.getByRole("heading", { name: "Time & costs", exact: true }).waitFor({ timeout: 15_000 });

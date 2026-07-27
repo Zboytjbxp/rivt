@@ -2,10 +2,37 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Tools and Work people discovery is deployed and exact-source verified.
-Active packet: `docs/delivery/packets/73_TOOLS_WORK_PEOPLE_DISCOVERY.md`
-Repository branch: `master`
+Current phase: Tools icon-language polish is locally verified and awaiting review/deployment.
+Active packet: `docs/delivery/packets/74_TOOLS_ICON_LANGUAGE.md`
+Repository branch: `codex/tool-icon-language`
 Production feature release commit: `5ed3bf7f77180b02caecb15cbc3d7042b91a0c6c`
+
+## Tools icon language
+
+- Replaced misleading launcher metaphors with distinct tool identities:
+  Phosphor duotone Camera, Estimate document, Invoice receipt, Jobsite
+  clipboard, and Materials package icons plus RIVT-owned Heavy 16th
+  tape-measure and Time & costs clock/cost marks.
+- Kept Lucide for navigation and ordinary controls. The new dependency is
+  limited to direct, tree-shakeable client-side icon imports for product
+  identity rather than a broad icon-system migration.
+- Standardized the launcher icon container at a larger optical size with
+  tokenized border, surface, color, and restrained hover/press feedback in
+  light and dark themes.
+- Every launcher retains its visible tool name and full button label; the
+  adjacent SVG remains decorative. Rendered QA now locks the exact seven
+  unique icon identities and the accessibility boundary.
+- No tool route, calculation, record, saved pin preference, server API,
+  schema, migration, or production data changed.
+- Local gates pass: production build, lint, all unit/frontend tests, all 20
+  serial PostgreSQL integration suites, fail-closed authentication plus
+  Jobs/discovery E2E, focused Tools rendered QA at desktop/390px/320px in
+  light and dark themes, and a zero-vulnerability production dependency
+  audit.
+- Screenshot evidence is outside the repository at
+  `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
+- This packet is not deployed yet. Production remains on exact source
+  `5ed3bf7f77180b02caecb15cbc3d7042b91a0c6c`.
 
 ## Tools and Work people discovery
 

@@ -17,7 +17,6 @@ import {
   RefreshCw,
   Plus,
   ReceiptText,
-  Scale,
   Search,
   Shield,
   Trash2,
@@ -53,6 +52,16 @@ import { createStandaloneProject, listStandaloneProjects, type StandaloneProject
 import { createAlbum, ensureDefaultAlbum, listAlbums, type PhotoAlbum } from "./album-api";
 import { toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
 import { isPublicToolMode, type PublicToolMode, type ToolMode } from "./tool-catalog";
+import {
+  CameraToolIcon,
+  EstimateToolIcon,
+  HeavySixteenthToolIcon,
+  InvoiceToolIcon,
+  JobsiteToolIcon,
+  MaterialsToolIcon,
+  TimeCostsToolIcon,
+  type ToolIdentityIcon,
+} from "./tool-launcher-icons";
 import {
   mileageDeductionForEntries,
   mileageDeductionForEntry,
@@ -149,7 +158,8 @@ function readToolContextProjects(): Partial<Record<PublicToolMode, string>> {
 
 interface ToolLauncher {
   mode: LaunchableToolMode;
-  icon: ToolIcon;
+  icon: ToolIdentityIcon;
+  iconKey: string;
   title: string;
   summary: string;
 }
@@ -174,6 +184,7 @@ function recordStatusLabel(status: ProjectRecord["status"]) {
 
 function ToolCard({
   icon: Icon,
+  iconKey,
   title,
   summary,
   category,
@@ -184,7 +195,8 @@ function ToolCard({
   onAction,
   onTogglePinned,
 }: {
-  icon: typeof Calculator;
+  icon: ToolIdentityIcon;
+  iconKey: string;
   title: string;
   summary: string;
   category: string;
@@ -208,7 +220,9 @@ function ToolCard({
         <span>{category}</span>
         {pinned ? <em>Pinned</em> : null}
       </span>
-      <span className="v2-tool-card-icon"><Icon size={21} /></span>
+      <span className="v2-tool-card-icon" data-tool-icon={iconKey}>
+        <Icon className="v2-tool-identity-icon" size={28} aria-hidden="true" />
+      </span>
       <span className="v2-tool-card-copy">
         <strong>{title}</strong>
         <small>{summary}</small>
@@ -312,39 +326,56 @@ const mileageKey = "rivt.mileage.v1";
 const PRIMARY_TOOL_LAUNCHERS: ToolLauncher[] = [
   {
     mode: "calculator",
-    icon: Calculator,
+    icon: HeavySixteenthToolIcon,
+    iconKey: "heavy-sixteenth",
     title: "Heavy 16th",
     summary: "Fractions and cut math.",
   },
   {
     mode: "estimate",
-    icon: Scale,
+    icon: EstimateToolIcon,
+    iconKey: "estimate",
     title: "Estimate",
     summary: "Build a price range.",
   },
   {
     mode: "invoice",
-    icon: ReceiptText,
+    icon: InvoiceToolIcon,
+    iconKey: "invoice",
     title: "Invoice",
     summary: "Draft and export.",
   },
   {
     mode: "jobsite",
-    icon: Clipboard,
+    icon: JobsiteToolIcon,
+    iconKey: "jobsite",
     title: "Jobsite",
     summary: "Log, punch, and safety.",
   },
   {
     mode: "job-photos",
-    icon: FolderOpen,
+    icon: CameraToolIcon,
+    iconKey: "camera",
     title: "Camera",
     summary: "Project photos and proof.",
   },
 ];
 
 const UTILITY_TOOL_LAUNCHERS: ToolLauncher[] = [
-  { mode: "materials", icon: Package2, title: "Materials", summary: "Takeoff, sheets, and saved prices." },
-  { mode: "time-costs", icon: RefreshCw, title: "Time & costs", summary: "Time, expenses, mileage, and summary." },
+  {
+    mode: "materials",
+    icon: MaterialsToolIcon,
+    iconKey: "materials",
+    title: "Materials",
+    summary: "Takeoff, sheets, and saved prices.",
+  },
+  {
+    mode: "time-costs",
+    icon: TimeCostsToolIcon,
+    iconKey: "time-costs",
+    title: "Time & costs",
+    summary: "Time, expenses, mileage, and summary.",
+  },
 ];
 
 const FIELD_TOOL_MODES = new Set<LaunchableToolMode>([
@@ -3855,6 +3886,7 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
             <ToolCard
               key={tool.mode}
               icon={tool.icon}
+              iconKey={tool.iconKey}
               title={tool.title}
               summary={tool.summary}
               category={launcherCategory(tool.mode)}

@@ -1,5 +1,22 @@
 # Gate A Requirements Traceability
 
+## Packet 74 — Tools icon-language evidence
+
+- `GA-UX-003` gains a clearer tool-recognition layer: each of the seven
+  launchers has a distinct, semantically accurate identity while preserving
+  the single-launcher information architecture from Packet 73.
+- `GA-UX-006` gains desktop, 390px mobile, and 320px compact-mobile rendered
+  evidence in light and dark themes for unique icon identity, contained
+  responsive sizing, no horizontal overflow, and decorative-SVG
+  accessibility handling.
+- `GA-OPS-007` gains a production build, clean lint, all unit/frontend tests,
+  all 20 serial PostgreSQL integration suites, fail-closed authentication and
+  Jobs/discovery E2E, focused rendered Tools QA, and a zero-vulnerability
+  production dependency audit.
+- Requirement maturity does not change. This is a presentation-only packet:
+  it changes no tool behavior, records, authorization, schema, migrations, or
+  production data. No deployment evidence is claimed.
+
 ## Packet 72 — Public Jobs and Shop Talk discovery evidence
 
 - `GA-FND-003` gains additive migration `0034_public_discovery`: jobs and Shop
