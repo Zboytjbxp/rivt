@@ -1,5 +1,36 @@
 # Deployment Ledger
 
+## 2026-07-27 - App Icon System
+
+- Production feature source commit:
+  `9f79fa59333dc9e27387f0ec7034939ec9854dbe`
+- Branch: `master` (source branch: `codex/app-icon-system`)
+- Railway application deployment:
+  `c31273f0-524f-4a42-9515-2dbb94bb100c`
+- Railway exact-source metadata deployment:
+  `8be00a1c-78b7-4f73-af3d-8a8b33634725`
+- Production: `https://rivt.pro`
+- Scope: shared semantic icon system; distinct Home, Work, Camera, Shop Talk,
+  and Tools destination identities; distinct Work and Shop Talk section
+  identities; separate search/messages/notifications command language; and
+  repaired icon-only names, tooltips, and target sizing.
+- Migration before/after: unchanged at `0035_job_budget_floor`.
+- Automated gates: production build, lint, 103 unit/frontend tests, all 20
+  serial PostgreSQL integration suites, fail-closed authentication and
+  Jobs/discovery E2E, four responsive rendered UI suites, diff check, and
+  zero known production dependency vulnerabilities passed.
+- Post-deploy proof: `/api/health` returned exact feature source `9f79fa5`,
+  ready migration `0035_job_budget_floor`, PostgreSQL/S3-compatible storage,
+  and configured Sentry/Web Push/Stripe Connect. The exact-source production
+  monitor passed in 471 ms with seven anonymous private-route checks and
+  normal operational controls. Live entry bundle `assets/index-CargqUSp.js`
+  contains the shared icon-system marker.
+- Provider/config change: only `SOURCE_COMMIT` advanced to the immutable
+  feature SHA. No auth, payment, email, storage, analytics, moderation, or
+  rollout credential changed.
+- Rollback target:
+  `0a8513ad443564867b6f5ebb6e5037c41d4523c7`; source rollback only.
+
 ## 2026-07-27 - Tools Icon Language
 
 - Production feature source commit:

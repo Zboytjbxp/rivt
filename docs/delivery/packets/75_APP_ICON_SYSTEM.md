@@ -63,5 +63,15 @@ icons from ordinary action icons across the five primary surfaces.
   `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`, and
   `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass`.
 - The production dependency audit reports zero known vulnerabilities.
-- This branch is verified locally and is not represented as deployed until a
-  reviewed merge and exact-source production proof occur.
+- The source branch was fast-forwarded into `master`. Railway application
+  deployment `c31273f0-524f-4a42-9515-2dbb94bb100c` and exact-source metadata
+  deployment `8be00a1c-78b7-4f73-af3d-8a8b33634725` both succeeded.
+- Live `/api/health` reports exact feature source
+  `9f79fa59333dc9e27387f0ec7034939ec9854dbe`, migration
+  `0035_job_budget_floor` ready, PostgreSQL and S3-compatible storage, plus
+  configured Sentry, Web Push, and Stripe Connect Accounts v2.
+- The exact-source production monitor passed in 471 ms with all seven
+  anonymous private-route checks healthy and operational controls off.
+  The live entry bundle `assets/index-CargqUSp.js` contains the shared
+  icon-system marker. No migration, production data, or provider credential
+  changed; only `SOURCE_COMMIT` advanced to the immutable feature SHA.

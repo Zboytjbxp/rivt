@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: App-wide icon-system polish is locally verified and awaiting review/deploy.
+Current phase: App-wide icon-system polish is deployed and exact-source verified.
 Active packet: `docs/delivery/packets/75_APP_ICON_SYSTEM.md`
-Repository branch: `codex/app-icon-system`
-Production feature release commit: `19916b3e71cfdac6a72abdea70b9b12ae91ef98f`
+Repository branch: `master` (source branch: `codex/app-icon-system`)
+Production feature release commit: `9f79fa59333dc9e27387f0ec7034939ec9854dbe`
 
 ## App icon system
 
@@ -35,8 +35,16 @@ Production feature release commit: `19916b3e71cfdac6a72abdea70b9b12ae91ef98f`
   destinations, three top-bar commands, Jobs/People, Feed/Communities/Trade
   News, icon-only labels/tooltips, no overflow, and the Shop Talk Post action
   width.
-- This branch is not yet represented as merged or deployed. Production still
-  serves feature source `19916b3e71cfdac6a72abdea70b9b12ae91ef98f`.
+- Fast-forward merge to `master` deployed through Railway application build
+  `c31273f0-524f-4a42-9515-2dbb94bb100c` and exact-source metadata release
+  `8be00a1c-78b7-4f73-af3d-8a8b33634725`.
+- Live health reports exact feature source
+  `9f79fa59333dc9e27387f0ec7034939ec9854dbe`, ready migration
+  `0035_job_budget_floor`, PostgreSQL, S3-compatible storage, and configured
+  Sentry, Web Push, and Stripe Connect Accounts v2. The exact-source
+  production monitor passed in 471 ms with all seven anonymous private-route
+  checks healthy and operational controls off. The live entry bundle
+  `assets/index-CargqUSp.js` contains the shared icon-system marker.
 
 ## Tools icon language
 

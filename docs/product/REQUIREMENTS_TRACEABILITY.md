@@ -18,10 +18,16 @@
   checks, all 20 serial PostgreSQL integration suites, fail-closed
   authentication and Jobs/discovery E2E, four focused rendered UI suites,
   diff integrity, and a zero-vulnerability production dependency audit.
-- Requirement maturity does not change. This is a presentation and
-  accessibility packet with no behavior, authorization, schema, migration,
-  or production-data change. Deployment evidence remains pending review and
-  merge.
+- `GA-OPS-008` gains production evidence: Railway application deployment
+  `c31273f0-524f-4a42-9515-2dbb94bb100c` and exact-source metadata deployment
+  `8be00a1c-78b7-4f73-af3d-8a8b33634725` serve feature source
+  `9f79fa59333dc9e27387f0ec7034939ec9854dbe`; live health reports ready
+  migration `0035_job_budget_floor`, PostgreSQL/S3-compatible storage, and
+  configured Sentry, Web Push, and Stripe Connect; the exact-source monitor
+  passed with all seven anonymous private-route checks and controls off.
+- Packet 75 is **Verified**. This is a presentation and accessibility packet
+  with no behavior, authorization, schema, migration, or production-data
+  change.
 
 ## Packet 74 — Tools icon-language evidence
 
