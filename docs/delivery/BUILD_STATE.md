@@ -2,10 +2,50 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Tools launcher subtraction is deployed and exact-source verified.
-Active packet: `docs/delivery/packets/76_TOOLS_LAUNCHER_SUBTRACTION.md`
-Repository branch: `master` (source branch: `codex/tools-launcher-subtraction`)
-Production feature release commit: `c2a698fab0812d0324053e01fbc0802f13715663`
+Current phase: Canonical contacts foundation is verified and queued for deployment.
+Active packet: `docs/delivery/packets/77_CANONICAL_CONTACTS_FOUNDATION.md`
+Repository branch: `codex/canonical-contacts-foundation`
+Production feature release commit: pending deployment (`ce56f463cb12870838753862625a98f77a78d84b` verified locally)
+
+## Canonical contacts foundation
+
+- Replaced role-specific identity silos with one account-owned contact model.
+  A person or company can now carry any combination of Crew, Subcontractor,
+  Customer, Supplier, and Other relationships without duplicate identity rows.
+- Added migration `0036_canonical_contacts` with contact methods, addresses,
+  role-specific details, tags, favorites, archive/recent-use state, and
+  private job/project relationship links. Existing Customer and Crew/Sub
+  records are backfilled and remain transactional compatibility projections.
+- Added a reviewed rollback that archives complete canonical contact
+  snapshots before removing the new tables. The migration lifecycle test
+  proves a canonical-only supplier survives rollback and reapply.
+- Added authenticated contact list/read/create/update/recent-use/activity
+  APIs with account isolation, normalized email/phone duplicate detection,
+  safe HTTP/HTTPS website validation, and no browser-only production
+  fallback.
+- Renamed Work's relationship surface to Contacts and added visible All,
+  Crew, Subs, Customers, Suppliers, and separately grouped Reviews views.
+  All/Suppliers share the canonical editor, multi-role chips, search,
+  favorites, archive/restore, supplier account/representative/terms, contact
+  methods, addresses, tags, and explicitly private notes.
+- Existing Customer and Crew interfaces remain usable while dual-writing the
+  canonical identity. Estimate, Invoice, project, and customer activity
+  links retain their existing IDs and immutable snapshots.
+- Rendered QA passes at desktop, 390px, and 320px with all relationship views
+  visible on compact phones, 44px actions, no horizontal overflow, and
+  explicit sample labeling in guest preview.
+- Local gates pass: production build, application/security lint, 103
+  unit/frontend tests, all 21 serial PostgreSQL integration suites,
+  fail-closed authentication plus Jobs/discovery E2E, Contacts/mobile-action,
+  Work-lifecycle, and guest-preview rendered QA, migration rollback/reapply,
+  diff integrity, and a zero-vulnerability production dependency audit.
+- The first aggregate integration attempt recorded one transient PostgreSQL
+  `ECONNRESET` during a project read. The project lifecycle then passed
+  independently and in the clean 21-suite aggregate rerun; no reproducible
+  product defect remained.
+- Deployment evidence is intentionally pending until `master`, migration
+  `0036_canonical_contacts`, live exact-source health, and the production
+  synthetic monitor are verified.
 
 ## Tools launcher subtraction
 

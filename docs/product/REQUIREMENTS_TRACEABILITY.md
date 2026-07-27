@@ -2708,3 +2708,36 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   and live frontend-chunk inspection confirm the packet is deployed at
   `5ed3bf7f77180b02caecb15cbc3d7042b91a0c6c`; no authenticated production
   click-path is claimed because its test credential is not configured here.
+
+## Traceability Addendum - 2026-07-27 Canonical Contacts Foundation
+
+- `GA-DATA-001` gains migration `0036_canonical_contacts`: one account-owned
+  identity supports person/company records, multiple relationship roles,
+  methods, addresses, tags, favorites, archive/recent-use state, and private
+  job/project links. Existing Customers and Crew/Sub records are backfilled
+  and retained as transactional compatibility projections.
+- `GA-DATA-001` also gains tested rollback preservation. Complete canonical
+  snapshots are archived before rollback, and a supplier created only in the
+  new directory is restored with stable roles, methods, addresses, and tags
+  when the migration is reapplied.
+- `GA-UX-003` gains one long-term Contacts information architecture in Work:
+  All, Crew, Subs, Customers, and Suppliers are relationship views over the
+  same identity. Reviews remains visibly separate because it is reputation,
+  not a contact category.
+- `GA-UX-005` gains relationship-state honesty: writes are server-owned,
+  normalized email/phone duplicates are surfaced instead of silently merged,
+  unsafe website schemes are rejected, private notes remain labeled private,
+  and guest records remain explicitly sample data.
+- `GA-UX-006` gains rendered desktop, 390px, and 320px evidence for contact
+  search, multi-role editing, supplier details, favorites, archive/restore,
+  the Customer compatibility book, the Crew compatibility manager, complete
+  compact-phone role navigation, and no horizontal overflow.
+- `GA-AUTH-007` gains direct cross-account list/read/activity isolation for
+  contacts. A private account directory does not automatically expose a
+  contact to another account or link it to a public RIVT profile.
+- Requirement maturity does not change. Local evidence includes build,
+  application/security lint, 103 unit/frontend tests, all 21 serial
+  PostgreSQL integration suites, migration rollback/reapply, fail-closed auth
+  plus Jobs/discovery E2E, focused rendered QA, diff integrity, and a
+  zero-vulnerability dependency audit. Deployment evidence remains pending
+  until the new migration and exact source are confirmed live.
