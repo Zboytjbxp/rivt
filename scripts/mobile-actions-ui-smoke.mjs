@@ -281,7 +281,7 @@ async function configurePage(page) {
       body: JSON.stringify({ data: { contacts } }),
     });
   });
-  routeResponse("**/api/v1/customers/*/activity", {
+  routeResponse("**/api/v1/contacts/*/activity", {
     data: {
       activity: [{
         id: standaloneProject.id,
@@ -295,6 +295,7 @@ async function configurePage(page) {
       }],
     },
   });
+  routeResponse("**/api/v1/contacts/*/work-links", { data: { links: [] } });
   routeResponse("**/api/v1/albums", { data: { albums: [defaultPrivateAlbum] } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}`, { data: { job: draftJob } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}/applications`, { data: { applications: [] } });
@@ -612,25 +613,24 @@ async function runMobileFlow(page) {
     "People assignments must not depend on the retired browser job store",
   );
   await page.getByRole("button", { name: "Customers", exact: true }).click();
-  await page.getByText("Customers (1)", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByPlaceholder("Search customers").fill("Miller");
-  await page.getByRole("button", { name: /Miller Property Group/ }).click();
+  await page.getByText("Customer contacts (1)", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByPlaceholder("Search names, companies, trades, or tags").fill("Miller");
+  const customerCard = page.locator(".v2-contact-card").filter({ hasText: "Miller Property Group" });
+  await customerCard.getByRole("button", { name: "Details & work", exact: true }).click();
   await page.getByText("Recent activity", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByText("Miller kitchen", { exact: true }).waitFor({ timeout: 15_000 });
+  await customerCard.getByLabel("Recent activity").getByText("Miller kitchen", { exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Customer book");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-customer-book.png"), fullPage: true });
+  await page.getByPlaceholder("Search names, companies, trades, or tags").fill("");
   await page.locator(".v2-network-tab-bar").getByRole("button", { name: "Crew", exact: true }).click();
-  const elenaCard = page.locator(".v2-crew-card-wrapper").filter({ hasText: "Elena Torres" });
-  await elenaCard.getByRole("button", { name: "Assign to Job", exact: true }).click();
-  const assignmentDialog = page.getByRole("dialog", { name: "Assign Elena Torres to work" });
-  await assignmentDialog.getByRole("button", { name: /Kitchen trim-out support/ }).click();
-  await elenaCard.getByText("Kitchen trim-out support", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.locator(".v2-crew-invite-fold > summary").click();
-  await page.getByRole("button", { name: "Plan invite", exact: true }).click();
-  const crewInviteInputs = page.locator(".v2-crew-invite-inputs input");
-  await assert.equal(await crewInviteInputs.count(), 4, "Crew invite planner should render four contained inputs");
-  await crewInviteInputs.nth(1).fill("Electrical framing and service");
-  await assertNoHorizontalOverflow(page, "People invite planner");
+  const elenaCard = page.locator(".v2-contact-card").filter({ hasText: "Elena Torres" });
+  await elenaCard.getByRole("button", { name: "Details & work", exact: true }).click();
+  await elenaCard.getByLabel("Job or private project").selectOption(`job:${draftJob.id}`);
+  await elenaCard.getByLabel("Relationship").fill("Crew");
+  await elenaCard.getByRole("button", { name: "Link to work", exact: true }).waitFor({ timeout: 15_000 });
+  await elenaCard.getByRole("button", { name: "Copy RIVT invite", exact: true }).waitFor({ timeout: 15_000 });
+  await assert.equal(await page.getByText("Plan an invite", { exact: true }).count(), 0, "Contacts should use real tracked invite links, not a planning-only ledger");
+  await assertNoHorizontalOverflow(page, "People tracked invite");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-crew-contained.png"), fullPage: true });
 
   await page.getByRole("button", { name: "Search" }).click();
@@ -717,13 +717,9 @@ async function runMobileFlow(page) {
   await page.getByRole("navigation", { name: "Work and contacts" }).getByRole("button", { name: "Contacts", exact: true }).click();
   await page.getByRole("heading", { name: "Contacts", exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-network-tab-bar").getByRole("button", { name: "Crew", exact: true }).click();
-  await page.locator(".v2-crew-invite-fold > summary").click();
-  await page.getByRole("button", { name: "Plan invite", exact: true }).click();
-  await page.getByPlaceholder("Name or company").fill("First Coast Electric");
-  await assertControlCenterClickable(page, ".v2-crew-invite-form .v2-primary-button", "crew plan invite button");
-  await page.locator(".v2-crew-invite-form .v2-primary-button").click();
-  await page.getByText("First Coast Electric", { exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Add person/i }).click();
+  await page.getByRole("button", { name: "Copy RIVT invite", exact: true }).waitFor({ timeout: 15_000 });
+  await assert.equal(await page.getByText("Plan an invite", { exact: true }).count(), 0);
+  await page.getByRole("button", { name: "Add contact", exact: true }).click();
   await page.getByLabel("Name").waitFor({ timeout: 15_000 });
   await page.getByLabel("Name").fill("Test Electrician");
   await page.getByRole("button", { name: "Cancel" }).click();

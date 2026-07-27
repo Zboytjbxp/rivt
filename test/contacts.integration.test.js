@@ -354,12 +354,86 @@ if (!testDatabaseUrl) {
     });
     assert.equal(otherRead.response.status, 404);
 
+    const project = await requestJson(baseUrl, "/api/v1/standalone-projects", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        title: "Northbank private project",
+        clientName: "Northbank Interiors",
+        customerId,
+        locationText: "Jacksonville, FL",
+        tradeCode: "carpentry",
+      },
+    });
+    assert.equal(project.response.status, 201);
+    const projectId = project.payload.data.project.id;
+    const projectLink = await requestJson(
+      baseUrl,
+      `/api/v1/standalone-projects/${projectId}/contacts`,
+      {
+        method: "POST",
+        cookie: owner.cookie,
+        idempotencyKey: randomUUID(),
+        body: {
+          contactId: supplierId,
+          relationshipRole: "Material supplier",
+          notes: "Commercial account",
+          isPrimary: true,
+        },
+      },
+    );
+    assert.equal(projectLink.response.status, 200);
+    assert.equal(projectLink.payload.data.link.contact.id, supplierId);
+    const repeatedProjectLink = await requestJson(
+      baseUrl,
+      `/api/v1/standalone-projects/${projectId}/contacts`,
+      {
+        method: "POST",
+        cookie: owner.cookie,
+        idempotencyKey: randomUUID(),
+        body: {
+          contactId: supplierId,
+          relationshipRole: "material SUPPLIER",
+          notes: "Updated commercial account",
+          isPrimary: true,
+        },
+      },
+    );
+    assert.equal(repeatedProjectLink.response.status, 200);
+    const projectContacts = await requestJson(
+      baseUrl,
+      `/api/v1/standalone-projects/${projectId}/contacts`,
+      { cookie: owner.cookie },
+    );
+    assert.equal(projectContacts.response.status, 200);
+    assert.equal(projectContacts.payload.data.links.length, 1);
+    assert.equal(projectContacts.payload.data.links[0].notes, "Updated commercial account");
+    const otherProjectContacts = await requestJson(
+      baseUrl,
+      `/api/v1/standalone-projects/${projectId}/contacts`,
+      { cookie: other.cookie },
+    );
+    assert.equal(otherProjectContacts.response.status, 404);
+
+    const workLinks = await requestJson(baseUrl, `/api/v1/contacts/${supplierId}/work-links`, {
+      cookie: owner.cookie,
+    });
+    assert.equal(workLinks.response.status, 200);
+    assert.deepEqual(
+      new Set(workLinks.payload.data.links.map(({ targetKind }) => targetKind)),
+      new Set(["job", "project"]),
+    );
+
     const activity = await requestJson(baseUrl, `/api/v1/contacts/${supplierId}/activity`, {
       cookie: owner.cookie,
     });
     assert.equal(activity.response.status, 200);
     assert.ok(activity.payload.data.activity.some((item) =>
       item.kind === "job" && item.title === "Contacts integration job"
+    ));
+    assert.ok(activity.payload.data.activity.some((item) =>
+      item.kind === "project" && item.title === "Northbank private project"
     ));
 
     const removedLink = await requestJson(

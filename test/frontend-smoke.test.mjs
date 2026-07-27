@@ -91,6 +91,38 @@ test("public tool catalog contains launch tools and rejects contained legacy rou
   ]);
 });
 
+test("contact CSV import preserves multi-role identities and skips empty rows", async () => {
+  const { parseContactsCsv, contactsCsv } = await loadModule("/src/features/network/contacts-api.ts");
+  const parsed = parseContactsCsv(
+    "\"Name\",\"Company\",\"Roles\",\"Email\",\"Phone\",\"Tags\",\"Notes\"\n"
+    + "\"Morgan Lee\",\"First Coast Supply\",\"supplier; customer\",\"morgan@example.test\",\"904-555-0148\",\"local; fasteners\",\"Net 30\"\n"
+    + "\"\",\"\",\"\",\"\",\"\",\"\",\"orphan note\"\n",
+  );
+  assert.equal(parsed.contacts.length, 1);
+  assert.deepEqual(parsed.contacts[0].roles.map(({ role }) => role), ["supplier", "customer"]);
+  assert.equal(parsed.contacts[0].methods[0].value, "morgan@example.test");
+  assert.equal(parsed.skipped, 1);
+  const exported = contactsCsv([{
+    id: "contact-1",
+    entityType: "person",
+    name: "Morgan Lee",
+    company: "First Coast Supply",
+    notes: "Net 30",
+    favorite: false,
+    status: "active",
+    linkedAccountId: null,
+    lastUsedAt: null,
+    roles: parsed.contacts[0].roles,
+    methods: parsed.contacts[0].methods,
+    addresses: [],
+    tags: ["local", "fasteners"],
+    createdAt: null,
+    updatedAt: null,
+  }]);
+  assert.match(exported, /"supplier; customer"/);
+  assert.match(exported, /"morgan@example\.test"/);
+});
+
 test("only account-owned estimate and invoice records receive document deep links", async () => {
   const { linkedRecordTypeForTool } = await loadModule("/src/features/tools/tool-record-links.ts");
 

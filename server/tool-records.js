@@ -446,6 +446,32 @@ export function registerToolRecordRoutes({
             throw new ApiError(403, "CUSTOMER_ACCESS_DENIED", "You cannot save records to that customer.");
           }
         }
+        const supplierContactId = input.recordType === "price_book"
+          && typeof input.payload.supplierContactId === "string"
+          ? input.payload.supplierContactId.trim()
+          : "";
+        if (supplierContactId) {
+          const parsedSupplierId = z.uuid().safeParse(supplierContactId);
+          if (!parsedSupplierId.success) {
+            throw new ApiError(400, "SUPPLIER_CONTACT_INVALID", "Choose a valid saved supplier.");
+          }
+          const ownedSupplier = await client.query(
+            `SELECT 1
+             FROM contacts contact
+             INNER JOIN contact_roles role
+               ON role.contact_id = contact.id
+              AND role.account_id = contact.account_id
+              AND role.role = 'supplier'
+              AND role.status = 'active'
+             WHERE contact.id = $1
+               AND contact.account_id = $2
+               AND contact.status = 'active'`,
+            [parsedSupplierId.data, request.actor.account.id],
+          );
+          if (!ownedSupplier.rowCount) {
+            throw new ApiError(403, "SUPPLIER_CONTACT_ACCESS_DENIED", "You cannot save prices to that supplier.");
+          }
+        }
         const upserted = await client.query(
           `INSERT INTO tool_records (
              account_id, record_type, local_id, title, status, record_date, amount_cents, payload,

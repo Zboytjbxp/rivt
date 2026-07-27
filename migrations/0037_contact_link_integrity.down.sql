@@ -1,0 +1,4 @@
+DROP INDEX IF EXISTS contact_project_links_one_primary_role_idx;
+DROP INDEX IF EXISTS contact_project_links_role_identity_idx;
+DROP INDEX IF EXISTS contact_job_links_one_primary_role_idx;
+DROP INDEX IF EXISTS contact_job_links_role_identity_idx;

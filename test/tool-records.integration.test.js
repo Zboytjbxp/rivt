@@ -389,6 +389,55 @@ if (!testDatabaseUrl) {
     assert.equal(otherCannotUseCustomer.response.status, 403);
     assert.equal(otherCannotUseCustomer.payload.error.code, "CUSTOMER_ACCESS_DENIED");
 
+    const supplier = await requestJson(baseUrl, "/api/v1/contacts", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        entityType: "company",
+        name: "Morgan Supply Desk",
+        company: "First Coast Fasteners",
+        roles: [{ role: "supplier", details: {} }],
+        methods: [{
+          kind: "email",
+          label: "orders",
+          value: "tool-record-supplier@example.test",
+          isPrimary: true,
+        }],
+      },
+    });
+    assert.equal(supplier.response.status, 201);
+    const supplierContactId = supplier.payload.data.contact.id;
+    const supplierPrice = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "price_book",
+        localId: "price:supplier-owned",
+        title: "Concrete anchors",
+        status: "saved",
+        amountCents: 1899,
+        payload: { supplierContactId, supplier: "First Coast Fasteners" },
+      },
+    });
+    assert.equal(supplierPrice.response.status, 200);
+    const otherCannotUseSupplier = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: other.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "price_book",
+        localId: "price:foreign-supplier",
+        title: "Unauthorized supplier price",
+        status: "saved",
+        amountCents: 1899,
+        payload: { supplierContactId, supplier: "First Coast Fasteners" },
+      },
+    });
+    assert.equal(otherCannotUseSupplier.response.status, 403);
+    assert.equal(otherCannotUseSupplier.payload.error.code, "SUPPLIER_CONTACT_ACCESS_DENIED");
+
     const projectCreated = await requestJson(baseUrl, "/api/v1/standalone-projects", {
       method: "POST",
       cookie: owner.cookie,

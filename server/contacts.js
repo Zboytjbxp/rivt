@@ -117,6 +117,8 @@ const jobContactLinkSchema = z.object({
   isPrimary: z.boolean().default(false),
 });
 
+const projectContactLinkSchema = jobContactLinkSchema;
+
 function normalizeMethod(kind, value) {
   const trimmed = String(value ?? "").trim();
   if (kind === "email") return trimmed.toLowerCase();
@@ -883,6 +885,18 @@ function mapContactJobLink(row) {
   };
 }
 
+function mapContactProjectLink(row) {
+  return {
+    id: row.link_id,
+    relationshipRole: row.relationship_role,
+    notes: row.link_notes || "",
+    isPrimary: Boolean(row.link_is_primary),
+    createdAt: row.link_created_at ? new Date(row.link_created_at).toISOString() : null,
+    updatedAt: row.link_updated_at ? new Date(row.link_updated_at).toISOString() : null,
+    contact: mapContact(row),
+  };
+}
+
 async function assertJobContactAccess(client, accountId, jobId) {
   const result = await client.query(
     `SELECT job.id
@@ -929,6 +943,43 @@ async function readJobContactLink(client, accountId, jobId, linkId) {
     [accountId, jobId, linkId],
   );
   return result.rows[0] ? mapContactJobLink(result.rows[0]) : null;
+}
+
+async function assertStandaloneProjectAccess(client, accountId, projectId) {
+  const result = await client.query(
+    `SELECT id
+     FROM standalone_projects
+     WHERE id = $1
+       AND account_id = $2`,
+    [projectId, accountId],
+  );
+  if (!result.rowCount) {
+    throw new ApiError(404, "STANDALONE_PROJECT_NOT_FOUND", "That project is not available to this account.");
+  }
+}
+
+async function readProjectContactLink(client, accountId, projectId, linkId) {
+  const result = await client.query(
+    `SELECT
+       link.id AS link_id,
+       link.relationship_role,
+       link.notes AS link_notes,
+       link.is_primary AS link_is_primary,
+       link.created_at AS link_created_at,
+       link.updated_at AS link_updated_at,
+       contact_row.*
+     FROM contact_project_links link
+     INNER JOIN LATERAL (
+       ${contactProjectionSql}
+       WHERE contact.id = link.contact_id
+         AND contact.account_id = link.account_id
+     ) contact_row ON true
+     WHERE link.account_id = $1
+       AND link.standalone_project_id = $2
+       AND link.id = $3`,
+    [accountId, projectId, linkId],
+  );
+  return result.rows[0] ? mapContactProjectLink(result.rows[0]) : null;
 }
 
 export function registerContactRoutes({
@@ -1139,6 +1190,67 @@ export function registerContactRoutes({
     sendIdempotentResult(response, result);
   }));
 
+  app.get("/api/v1/contacts/:id/work-links", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const contactId = validate(z.uuid(), request.params.id);
+    const owned = await database.query(
+      "SELECT 1 FROM contacts WHERE id = $1 AND account_id = $2",
+      [contactId, request.actor.account.id],
+    );
+    if (!owned.rowCount) {
+      throw new ApiError(404, "CONTACT_NOT_FOUND", "That contact does not exist.");
+    }
+    const links = await database.query(
+      `SELECT
+         link.id,
+         'job'::text AS target_kind,
+         link.job_id AS target_id,
+         job.title AS target_title,
+         link.relationship_role,
+         link.notes,
+         link.is_primary,
+         link.created_at,
+         link.updated_at
+       FROM contact_job_links link
+       INNER JOIN jobs job ON job.id = link.job_id
+       WHERE link.account_id = $1
+         AND link.contact_id = $2
+       UNION ALL
+       SELECT
+         link.id,
+         'project'::text AS target_kind,
+         link.standalone_project_id AS target_id,
+         project.title AS target_title,
+         link.relationship_role,
+         link.notes,
+         link.is_primary,
+         link.created_at,
+         link.updated_at
+       FROM contact_project_links link
+       INNER JOIN standalone_projects project
+         ON project.id = link.standalone_project_id
+       WHERE link.account_id = $1
+         AND link.contact_id = $2
+       ORDER BY updated_at DESC, id DESC`,
+      [request.actor.account.id, contactId],
+    );
+    response.json({
+      data: {
+        links: links.rows.map((link) => ({
+          id: link.id,
+          targetKind: link.target_kind,
+          targetId: link.target_id,
+          targetTitle: link.target_title,
+          relationshipRole: link.relationship_role,
+          notes: link.notes || "",
+          isPrimary: Boolean(link.is_primary),
+          createdAt: link.created_at ? new Date(link.created_at).toISOString() : null,
+          updatedAt: link.updated_at ? new Date(link.updated_at).toISOString() : null,
+        })),
+      },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
   app.get("/api/v1/jobs/:jobId/contacts", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const jobId = validate(z.uuid(), request.params.jobId);
     await assertJobContactAccess(database, request.actor.account.id, jobId);
@@ -1176,10 +1288,11 @@ export function registerContactRoutes({
   app.post("/api/v1/jobs/:jobId/contacts", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const jobId = validate(z.uuid(), request.params.jobId);
     const input = validate(jobContactLinkSchema, request.body);
+    const normalizedRole = input.relationshipRole.replace(/\s+/g, " ").trim();
     const result = await runIdempotentMutation(
       request,
       request.actor.account.id,
-      `contacts.job-link:${jobId}:${input.contactId}:${input.relationshipRole}`,
+      `contacts.job-link:${jobId}:${input.contactId}:${normalizedRole.toLowerCase()}`,
       async (client) => {
         await assertJobContactAccess(client, request.actor.account.id, jobId);
         const ownedContact = await client.query(
@@ -1200,28 +1313,63 @@ export function registerContactRoutes({
              WHERE account_id = $1
                AND job_id = $2
                AND lower(relationship_role) = lower($3)`,
-            [request.actor.account.id, jobId, input.relationshipRole],
+            [request.actor.account.id, jobId, normalizedRole],
           );
         }
-        const saved = await client.query(
-          `INSERT INTO contact_job_links (
-             account_id, contact_id, job_id, relationship_role, notes, is_primary
-           ) VALUES ($1, $2, $3, $4, $5, $6)
-           ON CONFLICT (account_id, contact_id, job_id, relationship_role)
-           DO UPDATE SET
-             notes = EXCLUDED.notes,
-             is_primary = EXCLUDED.is_primary,
-             updated_at = now()
-           RETURNING id`,
-          [
-            request.actor.account.id,
-            input.contactId,
-            jobId,
-            input.relationshipRole,
-            input.notes,
-            input.isPrimary,
-          ],
+        const existing = await client.query(
+          `SELECT id
+           FROM contact_job_links
+           WHERE account_id = $1
+             AND contact_id = $2
+             AND job_id = $3
+             AND lower(relationship_role) = lower($4)
+           LIMIT 1`,
+          [request.actor.account.id, input.contactId, jobId, normalizedRole],
         );
+        const saved = existing.rowCount
+          ? await client.query(
+            `UPDATE contact_job_links
+             SET relationship_role = $5,
+                 notes = $6,
+                 is_primary = $7,
+                 updated_at = now()
+             WHERE id = $1
+               AND account_id = $2
+               AND contact_id = $3
+               AND job_id = $4
+             RETURNING id`,
+            [
+              existing.rows[0].id,
+              request.actor.account.id,
+              input.contactId,
+              jobId,
+              normalizedRole,
+              input.notes,
+              input.isPrimary,
+            ],
+          )
+          : await client.query(
+            `INSERT INTO contact_job_links (
+               account_id, contact_id, job_id, relationship_role, notes, is_primary
+             ) VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (
+               account_id, contact_id, job_id, (lower(trim(relationship_role)))
+             )
+             DO UPDATE SET
+               relationship_role = EXCLUDED.relationship_role,
+               notes = EXCLUDED.notes,
+               is_primary = EXCLUDED.is_primary,
+               updated_at = now()
+             RETURNING id`,
+            [
+              request.actor.account.id,
+              input.contactId,
+              jobId,
+              normalizedRole,
+              input.notes,
+              input.isPrimary,
+            ],
+          );
         const link = await readJobContactLink(
           client,
           request.actor.account.id,
@@ -1259,6 +1407,177 @@ export function registerContactRoutes({
         );
         if (!removed.rowCount) {
           throw new ApiError(404, "CONTACT_LINK_NOT_FOUND", "That job contact link does not exist.");
+        }
+        return {
+          status: 200,
+          body: {
+            data: { deleted: true },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
+  app.get("/api/v1/standalone-projects/:projectId/contacts", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const projectId = validate(z.uuid(), request.params.projectId);
+    await assertStandaloneProjectAccess(database, request.actor.account.id, projectId);
+    const result = await database.query(
+      `SELECT
+         link.id AS link_id,
+         link.relationship_role,
+         link.notes AS link_notes,
+         link.is_primary AS link_is_primary,
+         link.created_at AS link_created_at,
+         link.updated_at AS link_updated_at,
+         contact_row.*
+       FROM contact_project_links link
+       INNER JOIN LATERAL (
+         ${contactProjectionSql}
+         WHERE contact.id = link.contact_id
+           AND contact.account_id = link.account_id
+       ) contact_row ON true
+       WHERE link.account_id = $1
+         AND link.standalone_project_id = $2
+       ORDER BY
+         link.is_primary DESC,
+         lower(link.relationship_role),
+         lower(contact_row.company),
+         lower(contact_row.name),
+         link.id`,
+      [request.actor.account.id, projectId],
+    );
+    response.json({
+      data: { links: result.rows.map(mapContactProjectLink) },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
+  app.post("/api/v1/standalone-projects/:projectId/contacts", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const projectId = validate(z.uuid(), request.params.projectId);
+    const input = validate(projectContactLinkSchema, request.body);
+    const normalizedRole = input.relationshipRole.replace(/\s+/g, " ").trim();
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `contacts.project-link:${projectId}:${input.contactId}:${normalizedRole.toLowerCase()}`,
+      async (client) => {
+        await assertStandaloneProjectAccess(client, request.actor.account.id, projectId);
+        const ownedContact = await client.query(
+          `SELECT id
+           FROM contacts
+           WHERE id = $1
+             AND account_id = $2
+             AND status = 'active'`,
+          [input.contactId, request.actor.account.id],
+        );
+        if (!ownedContact.rowCount) {
+          throw new ApiError(404, "CONTACT_NOT_FOUND", "That active contact does not exist.");
+        }
+        if (input.isPrimary) {
+          await client.query(
+            `UPDATE contact_project_links
+             SET is_primary = false, updated_at = now()
+             WHERE account_id = $1
+               AND standalone_project_id = $2
+               AND lower(relationship_role) = lower($3)`,
+            [request.actor.account.id, projectId, normalizedRole],
+          );
+        }
+        const existing = await client.query(
+          `SELECT id
+           FROM contact_project_links
+           WHERE account_id = $1
+             AND contact_id = $2
+             AND standalone_project_id = $3
+             AND lower(relationship_role) = lower($4)
+           LIMIT 1`,
+          [request.actor.account.id, input.contactId, projectId, normalizedRole],
+        );
+        const saved = existing.rowCount
+          ? await client.query(
+            `UPDATE contact_project_links
+             SET relationship_role = $5,
+                 notes = $6,
+                 is_primary = $7,
+                 updated_at = now()
+             WHERE id = $1
+               AND account_id = $2
+               AND contact_id = $3
+               AND standalone_project_id = $4
+             RETURNING id`,
+            [
+              existing.rows[0].id,
+              request.actor.account.id,
+              input.contactId,
+              projectId,
+              normalizedRole,
+              input.notes,
+              input.isPrimary,
+            ],
+          )
+          : await client.query(
+            `INSERT INTO contact_project_links (
+               account_id, contact_id, standalone_project_id,
+               relationship_role, notes, is_primary
+             ) VALUES ($1, $2, $3, $4, $5, $6)
+             ON CONFLICT (
+               account_id, contact_id, standalone_project_id,
+               (lower(trim(relationship_role)))
+             )
+             DO UPDATE SET
+               relationship_role = EXCLUDED.relationship_role,
+               notes = EXCLUDED.notes,
+               is_primary = EXCLUDED.is_primary,
+               updated_at = now()
+             RETURNING id`,
+            [
+              request.actor.account.id,
+              input.contactId,
+              projectId,
+              normalizedRole,
+              input.notes,
+              input.isPrimary,
+            ],
+          );
+        const link = await readProjectContactLink(
+          client,
+          request.actor.account.id,
+          projectId,
+          saved.rows[0].id,
+        );
+        return {
+          status: 200,
+          body: {
+            data: { link },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+    sendIdempotentResult(response, result);
+  }));
+
+  app.delete("/api/v1/standalone-projects/:projectId/contacts/:linkId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    const projectId = validate(z.uuid(), request.params.projectId);
+    const linkId = validate(z.uuid(), request.params.linkId);
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `contacts.project-unlink:${projectId}:${linkId}`,
+      async (client) => {
+        await assertStandaloneProjectAccess(client, request.actor.account.id, projectId);
+        const removed = await client.query(
+          `DELETE FROM contact_project_links
+           WHERE id = $1
+             AND standalone_project_id = $2
+             AND account_id = $3
+           RETURNING id`,
+          [linkId, projectId, request.actor.account.id],
+        );
+        if (!removed.rowCount) {
+          throw new ApiError(404, "CONTACT_LINK_NOT_FOUND", "That project contact link does not exist.");
         }
         return {
           status: 200,
@@ -1326,6 +1645,36 @@ export function registerContactRoutes({
          INNER JOIN jobs job ON job.id = link.job_id
          WHERE link.account_id = $1
            AND link.contact_id = $2
+         UNION ALL
+         SELECT
+           project.id,
+           'project'::text AS kind,
+           project.title,
+           project.status,
+           COALESCE(link.updated_at, link.created_at) AS activity_date,
+           NULL::integer AS amount_cents,
+           NULL::text AS record_type,
+           NULL::text AS local_id
+         FROM contact_project_links link
+         INNER JOIN standalone_projects project
+           ON project.id = link.standalone_project_id
+         WHERE link.account_id = $1
+           AND link.contact_id = $2
+         UNION ALL
+         SELECT
+           record.id,
+           'document'::text AS kind,
+           record.title,
+           record.status,
+           COALESCE(record.updated_at, record.created_at) AS activity_date,
+           record.amount_cents,
+           record.record_type,
+           record.local_id
+         FROM tool_records record
+         WHERE record.account_id = $1
+           AND record.deleted_at IS NULL
+           AND record.record_type = 'price_book'
+           AND record.payload->>'supplierContactId' = $2::text
        ) contact_activity
        ORDER BY activity_date DESC, id DESC
        LIMIT 150`,

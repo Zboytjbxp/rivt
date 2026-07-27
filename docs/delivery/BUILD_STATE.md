@@ -2,12 +2,48 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Contact workflow integration is deployed and exact-source verified.
-Active packet: `docs/delivery/packets/78_CONTACT_WORKFLOW_INTEGRATION.md`
-Repository branch: `master` (source branch:
-`codex/contact-workflow-integration`)
-Production feature release commit:
-`32db9cd56451e51db076eaa5a3d1c74b610db86b`
+Current phase: Contacts completion is locally verified and ready for
+deployment.
+Active packet: `docs/delivery/packets/79_CONTACTS_COMPLETION.md`
+Repository branch: `codex/contacts-completion`
+Production feature release commit: pending merge and deploy
+
+## Contacts completion
+
+- Replaced the remaining role-specific production paths with one canonical
+  Contact directory. All, Crew, Subs, Customers, and Suppliers are now
+  filters over the same multi-role identities and history.
+- Activated private standalone-project relationships alongside canonical job
+  relationships. Contact detail now shows one authenticated work/activity
+  history spanning jobs, private projects, Estimate/Invoice records, and
+  supplier price-book records.
+- Added complete quoted CSV import/export, common role aliases, multi-role
+  rows, normalized duplicate reporting, invalid-row reporting, and a
+  500-row import bound.
+- Added a real tracked RIVT referral action for Crew/Sub Contacts and removed
+  the planning-only invite ledger from the routed Contacts surface. The
+  action says it copied an invite and never claims delivery.
+- Materials now rejects missing, archived, non-Supplier, malformed, or
+  cross-account Contact IDs instead of accepting an unverified supplier
+  reference in a price record.
+- Migration `0037_contact_link_integrity` repairs case-only relationship
+  duplicates and multiple-primary collisions, then enforces
+  case-insensitive relationship identity and one primary per role for both
+  job and private-project links. Its rollback removes only those new
+  integrity indexes.
+- Rendered QA found and fixed container-level clipping that the page-level
+  overflow assertion did not detect: mobile import/export/add actions,
+  long phone/email links, and card actions now reflow at 320–390px.
+- Added `docs/delivery/PRODUCT_COMPLETION_AUDIT.md` as the current,
+  evidence-based definition of product completion. It records the ordered
+  completion train after Contacts instead of treating a passing launch
+  readiness script as proof that every surface is finished.
+- Local verification is complete: production build and lint pass; 104
+  unit/frontend tests and all 21 database integration suites pass; fail-closed
+  authentication and job-discovery E2E pass; authenticated Contacts, guest,
+  Work, Tools, and Shop Talk rendered QA pass; the dependency audit reports
+  zero production vulnerabilities; and diff integrity passes. Production
+  merge, migration, and exact-source evidence are pending.
 
 ## Contact workflow integration
 

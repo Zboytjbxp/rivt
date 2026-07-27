@@ -1,5 +1,36 @@
 # Gate A Requirements Traceability
 
+## Packet 79 — Contacts-completion evidence
+
+- `GA-FND-003` gains migration `0037_contact_link_integrity`, a reversible
+  integrity layer for canonical Contact relationships across jobs and private
+  projects. Case-only relationship duplicates and conflicting primary flags
+  are repaired before unique constraints are installed.
+- `GA-FND-004` gains server authorization for private-project Contact links,
+  unified Contact work history, and selected Materials suppliers. A caller
+  cannot read another account's project relationships or save another
+  account's, archived, or non-Supplier Contact as a price-book supplier.
+- `GA-UX-003` gains one long-term relationship model: All, Crew, Subs,
+  Customers, and Suppliers are filters over the same multi-role Contact
+  identity. Estimate, Invoice, Materials, jobs, and private projects reuse
+  that identity. Crew/Sub Contacts expose a real tracked referral link rather
+  than a planning-only invite ledger.
+- `GA-UX-005` gains full CSV portability, duplicate/invalid-row reporting,
+  honest copy-only invite feedback, and one real activity stream without
+  fabricated delivery, sharing, or relationship counts.
+- `GA-UX-006` gains desktop, 390px, and 320px rendered coverage for canonical
+  role filters, long contact methods, import/export/add controls, activity,
+  work linking, and wrapping card actions. Container clipping found during
+  screenshot review was fixed even though the page-level overflow assertion
+  had passed.
+- `GA-OPS-007` has a clean production build and lint, 104 passing
+  unit/frontend tests, all 21 passing database integration suites,
+  fail-closed authentication and job-discovery E2E, authenticated Contacts,
+  guest, Work, Tools, and Shop Talk rendered QA, zero production dependency
+  vulnerabilities, and clean diff integrity.
+- Packet 79 is **locally verified** and remains in progress until merge,
+  deployment, live migration, and exact-source monitor evidence are recorded.
+
 ## Packet 76 — Tools launcher-subtraction evidence
 
 - `GA-UX-003` gains a quieter fixed Tools information architecture: all seven

@@ -92,6 +92,33 @@ export interface ContactJobLink {
   contact: ContactRecord;
 }
 
+export interface ContactProjectLink extends Omit<ContactJobLink, "contact"> {
+  contact: ContactRecord;
+}
+
+export interface ContactActivity {
+  id: string;
+  kind: "document" | "project" | "job";
+  title: string;
+  status: string;
+  date: string | null;
+  amountCents: number | null;
+  recordType: string | null;
+  localId: string | null;
+}
+
+export interface ContactWorkLink {
+  id: string;
+  targetKind: "job" | "project";
+  targetId: string;
+  targetTitle: string;
+  relationshipRole: string;
+  notes: string;
+  isPrimary: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -349,6 +376,248 @@ export async function deleteJobContactLink(jobId: string, linkId: string): Promi
     },
   );
   return !result.error;
+}
+
+export async function fetchProjectContactLinks(projectId: string): Promise<ContactProjectLink[] | null> {
+  const result = await contactJobLinkRequest(
+    `/api/v1/standalone-projects/${encodeURIComponent(projectId)}/contacts`,
+  );
+  return result.error ? null : result.links;
+}
+
+export async function saveProjectContactLink(
+  projectId: string,
+  input: {
+    contactId: string;
+    relationshipRole: string;
+    notes: string;
+    isPrimary: boolean;
+  },
+): Promise<{ link: ContactProjectLink | null; error: string | null }> {
+  const result = await contactJobLinkRequest(
+    `/api/v1/standalone-projects/${encodeURIComponent(projectId)}/contacts`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": requestKey(),
+      },
+      body: JSON.stringify(input),
+    },
+  );
+  return { link: result.link, error: result.error };
+}
+
+export async function deleteProjectContactLink(projectId: string, linkId: string): Promise<boolean> {
+  const result = await contactJobLinkRequest(
+    `/api/v1/standalone-projects/${encodeURIComponent(projectId)}/contacts/${encodeURIComponent(linkId)}`,
+    {
+      method: "DELETE",
+      headers: { "Idempotency-Key": requestKey() },
+    },
+  );
+  return !result.error;
+}
+
+export async function fetchContactActivity(contactId: string): Promise<ContactActivity[] | null> {
+  try {
+    const response = await fetchWithTimeout(
+      apiPath(`/api/v1/contacts/${encodeURIComponent(contactId)}/activity`),
+      { credentials: "include" },
+    );
+    if (response.status === 401) notifySessionExpired();
+    const body = await response.json().catch(() => null) as {
+      data?: { activity?: unknown[] };
+    } | null;
+    if (!response.ok || !Array.isArray(body?.data?.activity)) return null;
+    return body.data.activity.flatMap((value): ContactActivity[] => {
+      if (
+        !isRecord(value)
+        || typeof value.id !== "string"
+        || !["document", "project", "job"].includes(String(value.kind))
+        || typeof value.title !== "string"
+      ) return [];
+      return [{
+        id: value.id,
+        kind: value.kind as ContactActivity["kind"],
+        title: value.title,
+        status: typeof value.status === "string" ? value.status : "",
+        date: typeof value.date === "string" ? value.date : null,
+        amountCents: typeof value.amountCents === "number" ? value.amountCents : null,
+        recordType: typeof value.recordType === "string" ? value.recordType : null,
+        localId: typeof value.localId === "string" ? value.localId : null,
+      }];
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchContactWorkLinks(contactId: string): Promise<ContactWorkLink[] | null> {
+  try {
+    const response = await fetchWithTimeout(
+      apiPath(`/api/v1/contacts/${encodeURIComponent(contactId)}/work-links`),
+      { credentials: "include" },
+    );
+    if (response.status === 401) notifySessionExpired();
+    const body = await response.json().catch(() => null) as {
+      data?: { links?: unknown[] };
+    } | null;
+    if (!response.ok || !Array.isArray(body?.data?.links)) return null;
+    return body.data.links.flatMap((value): ContactWorkLink[] => {
+      if (
+        !isRecord(value)
+        || typeof value.id !== "string"
+        || !["job", "project"].includes(String(value.targetKind))
+        || typeof value.targetId !== "string"
+        || typeof value.targetTitle !== "string"
+        || typeof value.relationshipRole !== "string"
+      ) return [];
+      return [{
+        id: value.id,
+        targetKind: value.targetKind as ContactWorkLink["targetKind"],
+        targetId: value.targetId,
+        targetTitle: value.targetTitle,
+        relationshipRole: value.relationshipRole,
+        notes: typeof value.notes === "string" ? value.notes : "",
+        isPrimary: value.isPrimary === true,
+        createdAt: typeof value.createdAt === "string" ? value.createdAt : null,
+        updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null,
+      }];
+    });
+  } catch {
+    return null;
+  }
+}
+
+function csvCell(value: string) {
+  return `"${value.replace(/"/g, "\"\"")}"`;
+}
+
+export function contactsCsv(contacts: ContactRecord[]) {
+  const columns = ["Name", "Company", "Roles", "Email", "Phone", "Website", "Tags", "Notes", "Status"];
+  const rows = contacts.map((contact) => [
+    contact.name,
+    contact.company,
+    contact.roles.filter(({ status }) => status === "active").map(({ role }) => role).join("; "),
+    contact.methods.find(({ kind, isPrimary }) => kind === "email" && isPrimary)?.value
+      ?? contact.methods.find(({ kind }) => kind === "email")?.value
+      ?? "",
+    contact.methods.find(({ kind, isPrimary }) => kind === "phone" && isPrimary)?.value
+      ?? contact.methods.find(({ kind }) => kind === "phone")?.value
+      ?? "",
+    contact.methods.find(({ kind, isPrimary }) => kind === "website" && isPrimary)?.value
+      ?? contact.methods.find(({ kind }) => kind === "website")?.value
+      ?? "",
+    contact.tags.join("; "),
+    contact.notes,
+    contact.status,
+  ]);
+  return [columns, ...rows].map((row) => row.map((value) => csvCell(String(value))).join(",")).join("\r\n");
+}
+
+function parseCsvRows(csv: string) {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let quoted = false;
+  for (let index = 0; index < csv.length; index += 1) {
+    const character = csv[index];
+    if (quoted && character === "\"" && csv[index + 1] === "\"") {
+      cell += "\"";
+      index += 1;
+    } else if (character === "\"") {
+      quoted = !quoted;
+    } else if (character === "," && !quoted) {
+      row.push(cell.trim());
+      cell = "";
+    } else if ((character === "\n" || character === "\r") && !quoted) {
+      if (character === "\r" && csv[index + 1] === "\n") index += 1;
+      row.push(cell.trim());
+      if (row.some(Boolean)) rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += character;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some(Boolean)) rows.push(row);
+  return rows;
+}
+
+const csvRoleAliases: Record<string, ContactRole> = {
+  crew: "crew",
+  employee: "crew",
+  employees: "crew",
+  sub: "subcontractor",
+  subs: "subcontractor",
+  subcontractor: "subcontractor",
+  subcontractors: "subcontractor",
+  customer: "customer",
+  customers: "customer",
+  client: "customer",
+  clients: "customer",
+  supplier: "supplier",
+  suppliers: "supplier",
+  vendor: "supplier",
+  vendors: "supplier",
+  other: "other",
+};
+
+export function parseContactsCsv(csv: string): { contacts: ContactInput[]; skipped: number } {
+  const rows = parseCsvRows(csv);
+  if (rows.length < 2) return { contacts: [], skipped: Math.max(0, rows.length - 1) };
+  const headers = rows[0].map((header) => header.trim().toLowerCase());
+  const indexOf = (...names: string[]) => headers.findIndex((header) => names.includes(header));
+  const nameIndex = indexOf("name", "contact name", "contact");
+  const companyIndex = indexOf("company", "business");
+  const rolesIndex = indexOf("roles", "role", "type");
+  const emailIndex = indexOf("email", "email address");
+  const phoneIndex = indexOf("phone", "phone number", "mobile");
+  const websiteIndex = indexOf("website", "url");
+  const tagsIndex = indexOf("tags", "tag");
+  const notesIndex = indexOf("notes", "note");
+  const statusIndex = indexOf("status");
+  const contacts: ContactInput[] = [];
+  let skipped = 0;
+  for (const row of rows.slice(1, 501)) {
+    const company = companyIndex >= 0 ? row[companyIndex]?.trim() ?? "" : "";
+    const name = nameIndex >= 0 ? row[nameIndex]?.trim() ?? "" : "";
+    if (!name && !company) {
+      skipped += 1;
+      continue;
+    }
+    const roleTokens = rolesIndex >= 0
+      ? (row[rolesIndex] ?? "").split(/[;|]/).map((value) => value.trim().toLowerCase()).filter(Boolean)
+      : [];
+    const roles = [...new Set(roleTokens.map((value) => csvRoleAliases[value]).filter(Boolean))]
+      .map((role) => ({ role, status: "active" as const, details: {} }));
+    const methods: ContactMethod[] = [];
+    const email = emailIndex >= 0 ? row[emailIndex]?.trim() ?? "" : "";
+    const phone = phoneIndex >= 0 ? row[phoneIndex]?.trim() ?? "" : "";
+    const website = websiteIndex >= 0 ? row[websiteIndex]?.trim() ?? "" : "";
+    if (email) methods.push({ kind: "email", label: "", value: email, isPrimary: true });
+    if (phone) methods.push({ kind: "phone", label: "", value: phone, isPrimary: true });
+    if (website) methods.push({ kind: "website", label: "", value: website, isPrimary: true });
+    contacts.push({
+      entityType: company && !name ? "company" : "person",
+      name: name || company,
+      company,
+      notes: notesIndex >= 0 ? row[notesIndex]?.trim() ?? "" : "",
+      favorite: false,
+      status: statusIndex >= 0 && row[statusIndex]?.trim().toLowerCase() === "archived"
+        ? "archived"
+        : "active",
+      roles: roles.length ? roles : [{ role: "other", status: "active", details: {} }],
+      methods,
+      addresses: [],
+      tags: tagsIndex >= 0
+        ? [...new Set((row[tagsIndex] ?? "").split(/[;|]/).map((value) => value.trim().toLowerCase()).filter(Boolean))]
+        : [],
+    });
+  }
+  return { contacts, skipped: skipped + Math.max(0, rows.length - 501) };
 }
 
 export function contactDisplayName(contact: Pick<ContactRecord, "name" | "company">) {

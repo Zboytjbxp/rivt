@@ -7,7 +7,9 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Download,
   FileText,
+  FolderKanban,
   Globe2,
   Mail,
   MapPin,
@@ -46,13 +48,27 @@ import {
 } from "./network-records-api";
 import {
   createContact,
+  contactsCsv,
+  deleteJobContactLink,
+  deleteProjectContactLink,
+  fetchContactActivity,
+  fetchContactWorkLinks,
   fetchContacts,
+  parseContactsCsv,
+  saveJobContactLink,
+  saveProjectContactLink,
   updateContact,
+  type ContactActivity,
   type ContactInput,
+  type ContactWorkLink,
   type ContactRecord,
   type ContactRole,
   type ContactRoleRecord,
 } from "./contacts-api";
+import {
+  listStandaloneProjects,
+  type StandaloneProject,
+} from "../tools/standalone-project-api";
 import {
   approveWorkReview,
   disputeWorkReview,
@@ -148,7 +164,7 @@ function normalizedCustomerPhone(value: string) {
   return value.replace(/\D/g, "");
 }
 
-function ClientBookView() {
+const _ClientBookView = function ClientBookView() {
   const [clients, setClients] = useState<Client[]>(readClientRecordsLocal);
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -799,7 +815,7 @@ function CrewCard({
 
 // ── Crew Manager (the enhanced Crew tab) ──────────────────────────────────────
 
-function CrewManager({
+const _CrewManager = function CrewManager({
   crewType,
   labelOverride,
   isDemo = false,
@@ -1207,7 +1223,7 @@ async function syncStoredReviewRecords(): Promise<{ records: StoredReview[]; mes
   return { records: merged, message: "Synced to your RIVT account." };
 }
 
-function CrewInvitePlanner({ isDemo = false }: { isDemo?: boolean }) {
+const _CrewInvitePlanner = function CrewInvitePlanner({ isDemo = false }: { isDemo?: boolean }) {
   const [invites, setInvites] = useState<CrewInvite[]>(() => isDemo ? demoCrewInvites : readCrewInvites());
   const [composerOpen, setComposerOpen] = useState(false);
   const [jobRef, setJobRef] = useState("");
@@ -1344,7 +1360,7 @@ function CrewInvitePlanner({ isDemo = false }: { isDemo?: boolean }) {
       </div>
     </Panel>
   );
-}
+};
 
 export function AnswerPrompt({ post, onOpenShopTalk }: { post: { title: string; trade: string; status: string }; onOpenShopTalk: () => void }) {
   return (
@@ -2134,9 +2150,15 @@ const demoContactRecords: ContactRecord[] = demoCrewMembers.map((member) => ({
 function ContactDirectoryView({
   role,
   isDemo = false,
+  workOptions = [],
+  workOptionsLoading = false,
+  workOptionsError = null,
 }: {
   role?: ContactRole;
   isDemo?: boolean;
+  workOptions?: NetworkWorkOption[];
+  workOptionsLoading?: boolean;
+  workOptionsError?: string | null;
 }) {
   const [contacts, setContacts] = useState<ContactRecord[]>(
     () => isDemo ? demoContactRecords : [],
@@ -2146,6 +2168,17 @@ function ContactDirectoryView({
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [editing, setEditing] = useState<ContactRecord | null | "new">(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activityByContact, setActivityByContact] = useState<Record<string, ContactActivity[] | null | undefined>>({});
+  const [linksByContact, setLinksByContact] = useState<Record<string, ContactWorkLink[] | null | undefined>>({});
+  const [standaloneProjects, setStandaloneProjects] = useState<StandaloneProject[]>([]);
+  const [linkTarget, setLinkTarget] = useState("");
+  const [linkRelationship, setLinkRelationship] = useState("");
+  const [linkNotes, setLinkNotes] = useState("");
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [inviteBusyId, setInviteBusyId] = useState<string | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (isDemo) return;
@@ -2162,6 +2195,19 @@ function ContactDirectoryView({
     });
     return () => { cancelled = true; };
   }, [isDemo, role, showArchived]);
+
+  useEffect(() => {
+    if (isDemo) return;
+    let cancelled = false;
+    void listStandaloneProjects()
+      .then((projects) => {
+        if (!cancelled) setStandaloneProjects(projects.filter(({ status }) => status === "active"));
+      })
+      .catch(() => {
+        if (!cancelled) setStandaloneProjects([]);
+      });
+    return () => { cancelled = true; };
+  }, [isDemo]);
 
   const visible = contacts.filter((contact) => {
     if (!showArchived && contact.status === "archived") return false;
@@ -2206,18 +2252,189 @@ function ContactDirectoryView({
     setMessage(result.error ?? "RIVT could not update this contact.");
   }
 
+  function toggleExpanded(contact: ContactRecord) {
+    const nextId = expandedId === contact.id ? null : contact.id;
+    setExpandedId(nextId);
+    setLinkTarget("");
+    setLinkRelationship("");
+    setLinkNotes("");
+    if (!nextId) return;
+    if (isDemo) {
+      setActivityByContact((current) => ({ ...current, [contact.id]: [] }));
+      setLinksByContact((current) => ({ ...current, [contact.id]: [] }));
+      return;
+    }
+    if (activityByContact[contact.id] === undefined) {
+      setActivityByContact((current) => ({ ...current, [contact.id]: undefined }));
+      void fetchContactActivity(contact.id).then((activity) => {
+        setActivityByContact((current) => ({ ...current, [contact.id]: activity }));
+      });
+    }
+    if (linksByContact[contact.id] === undefined) {
+      void fetchContactWorkLinks(contact.id).then((links) => {
+        setLinksByContact((current) => ({ ...current, [contact.id]: links }));
+      });
+    }
+  }
+
+  async function saveWorkLink(contact: ContactRecord) {
+    const [targetKind, targetId] = linkTarget.split(":");
+    if (!targetId || !linkRelationship.trim()) return;
+    setLinkBusy(true);
+    const result = targetKind === "project"
+      ? await saveProjectContactLink(targetId, {
+        contactId: contact.id,
+        relationshipRole: linkRelationship,
+        notes: linkNotes,
+        isPrimary: false,
+      })
+      : await saveJobContactLink(targetId, {
+        contactId: contact.id,
+        relationshipRole: linkRelationship,
+        notes: linkNotes,
+        isPrimary: false,
+      });
+    setLinkBusy(false);
+    if (result.error) {
+      setMessage(result.error);
+      return;
+    }
+    const [links, activity] = await Promise.all([
+      fetchContactWorkLinks(contact.id),
+      fetchContactActivity(contact.id),
+    ]);
+    setLinksByContact((current) => ({ ...current, [contact.id]: links }));
+    setActivityByContact((current) => ({ ...current, [contact.id]: activity }));
+    setLinkTarget("");
+    setLinkRelationship("");
+    setLinkNotes("");
+    setMessage("Work relationship saved to this contact.");
+  }
+
+  async function removeWorkLink(contact: ContactRecord, link: ContactWorkLink) {
+    const removed = link.targetKind === "project"
+      ? await deleteProjectContactLink(link.targetId, link.id)
+      : await deleteJobContactLink(link.targetId, link.id);
+    if (!removed) {
+      setMessage("RIVT could not remove that work relationship.");
+      return;
+    }
+    setLinksByContact((current) => ({
+      ...current,
+      [contact.id]: (current[contact.id] ?? []).filter(({ id }) => id !== link.id),
+    }));
+    setMessage("Work relationship removed. The contact was not deleted.");
+  }
+
+  async function copyRivtInvite(contact: ContactRecord) {
+    setInviteBusyId(contact.id);
+    try {
+      const response = await fetch("/api/v1/referrals/link", {
+        method: "POST",
+        credentials: "include",
+      });
+      const body = await response.json().catch(() => ({})) as {
+        data?: { url?: string; pilotInviteStillRequired?: boolean };
+        error?: { message?: string };
+      };
+      if (!response.ok || !body.data?.url) {
+        throw new Error(body.error?.message || "RIVT could not create an invite link.");
+      }
+      const name = contact.name || contact.company || "there";
+      const pilotNote = body.data.pilotInviteStillRequired
+        ? "\nYou’ll still need your Jacksonville pilot code."
+        : "";
+      await navigator.clipboard.writeText(
+        `Hey ${name}, join me on RIVT for skilled-trade work and crew coordination:\n${body.data.url}${pilotNote}`,
+      );
+      setMessage(`Tracked RIVT invite for ${name} copied. The link expires in 30 days.`);
+    } catch {
+      setMessage("RIVT could not create or copy that invite.");
+    } finally {
+      setInviteBusyId(null);
+    }
+  }
+
+  function exportDirectory() {
+    const blob = new Blob([contactsCsv(contacts)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `rivt-contacts-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setMessage("Contact export downloaded.");
+  }
+
+  async function importDirectory(file: File) {
+    setImportBusy(true);
+    setMessage("Checking contact file…");
+    const parsed = parseContactsCsv(await file.text());
+    let created = 0;
+    let duplicates = 0;
+    let failed = parsed.skipped;
+    for (const contact of parsed.contacts) {
+      const result = await createContact(contact);
+      if (result.contact) created += 1;
+      else if (result.duplicateCandidates.length) duplicates += 1;
+      else failed += 1;
+    }
+    const refreshed = await fetchContacts({ role, status: showArchived ? "all" : "active" });
+    if (refreshed) setContacts(refreshed);
+    setImportBusy(false);
+    if (importInputRef.current) importInputRef.current.value = "";
+    setMessage(
+      `Imported ${created} contact${created === 1 ? "" : "s"}.`
+      + (duplicates ? ` Skipped ${duplicates} existing match${duplicates === 1 ? "" : "es"}.` : "")
+      + (failed ? ` ${failed} row${failed === 1 ? "" : "s"} need correction.` : ""),
+    );
+  }
+
+  const directoryTitle = role ? `${contactRoleLabels[role]} contacts` : "All contacts";
+  const directoryDescription = role === "crew"
+    ? "Employees and regular crew you coordinate."
+    : role === "subcontractor"
+      ? "Independent trades and companies you hire."
+      : role === "customer"
+        ? "People and companies you estimate, invoice, and work for."
+        : role === "supplier"
+          ? "Suppliers, branches, and representatives you buy from."
+          : "People and companies, organized by relationship.";
+
   return (
-    <section className="v2-contact-directory" aria-label={role === "supplier" ? "Suppliers" : "All contacts"}>
+    <section className="v2-contact-directory" aria-label={directoryTitle}>
       <header className="v2-contact-directory-header">
         <div>
-          <strong>{role === "supplier" ? `Suppliers (${visible.length})` : `All contacts (${visible.length})`}</strong>
-          <small>{role === "supplier" ? "Companies and representatives you buy from." : "People and companies, organized by relationship."}</small>
+          <strong>{directoryTitle} ({visible.length})</strong>
+          <small>{directoryDescription}</small>
         </div>
-        {!isDemo ? (
-          <button type="button" onClick={() => setEditing("new")}>
-            <Plus size={16} /> Add contact
-          </button>
-        ) : null}
+        <div className="v2-contact-header-actions">
+          {!isDemo ? (
+            <label className="v2-contact-import-action">
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                disabled={importBusy}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  if (file) void importDirectory(file);
+                }}
+              />
+              <Plus size={16} /> {importBusy ? "Importing…" : "Import CSV"}
+            </label>
+          ) : null}
+          {!isDemo && contacts.length ? (
+            <button type="button" onClick={exportDirectory}>
+              <Download size={16} /> Export
+            </button>
+          ) : null}
+          {!isDemo ? (
+            <button type="button" onClick={() => setEditing("new")}>
+              <Plus size={16} /> Add contact
+            </button>
+          ) : null}
+        </div>
       </header>
       <p className="v2-client-sync-note" role="status">{message}</p>
 
@@ -2267,6 +2484,10 @@ function ContactDirectoryView({
             const website = contactMethodValue(contact, "website");
             const roleLabels = contactRoleSummary(contact);
             const supplierDetails = contactRoleDetails(contact, "supplier");
+            const canInvite = contact.roles.some(({ role: candidate }) => candidate === "crew" || candidate === "subcontractor");
+            const isExpanded = expandedId === contact.id;
+            const activity = activityByContact[contact.id];
+            const workLinks = linksByContact[contact.id];
             return (
               <article key={contact.id} className="v2-contact-card">
                 <div className="v2-contact-card-main">
@@ -2294,10 +2515,123 @@ function ContactDirectoryView({
                 ) : null}
                 {contact.tags.length ? <p className="v2-contact-tags">{contact.tags.join(" · ")}</p> : null}
                 {contact.notes ? <p className="v2-contact-notes">{contact.notes}</p> : null}
+                {isExpanded ? (
+                  <section className="v2-contact-detail" aria-label={`${contact.name} details`}>
+                    <div className="v2-contact-detail-grid">
+                      <section aria-label="Recent activity">
+                        <header><strong>Recent activity</strong><small>Documents and linked work</small></header>
+                        {activity === undefined ? (
+                          <p>Loading activity…</p>
+                        ) : activity === null ? (
+                          <p>Activity could not be loaded.</p>
+                        ) : activity.length ? (
+                          <ol className="v2-contact-activity-list">
+                            {activity.slice(0, 10).map((item) => (
+                              <li key={`${item.kind}:${item.id}`}>
+                                <span>
+                                  <strong>{item.title}</strong>
+                                  <small>{item.kind === "document" ? item.recordType ?? "Document" : item.kind} · {item.status}</small>
+                                </span>
+                                {item.amountCents !== null ? (
+                                  <strong>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(item.amountCents / 100)}</strong>
+                                ) : null}
+                              </li>
+                            ))}
+                          </ol>
+                        ) : <p>No linked documents or work yet.</p>}
+                      </section>
+
+                      {!isDemo ? (
+                        <section aria-label="Linked work">
+                          <header><strong>Linked work</strong><small>Private relationship context</small></header>
+                          {workLinks === undefined ? (
+                            <p>Loading work relationships…</p>
+                          ) : workLinks === null ? (
+                            <p>Work relationships could not be loaded.</p>
+                          ) : workLinks.length ? (
+                            <ul className="v2-contact-work-links">
+                              {workLinks.map((link) => (
+                                <li key={link.id}>
+                                  <span>
+                                    <strong>{link.targetTitle}</strong>
+                                    <small>{link.relationshipRole}{link.notes ? ` · ${link.notes}` : ""}</small>
+                                  </span>
+                                  <button type="button" onClick={() => void removeWorkLink(contact, link)}>Remove</button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : <p>Not linked to a job or private project yet.</p>}
+
+                          <div className="v2-contact-link-form">
+                            <label>
+                              <span>Job or private project</span>
+                              <select value={linkTarget} onChange={(event) => setLinkTarget(event.target.value)}>
+                                <option value="">Choose work</option>
+                                {workOptions.length ? (
+                                  <optgroup label="Jobs">
+                                    {workOptions.map((job) => (
+                                      <option key={job.id} value={`job:${job.id}`}>{job.title}</option>
+                                    ))}
+                                  </optgroup>
+                                ) : null}
+                                {standaloneProjects.length ? (
+                                  <optgroup label="Private projects">
+                                    {standaloneProjects.map((project) => (
+                                      <option key={project.id} value={`project:${project.id}`}>{project.title}</option>
+                                    ))}
+                                  </optgroup>
+                                ) : null}
+                              </select>
+                            </label>
+                            <label>
+                              <span>Relationship</span>
+                              <input
+                                value={linkRelationship}
+                                onChange={(event) => setLinkRelationship(event.target.value)}
+                                placeholder="Customer, supplier, foreman…"
+                              />
+                            </label>
+                            <label className="is-wide">
+                              <span>Private work note</span>
+                              <input
+                                value={linkNotes}
+                                onChange={(event) => setLinkNotes(event.target.value)}
+                                placeholder="What matters for this job"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              disabled={linkBusy || !linkTarget || !linkRelationship.trim()}
+                              onClick={() => void saveWorkLink(contact)}
+                            >
+                              {linkBusy ? "Linking…" : "Link to work"}
+                            </button>
+                          </div>
+                          {workOptionsLoading ? <p>Loading jobs…</p> : null}
+                          {workOptionsError ? <p>{workOptionsError}</p> : null}
+                        </section>
+                      ) : null}
+                    </div>
+                  </section>
+                ) : null}
                 {editing === contact ? (
                   <ContactEditor contact={contact} onSaved={replace} onCancel={() => setEditing(null)} />
                 ) : (
                   <footer>
+                    <button type="button" onClick={() => toggleExpanded(contact)} aria-expanded={isExpanded}>
+                      <FolderKanban size={15} />
+                      {isExpanded ? "Close details" : "Details & work"}
+                    </button>
+                    {!isDemo && canInvite ? (
+                      <button
+                        type="button"
+                        disabled={inviteBusyId === contact.id}
+                        onClick={() => void copyRivtInvite(contact)}
+                      >
+                        <Copy size={15} />
+                        {inviteBusyId === contact.id ? "Creating invite…" : "Copy RIVT invite"}
+                      </button>
+                    ) : null}
                     <button type="button" onClick={() => void toggleFavorite(contact)}>
                       <Star size={15} fill={contact.favorite ? "currentColor" : "none"} />
                       {contact.favorite ? "Unfavorite" : "Favorite"}
@@ -2386,26 +2720,6 @@ export function NetworkHub({
     </>
   );
 
-  if (visibleTab === "Customers") {
-    return (
-      <section className="v2-network-page" aria-label="Customers">
-        {pageHeader}
-        {tabBar}
-        <ClientBookView />
-      </section>
-    );
-  }
-
-  if (visibleTab === "Suppliers") {
-    return (
-      <section className="v2-network-page" aria-label="Suppliers">
-        {pageHeader}
-        {tabBar}
-        <ContactDirectoryView role="supplier" isDemo={isDemo} />
-      </section>
-    );
-  }
-
   if (visibleTab === "Reviews") {
     return (
       <section className="v2-network-page" aria-label="Reviews">
@@ -2422,55 +2736,28 @@ export function NetworkHub({
     );
   }
 
-  if (visibleTab === "Subs") {
-    return (
-      <section className="v2-network-page" aria-label="Subs">
-        {pageHeader}
-        {tabBar}
-        <CrewManager
-          crewType="sub"
-          isDemo={isDemo}
-          workOptions={workOptions}
-          workOptionsLoading={workOptionsLoading}
-          workOptionsError={workOptionsError}
-        />
-      </section>
-    );
-  }
+  const roleByTab: Partial<Record<NetworkTab, ContactRole>> = {
+    Crew: "crew",
+    Subs: "subcontractor",
+    Customers: "customer",
+    Suppliers: "supplier",
+  };
+  const selectedRole = roleByTab[visibleTab];
 
-  if (visibleTab === "All") {
-    return (
-      <section className="v2-network-page" aria-label="All contacts">
-        {pageHeader}
-        {tabBar}
-        {profileFocus ? <ProfileSearchSpotlight profile={profileFocus} onDismiss={onClearProfileFocus} /> : null}
-        <ContactDirectoryView isDemo={isDemo} />
-      </section>
-    );
-  }
-
-  // Crew tab
   return (
-    <section className="v2-network-page" aria-label="Crew">
+    <section className="v2-network-page" aria-label={visibleTab === "All" ? "All contacts" : `${visibleTab} contacts`}>
       {pageHeader}
       {tabBar}
       {profileFocus ? <ProfileSearchSpotlight profile={profileFocus} onDismiss={onClearProfileFocus} /> : null}
-
-      <div className="v2-crew-workbench">
-        <CrewManager
-          crewType="crew"
-          labelOverride="Crew"
+      <div className="v2-contact-workbench">
+        <ContactDirectoryView
+          role={selectedRole}
           isDemo={isDemo}
           workOptions={workOptions}
           workOptionsLoading={workOptionsLoading}
           workOptionsError={workOptionsError}
         />
-        <details className="v2-crew-invite-fold">
-          <summary>Plan an invite</summary>
-          <CrewInvitePlanner isDemo={isDemo} />
-        </details>
       </div>
-
     </section>
   );
 }

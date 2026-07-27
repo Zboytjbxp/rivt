@@ -125,11 +125,9 @@ async function openPreview(page, roleLabel, expectedHeading) {
     });
     await page.getByRole("heading", { name: "Contacts", exact: true }).waitFor({ timeout: 10_000 });
     await page.locator(".v2-network-tab-bar").getByRole("button", { name: "Crew", exact: true }).click();
-    const elenaCard = page.locator(".v2-crew-card-wrapper").filter({ hasText: "Elena Torres" });
-    await elenaCard.getByRole("button", { name: "Assign to Job", exact: true }).click();
-    const assignmentDialog = page.getByRole("dialog", { name: "Assign Elena Torres to work" });
-    await assignmentDialog.getByRole("button", { name: /Built-in cabinet install/ }).click();
-    await elenaCard.getByText("Built-in cabinet install", { exact: true }).waitFor({ timeout: 10_000 });
+    const elenaCard = page.locator(".v2-contact-card").filter({ hasText: "Elena Torres" });
+    await elenaCard.getByRole("button", { name: "Details & work", exact: true }).click();
+    await elenaCard.getByText("No linked documents or work yet.", { exact: true }).waitFor({ timeout: 10_000 });
     await page.getByRole("button", { name: "Home", exact: true }).click();
     await page.getByRole("heading", { name: expectedHeading }).waitFor({ timeout: 10_000 });
   }

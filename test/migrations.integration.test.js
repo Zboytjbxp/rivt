@@ -306,6 +306,10 @@ if (!testDatabaseUrl) {
         [rollbackContactId, newUserId],
       );
 
+      const rolledBackContactIntegrity = await rollbackLatest(database);
+      assert.equal(rolledBackContactIntegrity.latestVersion, 36);
+      assert.notEqual((await database.query("SELECT to_regclass('contacts') AS table_name")).rows[0].table_name, null);
+
       const rolledBackContacts = await rollbackLatest(database);
       assert.equal(rolledBackContacts.latestVersion, 35);
       assert.equal((await database.query("SELECT to_regclass('contacts') AS table_name")).rows[0].table_name, null);
