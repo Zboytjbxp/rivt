@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Tools launcher subtraction is locally verified and awaiting review/deploy.
+Current phase: Tools launcher subtraction is deployed and exact-source verified.
 Active packet: `docs/delivery/packets/76_TOOLS_LAUNCHER_SUBTRACTION.md`
-Repository branch: `codex/tools-launcher-subtraction`
-Production feature release commit: `9f79fa59333dc9e27387f0ec7034939ec9854dbe`
+Repository branch: `master` (source branch: `codex/tools-launcher-subtraction`)
+Production feature release commit: `c2a698fab0812d0324053e01fbc0802f13715663`
 
 ## Tools launcher subtraction
 
@@ -27,7 +27,18 @@ Production feature release commit: `9f79fa59333dc9e27387f0ec7034939ec9854dbe`
   serial PostgreSQL integration suites, fail-closed authentication plus
   Jobs/discovery E2E, focused rendered Tools QA, diff integrity, and a
   zero-vulnerability production dependency audit.
-- Deployment evidence remains pending.
+- Fast-forward merge to `master` deployed through Railway application build
+  `d1ed67d2-8b4c-4dee-b411-53302bcaf3a8` and exact-source metadata release
+  `e173434d-1f96-44a3-ac63-112d589b7c04`.
+- Live health reports exact feature source
+  `c2a698fab0812d0324053e01fbc0802f13715663`, ready migration
+  `0035_job_budget_floor`, PostgreSQL, S3-compatible storage, and configured
+  Sentry, Web Push, and Stripe Connect Accounts v2. The exact-source
+  production monitor passed in 489 ms with all seven anonymous private-route
+  checks healthy and operational controls off.
+- Live entry bundle `assets/index-BbvOPMbw.js` loads
+  `assets/ToolsStudio-woms0aem.js`; the Tools bundle contains the stable
+  launcher and none of the retired pin/customization copy.
 
 ## App icon system
 

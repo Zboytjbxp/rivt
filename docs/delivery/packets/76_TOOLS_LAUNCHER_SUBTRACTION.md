@@ -49,5 +49,16 @@ tool.
   mobile viewports.
 - The production dependency audit reports zero known vulnerabilities and the
   final diff integrity check passes.
-- This branch is verified locally and is not represented as deployed until a
-  reviewed merge and exact-source production proof occur.
+- The source branch was fast-forwarded into `master`. Railway application
+  deployment `d1ed67d2-8b4c-4dee-b411-53302bcaf3a8` and exact-source metadata
+  deployment `e173434d-1f96-44a3-ac63-112d589b7c04` both succeeded.
+- Live `/api/health` reports exact feature source
+  `c2a698fab0812d0324053e01fbc0802f13715663`, migration
+  `0035_job_budget_floor` ready, PostgreSQL and S3-compatible storage, plus
+  configured Sentry, Web Push, and Stripe Connect Accounts v2.
+- The exact-source production monitor passed in 489 ms with all seven
+  anonymous private-route checks healthy and operational controls off.
+  Live bundle `assets/ToolsStudio-woms0aem.js` contains the stable launcher
+  and none of the retired customization copy.
+- No migration, production data, or provider credential changed; only
+  `SOURCE_COMMIT` advanced to the immutable feature SHA.

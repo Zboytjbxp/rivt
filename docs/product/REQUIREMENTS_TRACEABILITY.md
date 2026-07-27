@@ -16,9 +16,15 @@
   all 20 serial PostgreSQL integration suites, fail-closed authentication and
   Jobs/discovery E2E, focused rendered Tools QA, diff integrity, and a
   zero-vulnerability production dependency audit.
-- Requirement maturity does not change. This packet changes no tool behavior,
-  record, authorization, API, schema, migration, or production data.
-  Production deployment evidence remains pending.
+- `GA-OPS-008` gains production evidence: Railway application deployment
+  `d1ed67d2-8b4c-4dee-b411-53302bcaf3a8` and exact-source metadata deployment
+  `e173434d-1f96-44a3-ac63-112d589b7c04` serve feature source
+  `c2a698fab0812d0324053e01fbc0802f13715663`; live health reports ready
+  migration `0035_job_budget_floor`, PostgreSQL/S3-compatible storage, and
+  configured Sentry, Web Push, and Stripe Connect; the exact-source monitor
+  passed with all seven anonymous private-route checks and controls off.
+- Packet 76 is **Verified**. It changes no tool behavior, record,
+  authorization, API, schema, migration, or production data.
 
 ## Packet 75 — App icon-system evidence
 

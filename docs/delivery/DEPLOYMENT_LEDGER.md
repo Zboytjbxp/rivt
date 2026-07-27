@@ -1,5 +1,35 @@
 # Deployment Ledger
 
+## 2026-07-27 - Tools Launcher Subtraction
+
+- Production feature source commit:
+  `c2a698fab0812d0324053e01fbc0802f13715663`
+- Branch: `master` (source branch: `codex/tools-launcher-subtraction`)
+- Railway application deployment:
+  `d1ed67d2-8b4c-4dee-b411-53302bcaf3a8`
+- Railway exact-source metadata deployment:
+  `e173434d-1f96-44a3-ac63-112d589b7c04`
+- Production: `https://rivt.pro`
+- Scope: removed device-only pin customization, pinned and Field/Business
+  labels, pin-limit state, and ordering copy; retained seven unique tools in
+  one stable field-ready order with unchanged routes, context, and records.
+- Migration before/after: unchanged at `0035_job_budget_floor`.
+- Automated gates: production build, lint, 103 unit/frontend tests, all 20
+  serial PostgreSQL integration suites, fail-closed authentication and
+  Jobs/discovery E2E, responsive light/dark Tools QA, diff check, and zero
+  known production dependency vulnerabilities passed.
+- Post-deploy proof: `/api/health` returned exact feature source `c2a698f`,
+  ready migration `0035_job_budget_floor`, PostgreSQL/S3-compatible storage,
+  and configured Sentry/Web Push/Stripe Connect. The exact-source production
+  monitor passed in 489 ms with seven anonymous private-route checks and
+  normal operational controls. Live `assets/ToolsStudio-woms0aem.js` contains
+  the stable launcher and none of the retired customization copy.
+- Provider/config change: only `SOURCE_COMMIT` advanced to the immutable
+  feature SHA. No auth, payment, email, storage, analytics, moderation, or
+  rollout credential changed.
+- Rollback target:
+  `f4bbfdc7c8627116d66ca779a58da33f95485619`; source rollback only.
+
 ## 2026-07-27 - App Icon System
 
 - Production feature source commit:
