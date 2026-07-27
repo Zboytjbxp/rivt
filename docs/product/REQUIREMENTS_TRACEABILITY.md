@@ -2607,3 +2607,25 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   bounded attempts, so no database integration pass is claimed. Production
   source `fac181b52a0498a21748d032e2b79d4861f216fa` is exact-source verified
   with migration `0033_customer_book` ready and the synthetic monitor passing.
+
+## Traceability Addendum - 2026-07-26 Tools and Work People Discovery
+
+- `GA-UX-003` gains a single Tools information architecture: every field and
+  business tool appears exactly once in one responsive launcher, while the
+  existing preference becomes an honest pinned-order control rather than a
+  duplicated fixed tray.
+- `GA-UX-005` gains contact-state honesty: Work exposes the existing
+  server-backed People/Customers hub, while job-specific site contacts state
+  that they are private device notes and do not imply crew sharing or account
+  synchronization.
+- `GA-UX-006` gains desktop, 390px mobile, and 320px compact-phone rendered
+  evidence for the unified tool launcher, persistent pin ordering, Work/People
+  switcher, and first-class active-job People workspace.
+- Requirement maturity does not change. This packet introduces no schema,
+  authorization, seed data, production-data, or deployment change. A
+  server-owned site-contact model remains a separate reviewed migration and
+  rollback packet. Local evidence includes production build, lint, 103
+  unit/frontend tests, all 20 serial PostgreSQL integration suites,
+  fail-closed auth and Jobs/discovery E2E at desktop/mobile widths, focused
+  rendered QA, diff integrity, and a zero-vulnerability production dependency
+  audit.

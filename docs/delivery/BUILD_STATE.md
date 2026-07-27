@@ -2,10 +2,35 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Privacy-safe public Jobs and Shop Talk discovery is deployed and exact-source verified.
-Active packet: `docs/delivery/packets/72_PUBLIC_JOBS_SHOP_TALK.md`
-Repository branch: `master`
+Current phase: Tools and Work people discovery is implemented on a review branch; production remains on the exact-source public discovery release.
+Active packet: `docs/delivery/packets/73_TOOLS_WORK_PEOPLE_DISCOVERY.md`
+Repository branch: `codex/tools-work-people-discovery`
 Production feature release commit: `8682f206706a91e1585982e774996111e8695157`
+
+## Tools and Work people discovery
+
+- Tools now uses one responsive, tile-based `All tools` launcher. Heavy 16th,
+  Estimate, Invoice, Jobsite, Camera, Materials, and Time & costs appear
+  exactly once; there is no hidden `More tools` section or repeated fixed tray.
+- The existing three-tool preference now controls pinned ordering inside that
+  launcher. Customize never hides an unpinned tool, and a minimum of one
+  pinned tool prevents an empty priority state.
+- Work has an always-visible Jobs/People switcher. People opens the existing
+  server-backed People/Subs/Reviews/Customers hub rather than introducing a
+  sixth primary concept or a homeowner flow.
+- Active-job contacts moved from `More` into a first-class People workspace.
+  The screen links to the shared people/customer hub and explicitly discloses
+  that current site-contact notes are device-only, not crew-shared or
+  account-synced.
+- Focused Tools QA passes on desktop, 390px, and 320px; Work lifecycle and
+  mobile-action QA pass with the new navigation and storage-boundary checks.
+- Production build and lint, 103 unit/frontend tests, all 20 serial
+  PostgreSQL integration suites, fail-closed auth plus Jobs/discovery E2E at
+  desktop/mobile widths, diff integrity, and the zero-vulnerability
+  production dependency audit pass.
+- Server-owned job contacts remain intentionally deferred to a migration and
+  authorization packet. No contact sync, production data change, deployment,
+  or production verification is claimed here.
 
 ## Public Jobs and Shop Talk discovery
 

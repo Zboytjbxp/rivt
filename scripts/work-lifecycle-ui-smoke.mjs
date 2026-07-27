@@ -742,6 +742,8 @@ async function runTradespersonApplicationFlow(page) {
 
   await page.goto(`${baseUrl}/app/work`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Work", exact: true }).waitFor({ timeout: 15_000 });
+  const workPeopleSwitcher = page.getByRole("navigation", { name: "Work and people" });
+  await workPeopleSwitcher.getByRole("button", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
   await clickJob(page, "Warehouse panel assist");
   await page.getByLabel("Message to contractor").fill("I can start Wednesday and bring tester, labels, and basic hand tools.");
   await page.getByRole("button", { name: "Save draft" }).click();
@@ -786,6 +788,16 @@ async function runTradespersonOfferFlow(page) {
   assert.equal(await workspaceHeading.evaluate((element) => document.activeElement === element), true, "Active-work workspace heading should receive focus after opening");
   const activeWorkspace = page.getByLabel("Active work workflow");
   await activeWorkspace.getByText("Document the job and submit closeout", { exact: true }).waitFor({ timeout: 15_000 });
+  const workspaceNav = page.getByRole("navigation", { name: "Job workspace" });
+  const mobileWorkspaceSelect = page.locator(".v2-mobile-detail-select select");
+  if (await mobileWorkspaceSelect.isVisible()) await mobileWorkspaceSelect.selectOption("people");
+  else await workspaceNav.getByRole("button", { name: "People", exact: true }).click();
+  await page.getByRole("heading", { name: "Site contacts", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("These site contacts are private notes saved on this device.", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "People & customers", exact: true }).waitFor({ timeout: 15_000 });
+  await page.screenshot({ path: path.join(screenshotDir, "active-work-people.png"), fullPage: true });
+  if (await mobileWorkspaceSelect.isVisible()) await mobileWorkspaceSelect.selectOption("today");
+  else await workspaceNav.getByRole("button", { name: "Today", exact: true }).click();
   await page.getByLabel("Exact jobsite").getByText("404 Acceptance Way, Suite 16, Jacksonville, FL 32202", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Exact jobsite").getByText("Use the east service entrance.", { exact: true }).waitFor({ timeout: 15_000 });
   const activeWorkspaceBox = await activeWorkspace.boundingBox();

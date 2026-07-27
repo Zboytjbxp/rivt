@@ -427,7 +427,7 @@ async function runMobileFlow(page) {
   await page.screenshot({ path: path.join(screenshotDir, "mobile-home-clean.png"), fullPage: true });
 
   await page.getByRole("button", { name: "Tools", exact: true }).click();
-  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).click();
+  await page.getByRole("group", { name: "All tools", exact: true }).getByRole("button", { name: "Open Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-camera-album-card", { hasText: "Private photos" }).waitFor({ timeout: 15_000 });
@@ -457,13 +457,14 @@ async function runMobileFlow(page) {
 
   await page.getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  const primaryInvoiceTool = page.locator(".v2-tool-launch-card").filter({ hasText: "Invoice" }).first();
+  const allToolsLauncher = page.getByRole("group", { name: "All tools", exact: true });
+  const primaryInvoiceTool = allToolsLauncher.getByRole("button", { name: "Open Invoice", exact: true });
   await primaryInvoiceTool.waitFor({ timeout: 15_000 });
-  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "mobile Tools hub should keep all five core apps visible without relying on the shortcut tray");
-  assert.equal(await page.locator(".v2-tool-mini-card").count(), 2, "mobile Tools hub should expose only the remaining supporting tool set");
-  assert.equal(await page.locator(".v2-tool-mini-card").filter({ hasText: "Time & costs" }).count(), 1, "Time & costs should replace the separate record helpers");
-  assert.equal(await page.getByLabel("Field shortcuts").getByRole("button", { name: "Jobsite", exact: true }).count(), 1, "Jobsite should replace separate daily log, punch, and safety launchers in the field tray");
+  await allToolsLauncher.getByRole("button", { name: "Open Camera", exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 7, "mobile Tools hub should expose every tool group in one launcher");
+  assert.equal(await page.locator(".v2-field-tools-tray, .v2-tool-group, .v2-tool-mini-card").count(), 0, "mobile Tools hub should not repeat or hide tools in a second launcher");
+  assert.equal(await allToolsLauncher.getByRole("button", { name: "Open Time & costs", exact: true }).count(), 1, "Time & costs should replace the separate record helpers");
+  assert.equal(await allToolsLauncher.getByRole("button", { name: "Open Jobsite", exact: true }).count(), 1, "Jobsite should replace separate daily log, punch, and safety launchers");
   await assertNoHorizontalOverflow(page, "Tools hub");
   await page.screenshot({ path: path.join(screenshotDir, "mobile-tools-card-subtraction.png"), fullPage: true });
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -488,7 +489,7 @@ async function runMobileFlow(page) {
 
   await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Camera", exact: true }).click();
+  await allToolsLauncher.getByRole("button", { name: "Open Camera", exact: true }).click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera actions").getByRole("button", { name: "Destination", exact: true }).click();
@@ -506,7 +507,7 @@ async function runMobileFlow(page) {
   await page.getByLabel("Camera").getByRole("button", { name: "Tools" }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Work", exact: true }).click();
-  await page.getByRole("button", { name: "Find people", exact: true }).click();
+  await page.getByRole("navigation", { name: "Work and people" }).getByRole("button", { name: "People", exact: true }).click();
   await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "People");
   assert.equal(
@@ -617,7 +618,7 @@ async function runMobileFlow(page) {
     assert.equal(await page.getByRole("button", { name: "Enable device alerts", exact: true }).count(), 0);
   await assertNoHorizontalOverflow(page, "Settings route");
   await page.getByRole("button", { name: "Work", exact: true }).click();
-  await page.getByRole("button", { name: "Find people", exact: true }).click();
+  await page.getByRole("navigation", { name: "Work and people" }).getByRole("button", { name: "People", exact: true }).click();
   await page.getByRole("heading", { name: "People", exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-crew-invite-fold > summary").click();
   await page.getByRole("button", { name: "Plan invite", exact: true }).click();
@@ -633,7 +634,7 @@ async function runMobileFlow(page) {
 
   await page.getByRole("button", { name: "Tools", exact: true }).click();
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  await page.getByLabel("Field shortcuts").getByRole("button", { name: "Heavy 16th", exact: true }).click();
+  await page.getByRole("group", { name: "All tools", exact: true }).getByRole("button", { name: "Open Heavy 16th", exact: true }).click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
   await page.getByRole("dialog", { name: "Calculator settings" }).getByRole("button", { name: "Metric" }).waitFor({ timeout: 15_000 });
@@ -744,10 +745,10 @@ async function runMobileFlow(page) {
       const titleBox = await page.getByRole("heading", { name: "Tools", exact: true }).boundingBox();
       const topbarBox = await page.locator(".v2-topbar").boundingBox();
       assert.ok(titleBox && topbarBox && titleBox.y >= topbarBox.y + topbarBox.height, `Tools title should clear the top bar at ${viewport.width}x${viewport.height} ${scale}`);
-      for (const shortcut of ["Camera", "Heavy 16th", "Jobsite"]) {
-        const button = page.getByLabel("Field shortcuts").getByRole("button", { name: shortcut, exact: true });
+      for (const shortcut of ["Camera", "Heavy 16th", "Jobsite", "Estimate", "Invoice", "Materials", "Time & costs"]) {
+        const button = page.getByRole("group", { name: "All tools", exact: true }).getByRole("button", { name: `Open ${shortcut}`, exact: true });
         const box = await button.boundingBox();
-        assert.ok(box && box.x >= 0 && box.x + box.width <= viewport.width, `${shortcut} shortcut should reflow at ${viewport.width}x${viewport.height} ${scale}`);
+        assert.ok(box && box.x >= 0 && box.x + box.width <= viewport.width, `${shortcut} tile should reflow at ${viewport.width}x${viewport.height} ${scale}`);
       }
       for (const navName of ["Home", "Work", "Camera", "Shop Talk", "Tools"]) {
         const box = await page.getByRole("navigation", { name: "Primary navigation" }).getByRole("button", { name: navName, exact: true }).boundingBox();

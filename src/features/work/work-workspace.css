@@ -61,6 +61,39 @@
   line-height: 1.5;
 }
 
+.v2-job-people-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.v2-job-people-heading > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.v2-job-people-heading h3,
+.v2-job-people-heading p {
+  margin: 0;
+}
+
+.v2-job-people-heading .v2-secondary-button {
+  flex: 0 0 auto;
+}
+
+.v2-work-local-boundary {
+  margin: 14px 0 16px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--v2-warning);
+  border-radius: 0 var(--v2-radius-sm) var(--v2-radius-sm) 0;
+  background: var(--v2-warning-soft);
+  color: var(--v2-warning);
+  font-size: var(--v2-text-label);
+  line-height: 1.45;
+}
+
 .v2-work-stage-switcher {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -70,6 +103,16 @@
   border: 1px solid var(--v2-border);
   border-radius: var(--v2-radius-md);
   background: var(--v2-surface-muted);
+}
+
+@media (max-width: 640px) {
+  .v2-job-people-heading {
+    display: grid;
+  }
+
+  .v2-job-people-heading .v2-secondary-button {
+    width: 100%;
+  }
 }
 
 .v2-work-stage-switcher button {

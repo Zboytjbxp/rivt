@@ -12969,3 +12969,231 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
     white-space: nowrap;
   }
 }
+
+/* Unified Tools launcher: every app appears once, with pinned tools reordered in place. */
+.v2-tools-launcher {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.v2-tools-launcher-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.v2-tools-launcher-header > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.v2-tools-launcher-header strong {
+  color: var(--v2-text);
+  font-size: calc(18px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-bold);
+  line-height: 1.15;
+}
+
+.v2-tools-launcher-header small,
+.v2-tools-pin-limit {
+  margin: 0;
+  color: var(--v2-text-muted);
+  font-size: calc(13px * var(--v2-text-scale));
+  line-height: 1.35;
+}
+
+.v2-tools-customize {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  font: inherit;
+  font-size: calc(13px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-bold);
+  cursor: pointer;
+}
+
+.v2-tools-customize:hover {
+  border-color: color-mix(in srgb, var(--v2-accent) 48%, var(--v2-border));
+  background: var(--v2-accent-soft);
+}
+
+.v2-tools-page .v2-tool-launch-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.v2-tools-page .v2-tool-launch-card,
+.v2-tools-page .v2-tool-launch-card.is-featured {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  gap: 8px 11px;
+  min-width: 0;
+  min-height: 142px;
+  padding: 13px;
+  overflow: hidden;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+  box-shadow: none;
+  color: var(--v2-text);
+  text-align: left;
+}
+
+.v2-tools-page .v2-tool-launch-card:last-child {
+  border-bottom: 1px solid var(--v2-border);
+}
+
+.v2-tools-page .v2-tool-launch-card:hover {
+  border-color: color-mix(in srgb, var(--v2-accent) 50%, var(--v2-border));
+  background: var(--v2-surface);
+  transform: translateY(-1px);
+}
+
+.v2-tools-page .v2-tool-launch-card:active {
+  transform: translateY(1px);
+}
+
+.v2-tools-page .v2-tool-launch-card.is-pinned {
+  border-color: color-mix(in srgb, var(--v2-accent) 45%, var(--v2-border));
+}
+
+.v2-tools-page .v2-tool-launch-card:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.v2-tool-card-topline {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  color: var(--v2-text-subtle);
+  font-size: calc(11px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-bold);
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.v2-tools-page .v2-tool-card-topline em {
+  display: inline-flex;
+  min-height: 0;
+  align-items: center;
+  justify-self: auto;
+  color: var(--v2-accent-text);
+  font-size: calc(11px * var(--v2-text-scale));
+  font-style: normal;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.v2-tools-page .v2-tool-card-icon {
+  align-self: start;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-accent-soft);
+  color: var(--v2-accent-text);
+}
+
+.v2-tools-page .v2-tool-card-copy {
+  align-self: center;
+  gap: 4px;
+}
+
+.v2-tools-page .v2-tool-card-copy strong {
+  font-size: calc(16px * var(--v2-text-scale));
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.v2-tools-page .v2-tool-card-copy small {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: calc(12px * var(--v2-text-scale));
+  line-height: 1.35;
+  text-wrap: pretty;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.v2-tool-card-action {
+  display: flex;
+  grid-column: 2;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 18px;
+  color: var(--v2-accent-text);
+  font-size: calc(12px * var(--v2-text-scale));
+  font-weight: var(--v2-weight-bold);
+}
+
+@media (max-width: 1179px) {
+  .v2-tools-page .v2-tool-launch-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .v2-tools-page {
+    padding-bottom: calc(112px + env(safe-area-inset-bottom));
+  }
+
+  .v2-tools-page .v2-tool-launch-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .v2-tools-page .v2-tool-launch-card,
+  .v2-tools-page .v2-tool-launch-card.is-featured {
+    grid-template-columns: 38px minmax(0, 1fr);
+    min-height: 126px;
+    padding: 11px;
+  }
+
+  .v2-tools-page .v2-tool-card-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .v2-tools-page .v2-tool-launch-card:last-child {
+    grid-column: 1 / -1;
+    min-height: 108px;
+  }
+}
+
+@media (max-width: 360px) {
+  .v2-tools-launcher-header {
+    align-items: flex-start;
+  }
+
+  .v2-tools-launcher-header small {
+    max-width: 25ch;
+  }
+
+  .v2-tools-page .v2-tool-launch-card,
+  .v2-tools-page .v2-tool-launch-card.is-featured {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 7px 8px;
+    min-height: 122px;
+    padding: 9px;
+  }
+
+  .v2-tools-page .v2-tool-card-icon {
+    width: 34px;
+    height: 34px;
+  }
+}

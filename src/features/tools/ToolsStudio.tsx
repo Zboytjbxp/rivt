@@ -3,7 +3,6 @@ import {
   ArrowRight,
   Calculator,
   Car,
-  ChevronDown,
   CheckCircle2,
   CheckSquare,
   Clipboard,
@@ -177,91 +176,47 @@ function ToolCard({
   icon: Icon,
   title,
   summary,
+  category,
+  pinned,
+  editing,
+  pinLimitReached,
+  onlyPinnedTool,
   onAction,
+  onTogglePinned,
 }: {
   icon: typeof Calculator;
   title: string;
   summary: string;
+  category: string;
+  pinned: boolean;
+  editing: boolean;
+  pinLimitReached: boolean;
+  onlyPinnedTool: boolean;
   onAction: () => void;
+  onTogglePinned: () => void;
 }) {
   return (
     <button
       type="button"
-      className="v2-tool-launch-card"
-      onClick={onAction}
-      aria-label={`Open ${title}`}
+      className={pinned ? "v2-tool-launch-card is-pinned" : "v2-tool-launch-card"}
+      onClick={editing ? onTogglePinned : onAction}
+      aria-label={editing ? `${pinned ? "Unpin" : "Pin"} ${title}` : `Open ${title}`}
+      aria-pressed={editing ? pinned : undefined}
+      disabled={editing && ((!pinned && pinLimitReached) || (pinned && onlyPinnedTool))}
     >
-      <span className="v2-tool-card-icon"><Icon size={19} /></span>
+      <span className="v2-tool-card-topline">
+        <span>{category}</span>
+        {pinned ? <em>Pinned</em> : null}
+      </span>
+      <span className="v2-tool-card-icon"><Icon size={21} /></span>
       <span className="v2-tool-card-copy">
         <strong>{title}</strong>
         <small>{summary}</small>
       </span>
-      <em aria-hidden="true"><ArrowRight size={14} /></em>
-    </button>
-  );
-}
-
-function ToolMiniCard({
-  icon: Icon,
-  title,
-  summary,
-  onAction,
-}: {
-  icon: ToolIcon;
-  title: string;
-  summary: string;
-  onAction: () => void;
-}) {
-  return (
-    <button type="button" className="v2-tool-mini-card" onClick={onAction}>
-      <span className="v2-tool-mini-icon"><Icon size={16} /></span>
-      <span>
-        <strong>{title}</strong>
-        <small>{summary}</small>
+      <span className="v2-tool-card-action" aria-hidden="true">
+        {editing ? (pinned ? "Remove" : "Pin") : <ArrowRight size={15} />}
       </span>
-      <ArrowRight size={14} />
     </button>
-  );
-}
-
-function ToolUtilitiesSection({
-  tools,
-  onOpen,
-  open,
-  onOpenChange,
-}: {
-  tools: ToolLauncher[];
-  onOpen: (tool: LaunchableToolMode) => void;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  return (
-    <details
-      id="tools-more-tools"
-      className="v2-tool-group"
-      aria-label="More tools"
-      open={open}
-      onToggle={(event) => onOpenChange(event.currentTarget.open)}
-    >
-      <summary className="v2-tool-group-summary">
-        <span className="v2-tool-group-header">
-          <strong>More tools</strong>
-          <small>{tools.length} focused helpers</small>
-        </span>
-        <ArrowRight size={16} aria-hidden="true" />
-      </summary>
-      <div className="v2-tool-mini-grid">
-        {tools.map((tool) => (
-          <ToolMiniCard
-            key={tool.mode}
-            icon={tool.icon}
-            title={tool.title}
-            summary={tool.summary}
-            onAction={() => onOpen(tool.mode)}
-          />
-        ))}
-      </div>
-    </details>
   );
 }
 
@@ -316,6 +271,10 @@ function allToolLaunchers(): ToolLauncher[] {
   return [...PRIMARY_TOOL_LAUNCHERS, ...UTILITY_TOOL_LAUNCHERS];
 }
 
+function launcherCategory(mode: LaunchableToolMode) {
+  return FIELD_TOOL_MODES.has(mode) ? "Field" : "Business";
+}
+
 const defaultFieldTools: LaunchableToolMode[] = ["job-photos", "calculator", "jobsite"];
 
 function readFieldTools(): LaunchableToolMode[] {
@@ -346,68 +305,6 @@ function persistFieldTools(tools: LaunchableToolMode[]) {
   } catch {
     // Field-tool shortcuts are a device preference only.
   }
-}
-
-function FieldToolsTray({
-  tools,
-  allTools,
-  editing,
-  onOpen,
-  onToggleEditing,
-  onChange,
-  onOpenMoreTools,
-}: {
-  tools: LaunchableToolMode[];
-  allTools: ToolLauncher[];
-  editing: boolean;
-  onOpen: (tool: LaunchableToolMode) => void;
-  onToggleEditing: () => void;
-  onChange: (tools: LaunchableToolMode[]) => void;
-  onOpenMoreTools: () => void;
-}) {
-  const pinned = tools.map((mode) => allTools.find((tool) => tool.mode === mode)).filter((tool): tool is ToolLauncher => Boolean(tool));
-
-  function toggleTool(mode: LaunchableToolMode) {
-    if (tools.includes(mode)) {
-      if (tools.length === 1) return;
-      onChange(tools.filter((tool) => tool !== mode));
-      return;
-    }
-    if (tools.length < 3) onChange([...tools, mode]);
-  }
-
-  return (
-    <section className={editing ? "v2-field-tools-tray is-editing" : "v2-field-tools-tray"} aria-label="Field shortcuts">
-      <div className="v2-field-tools-tray-header">
-        <span><strong>Field tools</strong><small>Fast, one-hand shortcuts</small></span>
-        <button type="button" onClick={onToggleEditing}>{editing ? "Done" : "Edit"}</button>
-      </div>
-      {editing ? (
-        <div className="v2-field-tools-picker" role="group" aria-label="Choose up to three field tools">
-          {allTools.slice(0, 8).map((tool) => {
-            const Icon = tool.icon;
-            const selected = tools.includes(tool.mode);
-            return (
-              <button key={tool.mode} type="button" className={selected ? "is-selected" : ""} onClick={() => toggleTool(tool.mode)} aria-pressed={selected} disabled={!selected && tools.length >= 3}>
-                <Icon size={16} />
-                <span>{tool.title}</span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="v2-field-tools-actions">
-          {pinned.map((tool) => {
-            const Icon = tool.icon;
-            return <button key={tool.mode} type="button" onClick={() => onOpen(tool.mode)}><Icon size={19} /><span>{tool.title}</span></button>;
-          })}
-          <button type="button" className="v2-field-tools-all" onClick={onOpenMoreTools}>
-            <ChevronDown size={19} /><span>More</span>
-          </button>
-        </div>
-      )}
-    </section>
-  );
 }
 
 const mileageKey = "rivt.mileage.v1";
@@ -455,14 +352,6 @@ const FIELD_TOOL_MODES = new Set<LaunchableToolMode>([
   "calculator",
   "jobsite",
 ]);
-
-const FIELD_TOOL_LAUNCHERS = PRIMARY_TOOL_LAUNCHERS.filter((tool) =>
-  FIELD_TOOL_MODES.has(tool.mode),
-);
-
-const MONEY_TOOL_LAUNCHERS = PRIMARY_TOOL_LAUNCHERS.filter(
-  (tool) => !FIELD_TOOL_MODES.has(tool.mode),
-);
 
 interface MileageEntry {
   id: string;
@@ -3055,8 +2944,7 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
   const [jobsiteView, setJobsiteView] = useState<JobsiteView>(() => jobsiteViewForMode(openTool) ?? "log");
   const activeJobsiteView = jobsiteViewForMode(openTool) ?? jobsiteView;
   const [fieldTools, setFieldTools] = useState(readFieldTools);
-  const [fieldToolsEditing, setFieldToolsEditing] = useState(false);
-  const [moreToolsOpen, setMoreToolsOpen] = useState(false);
+  const [launcherEditing, setLauncherEditing] = useState(false);
   const [cameraContextRequest, setCameraContextRequest] = useState(0);
   const [cameraCaptureOpen, setCameraCaptureOpen] = useState(false);
   const [cameraAlbums, setCameraAlbums] = useState<PhotoAlbum[]>([]);
@@ -3325,16 +3213,18 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
     setActiveTool(tool);
   }
 
-  function openMoreTools() {
-    setMoreToolsOpen(true);
-    requestAnimationFrame(() => {
-      document.getElementById("tools-more-tools")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
   function updateFieldTools(nextTools: LaunchableToolMode[]) {
     setFieldTools(nextTools);
     persistFieldTools(nextTools);
+  }
+
+  function togglePinnedTool(mode: LaunchableToolMode) {
+    if (fieldTools.includes(mode)) {
+      if (fieldTools.length === 1) return;
+      updateFieldTools(fieldTools.filter((tool) => tool !== mode));
+      return;
+    }
+    if (fieldTools.length < 3) updateFieldTools([...fieldTools, mode]);
   }
 
   function handleConvertEstimateToInvoice(draft: EstimateInvoiceDraft) {
@@ -3938,59 +3828,45 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
         title="Tools"
       />
 
-      <div className={moreToolsOpen ? "v2-tool-section-stack is-more-open" : "v2-tool-section-stack"}>
-        <FieldToolsTray
-          tools={fieldTools}
-          allTools={allToolLaunchers()}
-          editing={fieldToolsEditing}
-          onOpen={openToolFromHub}
-          onToggleEditing={() => setFieldToolsEditing((editing) => !editing)}
-          onChange={updateFieldTools}
-          onOpenMoreTools={openMoreTools}
-        />
-        <section className="v2-tool-section v2-tool-section-field" aria-label="Field tools">
-          <div className="v2-tool-section-header is-simple">
-            <strong>Field tools</strong>
-            <small>Camera, Heavy 16th, and Jobsite</small>
-          </div>
-          <div className="v2-tool-launch-grid">
-            {FIELD_TOOL_LAUNCHERS.map((tool) => (
-              <ToolCard
-                key={tool.mode}
-                icon={tool.icon}
-                title={tool.title}
-                summary={tool.summary}
-                onAction={() => openToolFromHub(tool.mode)}
-              />
-            ))}
-          </div>
-        </section>
-
-        <section className="v2-tool-section v2-tool-section-money" aria-label="Money tools">
-          <div className="v2-tool-section-header is-simple">
-            <strong>Money</strong>
-            <small>Estimate and invoice</small>
-          </div>
-          <div className="v2-tool-launch-grid">
-            {MONEY_TOOL_LAUNCHERS.map((tool) => (
-              <ToolCard
-                key={tool.mode}
-                icon={tool.icon}
-                title={tool.title}
-                summary={tool.summary}
-                onAction={() => openToolFromHub(tool.mode)}
-              />
-            ))}
-          </div>
-        </section>
-
-        <ToolUtilitiesSection
-          tools={UTILITY_TOOL_LAUNCHERS}
-          onOpen={openToolFromHub}
-          open={moreToolsOpen}
-          onOpenChange={setMoreToolsOpen}
-        />
-
+      <div className="v2-tools-launcher">
+        <div className="v2-tools-launcher-header">
+          <span>
+            <strong>Your toolbox</strong>
+            <small>{launcherEditing ? "Choose up to three tools to keep first." : "Every tool is here. Pinned tools stay first."}</small>
+          </span>
+          <button
+            type="button"
+            className="v2-tools-customize"
+            onClick={() => setLauncherEditing((editing) => !editing)}
+          >
+            {launcherEditing ? "Done" : "Customize"}
+          </button>
+        </div>
+        {launcherEditing && fieldTools.length >= 3 ? (
+          <p className="v2-tools-pin-limit" role="status">Three tools are pinned. Unpin one to choose another.</p>
+        ) : null}
+        <div className="v2-tool-launch-grid" role="group" aria-label="All tools">
+          {[
+            ...fieldTools
+              .map((mode) => allToolLaunchers().find((tool) => tool.mode === mode))
+              .filter((tool): tool is ToolLauncher => Boolean(tool)),
+            ...allToolLaunchers().filter((tool) => !fieldTools.includes(tool.mode)),
+          ].map((tool) => (
+            <ToolCard
+              key={tool.mode}
+              icon={tool.icon}
+              title={tool.title}
+              summary={tool.summary}
+              category={launcherCategory(tool.mode)}
+              pinned={fieldTools.includes(tool.mode)}
+              editing={launcherEditing}
+              pinLimitReached={fieldTools.length >= 3}
+              onlyPinnedTool={fieldTools.length === 1}
+              onAction={() => openToolFromHub(tool.mode)}
+              onTogglePinned={() => togglePinnedTool(tool.mode)}
+            />
+          ))}
+        </div>
       </div>
 
     </section>

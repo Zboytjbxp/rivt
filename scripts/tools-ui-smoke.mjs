@@ -15,7 +15,7 @@ const quickEntryHoldMs = 380;
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
   cwd: projectRoot,
   env: { ...process.env, VITE_ENABLE_GUEST_DEMO: "false" },
-  stdio: ["ignore", "pipe", "pipe"],
+  stdio: ["ignore", "ignore", "inherit"],
 });
 
 const account = {
@@ -887,40 +887,26 @@ async function runToolsFlow(page, viewportName) {
 
   await page.goto(`${baseUrl}/app/tools`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
-  const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
-  const fieldToolsTray = page.getByLabel("Field shortcuts", { exact: true });
-  await fieldToolsTray.waitFor({ timeout: 15_000 });
-  await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor({ timeout: 15_000 });
-  await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).waitFor({ timeout: 15_000 });
-  await fieldToolsTray.getByRole("button", { name: "Jobsite", exact: true }).waitFor({ timeout: 15_000 });
-  assert.equal(
-    await fieldToolsTray.locator(".v2-field-tools-actions > button").count(),
-    4,
-    "Field shortcuts should contain three user tools and one More tools control",
-  );
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should show all five core apps instead of leaving the page mostly empty");
-  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Supporting helpers should live in one More tools drawer");
-  if (viewportName === "mobile") {
-    const launcherLayout = await page.locator(".v2-tool-section-stack:not(.is-more-open)").evaluate((element) => {
-      const style = getComputedStyle(element);
-      return { minHeight: Number.parseFloat(style.minHeight), alignContent: style.alignContent };
-    });
-    assert.ok(launcherLayout.minHeight >= 600, `tall-phone launcher should reserve space above the field tray: ${JSON.stringify(launcherLayout)}`);
-    assert.equal(launcherLayout.alignContent, "space-between", "tall-phone launcher should distribute its short content instead of stranding it above the tray");
+  const allTools = page.getByRole("group", { name: "All tools", exact: true });
+  const toolTile = (name) => allTools.getByRole("button", { name: `Open ${name}`, exact: true });
+  const primaryTool = toolTile;
+  await allTools.waitFor({ timeout: 15_000 });
+  for (const toolName of ["Heavy 16th", "Jobsite", "Camera", "Estimate", "Invoice", "Materials", "Time & costs"]) {
+    await toolTile(toolName).waitFor({ timeout: 15_000 });
+    assert.equal(await toolTile(toolName).count(), 1, `${toolName} should appear exactly once in the unified launcher`);
   }
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 7, "Tools hub should expose all seven tool groups without a hidden drawer");
+  assert.equal(await page.locator(".v2-field-tools-tray, .v2-tool-group").count(), 0, "Tools hub should not repeat launchers in a fixed tray or More tools drawer");
   if (isHandsetViewport) {
-    await fieldToolsTray.getByRole("button", { name: "Edit" }).click();
-    await page.getByLabel("Choose up to three field tools").waitFor({ timeout: 15_000 });
-    await fieldToolsTray.getByRole("button", { name: "Done" }).click();
+    await page.getByRole("button", { name: "Customize", exact: true }).click();
+    await page.getByRole("button", { name: "Unpin Camera", exact: true }).click();
+    await page.getByRole("button", { name: "Pin Materials", exact: true }).click();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    const launcherNames = await allTools.locator(".v2-tool-launch-card").evaluateAll((buttons) =>
+      buttons.map((button) => button.getAttribute("aria-label")),
+    );
+    assert.ok(launcherNames.slice(0, 3).includes("Open Materials"), "customized pinned tools should reorder within the single launcher");
   }
-  await page.locator(".v2-tool-group").filter({ hasText: "More tools" }).locator("summary").click();
-  await page.getByRole("button", { name: /Materials/i }).waitFor({ timeout: 15_000 });
-  await page.getByRole("button", { name: /Time & costs/i }).waitFor({ timeout: 15_000 });
-  assert.equal(
-    await page.locator(".v2-tool-mini-card").count(),
-    2,
-    "The final utilities group should expose exactly Materials and Time & costs",
-  );
   assert.equal(await page.getByRole("button", { name: /Safety/i }).count(), 0, "Safety should live inside Jobsite instead of appearing as a separate launcher");
   assert.equal(await page.getByRole("button", { name: /Punch list/i }).count(), 0, "Punch should live inside Jobsite instead of appearing as a separate launcher");
   assert.equal(
@@ -943,7 +929,7 @@ async function runToolsFlow(page, viewportName) {
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-tools-hub.png`), fullPage: true });
 
-  await page.getByRole("button", { name: /Time & costs/i }).click();
+  await toolTile("Time & costs").click();
   await page.getByRole("heading", { name: "Time & costs", exact: true }).waitFor({ timeout: 15_000 });
   const timeCostsTabs = page.getByRole("navigation", { name: "Time and costs sections" });
   for (const tab of ["Time", "Expenses", "Mileage", "Summary"]) {
@@ -974,9 +960,8 @@ async function runToolsFlow(page, viewportName) {
     );
   }
   await page.getByLabel("Time & costs").getByRole("button", { name: "All tools" }).click();
-  await page.locator(".v2-tool-group").filter({ hasText: "More tools" }).locator("summary").click();
 
-  await page.getByRole("button", { name: /Materials/i }).click();
+  await toolTile("Materials").click();
   await page.getByRole("heading", { name: "Materials", exact: true }).waitFor({ timeout: 15_000 });
   const materialsViews = page.getByRole("navigation", { name: "Materials views" });
   await materialsViews.getByRole("button", { name: "Takeoff", exact: true }).waitFor({ timeout: 15_000 });
@@ -1001,7 +986,7 @@ async function runToolsFlow(page, viewportName) {
   await page.getByText("3/4 plywood", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Materials").getByRole("button", { name: "Tools" }).click();
 
-  await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
+  await toolTile("Heavy 16th").click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor({ timeout: 15_000 });
   if (viewportName === "se") {
     await page.evaluate(() => {
@@ -1556,7 +1541,7 @@ async function runToolsFlow(page, viewportName) {
   );
   await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "Tools" }).click();
 
-  await fieldToolsTray.getByRole("button", { name: "Jobsite", exact: true }).click();
+  await toolTile("Jobsite").click();
   await page.getByRole("heading", { name: "Jobsite", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Jobsite sections").getByRole("button", { name: "Log", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByRole("heading", { name: "Today's jobsite", exact: true }).waitFor({ timeout: 15_000 });
@@ -1602,7 +1587,7 @@ async function runToolsFlow(page, viewportName) {
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-jobsite.png`), fullPage: true });
   await page.getByLabel("Jobsite").getByRole("button", { name: "Tools" }).click();
 
-  await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).click();
+  await toolTile("Camera").click();
   await page.getByRole("heading", { name: "Private photos", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByLabel("Camera actions").getByRole("button", { name: "Destination", exact: true }).click();
   const destinationDialog = page.getByRole("dialog", { name: "Choose work context" });

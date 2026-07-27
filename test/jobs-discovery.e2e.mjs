@@ -393,16 +393,16 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
 async function assertToolsFlow(page) {
   await page.getByRole("button", { name: /^Tools$/ }).click();
   const primaryTool = (name) => page.locator(".v2-tool-launch-card").filter({ hasText: name }).first();
-  const fieldToolsTray = page.getByLabel("Field shortcuts", { exact: true });
-  await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).waitFor();
-  assert.equal(await page.locator(".v2-tool-launch-card").count(), 5, "Tools hub should make all five core apps visible in the main launcher");
-  assert.equal(await page.locator(".v2-tool-group").count(), 1, "Tools hub should consolidate supporting helpers into one More tools drawer");
-  await page.locator(".v2-tool-group").filter({ hasText: "More tools" }).locator("summary").click();
-  await page.getByRole("button", { name: /Materials/i }).waitFor();
+  const allTools = page.getByRole("group", { name: "All tools", exact: true });
+  await allTools.getByRole("button", { name: /Heavy 16th/i }).waitFor();
+  assert.equal(await page.locator(".v2-tool-launch-card").count(), 7, "Tools hub should expose all seven apps once in the unified launcher");
+  assert.equal(await page.locator(".v2-tool-group").count(), 0, "Tools hub should not hide apps inside a More tools drawer");
+  assert.equal(await page.getByLabel("Field shortcuts", { exact: true }).count(), 0, "Tools hub should not duplicate pinned apps in a fixed tray");
+  await allTools.getByRole("button", { name: /Materials/i }).waitFor();
   assert.equal(await page.getByRole("button", { name: /Receivables/i }).count(), 0, "Receivables should be contained inside Invoice");
   assert.equal(await page.getByRole("button", { name: /Safety/i }).count(), 0, "Safety should live inside Jobsite");
   await primaryTool("Jobsite").waitFor();
-  await fieldToolsTray.getByRole("button", { name: "Heavy 16th", exact: true }).click();
+  await primaryTool("Heavy 16th").click();
   await page.getByRole("heading", { name: "Heavy 16th field calculator" }).waitFor();
   await page.getByLabel("Length calculator").getByText("Decimal", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Calculator settings", exact: true }).click();
@@ -450,7 +450,7 @@ async function assertToolsFlow(page) {
   await page.getByLabel("Printable invoice preview").waitFor();
   await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "All tools" }).click();
 
-  await fieldToolsTray.getByRole("button", { name: "Camera", exact: true }).click();
+  await primaryTool("Camera").click();
   await page.getByRole("heading", { name: "Camera", exact: true }).waitFor();
   await page.waitForFunction(
     () => document.body.innerText.includes("Private photos") || document.body.innerText.includes("Active job"),

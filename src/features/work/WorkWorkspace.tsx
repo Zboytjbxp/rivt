@@ -72,7 +72,7 @@ type TradeFilter = (typeof tradeOptions)[number];
 type DifficultyFilter = (typeof difficultyOptions)[number];
 type WorkTypeFilter = (typeof workTypeOptions)[number];
 type DetailTab = "overview" | "requirements" | "activity" | "changes" | "checklist" | "payments" | "notes" | "contacts";
-type WorkspaceTab = "today" | "job" | "activity" | "money" | "more";
+type WorkspaceTab = "today" | "job" | "activity" | "money" | "people" | "more";
 type WorkStage = "browse" | "hiring" | "active" | "archive";
 type ContractorSection = "open" | "draft" | "paused" | "closed" | "pipeline" | "calendar" | "templates";
 type JobAction = "publish" | "pause" | "resume" | "close";
@@ -1761,12 +1761,14 @@ export function WorkWorkspace({
       { id: "today", label: "Today" },
       { id: "job", label: "Job" },
       { id: "money", label: "Money" },
+      { id: "people", label: "People" },
       { id: "more", label: "More" },
     ]
     : [
       { id: "job", label: "Job" },
       { id: "activity", label: "Activity" },
       { id: "money", label: "Money" },
+      { id: "people", label: "People" },
       { id: "more", label: "More" },
     ];
 
@@ -1775,6 +1777,7 @@ export function WorkWorkspace({
     if (tab === "today" || tab === "job") setDetailTab("overview");
     if (tab === "activity") setDetailTab("activity");
     if (tab === "money") setDetailTab("payments");
+    if (tab === "people") setDetailTab("contacts");
     if (tab === "more") setDetailTab("notes");
   }
 
@@ -1919,6 +1922,11 @@ export function WorkWorkspace({
         </div>
       </header>
 
+      <nav className="v2-people-work-switcher" aria-label="Work and people">
+        <button type="button" className="is-active" aria-current="page">Jobs</button>
+        <button type="button" onClick={onOpenPeople}>People</button>
+      </nav>
+
       <nav className="v2-work-stage-switcher" aria-label="Work stages">
         {workStages.map((stage) => (
           <button
@@ -1947,16 +1955,13 @@ export function WorkWorkspace({
         </button>
       ) : null}
 
-      {workStage === "browse" ? (
+      {workStage === "browse" && primaryActiveWorkRecord ? (
         <div className="v2-work-browse-actions">
-          <button type="button" className="v2-secondary-button" onClick={onOpenPeople}><Users size={17} /> Find people</button>
-          {primaryActiveWorkRecord ? (
-            <button type="button" className="v2-active-work-shortcut" onClick={() => selectWorkStage("active")}>
-              <span>Active now</span>
-              <strong>{primaryActiveWorkRecord.job?.title ?? "Accepted work"}</strong>
-              <ChevronRight size={17} />
-            </button>
-          ) : null}
+          <button type="button" className="v2-active-work-shortcut" onClick={() => selectWorkStage("active")}>
+            <span>Active now</span>
+            <strong>{primaryActiveWorkRecord.job?.title ?? "Accepted work"}</strong>
+            <ChevronRight size={17} />
+          </button>
         </div>
       ) : null}
 
@@ -2187,8 +2192,8 @@ export function WorkWorkspace({
 
             {workspaceTab === "more" ? (
               <nav className="v2-workspace-subnav" aria-label="More job records">
-                {(["changes", "checklist", "notes", "contacts"] as const).map((tab) => {
-                  const labels: Record<typeof tab, string> = { changes: "Changes", checklist: "Checklist", notes: "Notes", contacts: "Contacts" };
+                {(["changes", "checklist", "notes"] as const).map((tab) => {
+                  const labels: Record<typeof tab, string> = { changes: "Changes", checklist: "Checklist", notes: "Notes" };
                   return <button key={tab} type="button" className={detailTab === tab ? "is-active" : ""} onClick={() => setDetailTab(tab)}>{labels[tab]}</button>;
                 })}
               </nav>
@@ -2442,8 +2447,14 @@ export function WorkWorkspace({
             {detailTab === "contacts" ? (
               <div className="v2-detail-content">
                 <section className="v2-detail-section">
-                  <h3><Phone size={16} />Site contacts</h3>
-                  <p className="v2-muted-copy" style={{ marginBottom: 16 }}>GC, owner, inspector, supplier contacts for this job. Tap a phone number to call.</p>
+                  <div className="v2-job-people-heading">
+                    <div>
+                      <h3><Phone size={16} />Site contacts</h3>
+                      <p className="v2-muted-copy">GC, owner, inspector, supplier, and subcontractor contacts for this job.</p>
+                    </div>
+                    <button type="button" className="v2-secondary-button" onClick={onOpenPeople}><Users size={16} />People & customers</button>
+                  </div>
+                  <p className="v2-work-local-boundary">These site contacts are private notes saved on this device. They are not shared with the crew or synced to your account yet.</p>
                   <SiteContacts jobId={detailJob.id} />
                 </section>
               </div>
