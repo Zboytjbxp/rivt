@@ -58,7 +58,9 @@ or contact data, fabricating activity, or weakening authenticated actions.
   malformed detail URLs return an honest no-index page.
 - Mobile and desktop pages have no horizontal overflow in light or dark mode.
 - The migration applies and rolls back without losing the preceding customer
-  book migration.
+  book migration. Follow-up migration `0035_job_budget_floor` aligns the
+  database with the existing API's realistic $1 minimum and refuses rollback
+  when lower-budget records would violate the old $50 floor.
 
 ## Verification evidence
 
@@ -76,5 +78,11 @@ or contact data, fabricating activity, or weakening authenticated actions.
 - Direct browser inspection at mobile and desktop sizes confirms light/dark
   public list/detail rendering, no horizontal overflow, structured data, and
   omission of the test job's exact private address.
-- No merge, deployment, public indexing, or production-data visibility change
-  is claimed in this packet until founder review.
+- Fast-forward merge and production deployment are complete at exact source
+  `8682f206706a91e1585982e774996111e8695157`, Railway deployment
+  `e96c39e7-8a47-47f7-822e-46b022e4f366`, and ready migration
+  `0035_job_budget_floor`.
+- Authenticated production proof published and removed one clearly labeled
+  temporary job and Shop Talk post. It confirmed public metadata, exact
+  address omission, unpublish removal, and cleanup. The public APIs returned
+  to empty afterward; no real member record was made public.

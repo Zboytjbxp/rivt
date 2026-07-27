@@ -1,5 +1,43 @@
 # Deployment Ledger
 
+## 2026-07-26 - Public Jobs and Shop Talk Discovery
+
+- Production source commit:
+  `8682f206706a91e1585982e774996111e8695157`
+- Branch: `master` (source branch: `codex/public-jobs-shop-talk`)
+- Railway exact-source deployment:
+  `e96c39e7-8a47-47f7-822e-46b022e4f366`
+- Production: `https://rivt.pro`
+- Scope: explicit owner-controlled public Jobs and Shop Talk pages, bounded
+  public APIs, canonical/social/structured metadata, dynamic sitemap,
+  consented public answers, private-data publication guards, public media
+  acknowledgement, and authenticated apply/discuss/moderation boundaries.
+- Migrations: `0034_public_discovery` adds member-default visibility and
+  answer consent. Production smoke exposed the pre-existing API/database
+  budget-floor mismatch; `0035_job_budget_floor` aligns the database with the
+  established $1 API minimum and includes a guarded rollback.
+- Automated gates: build, lint, security lint, 103 unit/frontend tests, all
+  20 serial PostgreSQL integration suites, migration lifecycle, E2E, five
+  rendered UI suites, direct responsive light/dark browser inspection, diff
+  check, and zero known production dependency vulnerabilities passed.
+- Live proof: one temporary invite/account published a $16 QA-location job
+  and one Shop Talk post. The public projections and server-rendered pages
+  appeared, the job's private address never appeared, both records vanished
+  after unpublishing, and cleanup closed the temporary account, organization,
+  sessions, and invite. Public APIs returned to zero records afterward.
+- Post-deploy proof: `/api/health` returned exact source `8682f20`, ready
+  migration `0035_job_budget_floor`, PostgreSQL/S3-compatible storage,
+  configured Sentry/Web Push/Stripe Connect, and normal operational controls.
+  The production synthetic monitor passed in 533 ms with seven anonymous
+  private-route checks.
+- Provider/config change: `SOURCE_COMMIT` advanced to the immutable release
+  SHA. No auth, payment, email, storage, analytics, moderation, or rollout
+  credential changed.
+- Rollback target:
+  `d68644a99b0f0206bd93033be196917fbfc013a8`; source rollback plus reviewed
+  migration rollback in reverse order. Migration `0035` refuses rollback if
+  valid lower-budget jobs would violate the old constraint.
+
 ## 2026-07-26 - Estimate + Invoice Trust/Speed Continuity
 
 - Production source commit:

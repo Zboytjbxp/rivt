@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-26 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Privacy-safe public Jobs and Shop Talk discovery is implemented locally and awaiting review/deployment.
+Current phase: Privacy-safe public Jobs and Shop Talk discovery is deployed and exact-source verified.
 Active packet: `docs/delivery/packets/72_PUBLIC_JOBS_SHOP_TALK.md`
-Repository branch: `codex/public-jobs-shop-talk`
-Production feature release commit: `fac181b52a0498a21748d032e2b79d4861f216fa` (production remains on the prior verified release)
+Repository branch: `master`
+Production feature release commit: `8682f206706a91e1585982e774996111e8695157`
 
 ## Public Jobs and Shop Talk discovery
 
@@ -40,8 +40,29 @@ Production feature release commit: `fac181b52a0498a21748d032e2b79d4861f216fa` (p
   including messaging/notifications, public discovery, and the full migration
   lifecycle. The earlier 15-minute aggregate wrapper attempt was only too
   short; it is not represented as a product failure or a pass.
-- No merge, deployment, indexing, migration application, or production
-  visibility change is claimed.
+- Fast-forward merged through source commit
+  `aa2d09554dbbaaec2236603d36f234e82d329020`; the production verification
+  hotfix is `8682f206706a91e1585982e774996111e8695157`.
+- Railway production deployment
+  `e96c39e7-8a47-47f7-822e-46b022e4f366` serves that exact source. Health
+  reports PostgreSQL/S3-compatible storage and ready migration
+  `0035_job_budget_floor`.
+- The live smoke exposed and closed a pre-existing database/API mismatch:
+  the API accepted realistic job budgets below $50 while the original
+  database constraint returned an internal error. Migration `0035` aligns
+  the database with the existing $1 API floor and has a guarded rollback.
+- Authenticated production proof used one temporary invite/account at a
+  nonmatching QA location, published a $16 job and one Shop Talk post,
+  confirmed public rendering and structured metadata, proved the job's
+  private address stayed absent, then unpublished and removed both records.
+  The account, organization, sessions, and invite were closed/cleaned; both
+  public feeds returned to zero records.
+- The exact-source production monitor passed in 533 ms with all seven
+  anonymous private-route checks healthy and emergency disable controls off
+  for normal use.
+- No real member content was made public automatically. Public indexing now
+  exists as an owner-controlled production capability; actual pilot content
+  remains a founder/editor decision.
 
 ## Pre-launch activation, accessibility, measurement, performance, and PWA
 

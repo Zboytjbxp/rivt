@@ -27,10 +27,21 @@
   production dependency audit. The integration command completed in 21
   minutes with zero failures, including public publication, messaging and
   notifications, Work/Shop Talk lifecycles, and migration rollback/reapply.
-  No deployment evidence is claimed.
-- Requirement maturity does not change until branch review, aggregate launch
-  gates, merge, deployment, migration readiness, live privacy checks, and
-  exact-source monitoring are complete.
+  Production exact-source monitoring subsequently passed with seven
+  anonymous private-route checks.
+- `GA-FND-003` additionally gains migration `0035_job_budget_floor`, which
+  repairs the original database/API minimum-budget mismatch without changing
+  the already-tested API contract. Its rollback refuses to discard or
+  rewrite valid lower-budget jobs.
+- `GA-OPS-008` gains production deployment
+  `e96c39e7-8a47-47f7-822e-46b022e4f366` at exact source
+  `8682f206706a91e1585982e774996111e8695157`, ready migration `0035`, an
+  authenticated publish/render/unpublish cleanup proof for both surfaces,
+  private-address omission, empty-feed cleanup confirmation, and the
+  exact-source production monitor.
+- Packet 72 is **Verified**. This does not by itself declare the entire
+  nationwide product launch-ready; cross-product operational and
+  physical-device gates remain tracked separately.
 
 ## Packet 71 — Pre-launch activation and accessibility evidence
 

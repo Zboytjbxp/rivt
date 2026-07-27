@@ -273,7 +273,7 @@ try {
       body: "Temporary release verification post. It will be removed immediately.",
       trade: "Electrical",
       flair: "Discussion",
-      postType: "discussion",
+      postType: "general",
       communitySlug: "electrical-talk",
       webVisibility: "public",
     },
