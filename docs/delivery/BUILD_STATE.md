@@ -2,10 +2,12 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Canonical contacts foundation is verified and queued for deployment.
+Current phase: Canonical contacts foundation is deployed and exact-source verified.
 Active packet: `docs/delivery/packets/77_CANONICAL_CONTACTS_FOUNDATION.md`
-Repository branch: `codex/canonical-contacts-foundation`
-Production feature release commit: pending deployment (`ce56f463cb12870838753862625a98f77a78d84b` verified locally)
+Repository branch: `master` (source branch:
+`codex/canonical-contacts-foundation`)
+Production feature release commit:
+`fe405c0c650ea44134f780c0b308041089cf139d`
 
 ## Canonical contacts foundation
 
@@ -43,9 +45,16 @@ Production feature release commit: pending deployment (`ce56f463cb12870838753862
   `ECONNRESET` during a project read. The project lifecycle then passed
   independently and in the clean 21-suite aggregate rerun; no reproducible
   product defect remained.
-- Deployment evidence is intentionally pending until `master`, migration
-  `0036_canonical_contacts`, live exact-source health, and the production
-  synthetic monitor are verified.
+- Fast-forward merge to `master` deployed through Railway application build
+  `9d5a6d95-1a5e-4b09-b071-ad7b744c83e2` and exact-source metadata release
+  `6b1d3b4e-292d-4a76-96f6-81ca1242cbfc`.
+- Live health reports exact source
+  `fe405c0c650ea44134f780c0b308041089cf139d`, ready migration
+  `0036_canonical_contacts`, PostgreSQL, S3-compatible storage, and configured
+  Sentry, Web Push, and Stripe Connect Accounts v2. The production monitor
+  passed in 498 ms with all seven anonymous private-route checks healthy and
+  operational controls off. Anonymous `/api/v1/contacts` returned `401`, and
+  live entry bundle `assets/index-DfWIcuJQ.js` contains the Contacts release.
 
 ## Tools launcher subtraction
 

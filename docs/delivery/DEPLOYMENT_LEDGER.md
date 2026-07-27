@@ -3129,3 +3129,45 @@ Add one entry per staging/production deployment.
   chunks confirmed the new Tools and Work/People copy is present and the
   retired `More tools` helper is absent. No authenticated live click-path is
   claimed because its test password is not configured in this workspace.
+
+# Current Production - Canonical Contacts Foundation
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-27 America/New_York
+- Deployer: Codex through `codex/canonical-contacts-foundation`,
+  fast-forward merge to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `fe405c0c650ea44134f780c0b308041089cf139d`
+- Railway deployments: application source build
+  `9d5a6d95-1a5e-4b09-b071-ad7b744c83e2`; exact-source release
+  `6b1d3b4e-292d-4a76-96f6-81ca1242cbfc`
+- Migration version before/after:
+  `0035_job_budget_floor` -> `0036_canonical_contacts`
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, Stripe Connect,
+  email, moderation, and rollout controls were preserved.
+- Rollback target:
+  `3fbea06ae73e7b4f3f45182d82c926d9478edfe0`. Database rollback uses
+  `migrations/0036_canonical_contacts.down.sql`, which preserves complete
+  canonical snapshots for a reviewed reapply.
+- Automated gates: production build, application/security lint, 103
+  unit/frontend tests, all 21 serial PostgreSQL integration suites,
+  migration rollback/reapply, fail-closed authentication plus Jobs/discovery
+  E2E, Contacts/mobile-action, Work-lifecycle, and guest-preview rendered QA,
+  diff integrity, and a zero-vulnerability production dependency audit
+  passed.
+- Product evidence: Work now exposes one account-synced Contacts directory
+  with All, Crew, Subs, Customers, and Suppliers as relationship views over
+  the same person/company identity; Reviews remains separate reputation.
+  Multi-role contacts, contact methods, addresses, tags, favorites,
+  archive/restore, private notes, supplier terms, recent use, activity, and
+  private job/project links are server-owned and account-isolated. Existing
+  Customer and Crew/Sub workflows remain transactional compatibility
+  projections.
+- Post-deploy proof: live `/api/health` returned the exact source with
+  `0036_canonical_contacts` ready, PostgreSQL and S3-compatible storage
+  healthy, and configured Sentry, Web Push, and Stripe Connect Accounts v2.
+  The production monitor passed in 498 ms with all seven anonymous
+  private-route checks healthy and operational controls disabled. Anonymous
+  `/api/v1/contacts` returned `401`, and live entry bundle
+  `assets/index-DfWIcuJQ.js` contains the Contacts release.

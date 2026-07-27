@@ -2739,5 +2739,7 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   application/security lint, 103 unit/frontend tests, all 21 serial
   PostgreSQL integration suites, migration rollback/reapply, fail-closed auth
   plus Jobs/discovery E2E, focused rendered QA, diff integrity, and a
-  zero-vulnerability dependency audit. Deployment evidence remains pending
-  until the new migration and exact source are confirmed live.
+  zero-vulnerability dependency audit. Production exact-source health reports
+  `fe405c0c650ea44134f780c0b308041089cf139d` with
+  `0036_canonical_contacts` ready; the seven-check synthetic monitor,
+  anonymous Contacts authorization check, and live-bundle inspection pass.
