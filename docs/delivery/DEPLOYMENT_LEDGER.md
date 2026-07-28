@@ -1,5 +1,43 @@
 # Deployment Ledger
 
+## 2026-07-28 - Shop Talk and Trade News Continuity
+
+- Production feature source commit:
+  `ef44c728c0af8afd004b735668f11f2c304087a6`
+- Branch: `master` (source branch: `codex/shop-talk-news-continuity`)
+- Railway application deployment:
+  `f3c10964-139e-48d5-9507-c591db6f7bd5`
+- Railway exact-source metadata deployment:
+  `e9bb3ea7-42dd-4e1f-b60f-d5df8b780b7f`
+- Production: `https://rivt.pro`
+- Scope: account-owned Trade News coverage/follows/saves, explicit loss-safe
+  legacy-device migration, saved publisher snapshots, structured canonical
+  article discussions, indexed cross-filter lookup, public-audience
+  enforcement, duplicate-race navigation, and legacy URL-body compatibility.
+- Migration before/after:
+  `0040_messaging_customer_notes` ->
+  `0041_shop_talk_news_continuity`.
+- Automated gates: production build, application/security lint, 112
+  unit/frontend tests, all 22 serial PostgreSQL integration suites,
+  fail-closed authentication and Jobs/discovery E2E, migration
+  rollback/reapply, four focused rendered UI suites, diff check, and zero
+  known production dependency vulnerabilities passed.
+- Post-deploy proof: `/api/health` returned exact source `ef44c72`, ready
+  migration `0041_shop_talk_news_continuity`, PostgreSQL/S3-compatible
+  storage, and configured Sentry/Web Push/Stripe Connect. The production
+  monitor passed with seven anonymous private-route checks. Disposable run
+  `packet83-20260728070811-f7d1a6` passed owner continuity/isolation,
+  structured clean-body creation, cross-role indexed lookup and answer
+  visibility, duplicate conflict carrying the existing post ID, cleanup, and
+  account closure.
+- Provider/config change: only `SOURCE_COMMIT` advanced to the immutable
+  feature SHA. No auth, payment, email, storage, analytics, moderation, or
+  rollout credential changed.
+- Rollback target:
+  `5e838ab49b9a3d43b5dd314eacf9fed3f693daf8`; source rollback first, then
+  reviewed migration 41 rollback only if the continuity schema must be
+  removed.
+
 ## 2026-07-27 - Contacts Completion
 
 - Production feature source commit:

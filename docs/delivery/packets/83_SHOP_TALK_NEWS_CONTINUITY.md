@@ -94,3 +94,22 @@ legacy-device migration, account-backed saved-article snapshots, structured
 discussion creation and indexed reuse, desktop and 390px mobile layouts, and
 light/dark presentation. Migration integration coverage rolls `0041` back and
 reapplies it.
+
+## Production evidence
+
+- Feature source: `ef44c728c0af8afd004b735668f11f2c304087a6`
+- Railway application deployment:
+  `f3c10964-139e-48d5-9507-c591db6f7bd5`
+- Railway exact-source metadata release:
+  `e9bb3ea7-42dd-4e1f-b60f-d5df8b780b7f`
+- `/api/health` reports the exact feature source and ready migration
+  `0041_shop_talk_news_continuity`.
+- `npm run monitor:production` passes all seven anonymous private-route
+  probes with operational controls off.
+- Disposable authenticated run `packet83-20260728070811-f7d1a6` passes
+  account preference/save continuity, owner isolation, structured clean-body
+  discussion creation, indexed cross-role lookup, duplicate prevention with
+  the existing post ID, cross-role answer visibility, API cleanup, and
+  closure of both temporary accounts.
+
+Packet status: **Verified**.

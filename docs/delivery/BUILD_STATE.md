@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk and Trade News continuity locally verified; production release pending.
+Current phase: Shop Talk and Trade News continuity production verified.
 Active packet: `docs/delivery/packets/83_SHOP_TALK_NEWS_CONTINUITY.md`
-Repository branch: `codex/shop-talk-news-continuity`
-Production feature release commit: pending
+Repository branch: `master` (feature branch `codex/shop-talk-news-continuity`)
+Production feature release commit: `ef44c728c0af8afd004b735668f11f2c304087a6`
 
 ## Shop Talk and Trade News continuity
 
@@ -41,6 +41,19 @@ Production feature release commit: pending
 - Three-things review closed structured-link public discovery, duplicate-race
   navigation, and silent legacy-device preference replacement before the
   packet advanced.
+- Packet 83 is **Verified**. Railway application deployment
+  `f3c10964-139e-48d5-9507-c591db6f7bd5` and exact-source metadata release
+  `e9bb3ea7-42dd-4e1f-b60f-d5df8b780b7f` succeeded. Live health reports exact
+  source `ef44c728c0af8afd004b735668f11f2c304087a6`, ready migration
+  `0041_shop_talk_news_continuity`, PostgreSQL, S3-compatible storage,
+  configured Sentry/Web Push/Stripe Connect, and operational controls off.
+- The exact-source production monitor passed with seven anonymous private
+  route probes. Disposable authenticated run
+  `packet83-20260728070811-f7d1a6` proved preference/save continuity, owner
+  isolation, a URL-free structured post body, cross-role indexed lookup,
+  duplicate conflict carrying the existing post ID, cross-role answer
+  visibility, saved-link removal, post removal, and closure of both temporary
+  accounts.
 
 ## Messages and private customer-note continuity
 

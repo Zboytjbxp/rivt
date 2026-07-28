@@ -2,7 +2,7 @@
 
 Audit date: 2026-07-28 America/New_York
 
-Baseline: `origin/master` at `5e838ab`
+Baseline: `origin/master` at `ef44c72`
 
 Current packet: `docs/delivery/packets/83_SHOP_TALK_NEWS_CONTINUITY.md`
 
@@ -112,9 +112,10 @@ Evidence:
 
 - Shop Talk posts, answers, reactions, moderation, media, and opt-in public
   discovery are canonical.
-- Trade News follows, saved articles, scope, and location are device-only.
-- News-to-discussion matching scans currently loaded post bodies, so a
-  paginated or unloaded discussion can be missed and duplicated.
+- Trade News follows, saved articles, scope, and location are account-owned
+  with explicit loss-safe migration of older device choices.
+- News-to-discussion matching uses structured canonical URLs and an indexed
+  server lookup independent of pagination or the current client filter.
 
 Completion boundary:
 
@@ -124,13 +125,13 @@ Completion boundary:
 - preserve source/image/freshness honesty and the existing public-consent
   boundary.
 
-Status: **Locally verified; production release pending.** Migration
-`0041_shop_talk_news_continuity`, 112 unit/frontend tests, all 22 serial
-PostgreSQL integration suites, browser E2E, focused rendered suites, and the
-dependency audit pass. The implementation includes explicit loss-safe device
-migration, saved-article snapshots, structured clean-body discussions,
-indexed cross-filter lookup, public-audience enforcement, and duplicate-race
-navigation to the existing thread.
+Status: **Production deployed and exact-source verified at `ef44c72`.**
+Migration `0041_shop_talk_news_continuity`, 112 unit/frontend tests, all 22
+serial PostgreSQL integration suites, browser E2E, focused rendered suites,
+and the dependency audit pass. Disposable authenticated run
+`packet83-20260728070811-f7d1a6` proves owner continuity/isolation,
+structured clean-body discussions, indexed cross-role lookup, duplicate
+prevention, answer visibility, and cleanup.
 
 ### Next 3 — Offline and recovery behavior
 

@@ -2957,3 +2957,9 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   PostgreSQL integration suites, migration rollback/reapply, fail-closed
   authentication plus Jobs/discovery E2E, focused rendered QA, diff
   integrity, and a zero-vulnerability production dependency audit.
+- Production exact-source health reports
+  `ef44c728c0af8afd004b735668f11f2c304087a6` with
+  `0041_shop_talk_news_continuity` ready. The seven-check production monitor
+  and disposable run `packet83-20260728070811-f7d1a6` pass owner continuity
+  and isolation, structured clean-body discussion creation, indexed
+  cross-role lookup, duplicate prevention, answer visibility, and cleanup.
