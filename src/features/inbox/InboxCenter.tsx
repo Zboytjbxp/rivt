@@ -7,6 +7,7 @@ import {
   CheckCheck,
   Clock3,
   MessageCircle,
+  Paperclip,
   Pin,
   Plus,
   RefreshCw,
@@ -17,7 +18,21 @@ import {
   X,
 } from "lucide-react";
 import type { PrimaryDestination } from "../../app-shell/types";
-import type { InboxConversation, InboxMessage, InboxNotification } from "./inbox-api";
+import {
+  archiveMessageTemplate,
+  createMessageTemplate,
+  getMessagingSettings,
+  removeConversationAttachment,
+  saveConversationPreference,
+  setMessageReaction,
+  uploadConversationAttachment,
+  type ConversationPreference,
+  type InboxConversation,
+  type InboxMessage,
+  type InboxNotification,
+  type MessageTemplate,
+  type StagedMessageAttachment,
+} from "./inbox-api";
 import { Avatar, EmptyState, PageHeader, Panel, SkeletonCard } from "../../components/ui";
 import {
   emptyClientRecord,
@@ -28,6 +43,7 @@ import {
   type ClientRecord,
   type ClientRecordMessage,
 } from "../clients/client-records";
+import { AccountCustomerNotesTab, type LegacyCustomer } from "./AccountCustomerNotesTab";
 import "./inbox-center.css";
 
 // ─── localStorage keys ────────────────────────────────────────────────────────
@@ -78,12 +94,12 @@ function loadClientThreads(): ClientThreads {
   return {};
 }
 
-function saveClientThreads(threads: ClientThreads) {
-  try { localStorage.setItem(CLIENT_THREADS_KEY, JSON.stringify(threads)); } catch { /* noop */ }
-}
-
 function privateClientNotes(messages: ClientMessage[] = []): ClientMessage[] {
   return messages.filter((message) => message.from === "me");
+}
+
+function saveClientThreads(threads: ClientThreads) {
+  try { localStorage.setItem(CLIENT_THREADS_KEY, JSON.stringify(threads)); } catch { /* noop */ }
 }
 
 function sanitizeClientThreadMessages(messages: ClientMessage[] = []): ClientRecordMessage[] {
@@ -285,7 +301,7 @@ function ClientThread({
   );
 }
 
-function CustomerNotesTab() {
+function LegacyCustomerNotesTab() {
   const [contacts, setContacts] = useState<ClientContact[]>(loadClientContacts);
   const [selectedContact, setSelectedContact] = useState<ClientContact | null>(null);
   const [addingName, setAddingName] = useState(false);
@@ -437,6 +453,46 @@ function CustomerNotesTab() {
   );
 }
 
+void LegacyCustomerNotesTab;
+
+function CustomerNotesTab() {
+  const [migrationVersion, setMigrationVersion] = useState(0);
+  const legacyCustomers = (() => {
+    void migrationVersion;
+    const contacts = loadClientContacts();
+    const threads = loadClientThreads();
+    return contacts.flatMap((contact): LegacyCustomer[] => {
+      const notes = privateClientNotes([
+        ...(threads[contact.id] ?? []),
+        ...(contact.threadMessages ?? []).map((message) => ({ ...message })),
+      ]);
+      if (!notes.length) return [];
+      const unique = [...new Map(notes.map((note) => [note.id, note])).values()];
+      return [{
+        id: contact.id,
+        name: contact.name,
+        notes: unique.map((note) => ({
+          id: note.id,
+          text: note.text,
+          sentAt: note.sentAt,
+          attachmentUrl: note.attachmentUrl,
+        })),
+      }];
+    });
+  })();
+
+  return (
+    <AccountCustomerNotesTab
+      legacyCustomers={legacyCustomers}
+      onLegacyMigrationComplete={() => {
+        try { localStorage.removeItem(CLIENT_THREADS_KEY); } catch { /* noop */ }
+        saveClientRecordsLocal(loadClientContacts().map((contact) => ({ ...contact, threadMessages: [] })));
+        setMigrationVersion((current) => current + 1);
+      }}
+    />
+  );
+}
+
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface InboxCenterProps {
   accountId: string;
@@ -450,7 +506,7 @@ interface InboxCenterProps {
   error: string | null;
   onSelectConversation: (conversationId: string) => void;
   onMessageDraft: (message: string) => void;
-  onSendMessage: () => void;
+  onSendMessage: (attachments: StagedMessageAttachment[]) => Promise<boolean>;
   onMarkSelectedRead: () => void;
   onMarkNotificationsRead: () => void;
   onMuteSelected: () => void;
@@ -508,91 +564,212 @@ export function InboxCenter({
   const [activeTab, setActiveTab] = useState<InboxTab>("Messages");
 
   // ── Feature 1: Message Templates ──────────────────────────────────────────
-  const [templates, setTemplates] = useState<string[]>(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(TEMPLATES_KEY) ?? "null") as string[] | null;
-      return saved ?? DEFAULT_TEMPLATES;
-    } catch {
-      return DEFAULT_TEMPLATES;
-    }
-  });
+  const [templates, setTemplates] = useState<MessageTemplate[]>([]);
+  const [preferences, setPreferences] = useState<Record<string, ConversationPreference>>({});
+  const [settingsStatus, setSettingsStatus] = useState("Loading account-backed message settings…");
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [newTemplateDraft, setNewTemplateDraft] = useState("");
   const [addingTemplate, setAddingTemplate] = useState(false);
+  const [reactionOverrides, setReactionOverrides] = useState<Record<string, InboxMessage["reactions"]>>({});
+  const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
+  const [stagedAttachments, setStagedAttachments] = useState<StagedMessageAttachment[]>([]);
+  const [failedAttachment, setFailedAttachment] = useState<{ file: File; error: string } | null>(null);
+  const [removedMessageAttachmentIds, setRemovedMessageAttachmentIds] = useState<Set<string>>(new Set());
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  const [hasLegacyReactions, setHasLegacyReactions] = useState(() => {
+    try { return Boolean(localStorage.getItem(REACTIONS_KEY)); } catch { return false; }
+  });
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
 
-  function saveTemplates(next: string[]) {
-    setTemplates(next);
-    try { localStorage.setItem(TEMPLATES_KEY, JSON.stringify(next)); } catch { /* noop */ }
-  }
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSettings() {
+      try {
+        const settings = await getMessagingSettings();
+        if (cancelled) return;
+        const nextPreferences = Object.fromEntries(
+          settings.conversationPreferences.map((preference) => [preference.conversationId, preference]),
+        );
+        setPreferences(nextPreferences);
+        setTemplates(settings.templates.filter((template) => !template.archivedAt));
 
-  function addTemplate() {
+        const legacyTemplates = (() => {
+          try {
+            const stored = JSON.parse(localStorage.getItem(TEMPLATES_KEY) ?? "null") as string[] | null;
+            return stored ?? (settings.templates.length ? [] : DEFAULT_TEMPLATES);
+          } catch {
+            return settings.templates.length ? [] : DEFAULT_TEMPLATES;
+          }
+        })();
+        const legacyPinned = (() => {
+          try { return JSON.parse(localStorage.getItem(PINNED_KEY) ?? "[]") as string[]; } catch { return []; }
+        })();
+        const legacyArchived = (() => {
+          try { return JSON.parse(localStorage.getItem(ARCHIVED_KEY) ?? "[]") as string[]; } catch { return []; }
+        })();
+        const migratedTemplates: MessageTemplate[] = [];
+        for (const [index, text] of legacyTemplates.entries()) {
+          if (!text.trim() || settings.templates.some((template) => template.body === text.trim())) continue;
+          migratedTemplates.push(await createMessageTemplate(text.trim(), index));
+        }
+        const migratedPreferences: ConversationPreference[] = [];
+        const unmatchedPinned = legacyPinned.filter((conversationId) => !conversations.some((conversation) => conversation.id === conversationId));
+        const unmatchedArchived = legacyArchived.filter((conversationId) => !conversations.some((conversation) => conversation.id === conversationId));
+        for (const conversationId of new Set([...legacyPinned, ...legacyArchived])) {
+          if (!conversations.some((conversation) => conversation.id === conversationId)) continue;
+          const current = nextPreferences[conversationId];
+          migratedPreferences.push(await saveConversationPreference(conversationId, {
+            pinned: legacyPinned.includes(conversationId) || current?.pinned || false,
+            archived: legacyArchived.includes(conversationId) || current?.archived || false,
+            expectedVersion: current?.version ?? 0,
+          }));
+        }
+        if (cancelled) return;
+        if (migratedTemplates.length) setTemplates((current) => [...current, ...migratedTemplates]);
+        if (migratedPreferences.length) {
+          setPreferences((current) => ({
+            ...current,
+            ...Object.fromEntries(migratedPreferences.map((item) => [item.conversationId, item])),
+          }));
+        }
+        try {
+          localStorage.removeItem(TEMPLATES_KEY);
+          if (unmatchedPinned.length) localStorage.setItem(PINNED_KEY, JSON.stringify(unmatchedPinned));
+          else localStorage.removeItem(PINNED_KEY);
+          if (unmatchedArchived.length) localStorage.setItem(ARCHIVED_KEY, JSON.stringify(unmatchedArchived));
+          else localStorage.removeItem(ARCHIVED_KEY);
+        } catch { /* noop */ }
+        setSettingsStatus(
+          unmatchedPinned.length || unmatchedArchived.length
+            ? "Some device thread settings do not match a currently loaded work thread and were kept on this device."
+            : localStorage.getItem(REACTIONS_KEY)
+            ? "Message settings synced. Previous private reactions remain only on this device."
+            : "Message settings synced to your RIVT account.",
+        );
+      } catch (settingsError) {
+        if (!cancelled) setSettingsStatus(settingsError instanceof Error ? settingsError.message : "Message settings could not sync.");
+      }
+    }
+    void loadSettings();
+    return () => { cancelled = true; };
+  }, [conversations]);
+
+  async function addTemplate() {
     const trimmed = newTemplateDraft.trim();
     if (!trimmed) return;
-    saveTemplates([...templates, trimmed]);
-    setNewTemplateDraft("");
-    setAddingTemplate(false);
+    try {
+      const template = await createMessageTemplate(trimmed, templates.length);
+      setTemplates((current) => [...current, template]);
+      setNewTemplateDraft("");
+      setAddingTemplate(false);
+      setSettingsStatus("Template saved to your RIVT account.");
+    } catch (templateError) {
+      setSettingsStatus(templateError instanceof Error ? templateError.message : "Template could not be saved.");
+    }
   }
 
-  function deleteTemplate(index: number) {
-    saveTemplates(templates.filter((_, i) => i !== index));
+  async function deleteTemplate(template: MessageTemplate) {
+    try {
+      await archiveMessageTemplate(template);
+      setTemplates((current) => current.filter((item) => item.id !== template.id));
+      setSettingsStatus("Template archived.");
+    } catch (templateError) {
+      setSettingsStatus(templateError instanceof Error ? templateError.message : "Template could not be archived.");
+    }
   }
 
   // ── Feature 2: Pin Conversations ──────────────────────────────────────────
-  const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(PINNED_KEY) ?? "[]") as string[]);
-    } catch {
-      return new Set();
-    }
-  });
-
-  function togglePin(id: string) {
-    setPinnedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      try { localStorage.setItem(PINNED_KEY, JSON.stringify([...next])); } catch { /* noop */ }
-      return next;
-    });
-  }
+  const pinnedIds = new Set(Object.values(preferences).filter((item) => item.pinned).map((item) => item.conversationId));
 
   // ── Feature 3: Archive Conversations ─────────────────────────────────────
-  const [archivedIds, setArchivedIds] = useState<Set<string>>(() => {
-    try {
-      return new Set(JSON.parse(localStorage.getItem(ARCHIVED_KEY) ?? "[]") as string[]);
-    } catch {
-      return new Set();
-    }
-  });
+  const archivedIds = new Set(Object.values(preferences).filter((item) => item.archived).map((item) => item.conversationId));
   const [showArchived, setShowArchived] = useState(false);
 
-  function toggleArchive(id: string) {
-    setArchivedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      try { localStorage.setItem(ARCHIVED_KEY, JSON.stringify([...next])); } catch { /* noop */ }
-      return next;
-    });
+  async function updatePreference(id: string, change: "pin" | "archive") {
+    const current = preferences[id];
+    try {
+      const preference = await saveConversationPreference(id, {
+        pinned: change === "pin" ? !current?.pinned : current?.pinned ?? false,
+        archived: change === "archive" ? !current?.archived : current?.archived ?? false,
+        expectedVersion: current?.version ?? 0,
+      });
+      setPreferences((items) => ({ ...items, [id]: preference }));
+      setSettingsStatus(change === "pin" ? (preference.pinned ? "Thread pinned." : "Thread unpinned.") : (preference.archived ? "Thread archived." : "Thread restored."));
+    } catch (preferenceError) {
+      setSettingsStatus(preferenceError instanceof Error ? preferenceError.message : "Thread setting could not be saved.");
+    }
   }
 
   // ── Feature 4: Emoji Reactions ────────────────────────────────────────────
-  const [reactions, setReactions] = useState<Record<string, string>>(() => {
+  async function changeReaction(message: InboxMessage, emoji: string) {
+    if (!selectedConversationId) return;
+    const current = reactionOverrides[message.id] ?? message.reactions ?? [];
+    const existing = current.find((reaction) => reaction.reactedByMe)?.emoji ?? null;
     try {
-      return JSON.parse(localStorage.getItem(REACTIONS_KEY) ?? "{}") as Record<string, string>;
-    } catch {
-      return {};
+      const next = await setMessageReaction(selectedConversationId, message.id, existing === emoji ? null : emoji);
+      setReactionOverrides((items) => ({ ...items, [message.id]: next }));
+    } catch (reactionError) {
+      setSettingsStatus(reactionError instanceof Error ? reactionError.message : "Reaction could not be saved.");
     }
-  });
-  const [reactionPickerFor, setReactionPickerFor] = useState<string | null>(null);
-
-  function setReaction(messageId: string, emoji: string) {
-    setReactions((prev) => {
-      const next = { ...prev };
-      if (next[messageId] === emoji) delete next[messageId];
-      else next[messageId] = emoji;
-      try { localStorage.setItem(REACTIONS_KEY, JSON.stringify(next)); } catch { /* noop */ }
-      return next;
-    });
     setReactionPickerFor(null);
+  }
+
+  function selectConversation(conversationId: string) {
+    setStagedAttachments([]);
+    setAttachmentError(null);
+    setFailedAttachment(null);
+    setRemovedMessageAttachmentIds(new Set());
+    if (attachmentInputRef.current) attachmentInputRef.current.value = "";
+    onSelectConversation(conversationId);
+  }
+
+  async function stageAttachment(file: File) {
+    if (!selectedConversationId) return;
+    setUploadingAttachment(true);
+    setAttachmentError(null);
+    setFailedAttachment(null);
+    try {
+      const attachment = await uploadConversationAttachment(selectedConversationId, file);
+      setStagedAttachments((current) => [...current, attachment]);
+    } catch (uploadError) {
+      const message = uploadError instanceof Error ? uploadError.message : "Attachment could not be uploaded.";
+      setAttachmentError(message);
+      setFailedAttachment({ file, error: message });
+    } finally {
+      setUploadingAttachment(false);
+      if (attachmentInputRef.current) attachmentInputRef.current.value = "";
+    }
+  }
+
+  async function removeStagedAttachment(attachment: StagedMessageAttachment) {
+    if (!selectedConversationId) return;
+    try {
+      await removeConversationAttachment(selectedConversationId, attachment.id);
+      setStagedAttachments((current) => current.filter((item) => item.id !== attachment.id));
+    } catch (removeError) {
+      setAttachmentError(removeError instanceof Error ? removeError.message : "Attachment could not be removed.");
+    }
+  }
+
+  async function removeSentAttachment(attachmentId: string) {
+    if (!selectedConversationId) return;
+    try {
+      await removeConversationAttachment(selectedConversationId, attachmentId);
+      setRemovedMessageAttachmentIds((current) => new Set([...current, attachmentId]));
+      setSettingsStatus("Message attachment removed.");
+      onRefresh();
+    } catch (removeError) {
+      setAttachmentError(removeError instanceof Error ? removeError.message : "Attachment could not be removed.");
+    }
+  }
+
+  async function sendMessage() {
+    const sent = await onSendMessage(stagedAttachments);
+    if (sent) {
+      setStagedAttachments([]);
+      setAttachmentError(null);
+    }
   }
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -601,7 +778,12 @@ export function InboxCenter({
   const selectedConversation = conversations.find((conv) => conv.id === selectedConversationId) ?? null;
   const otherParticipants =
     selectedConversation?.participants.filter((p) => p.accountId !== accountId) ?? [];
-  const canSend = Boolean(selectedConversation && messageDraft.trim() && !sending);
+  const canSend = Boolean(
+    selectedConversation
+    && (messageDraft.trim() || stagedAttachments.length)
+    && !sending
+    && !uploadingAttachment,
+  );
 
   // Build sorted, filtered conversation list
   const visibleConversations = showArchived
@@ -696,9 +878,9 @@ export function InboxCenter({
                           isActive={conversation.id === selectedConversationId}
                           isPinned={pinnedIds.has(conversation.id)}
                           isArchived={archivedIds.has(conversation.id)}
-                          onSelect={onSelectConversation}
-                          onTogglePin={togglePin}
-                          onToggleArchive={toggleArchive}
+                          onSelect={selectConversation}
+                          onTogglePin={(id) => void updatePreference(id, "pin")}
+                          onToggleArchive={(id) => void updatePreference(id, "archive")}
                         />
                       ))}
                       {unpinnedConversations.length > 0 && (
@@ -715,9 +897,9 @@ export function InboxCenter({
                       isActive={conversation.id === selectedConversationId}
                       isPinned={pinnedIds.has(conversation.id)}
                       isArchived={archivedIds.has(conversation.id)}
-                      onSelect={onSelectConversation}
-                      onTogglePin={togglePin}
-                      onToggleArchive={toggleArchive}
+                      onSelect={selectConversation}
+                      onTogglePin={(id) => void updatePreference(id, "pin")}
+                      onToggleArchive={(id) => void updatePreference(id, "archive")}
                     />
                   ))}
 
@@ -784,7 +966,8 @@ export function InboxCenter({
                   {messages.length ? messages.map((message) => {
                     const mine = message.senderAccountId === accountId;
                     const state = messageState(message, accountId);
-                    const existingReaction = reactions[message.id];
+                    const messageReactions = reactionOverrides[message.id] ?? message.reactions ?? [];
+                    const existingReaction = messageReactions.find((reaction) => reaction.reactedByMe)?.emoji ?? null;
                     const pickerOpen = reactionPickerFor === message.id;
 
                     return (
@@ -794,24 +977,39 @@ export function InboxCenter({
                       >
                         <small>{message.sender?.displayName || "RIVT member"} - {timeLabel(message.createdAt)}</small>
                         <p>{message.body}</p>
+                        {message.attachments?.some((attachment) => !removedMessageAttachmentIds.has(attachment.id)) ? (
+                          <div className="v2-msg-attachments">
+                            {message.attachments.filter((attachment) => !removedMessageAttachmentIds.has(attachment.id)).map((attachment) => (
+                              <div key={attachment.id} className="v2-msg-attachment">
+                                <a href={attachment.url ?? undefined} target="_blank" rel="noreferrer">
+                                  <Paperclip size={14} />
+                                  <span>{attachment.originalName}</span>
+                                  <small>{attachment.sizeBytes ? `${Math.max(1, Math.round(attachment.sizeBytes / 1024))} KB` : "File"}</small>
+                                </a>
+                                {mine ? (
+                                  <button type="button" onClick={() => void removeSentAttachment(attachment.id)} aria-label={`Remove ${attachment.originalName}`}>
+                                    <X size={13} />
+                                  </button>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                         {state ? <span><CheckCheck size={12} /> {state}</span> : null}
 
                         {/* Emoji picker + reaction pill */}
                         <div className="v2-msg-reaction-row">
-                          {existingReaction && (
-                            <>
-                              <button
-                                type="button"
-                                className="v2-msg-reaction-pill"
-                                onClick={(e) => { e.stopPropagation(); setReaction(message.id, existingReaction); }}
-                                title="Remove private reaction"
-                                aria-label="Remove private reaction"
-                              >
-                                {existingReaction}
-                              </button>
-                              <span className="v2-msg-reaction-private">Private to you</span>
-                            </>
-                          )}
+                          {messageReactions.map((reaction) => (
+                            <button
+                              key={reaction.emoji}
+                              type="button"
+                              className={`v2-msg-reaction-pill${reaction.reactedByMe ? " is-mine" : ""}`}
+                              onClick={(event) => { event.stopPropagation(); void changeReaction(message, reaction.emoji); }}
+                              aria-label={`${reaction.emoji} reaction, ${reaction.count}`}
+                            >
+                              {reaction.emoji} {reaction.count}
+                            </button>
+                          ))}
                           <button
                             type="button"
                             className="v2-msg-reaction-trigger"
@@ -819,8 +1017,8 @@ export function InboxCenter({
                               e.stopPropagation();
                               setReactionPickerFor(pickerOpen ? null : message.id);
                             }}
-                            title="Add a private reaction"
-                            aria-label="Add a private reaction"
+                            title="React to this message"
+                            aria-label="React to this message"
                           >
                             {existingReaction ? "…" : "☺"}
                           </button>
@@ -834,7 +1032,7 @@ export function InboxCenter({
                                   key={emoji}
                                   type="button"
                                   className={`v2-msg-reaction-btn${existingReaction === emoji ? " is-active" : ""}`}
-                                  onClick={() => setReaction(message.id, emoji)}
+                                  onClick={() => void changeReaction(message, emoji)}
                                 >
                                   {emoji}
                                 </button>
@@ -867,21 +1065,21 @@ export function InboxCenter({
 
                   {templatesOpen && (
                     <div className="v2-msg-templates-bar">
-                      {templates.map((tpl, i) => (
-                        <span key={i} className="v2-msg-template-chip">
+                      {templates.map((template) => (
+                        <span key={template.id} className="v2-msg-template-chip">
                           <button
                             type="button"
-                            onClick={() => onMessageDraft(tpl)}
-                            title={tpl}
+                            onClick={() => onMessageDraft(template.body)}
+                            title={template.body}
                           >
-                            {tpl.length > 35 ? tpl.slice(0, 35) + "…" : tpl}
+                            {template.body.length > 35 ? `${template.body.slice(0, 35)}…` : template.body}
                           </button>
                           <button
                             type="button"
                             className="v2-msg-template-chip-delete"
-                            onClick={() => deleteTemplate(i)}
-                            title="Remove template"
-                            aria-label="Remove template"
+                            onClick={() => void deleteTemplate(template)}
+                            title="Archive template"
+                            aria-label="Archive template"
                           >
                             <X size={10} />
                           </button>
@@ -896,12 +1094,12 @@ export function InboxCenter({
                             value={newTemplateDraft}
                             onChange={(e) => setNewTemplateDraft(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") addTemplate();
+                              if (e.key === "Enter") void addTemplate();
                               if (e.key === "Escape") { setAddingTemplate(false); setNewTemplateDraft(""); }
                             }}
                             placeholder="New template text…"
                           />
-                          <button type="button" onClick={addTemplate}>Save</button>
+                          <button type="button" onClick={() => void addTemplate()}>Save</button>
                           <button type="button" aria-label="Cancel adding template" title="Cancel" onClick={() => { setAddingTemplate(false); setNewTemplateDraft(""); }}>
                             <X size={12} />
                           </button>
@@ -929,13 +1127,64 @@ export function InboxCenter({
                     placeholder="Write a job update, schedule question, or site note."
                   />
                 </label>
+                <input
+                  ref={attachmentInputRef}
+                  type="file"
+                  className="v2-ct-file-input"
+                  accept="image/jpeg,image/png,image/webp,application/pdf,text/plain"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (file) void stageAttachment(file);
+                  }}
+                  aria-label="Attach a file to this message"
+                />
+                {stagedAttachments.length ? (
+                  <div className="v2-msg-staged" aria-label="Files ready to send">
+                    {stagedAttachments.map((attachment) => (
+                      <span key={attachment.id}>
+                        <Paperclip size={13} />
+                        {attachment.originalName}
+                        <button type="button" onClick={() => void removeStagedAttachment(attachment)} aria-label={`Remove ${attachment.originalName}`}>
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {failedAttachment ? (
+                  <div className="v2-msg-upload-failed" role="alert">
+                    <span><Paperclip size={13} /> {failedAttachment.file.name} was not uploaded.</span>
+                    <button type="button" onClick={() => void stageAttachment(failedAttachment.file)}>Retry</button>
+                    <button type="button" onClick={() => { setFailedAttachment(null); setAttachmentError(null); }}>Remove</button>
+                  </div>
+                ) : null}
+                {attachmentError ? <p className="v2-msg-attachment-error" role="alert">{attachmentError}</p> : null}
                 <div className="v2-inbox-composer-actions">
-                  <button type="button" className="v2-primary-button" onClick={onSendMessage} disabled={!canSend}>
+                  <button type="button" onClick={() => attachmentInputRef.current?.click()} disabled={uploadingAttachment || stagedAttachments.length >= 5}>
+                    <Paperclip size={16} /> {uploadingAttachment ? "Uploading…" : "Attach"}
+                  </button>
+                  <button type="button" className="v2-primary-button" onClick={() => void sendMessage()} disabled={!canSend}>
                     <Send size={16} />
                     {sending ? "Sending" : "Send"}
                   </button>
                   <button type="button" onClick={() => onNavigate("work")}>Open job</button>
                 </div>
+                <p className="v2-client-sync-note" role="status">{settingsStatus}</p>
+                {hasLegacyReactions ? (
+                  <div className="v2-msg-legacy-reactions">
+                    <span>Old reactions were private to this device. New reactions are visible to work participants.</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try { localStorage.removeItem(REACTIONS_KEY); } catch { /* noop */ }
+                        setHasLegacyReactions(false);
+                        setSettingsStatus("Old device-only reactions cleared.");
+                      }}
+                    >
+                      Clear old private reactions
+                    </button>
+                  </div>
+                ) : null}
               </>
             ) : (
               <EmptyState

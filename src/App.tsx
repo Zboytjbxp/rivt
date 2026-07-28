@@ -72,6 +72,7 @@ import {
   type InboxConversation,
   type InboxMessage,
   type InboxNotification,
+  type StagedMessageAttachment,
 } from "./features/inbox/inbox-api";
 import type { ProfileRouteView } from "./features/profile/ProfileRoute";
 import type {
@@ -2223,15 +2224,15 @@ function App() {
     );
   }
 
-  async function handleSendMessage() {
+  async function handleSendMessage(attachments: StagedMessageAttachment[] = []) {
     const trimmed = messageDraft.trim();
-    if (!trimmed) {
+    if (!trimmed && !attachments.length) {
       addActivity(
         "Message not sent",
         "Write a message in the composer before sending.",
         "warning",
       );
-      return;
+      return false;
     }
     if (!selectedConversationId) {
       addActivity(
@@ -2239,16 +2240,21 @@ function App() {
         "Open an accepted work thread before sending a message.",
         "warning",
       );
-      return;
+      return false;
     }
 
     setInboxSending(true);
     setInboxError(null);
     try {
-      const message = await sendConversationMessage(selectedConversationId, trimmed);
+      const message = await sendConversationMessage(
+        selectedConversationId,
+        trimmed,
+        attachments.map(({ uploadId }) => ({ uploadId })),
+      );
       setInboxMessages((current) => [...current, message]);
       setMessageDraft("");
       await reloadInbox();
+      return true;
     } catch (error) {
       setInboxError(error instanceof Error ? error.message : "Message could not be sent.");
       addActivity(
@@ -2256,6 +2262,7 @@ function App() {
         error instanceof Error ? error.message : "Message could not be sent.",
         "error",
       );
+      return false;
     } finally {
       setInboxSending(false);
     }
@@ -2999,12 +3006,12 @@ function App() {
             error={inboxError}
             onSelectConversation={handleSelectConversation}
             onMessageDraft={setMessageDraft}
-            onSendMessage={() => {
+            onSendMessage={async (attachments) => {
               if (isGuest) {
                 setGuestPromptOpen(true);
-                return;
+                return false;
               }
-              void handleSendMessage();
+              return handleSendMessage(attachments);
             }}
             onMarkSelectedRead={() => void handleMarkSelectedConversationRead()}
             onMarkNotificationsRead={() => void handleMarkNotificationsRead()}

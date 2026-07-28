@@ -78,6 +78,64 @@ const draftJob = {
   events: [],
 };
 
+const inboxConversationId = "90909090-9090-4090-8090-909090909090";
+const inboxMessageId = "91919191-9191-4191-8191-919191919191";
+const inboxConversation = {
+  id: inboxConversationId,
+  activeWorkId: "92929292-9292-4292-8292-929292929292",
+  jobId: draftJob.id,
+  organizationId: account.organizations[0].id,
+  status: "open",
+  activeWorkStatus: "active",
+  createdByAccountId: account.id,
+  createdAt: "2026-07-27T10:00:00.000Z",
+  updatedAt: "2026-07-27T11:00:00.000Z",
+  job: {
+    id: draftJob.id,
+    title: "Kitchen trim-out support",
+    status: "accepted",
+    organization: account.organizations[0],
+    publicLocation: { city: "Jacksonville", region: "FL", countryCode: "US" },
+  },
+  participants: [{
+    accountId: account.id,
+    role: "contractor",
+    mutedUntil: null,
+    lastReadAt: null,
+    displayName: "Michael Test",
+    headline: "Contractor",
+    serviceArea: { city: "Jacksonville", region: "FL" },
+  }, {
+    accountId: "93939393-9393-4393-8393-939393939393",
+    role: "tradesperson",
+    mutedUntil: null,
+    lastReadAt: null,
+    displayName: "Elena Torres",
+    headline: "Electrician",
+    serviceArea: { city: "Jacksonville", region: "FL" },
+  }],
+  lastMessage: null,
+  unreadCount: 1,
+};
+const inboxMessage = {
+  id: inboxMessageId,
+  conversationId: inboxConversationId,
+  senderAccountId: "93939393-9393-4393-8393-939393939393",
+  body: "Panel labels are ready for the walkthrough.",
+  kind: "user",
+  createdAt: "2026-07-27T11:00:00.000Z",
+  editedAt: null,
+  deletedAt: null,
+  sender: {
+    accountId: "93939393-9393-4393-8393-939393939393",
+    displayName: "Elena Torres",
+    headline: "Electrician",
+  },
+  receipts: [],
+  attachments: [],
+  reactions: [{ emoji: "✅", count: 1, reactedByMe: false }],
+};
+
 const crewMemberRecord = {
   id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
   recordType: "crew_member",
@@ -292,7 +350,29 @@ async function configurePage(page) {
   routeResponse("**/api/auth/providers", { providers: {} });
   routeResponse("**/api/v1/sessions", { data: { sessions: [] } });
   routeResponse("**/api/storage", { usedBytes: 0, objectCount: 0 });
-  routeResponse("**/api/v1/conversations", { data: { conversations: [] } });
+  routeResponse("**/api/v1/conversations", { data: { conversations: [inboxConversation] } });
+  routeResponse(`**/api/v1/conversations/${inboxConversationId}/messages`, { data: { messages: [inboxMessage] } });
+  routeResponse(`**/api/v1/conversations/${inboxConversationId}/read`, { data: { conversation: { ...inboxConversation, unreadCount: 0 } } });
+  routeResponse("**/api/v1/messaging/settings", {
+    data: {
+      conversationPreferences: [{
+        conversationId: inboxConversationId,
+        pinned: true,
+        archived: false,
+        version: 1,
+        updatedAt: "2026-07-27T11:00:00.000Z",
+      }],
+      templates: [{
+        id: "94949494-9494-4494-8494-949494949494",
+        body: "Gate is open. Meet at the south entrance.",
+        sortOrder: 0,
+        version: 1,
+        archivedAt: null,
+        createdAt: "2026-07-27T11:00:00.000Z",
+        updatedAt: "2026-07-27T11:00:00.000Z",
+      }],
+    },
+  });
   routeResponse("**/api/v1/notifications", { data: { notifications: [], unreadCount: 0 } });
     routeResponse("**/api/v1/notifications/read", { data: { unreadCount: 0 } });
     routeResponse("**/api/v1/push/config", { data: { configured: false, publicKey: null, subscriptionCount: 0 } });
@@ -354,6 +434,7 @@ async function configurePage(page) {
     },
   });
   routeResponse("**/api/v1/contacts/*/work-links", { data: { links: [] } });
+  routeResponse("**/api/v1/contacts/*/notes**", { data: { notes: [] } });
   routeResponse("**/api/v1/albums", { data: { albums: [defaultPrivateAlbum] } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}`, { data: { job: draftJob } });
   routeResponse(`**/api/v1/jobs/${draftJob.id}/applications`, { data: { applications: [] } });
@@ -718,17 +799,26 @@ async function runMobileFlow(page) {
   await assertControlCenterClickable(page, '.side-panel[aria-label="Notifications"] .quick-actions button:nth-of-type(2)', "notifications messages action");
   await notificationsDialog.getByRole("button", { name: "Messages" }).click();
   await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Kitchen trim-out support/ }).click();
+  await page.getByText("Panel labels are ready for the walkthrough.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Attach", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "✅ reaction, 1" }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Managed Messages route");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-managed-messages.png"), fullPage: true });
   await page.getByRole("button", { name: "Customer notes", exact: true }).click();
   await page.getByText("Customer notes", { exact: false }).first().waitFor({ timeout: 15_000 });
   assert.equal(await page.getByRole("button", { name: /Simulate reply/i }).count(), 0, "Customer notes must never fabricate an inbound reply");
+  await page.getByText("Jordan Miller", { exact: true }).waitFor({ timeout: 15_000 });
   const customerNoteRows = page.locator(".v2-client-conv-row");
   if (await customerNoteRows.count()) {
     await customerNoteRows.first().click();
-    await page.getByText("Private customer log. These notes are not sent to the customer.", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText("Private customer history. Notes and files are not messages and are never sent.", { exact: true }).waitFor({ timeout: 15_000 });
+    await page.getByText("No private notes yet.", { exact: false }).waitFor({ timeout: 15_000 });
   } else {
-    await page.getByText("private job and follow-up notes", { exact: false }).waitFor({ timeout: 15_000 });
+    await page.getByText("Private notes connected to the same customers used in Work, Estimates, and Invoices.", { exact: false }).waitFor({ timeout: 15_000 });
   }
   await assertNoHorizontalOverflow(page, "Messages route");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-customer-notes.png"), fullPage: true });
   await page.getByRole("button", { name: "Home", exact: true }).click();
   await assertNoHorizontalOverflow(page, "Home after messages");
 
@@ -963,6 +1053,7 @@ async function runMobileFlow(page) {
     { name: "camera", path: "/app/camera", ready: ".v2-job-photos-workbench" },
     { name: "shop-talk", path: "/app/shop-talk", ready: ".shop-talk-layout" },
     { name: "tools", path: "/app/tools", ready: ".v2-tools-page" },
+    { name: "messages", path: "/app/messages", ready: ".v2-inbox-page" },
   ];
   for (const theme of ["light", "dark"]) {
     await page.evaluate((selectedTheme) => {
@@ -1020,6 +1111,18 @@ async function runMobileFlow(page) {
       });
     }
   }
+
+  await page.setViewportSize({ width: 1280, height: 820 });
+  await page.evaluate(() => {
+    localStorage.setItem("rivt-theme-source", "dark");
+    localStorage.setItem("rivt-theme-mode", "dark");
+  });
+  await page.goto(`${baseUrl}/app/messages`, { waitUntil: "networkidle" });
+  await page.getByRole("heading", { name: "Inbox", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: /Kitchen trim-out support/ }).click();
+  await page.getByText("Panel labels are ready for the walkthrough.", { exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Messages desktop dark");
+  await page.screenshot({ path: path.join(screenshotDir, "desktop-managed-messages-dark.png"), fullPage: true });
 
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(`${baseUrl}/app/camera`, { waitUntil: "networkidle" });

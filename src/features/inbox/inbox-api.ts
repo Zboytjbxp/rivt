@@ -60,9 +60,44 @@ export interface InboxMessage {
     mimeType: string;
     sizeBytes: number | null;
     status: "pending_authorization" | "attached" | "rejected";
+    version: number;
+    url: string | null;
     createdByAccountId: string;
     createdAt: string;
   }>;
+  reactions: Array<{
+    emoji: string;
+    count: number;
+    reactedByMe: boolean;
+  }>;
+}
+
+export interface ConversationPreference {
+  conversationId: string;
+  pinned: boolean;
+  archived: boolean;
+  version: number;
+  updatedAt: string;
+}
+
+export interface MessageTemplate {
+  id: string;
+  body: string;
+  sortOrder: number;
+  version: number;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StagedMessageAttachment {
+  id: string;
+  uploadId: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  status: "pending_authorization";
+  url: string | null;
 }
 
 export interface InboxNotification {
@@ -108,13 +143,96 @@ export async function listConversationMessages(conversationId: string) {
   return body.data.messages;
 }
 
-export async function sendConversationMessage(conversationId: string, bodyText: string) {
+export async function sendConversationMessage(
+  conversationId: string,
+  bodyText: string,
+  attachments: Array<Pick<StagedMessageAttachment, "uploadId">> = [],
+) {
   const body = await request<{ data: { message: InboxMessage } }>(`/api/v1/conversations/${conversationId}/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
-    body: JSON.stringify({ body: bodyText }),
+    body: JSON.stringify({ body: bodyText, attachments }),
   });
   return body.data.message;
+}
+
+export async function getMessagingSettings() {
+  const body = await request<{
+    data: {
+      conversationPreferences: ConversationPreference[];
+      templates: MessageTemplate[];
+    };
+  }>("/api/v1/messaging/settings");
+  return body.data;
+}
+
+export async function saveConversationPreference(
+  conversationId: string,
+  input: Pick<ConversationPreference, "pinned" | "archived"> & { expectedVersion: number },
+) {
+  const body = await request<{ data: { preference: ConversationPreference } }>(
+    `/api/v1/conversations/${conversationId}/preference`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+  return body.data.preference;
+}
+
+export async function createMessageTemplate(bodyText: string, sortOrder = 0) {
+  const body = await request<{ data: { template: MessageTemplate } }>("/api/v1/message-templates", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    body: JSON.stringify({ body: bodyText, sortOrder }),
+  });
+  return body.data.template;
+}
+
+export async function archiveMessageTemplate(template: MessageTemplate) {
+  const body = await request<{ data: { template: MessageTemplate } }>(
+    `/api/v1/message-templates/${template.id}/archive`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expectedVersion: template.version }),
+    },
+  );
+  return body.data.template;
+}
+
+export async function setMessageReaction(
+  conversationId: string,
+  messageId: string,
+  emoji: string | null,
+) {
+  const body = await request<{ data: { reactions: InboxMessage["reactions"] } }>(
+    `/api/v1/conversations/${conversationId}/messages/${messageId}/reaction`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emoji }),
+    },
+  );
+  return body.data.reactions;
+}
+
+export async function uploadConversationAttachment(conversationId: string, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  const body = await request<{ data: { attachment: StagedMessageAttachment } }>(
+    `/api/v1/conversations/${conversationId}/attachments`,
+    { method: "POST", body: form },
+  );
+  return body.data.attachment;
+}
+
+export async function removeConversationAttachment(conversationId: string, attachmentId: string) {
+  await request<{ data: { removed: boolean } }>(
+    `/api/v1/conversations/${conversationId}/attachments/${attachmentId}`,
+    { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) },
+  );
 }
 
 export async function markConversationRead(conversationId: string) {

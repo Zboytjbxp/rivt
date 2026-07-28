@@ -388,6 +388,7 @@ function demoInbox(input: GuestPreviewInput, job: Job) {
       },
       receipts: [],
       attachments: [],
+      reactions: [],
     },
   ];
   const notifications: InboxNotification[] = [
