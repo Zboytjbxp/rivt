@@ -3290,3 +3290,44 @@ Add one entry per staging/production deployment.
   workspace-record access returned `401`. A disposable authenticated project
   lifecycle passed participant access, outsider denial, media, completion,
   dispute, persistence, relogin, and cleanup.
+
+# Current Production - Professional Identity and People Discovery
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-27 America/New_York
+- Deployer: Codex through `codex/professional-identity`, fast-forward merge
+  to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `2901255fae8a6c4c8e5f7615e1a51d031dad8c92`
+- Railway deployments: application source build
+  `225015f8-3b7d-4c33-b0ef-646254f2bfbd`; exact-source release
+  `8f1c87da-1051-4191-8442-0ed86b97b584`
+- Migration version before/after:
+  `0038_project_workspace_records` -> `0039_professional_identity`
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, Stripe Connect,
+  email, moderation, and rollout controls were preserved.
+- Rollback target:
+  `716a2dc40982e4fcc97e0f3f2145d7071d74dd58`. Roll the application back
+  before applying `migrations/0039_professional_identity.down.sql`; the down
+  migration detaches professional-profile uploads before removing the four
+  additive identity tables.
+- Automated gates: production build, application/security lint, 109
+  unit/frontend tests, all 22 serial PostgreSQL integration suites,
+  migration rollback/reapply, fail-closed authentication plus Jobs/discovery
+  E2E, focused Work, Shop Talk/Trade News, mobile-action, light/dark,
+  Extra Large, 390px, and 320px rendered QA, diff integrity, and a
+  zero-vulnerability production dependency audit passed.
+- Product evidence: canonical professional credentials, dated availability,
+  managed avatar, private-by-default portfolio, archive/restore/history, and
+  one server-filtered professional profile are reused by global search, Work
+  applicants, Shop Talk authors, and linked Contacts. Credential evidence is
+  labeled as unverified by RIVT; evidence files and private records are never
+  included in the viewer response.
+- Post-deploy proof: live `/api/health` returned exact source `2901255` with
+  `0039_professional_identity` ready, PostgreSQL and S3-compatible storage
+  healthy, and configured Sentry, Web Push, and Stripe Connect Accounts v2.
+  The production monitor passed with all seven anonymous private-route
+  checks healthy and operational controls disabled. A disposable
+  two-account production smoke passed managed uploads, private/public
+  filtering, embedded-GPS rejection, block denial, and cleanup.

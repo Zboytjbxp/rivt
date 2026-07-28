@@ -2,7 +2,7 @@
 
 Audit date: 2026-07-27 America/New_York
 
-Baseline: `origin/master` at `716a2dc`
+Baseline: `origin/master` at `2901255`
 
 Current packet: `docs/delivery/packets/81_PROFESSIONAL_IDENTITY.md`
 
@@ -80,9 +80,9 @@ Packet 81 closes the browser-only proof and fragmented-discovery boundary:
 - one privacy-filtered professional profile reused by search, Work
   applicants, Shop Talk authors, and linked Contacts.
 
-Status: **Local acceptance is complete. Production deployment,
-exact-source/migration health, monitor, and authenticated live proof are
-pending before this surface is marked production-complete.**
+Status: **Production deployed and exact-source verified at `2901255`.**
+Migration `0039_professional_identity`, the seven-check production monitor,
+and a disposable two-account privacy/media lifecycle all pass.
 
 ### Next 2 — Messages and customer notes
 

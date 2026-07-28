@@ -28,8 +28,12 @@
 - `GA-OPS-007` has a clean build/lint, 109 unit/frontend tests, all 22 serial
   database integration tests, E2E, focused rendered suites, migration
   rollback/reapply, and zero production dependency vulnerabilities.
-- Deployment, exact-source/migration health, monitor, and authenticated live
-  proof remain pending; Packet 81 is not yet marked Verified.
+- Railway application deployment
+  `225015f8-3b7d-4c33-b0ef-646254f2bfbd` and exact-source release
+  `8f1c87da-1051-4191-8442-0ed86b97b584` succeeded. Live health reports
+  source `2901255fae8a6c4c8e5f7615e1a51d031dad8c92` with
+  `0039_professional_identity` ready; the production monitor and disposable
+  two-account privacy/media lifecycle pass. Packet 81 is Verified.
 
 ## Packet 80 — Work-workspace-record evidence
 
@@ -1854,11 +1858,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-PRO-001 | Resumable contractor/tradesperson onboarding | Partial | Canonical onboarding APIs persist selected role, organization/profile basics, and resume state; richer checklist/profile-strength guidance remains outside Gate A. |
-| GA-PRO-002 | Role-correct professional profile persists independently | Partial | Packet 81 adds canonical credentials, availability windows, avatar, portfolio, rate references, archive/restore/history, and one reusable network profile over the existing account profile. Local acceptance passes; production exact-source and authenticated proof remain before Verified. |
+| GA-PRO-002 | Role-correct professional profile persists independently | Verified | Packet 81 adds canonical credentials, availability windows, avatar, portfolio, rate references, archive/restore/history, and one reusable network profile over the existing account profile. Exact-source production health and the authenticated owner/viewer lifecycle pass. |
 | GA-PRO-003 | Trade specialties use canonical taxonomy | Partial | Versioned 25-trade taxonomy, profile relationship tables, and profile/onboarding APIs exist; broader profile-search and trade-management UX still need polish. |
 | GA-PRO-004 | Service area and location privacy | Partial | Public-area/private-address protection is verified for jobs and accepted work; profile-level service-area normalization/geospatial privacy remains incomplete. |
-| GA-PRO-005 | Availability and controlled contact visibility | Partial | Packet 81 adds dated private/network availability windows and exposes only chosen network windows through the authenticated profile used by search, applicants, Shop Talk, and linked Contacts. Email, phone, exact address, and all private records remain excluded; production proof is pending. |
-| GA-PRO-006 | Profile photos/portfolio use authorized private media | Partial | Packet 81 adds account-owned managed avatar and portfolio media, signed reads, private-by-default work proof, explicit publication/removal, file validation, cleanup, and hidden-GPS rejection. Production object-storage and live viewer proof remain pending. |
+| GA-PRO-005 | Availability and controlled contact visibility | Verified | Packet 81 adds dated private/network availability windows and exposes only chosen network windows through the authenticated profile used by search, applicants, Shop Talk, and linked Contacts. Production owner/viewer and block proofs confirm email, phone, exact address, evidence files, and private records remain excluded. |
+| GA-PRO-006 | Profile photos/portfolio use authorized private media | Verified | Packet 81 adds account-owned managed avatar and portfolio media, signed reads, private-by-default work proof, explicit publication/removal, file validation, cleanup, and hidden-GPS rejection. Production object-storage, viewer filtering, removal, and cleanup pass. |
 
 ## Application Shell and UX
 

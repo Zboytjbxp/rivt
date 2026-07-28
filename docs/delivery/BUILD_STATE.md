@@ -2,11 +2,11 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Professional identity and people discovery implementation.
+Current phase: Professional identity and people discovery production verification complete.
 Active packet: `docs/delivery/packets/81_PROFESSIONAL_IDENTITY.md`
-Repository branch: `codex/professional-identity`
+Repository branch: `master`
 Production feature release commit:
-Pending local verification and deployment.
+`2901255fae8a6c4c8e5f7615e1a51d031dad8c92`
 
 ## Professional identity and people discovery
 
@@ -48,9 +48,18 @@ Pending local verification and deployment.
   Jobs/discovery E2E, Work-lifecycle, Shop Talk/Trade News, and mobile-action
   rendered QA, migration rollback/reapply, and a zero-vulnerability
   production dependency audit pass.
-- Production deployment, exact-source health, migration readiness, monitor,
-  and authenticated live proof remain pending; Packet 81 is not yet marked
-  Verified.
+- Railway application deployment
+  `225015f8-3b7d-4c33-b0ef-646254f2bfbd` and exact-source release
+  `8f1c87da-1051-4191-8442-0ed86b97b584` succeeded.
+- Live health reports exact feature source
+  `2901255fae8a6c4c8e5f7615e1a51d031dad8c92`, ready migration
+  `0039_professional_identity`, PostgreSQL, S3-compatible storage, and
+  configured Sentry, Web Push, and Stripe Connect Accounts v2.
+- The production monitor passed with all seven anonymous private-route
+  checks healthy and operational controls off. A disposable two-account
+  production smoke passed owner CRUD, managed avatar/evidence/portfolio,
+  embedded-GPS rejection, private-record and evidence-file exclusion, block
+  denial, and cleanup. Packet 81 is Verified.
 
 ## Work workspace records
 

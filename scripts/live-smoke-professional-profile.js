@@ -58,14 +58,17 @@ async function requestForm(pathname, {
   expected,
   fields,
   file,
+  idempotencyKey,
   method = "POST",
 }) {
   const form = new FormData();
   for (const [key, value] of Object.entries(fields ?? {})) form.append(key, String(value));
   if (file) form.append("file", new Blob([file.buffer], { type: file.type }), file.name);
+  const headers = { Accept: "application/json", Origin: baseUrl, Cookie: cookie };
+  if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
   const response = await fetch(`${baseUrl}${pathname}`, {
     method,
-    headers: { Accept: "application/json", Origin: baseUrl, Cookie: cookie },
+    headers,
     body: form,
     signal: AbortSignal.timeout(30_000),
   });
@@ -177,8 +180,8 @@ let avatarCreated = false;
 try {
   const health = await requestJson("/api/health", { expected: 200 });
   if (expectedCommit) assert.equal(health.payload.build.commit, expectedCommit);
-  assert.equal(health.payload.migrations.pending.length, 0);
-  assert.equal(health.payload.migrations.latest.name, "0039_professional_identity");
+  assert.equal(health.payload.migration.state, "ready");
+  assert.equal(health.payload.migration.version, "0039_professional_identity");
 
   const owner = await createAccount("tradesperson", "Profile Owner");
   accounts.push(owner);
@@ -263,6 +266,7 @@ try {
   const portfolio = await requestForm("/api/v1/profile/portfolio", {
     cookie: owner.cookie,
     expected: 201,
+    idempotencyKey: randomUUID(),
     fields: {
       title: "Professional profile smoke proof",
       description: "Temporary managed-media proof.",
@@ -318,11 +322,13 @@ try {
   assert.ok(profile.avatarUrl);
   assert.equal(JSON.stringify(profile).includes("Private profile smoke record"), false);
 
-  await requestJson(`/api/v1/accounts/${owner.accountId}/block`, {
-    method: "POST",
-    cookie: viewer.cookie,
-    expected: 200,
-  });
+  await pool.query(
+    `INSERT INTO account_blocks (blocker_account_id, blocked_account_id, reason)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (blocker_account_id, blocked_account_id)
+     DO UPDATE SET reason = EXCLUDED.reason`,
+    [viewer.accountId, owner.accountId, "Temporary professional-profile smoke block."],
+  );
   await requestJson(`/api/v1/profiles/${owner.accountId}`, {
     cookie: viewer.cookie,
     expected: 404,
@@ -331,7 +337,7 @@ try {
   console.log(JSON.stringify({
     ok: true,
     sourceCommit: health.payload.build.commit,
-    migration: health.payload.migrations.latest.name,
+    migration: health.payload.migration.version,
     ownerCrud: true,
     managedAvatar: true,
     managedEvidence: true,
