@@ -100,5 +100,17 @@ real project records rather than browser-only lists.
   light, dark, and Extra Large text screenshots.
 - The production dependency audit reports zero known vulnerabilities and
   diff integrity passes.
-- Merge, Railway deployment, production migration, authenticated live proof,
-  and the exact-source monitor remain pending until they actually succeed.
+- Fast-forward merge to `master` and Railway application deployment
+  `dc493a93-4df9-4787-bf8a-7892c2ca0898` succeeded.
+- Exact-source release `48f49354-cf8b-4dd1-a5c5-29e59b68f155`
+  reports feature source
+  `ec784d5a35c60294792853e479d3fdb492e8c3d1`.
+- Production health reports migration `0038_project_workspace_records`
+  ready with PostgreSQL and S3-compatible storage healthy.
+- The exact-source production monitor passes all seven anonymous private
+  checks; anonymous workspace-record access returns `401`.
+- The disposable authenticated production project smoke passes participant
+  access, outsider denial, media evidence, confirmed and disputed completion,
+  persistence, relogin continuity, and cleanup. Workspace-record mutation
+  authorization, conflicts, archive/restore, notifications, and report
+  inclusion remain proven by the production-schema integration lifecycle.

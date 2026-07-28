@@ -210,6 +210,8 @@ async function createActiveWork(contractor, tradesperson, job, label) {
       startDate: "2026-07-02",
       scopeSummary: "Panel scope accepted through Packet 06 smoke.",
       message: "Confirm and start the closeout record.",
+      agreedAmountCents: 95000,
+      agreedUnit: "fixed",
     },
   });
   const accepted = await requestJson(`/api/v1/offers/${offer.payload.data.offer.id}/accept`, {

@@ -62,8 +62,7 @@ Packet 80 closes the device-only accepted-job record boundary:
   records;
 - conflict-safe, idempotent multi-device mutations.
 
-Status: **Locally verified; all repository gates pass and the production
-deployment boundary is being completed.**
+Status: **Production deployed and exact-source verified at `ec784d5`.**
 
 ### Next 1 — Professional identity and people discovery
 

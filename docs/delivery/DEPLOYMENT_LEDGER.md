@@ -3248,3 +3248,45 @@ Add one entry per staging/production deployment.
   private-route checks healthy and operational controls disabled. Anonymous
   job-contact access returned `401`; the live Contact picker, Work, and Tools
   chunks contain the shipped workflow markers.
+
+# Current Production - Work Workspace Records
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-27 America/New_York
+- Deployer: Codex through `codex/work-workspace-records`, fast-forward merge
+  to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `ec784d5a35c60294792853e479d3fdb492e8c3d1`
+- Railway deployments: application source build
+  `dc493a93-4df9-4787-bf8a-7892c2ca0898`; exact-source release
+  `48f49354-cf8b-4dd1-a5c5-29e59b68f155`
+- Migration version before/after:
+  `0037_contact_link_integrity` -> `0038_project_workspace_records`
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, Stripe Connect,
+  email, moderation, and rollout controls were preserved.
+- Rollback target:
+  `770f88504b38e2435354757334a429ae8cf74d6c`. Roll the application back
+  before applying `migrations/0038_project_workspace_records.down.sql`; the
+  down migration removes the two additive workspace tables.
+- Automated gates: production build, application/security lint, 104
+  unit/frontend tests, all 21 serial PostgreSQL integration suites,
+  migration rollback/reapply, fail-closed authentication plus Jobs/discovery
+  E2E, focused Tools, Shop Talk/Trade News, mobile-action, guest-preview, and
+  Work-lifecycle rendered QA, diff integrity, and a zero-vulnerability
+  production dependency audit passed.
+- Product evidence: accepted Work now owns canonical checklist, milestone,
+  change-order, and shared/private note records with participant, author,
+  and contractor authorization, exact cents, optimistic conflicts,
+  idempotency, append-only history, counterpart notifications,
+  archive/restore, explicit legacy migration, and closeout-report inclusion
+  without private-note leakage.
+- Post-deploy proof: live `/api/health` returned exact source
+  `ec784d5a35c60294792853e479d3fdb492e8c3d1` with
+  `0038_project_workspace_records` ready, PostgreSQL and S3-compatible
+  storage healthy, and configured Sentry, Web Push, and Stripe Connect
+  Accounts v2. The production monitor passed with all seven anonymous
+  private-route checks healthy and operational controls disabled. Anonymous
+  workspace-record access returned `401`. A disposable authenticated project
+  lifecycle passed participant access, outsider denial, media, completion,
+  dispute, persistence, relogin, and cleanup.

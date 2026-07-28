@@ -2,11 +2,11 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Work workspace records are locally verified and awaiting deployment.
+Current phase: Work workspace records are production deployed and exact-source verified.
 Active packet: `docs/delivery/packets/80_WORK_WORKSPACE_RECORDS.md`
 Repository branch: `codex/work-workspace-records`
 Production feature release commit:
-Pending final verification and deployment.
+`ec784d5a35c60294792853e479d3fdb492e8c3d1`
 
 ## Work workspace records
 
@@ -46,8 +46,21 @@ Pending final verification and deployment.
 - Fail-closed authentication plus Jobs/discovery E2E pass, the production
   dependency audit reports zero known vulnerabilities, and diff integrity
   passes.
-- Merge, deployment, production migration, authenticated live proof, and
-  exact-source health are pending and are not yet claimed.
+- Fast-forward merge to `master` deployed through Railway application build
+  `dc493a93-4df9-4787-bf8a-7892c2ca0898` and exact-source release
+  `48f49354-cf8b-4dd1-a5c5-29e59b68f155`.
+- Live health reports exact source
+  `ec784d5a35c60294792853e479d3fdb492e8c3d1`, ready migration
+  `0038_project_workspace_records`, PostgreSQL, S3-compatible storage, and
+  configured Sentry, Web Push, and Stripe Connect Accounts v2.
+- The production monitor passed with all seven anonymous private-route
+  checks healthy and operational controls off. The new workspace-record
+  route rejects anonymous access with `401`.
+- A disposable authenticated production project lifecycle passed participant
+  access, outsider denial, evidence, completion, dispute, persistence, and
+  cleanup. The live smoke fixture was corrected to provide the now-required
+  agreed offer amount and unit; production had properly rejected the stale
+  fixture with `422`.
 
 ## Contacts completion
 

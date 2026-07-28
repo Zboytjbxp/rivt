@@ -2834,3 +2834,29 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `0036_canonical_contacts` ready; the seven-check synthetic monitor,
   anonymous job-contact authorization check, and live Contact/Work/Tools
   bundle inspection pass.
+
+## Traceability Addendum - 2026-07-27 Work Workspace Records
+
+- `GA-DATA-001` gains canonical, versioned accepted-job checklist,
+  milestone, change-order, and note records plus append-only record events.
+- `GA-AUTH-007` gains participant-only workspace reads and writes,
+  author-only private notes, contractor-only milestone mutation and
+  change-order decisions, and fail-closed outsider behavior.
+- `GA-UX-005` gains honest multi-device state: required optimistic versions,
+  idempotent mutation, explicit local-record migration, device-only unsent
+  drafts, reversible archive, immutable history, and manual-payment wording.
+- `GA-UX-006` gains rendered mobile light, dark, and Extra Large evidence for
+  create, edit, archive, restore, exact milestone cents, and fixed-navigation
+  clearance.
+- Closeout report v2 includes authorized shared records and their history
+  while excluding private notes.
+- Local evidence includes production build, application/security lint, 104
+  unit/frontend tests, all 21 serial PostgreSQL integration suites,
+  migration rollback/reapply, fail-closed authentication plus Jobs/discovery
+  E2E, focused rendered QA, diff integrity, and a zero-vulnerability
+  production dependency audit.
+- Production exact-source health reports
+  `ec784d5a35c60294792853e479d3fdb492e8c3d1` with
+  `0038_project_workspace_records` ready. The seven-check monitor,
+  anonymous workspace authorization probe, and disposable authenticated
+  project lifecycle pass.
