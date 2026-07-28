@@ -306,6 +306,11 @@
   margin-left: auto;
 }
 
+.rivt-empty-action > button,
+.rivt-empty-action > a {
+  min-height: 44px;
+}
+
 .rivt-metric-tile {
   display: flex;
   align-items: center;

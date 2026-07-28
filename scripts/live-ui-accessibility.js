@@ -232,7 +232,9 @@ async function collectUiAudit(page, label) {
     const fields = [...document.querySelectorAll("input,select,textarea")]
       .filter((el) => visible(el) && !["button", "checkbox", "hidden", "image", "radio", "reset", "submit"].includes(String(el.type || "").toLowerCase()));
     const controls = interactive.map((el) => {
-      const rect = el.getBoundingClientRect();
+      const labeledTarget = el.matches("input,select,textarea") ? el.closest("label") : null;
+      const target = labeledTarget && visible(labeledTarget) ? labeledTarget : el;
+      const rect = target.getBoundingClientRect();
       return {
         name: textOf(el),
         tag: el.tagName.toLowerCase(),
