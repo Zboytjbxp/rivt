@@ -182,23 +182,29 @@ async function firstVisibleClick(page, label) {
 }
 
 async function clickVisibleControl(page, { pattern, flags = "i", description }) {
-  const count = await page.evaluate(({ pattern: patternText, flags: patternFlags }) => {
-    const matcher = new RegExp(patternText, patternFlags);
-    function textOf(el) {
-      return (el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent || el.getAttribute("placeholder") || "")
-        .replace(/\s+/g, " ")
-        .trim();
-    }
-    function visible(el) {
-      const rect = el.getBoundingClientRect();
-      const style = window.getComputedStyle(el);
-      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
-    }
-    const matches = [...document.querySelectorAll("button,a,input,[role='button']")]
-      .filter((el) => visible(el) && matcher.test(textOf(el)));
-    matches.at(-1)?.click();
-    return matches.length;
-  }, { pattern, flags });
+  let count = 0;
+  const deadline = Date.now() + 5000;
+  do {
+    count = await page.evaluate(({ pattern: patternText, flags: patternFlags }) => {
+      const matcher = new RegExp(patternText, patternFlags);
+      function textOf(el) {
+        return (el.getAttribute("aria-label") || el.getAttribute("title") || el.textContent || el.getAttribute("placeholder") || "")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+      function visible(el) {
+        const rect = el.getBoundingClientRect();
+        const style = window.getComputedStyle(el);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+      }
+      const matches = [...document.querySelectorAll("button,a,input,[role='button']")]
+        .filter((el) => visible(el) && matcher.test(textOf(el)));
+      matches.at(-1)?.click();
+      return matches.length;
+    }, { pattern, flags });
+    if (count > 0) break;
+    await page.waitForTimeout(200);
+  } while (Date.now() < deadline);
   assert.ok(count > 0, `No visible ${description} control was found.`);
   await page.waitForTimeout(350);
 }
