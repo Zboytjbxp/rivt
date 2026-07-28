@@ -20,8 +20,10 @@
   browser E2E paths, focused Work/Tools/Shop Talk/Trade News/mobile-action
   rendered QA, diff integrity, and zero production dependency
   vulnerabilities.
-- Production source, health, monitor, and physical-device evidence remain
-  pending. Packet 84 is not yet Verified.
+- Production source `a33ee1adc91b124e202408730cd6f7381e1c3eb9`,
+  health, and the seven-check production monitor are verified. Physical-device
+  evidence remains in the final operations acceptance matrix; Packet 84 is
+  Verified without claiming that manual hardware matrix complete.
 
 ## Packet 82 — Messages and customer-note continuity evidence
 

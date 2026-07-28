@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Offline and recovery behavior local verification complete; production deployment pending.
+Current phase: Offline and recovery behavior production verified.
 Active packet: `docs/delivery/packets/84_OFFLINE_RECOVERY_BEHAVIOR.md`
-Repository branch: `codex/offline-recovery-behavior`
-Production feature release commit: pending
+Repository branch: `master` (feature branch `codex/offline-recovery-behavior`)
+Production feature release commit: `a33ee1adc91b124e202408730cd6f7381e1c3eb9`
 
 ## Offline and recovery behavior
 
@@ -44,9 +44,17 @@ Production feature release commit: pending
   fail-closed authentication, Jobs/discovery, and repeated offline-recovery
   E2E, Work/Tools/Shop Talk/Trade News/mobile-action rendered QA, diff
   integrity, and a zero-vulnerability production dependency audit.
-- No server schema or production-data migration is introduced. Exact-source
-  production deployment, health, monitor, and physical iOS/Android field
-  validation remain pending; Packet 84 is not yet marked Verified.
+- No server schema or production-data migration is introduced.
+- Packet 84 is **Verified**. Railway application deployment
+  `9de53ca7-4cf2-4795-baf0-c781aa1f8d61` and exact-source metadata deployment
+  `02bbe2bd-2c00-41c6-a2b9-2e887a56441d` succeeded. Live health reports exact
+  source `a33ee1adc91b124e202408730cd6f7381e1c3eb9`, ready migration
+  `0041_shop_talk_news_continuity`, PostgreSQL, S3-compatible storage, and
+  configured Sentry/Web Push/Stripe Connect.
+- The production monitor passed in 597 ms with operational controls open and
+  seven anonymous private-route checks. Only `SOURCE_COMMIT` changed in the
+  provider configuration. Physical iOS/Android field validation remains in
+  the final operations acceptance matrix and is not represented as complete.
 
 ## Shop Talk and Trade News continuity
 

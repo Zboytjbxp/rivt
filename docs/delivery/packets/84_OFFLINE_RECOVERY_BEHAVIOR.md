@@ -103,4 +103,22 @@ Before advancing, explicitly review:
    disappearing. Native quota denial produces actionable copy, and every row
    has an explicit discard action.
 
-Packet status: **Local verification complete; production deployment pending**.
+## Production evidence
+
+- Feature source:
+  `a33ee1adc91b124e202408730cd6f7381e1c3eb9`
+- Railway application deployment:
+  `9de53ca7-4cf2-4795-baf0-c781aa1f8d61`
+- Railway exact-source metadata deployment:
+  `02bbe2bd-2c00-41c6-a2b9-2e887a56441d`
+- Live `/api/health` returned the exact feature source, ready migration
+  `0041_shop_talk_news_continuity`, PostgreSQL, S3-compatible storage, and
+  configured Sentry, Web Push, and Stripe Connect.
+- `EXPECTED_SOURCE_COMMIT=a33ee1adc91b124e202408730cd6f7381e1c3eb9
+  npm run monitor:production` passed in 597 ms with operational controls open
+  and seven anonymous private-route checks.
+- Only `SOURCE_COMMIT` changed in Railway configuration. Physical iOS/Android
+  field validation remains in the final operations acceptance matrix and is
+  not represented as complete.
+
+Packet status: **Verified**.

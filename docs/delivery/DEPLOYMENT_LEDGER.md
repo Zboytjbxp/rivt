@@ -1,5 +1,40 @@
 # Deployment Ledger
 
+## 2026-07-28 - Offline Recovery Behavior
+
+- Production feature source commit:
+  `a33ee1adc91b124e202408730cd6f7381e1c3eb9`
+- Branch: `master` (source branch: `codex/offline-recovery-behavior`)
+- Railway application deployment:
+  `9de53ca7-4cf2-4795-baf0-c781aa1f8d61`
+- Railway exact-source metadata deployment:
+  `02bbe2bd-2c00-41c6-a2b9-2e887a56441d`
+- Production: `https://rivt.pro`
+- Scope: account-scoped IndexedDB recovery for Work punch-list items and
+  notes, coalesced Daily Logs, accepted-work photos, private-album photos,
+  explicit retry/discard/conflict states, stable replay idempotency, cached
+  offline account/Work reopening, bounded photo storage, and atomic service
+  worker shell activation.
+- Migration before/after: unchanged at
+  `0041_shop_talk_news_continuity`.
+- Automated gates: production build, application/security lint, 113
+  unit/frontend tests, all 22 serial PostgreSQL integration suites, three
+  browser E2E paths, focused Work/Tools/Shop Talk/Trade News/mobile-action
+  rendered suites, diff integrity, and zero known production dependency
+  vulnerabilities passed.
+- Post-deploy proof: `/api/health` returned exact source `a33ee1a`, ready
+  migration `0041_shop_talk_news_continuity`, PostgreSQL/S3-compatible
+  storage, and configured Sentry/Web Push/Stripe Connect. The production
+  monitor passed in 597 ms with operational controls open and seven anonymous
+  private-route checks.
+- Provider/config change: only `SOURCE_COMMIT` advanced to the immutable
+  feature SHA. No auth, payment, email, storage, analytics, moderation, or
+  rollout credential changed.
+- Rollback target:
+  `9f42f0e218997989f1c047f98eebc7d2d6b5ab5`; source rollback only. IndexedDB
+  outbox rows remain account-scoped for a later compatible build rather than
+  being silently deleted.
+
 ## 2026-07-28 - Shop Talk and Trade News Continuity
 
 - Production feature source commit:

@@ -142,7 +142,7 @@ Evidence:
 - Field use on unstable jobsites is a defining RIVT context; a cached shell
   alone must not be described as offline work support.
 
-Completed locally:
+Completed:
 
 - field-critical punch-list items, job notes, Daily Logs, accepted-work
   photos, and private-album photos use one account-scoped outbox;
@@ -156,8 +156,11 @@ Completed locally:
   delivery, and payments remain online-only;
 - calculator tape measurements remain intentionally device-local.
 
-Status: **Local verification complete; production deployment and physical
-iOS/Android field validation pending.**
+Status: **Production deployed and exact-source verified at `a33ee1a`.**
+The production monitor, all 22 serial PostgreSQL integration suites, three
+browser E2E paths, focused rendered Work/Tools/mobile/Shop Talk suites, and
+the dependency audit pass. Physical iOS/Android field validation remains in
+the final operations acceptance matrix and is not claimed here.
 
 ### Next 4 — Security, accessibility, and operations closure
 
@@ -201,7 +204,7 @@ Completion boundary:
 ## Current launch statement
 
 RIVT is **not yet 100% product-complete** under this definition. Offline and
-recovery behavior is the current completion packet. The machine
-launch-readiness and incident-readiness gates pass, but they do not override
-the unfinished security/accessibility/operations closure, final architecture
-subtraction, and physical-device acceptance items above.
+recovery behavior is production verified. Security/accessibility/operations
+closure is next. The machine launch-readiness and incident-readiness gates
+pass, but they do not override the unfinished final architecture subtraction
+and physical-device acceptance items above.
