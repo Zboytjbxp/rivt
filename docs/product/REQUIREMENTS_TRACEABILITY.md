@@ -2931,3 +2931,29 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   `0038_project_workspace_records` ready. The seven-check monitor,
   anonymous workspace authorization probe, and disposable authenticated
   project lifecycle pass.
+
+## Traceability Addendum - 2026-07-28 Shop Talk and Trade News Continuity
+
+- `GA-DATA-001` gains versioned account-owned Trade News preferences and
+  saved-article snapshots plus structured canonical article fields on Shop
+  Talk posts. Browser `rivt.news.*` values are a cache or an explicitly
+  migrated legacy source, never the only signed-in copy.
+- `GA-AUTH-007` gains owner-only preference and saved-article mutation,
+  public-audience community enforcement for shared article discussions, and
+  audience/moderation filtering on indexed discussion lookup.
+- `GA-COM-001` and `GA-COM-003` gain one canonical cross-role discussion per
+  article. Server canonicalization, an active-post uniqueness index, and
+  conflict responses carrying the existing post ID prevent duplicate
+  conversations without inventing engagement.
+- `GA-UX-005` gains loss-safe continuity and article honesty: a device choice
+  is never silently overwritten, failed migration retains local state,
+  saved records contain only known publisher metadata, and structured posts
+  keep the article link separate from the member's comment.
+- `GA-UX-006` gains rendered desktop and 390px evidence for fresh-account
+  sync, explicit old-device migration, Saved continuity, structured
+  discussion reuse, and light/dark presentation.
+- Requirement maturity does not change. Local evidence includes production
+  build, application/security lint, 112 unit/frontend tests, all 22 serial
+  PostgreSQL integration suites, migration rollback/reapply, fail-closed
+  authentication plus Jobs/discovery E2E, focused rendered QA, diff
+  integrity, and a zero-vulnerability production dependency audit.

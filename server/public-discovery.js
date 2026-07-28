@@ -197,8 +197,21 @@ function parseArticleBody(body) {
   };
 }
 
+function safeHostname(value) {
+  try {
+    return new URL(value).hostname.replace(/^www\./i, "");
+  } catch {
+    return "";
+  }
+}
+
 function publicPostProjection(row, answers = [], imageUrl = null) {
   const parsed = parseArticleBody(row.body);
+  const structuredArticle = row.article_url ? {
+    url: row.article_url,
+    domain: safeHostname(row.article_url) || "Linked article",
+    source: row.article_source || safeHostname(row.article_url) || "Linked article",
+  } : null;
   return {
     id: row.id,
     author: publicContentRisks([row.author_name]).length ? "RIVT member" : row.author_name,
@@ -207,7 +220,7 @@ function publicPostProjection(row, answers = [], imageUrl = null) {
     type: row.post_type,
     title: row.title,
     body: parsed.content,
-    article: parsed.article,
+    article: structuredArticle ?? parsed.article,
     status: row.status,
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
@@ -228,6 +241,7 @@ function publicPostProjection(row, answers = [], imageUrl = null) {
 const publicPostSelect = `
   SELECT post.id, post.author_name, post.trade, post.flair, post.post_type,
          post.title, post.body, post.status, post.created_at, post.updated_at,
+         post.article_url, post.article_source,
          community.slug AS community_slug, community.name AS community_name,
          COALESCE(answer_count.count, 0)::int AS answer_count,
          media.object_key AS image_object_key, media.alt_text AS image_alt_text,

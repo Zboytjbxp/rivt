@@ -57,9 +57,17 @@ import {
 } from "../../app-shell/app-icons";
 import { ZoomableImage } from "../../components/ZoomableImage";
 import {
-  buildArticleDiscussionBody,
-  parseShopTalkPostBody,
+  shopTalkPostContent,
 } from "./shop-talk-post-content";
+import { findShopTalkArticleDiscussions } from "./shop-talk-api";
+import {
+  loadTradeNewsContinuity,
+  removeTradeNewsArticle,
+  saveLegacyTradeNewsUrl,
+  saveTradeNewsArticle,
+  saveTradeNewsPreference,
+  type SavedTradeNewsArticle,
+} from "./trade-news-api";
 import "./shop-talk.css";
 
 const NEWS_RENDER_NOW = Date.now();
@@ -71,6 +79,7 @@ interface AccountProfile {
 
 export interface NewsItem {
   id: number;
+  canonicalUrl?: string;
   headline: string;
   source: string;
   date: string;
@@ -133,6 +142,10 @@ export interface CommunityPost {
   viewerCanDelete?: boolean;
   webVisibility?: "members" | "public";
   publicWebPublishedAt?: string | null;
+  articleUrl?: string | null;
+  articleCanonicalUrl?: string | null;
+  articleSource?: string | null;
+  articlePublishedAt?: string | null;
 }
 
 export type PostFlair = "Question" | "Discussion" | "Code Talk" | "Compliance" | "Tip" | "Humor";
@@ -196,6 +209,41 @@ interface NewsResource {
 }
 
 type NewsChannel = "for-you" | "local" | "critical" | "following" | "saved";
+type NewsContinuityStatus = "loading" | "ready" | "saving" | "saved" | "error";
+
+const NEWS_LOCAL_STORAGE_KEYS = [
+  "rivt.news.category.v1",
+  "rivt.news.trade.v1",
+  "rivt.news.scope.v1",
+  "rivt.news.location.v1",
+  "rivt.news.followedTrades.v1",
+  "rivt.news.followedTopics.v1",
+  "rivt.news.savedUrls.v1",
+] as const;
+const NEWS_ACCOUNT_PREFERENCE_SIGNATURE_KEY = "rivt.news.accountPreferenceSignature.v1";
+const NEWS_ACCOUNT_SAVED_SIGNATURE_KEY = "rivt.news.accountSavedSignature.v1";
+
+function newsPreferenceSignature(value: {
+  scope: "local" | "all";
+  location: string;
+  category: string;
+  trade: string;
+  followedTrades: string[];
+  followedTopics: string[];
+}) {
+  return JSON.stringify({
+    scope: value.scope,
+    location: value.location.trim(),
+    category: value.category,
+    trade: value.trade,
+    followedTrades: [...value.followedTrades].sort(),
+    followedTopics: [...value.followedTopics].sort(),
+  });
+}
+
+function savedNewsSignature(values: Iterable<string>) {
+  return JSON.stringify([...values].map(canonicalNewsUrl).filter(Boolean).sort());
+}
 
 function newsItemTrades(item: NewsItem) {
   if (item.trades?.length) return item.trades;
@@ -229,6 +277,34 @@ function canonicalNewsUrl(value: string) {
   } catch {
     return "";
   }
+}
+
+function savedArticleNewsItem(article: SavedTradeNewsArticle, index: number): NewsItem {
+  let domain = article.source.trim();
+  if (!domain) {
+    try {
+      domain = new URL(article.url).hostname.replace(/^www\./i, "");
+    } catch {
+      domain = "Saved publisher";
+    }
+  }
+  return {
+    id: -1_000_000 - index,
+    canonicalUrl: article.canonicalUrl,
+    headline: article.headline.trim() || domain,
+    source: domain,
+    date: article.publishedAt ? new Date(article.publishedAt).toLocaleDateString() : "Saved article",
+    publishedAt: article.publishedAt ?? undefined,
+    summary: "",
+    url: article.url,
+    category: article.category || "Industry news",
+    trades: article.trades,
+    topics: article.topics,
+    impactLevel: "routine",
+    sourceKind: "publisher",
+    thumbnailUrl: article.thumbnailUrl ?? undefined,
+    thumbnailKind: article.thumbnailUrl ? "article" : "fallback",
+  };
 }
 
 function relativeNewsTime(item: NewsItem, now = Date.now()) {
@@ -477,15 +553,19 @@ function ShopTalkNewPostModal({
   initialFlair?: PostFlair;
   initialTitle?: string;
   initialBody?: string;
-  articleContext?: Pick<NewsItem, "headline" | "source" | "date" | "url"> | null;
+  articleContext?: Pick<NewsItem, "headline" | "source" | "date" | "publishedAt" | "url"> | null;
   communities: CommunityDisplay[];
   initialCommunitySlug?: string | null;
   onClose: () => void;
-  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null, webVisibility?: "members" | "public") => void;
+  onSubmit: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null, webVisibility?: "members" | "public", article?: { url: string; source: string; publishedAt?: string | null } | null) => void;
 }) {
   const posterDefaultTrade = profile.specialties[0] ?? selectedJobTrade;
-  const initialPostCommunitySlug = initialCommunitySlug ?? communities[0]?.slug ?? null;
-  const initialPostCommunity = communities.find((community) => community.slug === initialPostCommunitySlug) ?? null;
+  const availableCommunities = articleContext
+    ? communities.filter((community) => community.audience === "public")
+    : communities;
+  const requestedCommunity = availableCommunities.find((community) => community.slug === initialCommunitySlug);
+  const initialPostCommunitySlug = requestedCommunity?.slug ?? availableCommunities[0]?.slug ?? null;
+  const initialPostCommunity = availableCommunities.find((community) => community.slug === initialPostCommunitySlug) ?? null;
   const [flair, setFlair] = useState<PostFlair>(initialFlair);
   const [title, setTitle] = useState(initialTitle);
   const [trade, setTrade] = useState<Trade | "General">(() => inferCommunityDefaultTrade(initialPostCommunity, posterDefaultTrade));
@@ -498,7 +578,7 @@ function ShopTalkNewPostModal({
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState("");
   const [webVisibility, setWebVisibility] = useState<"members" | "public">("members");
-  const selectedPostCommunity = communities.find((community) => community.slug === selectedPostCommunitySlug) ?? null;
+  const selectedPostCommunity = availableCommunities.find((community) => community.slug === selectedPostCommunitySlug) ?? null;
   const publicWebAllowed = allowPublicWeb && selectedPostCommunity?.audience === "public";
   const canSubmit = title.trim().length > 0 && (
     body.trim().length > 0
@@ -576,13 +656,13 @@ function ShopTalkNewPostModal({
               value={selectedPostCommunitySlug ?? ""}
               onChange={(e) => {
                 const nextSlug = e.target.value || null;
-                const nextCommunity = communities.find((community) => community.slug === nextSlug) ?? null;
+                const nextCommunity = availableCommunities.find((community) => community.slug === nextSlug) ?? null;
                 setSelectedPostCommunitySlug(nextSlug);
                 setTrade(inferCommunityDefaultTrade(nextCommunity, posterDefaultTrade));
                 if (nextCommunity?.audience !== "public") setWebVisibility("members");
               }}
             >
-              {communities.map((community) => (
+              {availableCommunities.map((community) => (
                 <option key={community.slug} value={community.slug}>{community.name}</option>
               ))}
             </select>
@@ -736,9 +816,7 @@ function ShopTalkNewPostModal({
                   flair,
                   title.trim(),
                   trade,
-                  articleContext
-                    ? buildArticleDiscussionBody(body, articleContext)
-                    : body.trim(),
+                  body.trim(),
                   postType,
                   postType === "sub-request" ? subTrade : undefined,
                   postType === "sub-request" ? subLocation : undefined,
@@ -746,6 +824,11 @@ function ShopTalkNewPostModal({
                   selectedPostCommunitySlug,
                   photoFile,
                   webVisibility,
+                  articleContext ? {
+                    url: articleContext.url,
+                    source: articleContext.source,
+                    publishedAt: articleContext.publishedAt ?? null,
+                  } : null,
                 );
                 onClose();
               }
@@ -817,7 +900,7 @@ export function ShopTalkView({
   onReportPost: (postId: string, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
   onReportAnswer: (postId: string, answerId: string, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
   onReportCommunity: (community: CommunityDisplay, reason: CommunityReport["reason"], note?: string) => void | Promise<void>;
-  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null, webVisibility?: "members" | "public") => void | Promise<void>;
+  onNewPost: (flair: PostFlair, title: string, trade: Trade | "General", body: string, postType: PostType, subTrade?: string, subLocation?: string, subRate?: string, communitySlug?: string | null, photoFile?: File | null, webVisibility?: "members" | "public", article?: { url: string; source: string; publishedAt?: string | null } | null) => void | Promise<void>;
   onDeletePost: (postId: string) => boolean | Promise<boolean>;
   onSetPostWebVisibility: (postId: string, webVisibility: "members" | "public") => boolean | Promise<boolean>;
   onCommunityCreated: (community: ServerCommunity) => void;
@@ -868,7 +951,23 @@ export function ShopTalkView({
   const [newsSearchOpen, setNewsSearchOpen] = useState(false);
   const [followedNewsTrades, setFollowedNewsTrades] = useState<Set<string>>(() => readStringSet("rivt.news.followedTrades.v1"));
   const [followedNewsTopics, setFollowedNewsTopics] = useState<Set<string>>(() => readStringSet("rivt.news.followedTopics.v1"));
-  const [savedNewsUrls, setSavedNewsUrls] = useState<Set<string>>(() => readStringSet("rivt.news.savedUrls.v1"));
+  const [savedNewsUrls, setSavedNewsUrls] = useState<Set<string>>(() => new Set(
+    [...readStringSet("rivt.news.savedUrls.v1")].map(canonicalNewsUrl).filter(Boolean),
+  ));
+  const [savedNewsArticles, setSavedNewsArticles] = useState<SavedTradeNewsArticle[]>([]);
+  const [newsContinuityStatus, setNewsContinuityStatus] = useState<NewsContinuityStatus>(isGuest ? "ready" : "loading");
+  const [newsContinuityMessage, setNewsContinuityMessage] = useState(isGuest
+    ? "Sign in to keep this briefing across devices."
+    : "Loading your account briefing...");
+  const [newsLegacyMovePending, setNewsLegacyMovePending] = useState(false);
+  const [newsContinuityLoaded, setNewsContinuityLoaded] = useState(Boolean(isGuest));
+  const [newsContinuityAttempt, setNewsContinuityAttempt] = useState(0);
+  const hadDeviceNewsChoicesRef = useRef(NEWS_LOCAL_STORAGE_KEYS.some((key) => localStorage.getItem(key) != null));
+  const newsPreferenceVersionRef = useRef(0);
+  const newsPreferenceSaveChainRef = useRef<Promise<void>>(Promise.resolve());
+  const lastSavedNewsPreferenceRef = useRef("");
+  const newsContinuityLoadStartedRef = useRef(-1);
+  const [serverNewsThreadMatches, setServerNewsThreadMatches] = useState<Map<string, { postId: string; replies: number }>>(new Map());
   const [liveNews, setLiveNews] = useState<NewsItem[]>([]);
   const [newsResources, setNewsResources] = useState<NewsResource[]>([]);
   const [newsFetchedAt, setNewsFetchedAt] = useState<number | null>(null);
@@ -880,7 +979,23 @@ export function ShopTalkView({
   const [showBookmarked, setShowBookmarked] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filterType, setFilterType] = useState<PostType | "all">(() => readShopTalkFilterPrefs().filterType);
-  const displayNews = liveNews.length ? liveNews : newsItems;
+  const sourceNews = useMemo(() => liveNews.length ? liveNews : newsItems, [liveNews, newsItems]);
+  const savedSnapshotNews = useMemo(
+    () => savedNewsArticles.map(savedArticleNewsItem),
+    [savedNewsArticles],
+  );
+  const displayNews = useMemo(() => {
+    if (newsChannel !== "saved") return sourceNews;
+    const merged = [...sourceNews];
+    const seen = new Set(sourceNews.map((item) => canonicalNewsUrl(item.url)).filter(Boolean));
+    for (const item of savedSnapshotNews) {
+      const canonicalUrl = canonicalNewsUrl(item.url);
+      if (!canonicalUrl || seen.has(canonicalUrl)) continue;
+      seen.add(canonicalUrl);
+      merged.push(item);
+    }
+    return merged;
+  }, [newsChannel, savedSnapshotNews, sourceNews]);
   const [selectedNewsId, setSelectedNewsId] = useState(displayNews[0]?.id ?? 0);
   const [mobileDetail, setMobileDetail] = useState(initialPostId != null || Boolean(initialAnswerQueue));
   const [newsDiscussContext, setNewsDiscussContext] = useState<NewsItem | null>(null);
@@ -918,6 +1033,145 @@ export function ShopTalkView({
     localStorage.setItem("rivt.news.followedTopics.v1", JSON.stringify([...followedNewsTopics]));
     localStorage.setItem("rivt.news.savedUrls.v1", JSON.stringify([...savedNewsUrls]));
   }, [followedNewsTopics, followedNewsTrades, savedNewsUrls]);
+
+  useEffect(() => {
+    if (isGuest || newsContinuityLoadStartedRef.current === newsContinuityAttempt) return;
+    newsContinuityLoadStartedRef.current = newsContinuityAttempt;
+    const devicePreference = {
+      scope: newsScope,
+      location: newsLocation,
+      category: newsCategory,
+      trade: newsTrade,
+      followedTrades: [...followedNewsTrades],
+      followedTopics: [...followedNewsTopics],
+    };
+    const devicePreferenceSignature = newsPreferenceSignature(devicePreference);
+    const deviceSavedSignature = savedNewsSignature(savedNewsUrls);
+    void loadTradeNewsContinuity().then(({ preference, savedArticles }) => {
+      setSavedNewsArticles(savedArticles);
+      if (preference) {
+        newsPreferenceVersionRef.current = preference.version;
+        const serverPreference = {
+          scope: preference.scope,
+          location: preference.location || userLocation,
+          category: preference.category,
+          trade: preference.trade,
+          followedTrades: preference.followedTrades,
+          followedTopics: preference.followedTopics,
+        };
+        const serverPreferenceSignature = newsPreferenceSignature(serverPreference);
+        const serverSavedSignature = savedNewsSignature(savedArticles.map((article) => article.canonicalUrl));
+        const deviceDiffers = hadDeviceNewsChoicesRef.current && (
+          localStorage.getItem(NEWS_ACCOUNT_PREFERENCE_SIGNATURE_KEY) !== devicePreferenceSignature
+          || localStorage.getItem(NEWS_ACCOUNT_SAVED_SIGNATURE_KEY) !== deviceSavedSignature
+        );
+        lastSavedNewsPreferenceRef.current = serverPreferenceSignature;
+        if (deviceDiffers) {
+          setSavedNewsUrls((current) => new Set([
+            ...current,
+            ...savedArticles.map((article) => article.canonicalUrl),
+          ]));
+          setNewsLegacyMovePending(true);
+          setNewsContinuityMessage("This device has Trade News choices that differ from your account. Review and move them when ready.");
+        } else {
+          setSavedNewsUrls(new Set(savedArticles.map((article) => article.canonicalUrl)));
+          setNewsScope(serverPreference.scope);
+          setNewsLocation(serverPreference.location);
+          setNewsCategory(serverPreference.category);
+          setNewsTrade(serverPreference.trade);
+          setFollowedNewsTrades(new Set(serverPreference.followedTrades));
+          setFollowedNewsTopics(new Set(serverPreference.followedTopics));
+          localStorage.setItem(NEWS_ACCOUNT_PREFERENCE_SIGNATURE_KEY, serverPreferenceSignature);
+          localStorage.setItem(NEWS_ACCOUNT_SAVED_SIGNATURE_KEY, serverSavedSignature);
+          setNewsContinuityMessage("Your Trade News briefing is saved to your RIVT account.");
+        }
+      } else if (hadDeviceNewsChoicesRef.current) {
+        setSavedNewsUrls((current) => new Set([
+          ...current,
+          ...savedArticles.map((article) => article.canonicalUrl),
+        ]));
+        setNewsLegacyMovePending(true);
+        setNewsContinuityMessage("This device has older Trade News choices. Move them only when you are ready.");
+      } else {
+        setSavedNewsUrls(new Set(savedArticles.map((article) => article.canonicalUrl)));
+        localStorage.setItem(
+          NEWS_ACCOUNT_SAVED_SIGNATURE_KEY,
+          savedNewsSignature(savedArticles.map((article) => article.canonicalUrl)),
+        );
+        setNewsContinuityMessage("Your Trade News briefing is ready to save to your RIVT account.");
+      }
+      setNewsContinuityStatus("ready");
+      setNewsContinuityLoaded(true);
+    }).catch((error) => {
+      setNewsContinuityStatus("error");
+      setNewsContinuityMessage(error instanceof Error ? error.message : "Your account briefing could not be loaded.");
+      setNewsContinuityLoaded(true);
+    });
+  // The attempt token intentionally snapshots current device choices once per account load.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGuest, newsContinuityAttempt, userLocation]);
+
+  useEffect(() => {
+    if (isGuest || !newsContinuityLoaded || newsLegacyMovePending || newsContinuityStatus === "error") return;
+    const snapshot = {
+      scope: newsScope,
+      location: newsLocation.trim(),
+      category: newsCategory,
+      trade: newsTrade,
+      followedTrades: [...followedNewsTrades].sort(),
+      followedTopics: [...followedNewsTopics].sort(),
+    };
+    const signature = JSON.stringify(snapshot);
+    if (signature === lastSavedNewsPreferenceRef.current) return;
+    const timer = window.setTimeout(() => {
+      newsPreferenceSaveChainRef.current = newsPreferenceSaveChainRef.current.then(async () => {
+        setNewsContinuityStatus("saving");
+        try {
+          const saved = await saveTradeNewsPreference({
+            ...snapshot,
+            expectedVersion: newsPreferenceVersionRef.current,
+          });
+          newsPreferenceVersionRef.current = saved.version;
+          lastSavedNewsPreferenceRef.current = signature;
+          localStorage.setItem(NEWS_ACCOUNT_PREFERENCE_SIGNATURE_KEY, signature);
+          setNewsContinuityStatus("saved");
+          setNewsContinuityMessage("Your Trade News briefing is saved to your RIVT account.");
+        } catch (error) {
+          setNewsContinuityStatus("error");
+          setNewsContinuityMessage(error instanceof Error ? error.message : "Your briefing changes were not saved.");
+        }
+      });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [
+    followedNewsTopics,
+    followedNewsTrades,
+    isGuest,
+    newsCategory,
+    newsContinuityLoaded,
+    newsContinuityStatus,
+    newsLegacyMovePending,
+    newsLocation,
+    newsScope,
+    newsTrade,
+  ]);
+
+  useEffect(() => {
+    if (isGuest) return;
+    const urls = [...new Set(displayNews.map((item) => item.url).filter((url) => canonicalNewsUrl(url)))].slice(0, 50);
+    if (!urls.length) return;
+    let cancelled = false;
+    void findShopTalkArticleDiscussions(urls).then((discussions) => {
+      if (cancelled) return;
+      setServerNewsThreadMatches(new Map(discussions.map(({ canonicalUrl, post }) => [
+        canonicalUrl,
+        { postId: post.id, replies: post.answers?.length ?? 0 },
+      ])));
+    }).catch(() => {
+      // Loaded posts still provide a truthful legacy fallback when lookup is unavailable.
+    });
+    return () => { cancelled = true; };
+  }, [displayNews, isGuest]);
 
   const tradeFilters = ["All trades", "General", ...specialtyOptions];
   const primaryTrade = profile.specialties[0] ?? selectedJobTrade;
@@ -1120,6 +1374,96 @@ export function ShopTalkView({
     });
   }
 
+  function isNewsSaved(item: NewsItem) {
+    const canonicalUrl = canonicalNewsUrl(item.url);
+    return Boolean(canonicalUrl && savedNewsUrls.has(canonicalUrl));
+  }
+
+  async function toggleSavedNews(item: NewsItem) {
+    const canonicalUrl = canonicalNewsUrl(item.url);
+    if (!canonicalUrl) return;
+    const wasSaved = savedNewsUrls.has(canonicalUrl);
+    setSavedNewsUrls((current) => {
+      const next = new Set(current);
+      if (wasSaved) next.delete(canonicalUrl);
+      else next.add(canonicalUrl);
+      return next;
+    });
+    if (isGuest) return;
+    try {
+      if (wasSaved) {
+        await removeTradeNewsArticle(item.url);
+        setSavedNewsArticles((current) => current.filter((article) => article.canonicalUrl !== canonicalUrl));
+      } else {
+        const saved = await saveTradeNewsArticle(item);
+        setSavedNewsArticles((current) => [
+          saved,
+          ...current.filter((article) => article.canonicalUrl !== saved.canonicalUrl),
+        ]);
+      }
+      const nextSavedUrls = new Set(savedNewsUrls);
+      if (wasSaved) nextSavedUrls.delete(canonicalUrl);
+      else nextSavedUrls.add(canonicalUrl);
+      localStorage.setItem(NEWS_ACCOUNT_SAVED_SIGNATURE_KEY, savedNewsSignature(nextSavedUrls));
+      setNewsContinuityMessage(wasSaved
+        ? "Article removed from your RIVT account."
+        : "Article saved to your RIVT account.");
+      setNewsContinuityStatus("saved");
+    } catch (error) {
+      setSavedNewsUrls((current) => {
+        const next = new Set(current);
+        if (wasSaved) next.add(canonicalUrl);
+        else next.delete(canonicalUrl);
+        return next;
+      });
+      setNewsContinuityStatus("error");
+      setNewsContinuityMessage(error instanceof Error ? error.message : "That saved article change did not reach your account.");
+    }
+  }
+
+  async function moveDeviceNewsChoices() {
+    if (isGuest || !newsLegacyMovePending) return;
+    setNewsContinuityStatus("saving");
+    setNewsContinuityMessage("Moving this device's Trade News choices to your RIVT account...");
+    try {
+      const preferenceInput = {
+        scope: newsScope,
+        location: newsLocation.trim(),
+        category: newsCategory,
+        trade: newsTrade,
+        followedTrades: [...followedNewsTrades].sort(),
+        followedTopics: [...followedNewsTopics].sort(),
+      };
+      const savedPreference = await saveTradeNewsPreference({
+        ...preferenceInput,
+        expectedVersion: newsPreferenceVersionRef.current,
+      });
+      newsPreferenceVersionRef.current = savedPreference.version;
+      lastSavedNewsPreferenceRef.current = newsPreferenceSignature(preferenceInput);
+      localStorage.setItem(NEWS_ACCOUNT_PREFERENCE_SIGNATURE_KEY, newsPreferenceSignature(preferenceInput));
+      const migrated: SavedTradeNewsArticle[] = [...savedNewsArticles];
+      for (const url of savedNewsUrls) {
+        if (migrated.some((article) => article.canonicalUrl === url)) continue;
+        const matchingItem = sourceNews.find((item) => canonicalNewsUrl(item.url) === url);
+        const saved = matchingItem
+          ? await saveTradeNewsArticle(matchingItem)
+          : await saveLegacyTradeNewsUrl(url);
+        migrated.push(saved);
+      }
+      setSavedNewsArticles(migrated);
+      setSavedNewsUrls(new Set(migrated.map((article) => article.canonicalUrl)));
+      localStorage.setItem(NEWS_ACCOUNT_SAVED_SIGNATURE_KEY, savedNewsSignature(migrated.map((article) => article.canonicalUrl)));
+      setNewsLegacyMovePending(false);
+      setNewsContinuityStatus("saved");
+      setNewsContinuityMessage("This device's Trade News choices are now saved to your RIVT account.");
+    } catch (error) {
+      setNewsContinuityStatus("error");
+      setNewsContinuityMessage(error instanceof Error
+        ? `${error.message} Your device choices were kept.`
+        : "The move did not finish. Your device choices were kept.");
+    }
+  }
+
   function selectNewsChannel(channel: NewsChannel) {
     setNewsChannel(channel);
     if (channel === "local" && newsScope !== "local") {
@@ -1168,7 +1512,7 @@ export function ShopTalkView({
       itemTrades.some((trade) => followedNewsTrades.has(trade)) ||
       itemTopics.some((topic) => followedNewsTopics.has(topic))
     )) return false;
-    if (newsChannel === "saved" && !savedNewsUrls.has(item.url)) return false;
+    if (newsChannel === "saved" && !isNewsSaved(item)) return false;
     if (!normalizedNewsQuery) return true;
     return [item.headline, item.summary, item.source, item.category ?? "", item.urgency ?? "", item.date].join(" ").toLowerCase().includes(normalizedNewsQuery);
   }).sort((a, b) => {
@@ -1208,22 +1552,24 @@ export function ShopTalkView({
   const newsSourceCount = new Set(filteredNews.map((item) => item.source)).size;
   const criticalNewsCount = displayNews.filter((item) => ["critical", "high"].includes(item.impactLevel ?? "")).length;
   const newsThreadMatches = useMemo(() => {
-    const matches = new Map<string, { postId: string; replies: number }>();
-    for (const item of displayNews) {
-      const articleUrl = canonicalNewsUrl(item.url);
-      if (!articleUrl) continue;
-      const related = communityPosts.filter((post) => (
-        (post.body.match(/https?:\/\/[^\s)]+/g) ?? []).some((url) => canonicalNewsUrl(url) === articleUrl)
-      ));
-      if (related.length) {
+    const matches = new Map(serverNewsThreadMatches);
+    for (const post of communityPosts) {
+      const structuredUrl = post.articleCanonicalUrl || canonicalNewsUrl(post.articleUrl ?? "");
+      const legacyUrls = structuredUrl
+        ? [structuredUrl]
+        : (post.body.match(/https?:\/\/[^\s)]+/g) ?? []).map(canonicalNewsUrl).filter(Boolean);
+      for (const articleUrl of legacyUrls) {
+        const current = matches.get(articleUrl);
         matches.set(articleUrl, {
-          postId: related[0].id,
-          replies: related.reduce((sum, post) => sum + post.replies.length, 0),
+          postId: post.id,
+          replies: current?.postId === post.id
+            ? post.replies.length
+            : (current?.replies ?? 0) + post.replies.length,
         });
       }
     }
     return matches;
-  }, [communityPosts, displayNews]);
+  }, [communityPosts, serverNewsThreadMatches]);
   const newThisWeek = filteredNews.filter((item) => {
     const published = Date.parse(item.publishedAt ?? "");
     return Number.isFinite(published) && NEWS_RENDER_NOW - published <= 7 * 86_400_000;
@@ -1279,14 +1625,23 @@ export function ShopTalkView({
   function openNewsThread(item: NewsItem) {
     const match = newsThreadMatches.get(canonicalNewsUrl(item.url));
     if (!match) return;
-    setSelectedPostId(match.postId);
-    setActiveTab("talk");
-    setMobileDetail(true);
+    const open = () => {
+      setSelectedPostId(match.postId);
+      setActiveTab("talk");
+      setMobileDetail(true);
+    };
+    if (communityPosts.some((post) => post.id === match.postId)) {
+      open();
+      return;
+    }
+    void onLoadPost(match.postId).then((post) => {
+      if (post) open();
+    });
   }
   const selectedPostReactionState = selectedPost
     ? getPostReactionState(selectedPost)
     : { upvotes: 0, downvotes: 0, reaction: null, serverOwned: reactionStatus === "ready", pending: false };
-  const selectedPostContent = selectedPost ? parseShopTalkPostBody(selectedPost.body) : null;
+  const selectedPostContent = selectedPost ? shopTalkPostContent(selectedPost) : null;
   const canDeleteSelectedPost = Boolean(selectedPost && !selectedPost.badge && (
     selectedPost.viewerCanDelete === true
     || (selectedPost.viewerCanDelete == null && selectedPost.author === profile.displayName)
@@ -1376,8 +1731,8 @@ export function ShopTalkView({
         {item.url && item.url !== "#" ? (
           <a className="shop-news-source-link" href={item.url} target="_blank" rel="noreferrer"><ExternalLink size={12} />Read original</a>
         ) : null}
-        <button type="button" aria-label={savedNewsUrls.has(item.url) ? "Remove saved article" : "Save article"} aria-pressed={savedNewsUrls.has(item.url)} onClick={() => toggleNewsPreference(setSavedNewsUrls, item.url)}>
-          {savedNewsUrls.has(item.url) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
+        <button type="button" aria-label={isNewsSaved(item) ? "Remove saved article" : "Save article"} aria-pressed={isNewsSaved(item)} onClick={() => { void toggleSavedNews(item); }}>
+          {isNewsSaved(item) ? <BookmarkCheck size={14} /> : <Bookmark size={14} />}
         </button>
       </div>
     );
@@ -1397,8 +1752,8 @@ export function ShopTalkView({
           initialBody=""
           articleContext={newsDiscussContext}
           onClose={() => { setNewPostOpen(false); setNewsDiscussContext(null); }}
-          onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile, webVisibility) => {
-            void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile, webVisibility);
+          onSubmit={(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile, webVisibility, article) => {
+            void onNewPost(flair, title, trade, body, postType, subTrade, subLocation, subRate, communitySlug, photoFile, webVisibility, article);
             setNewPostOpen(false);
             setNewsDiscussContext(null);
           }}
@@ -1779,8 +2134,25 @@ export function ShopTalkView({
               {newsCustomizeOpen ? (
                 <section className="news-customize-panel" aria-label="Customize Trade News">
                   <div className="news-customize-heading">
-                    <div><strong>Build your briefing</strong><small>Follow any combination. Recommendations stay on this device.</small></div>
+                    <div><strong>Build your briefing</strong><small>Follow any combination. Signed-in choices stay with your RIVT account.</small></div>
                     <button type="button" className="v2-icon-button" onClick={() => setNewsCustomizeOpen(false)} aria-label="Close Trade News customization"><X size={16} /></button>
+                  </div>
+                  <div className={`news-continuity-status is-${newsContinuityStatus}`} role="status" aria-live="polite">
+                    <div>
+                      <strong>{newsLegacyMovePending ? "Device choices found" : isGuest ? "Device-only briefing" : "Account continuity"}</strong>
+                      <small>{newsContinuityMessage}</small>
+                    </div>
+                    {newsLegacyMovePending ? (
+                      <button type="button" disabled={newsContinuityStatus === "saving"} onClick={() => { void moveDeviceNewsChoices(); }}>
+                        {newsContinuityStatus === "saving" ? "Moving..." : "Move to my account"}
+                      </button>
+                    ) : newsContinuityStatus === "error" && !isGuest ? (
+                      <button type="button" onClick={() => {
+                        setNewsContinuityStatus("loading");
+                        setNewsContinuityMessage("Reloading your account briefing...");
+                        setNewsContinuityAttempt((current) => current + 1);
+                      }}>Retry account sync</button>
+                    ) : null}
                   </div>
                   <fieldset>
                     <legend>Coverage location</legend>
@@ -2285,9 +2657,9 @@ export function ShopTalkView({
                     <ExternalLink size={15} />
                   </a>
                 )}
-                <button type="button" className="news-save-detail" aria-pressed={savedNewsUrls.has(selectedNews.url)} onClick={() => toggleNewsPreference(setSavedNewsUrls, selectedNews.url)}>
-                  {savedNewsUrls.has(selectedNews.url) ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
-                  {savedNewsUrls.has(selectedNews.url) ? "Saved" : "Save for later"}
+                <button type="button" className="news-save-detail" aria-pressed={isNewsSaved(selectedNews)} onClick={() => { void toggleSavedNews(selectedNews); }}>
+                  {isNewsSaved(selectedNews) ? <BookmarkCheck size={15} /> : <Bookmark size={15} />}
+                  {isNewsSaved(selectedNews) ? "Saved" : "Save for later"}
                 </button>
                 <div className="shop-news-discuss">
                   <strong>Discuss this in Shop Talk</strong>

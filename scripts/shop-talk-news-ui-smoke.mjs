@@ -322,11 +322,19 @@ async function waitForServer() {
   throw new Error("Timed out waiting for Vite.");
 }
 
-async function configurePage(page) {
+async function configurePage(page, { legacyDeviceChoices = false } = {}) {
   await page.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ status: 200, contentType: "text/css", body: "" }));
-  await page.addInitScript((storageKey) => {
+  await page.addInitScript(({ storageKey, legacy }) => {
     window.localStorage.removeItem(storageKey);
-  }, reactionStorageKey);
+    for (const key of Object.keys(window.localStorage)) {
+      if (key.startsWith("rivt.news.")) window.localStorage.removeItem(key);
+    }
+    if (legacy) {
+      window.localStorage.setItem("rivt.news.scope.v1", "local");
+      window.localStorage.setItem("rivt.news.followedTrades.v1", JSON.stringify(["Electrical"]));
+      window.localStorage.setItem("rivt.news.savedUrls.v1", JSON.stringify(["https://www.osha.gov/heat-exposure?utm_source=device"]));
+    }
+  }, { storageKey: reactionStorageKey, legacy: legacyDeviceChoices });
   reactionLedger.clear();
   await page.route("http://127.0.0.1:8787/api/**", (route) =>
     route.fulfill({
@@ -529,6 +537,89 @@ async function configurePage(page) {
       body: JSON.stringify({ usedBytes: 0, objectCount: 0, plan: {} }),
     }),
   );
+  let preferenceVersion = 0;
+  await page.route("**/api/v1/trade-news/preferences", async (route) => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: { preference: null, savedArticles: [] } }),
+      });
+    }
+    const body = route.request().postDataJSON();
+    preferenceVersion += 1;
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          preference: {
+            scope: body.scope,
+            location: body.location,
+            category: body.category,
+            trade: body.trade,
+            followedTrades: body.followedTrades,
+            followedTopics: body.followedTopics,
+            version: preferenceVersion,
+            updatedAt: "2026-07-28T12:00:00.000Z",
+          },
+        },
+      }),
+    });
+  });
+  await page.route("**/api/v1/trade-news/saved-articles**", async (route) => {
+    if (route.request().method() === "DELETE") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { removed: true } }) });
+    }
+    const body = route.request().postDataJSON();
+    return route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          savedArticle: {
+            id: "saved-news-ui",
+            canonicalUrl: "https://osha.gov/heat-exposure",
+            url: body.url,
+            headline: body.headline,
+            source: body.source,
+            publishedAt: body.publishedAt,
+            category: body.category,
+            trades: body.trades,
+            topics: body.topics,
+            thumbnailUrl: body.thumbnailUrl,
+            savedAt: "2026-07-28T12:00:00.000Z",
+          },
+        },
+      }),
+    });
+  });
+  await page.route("**/api/v1/shop-talk/article-discussions/lookup", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: {
+          discussions: [{
+            canonicalUrl: "https://osha.gov/heat-exposure",
+            post: {
+              id: "shop-talk-ui-heat-safety",
+              author: "RIVT",
+              trade: "General",
+              title: "How are you handling the new OSHA heat rule on outdoor jobs this summer?",
+              body: "Compare practical heat plans, scheduling changes, and field routines.",
+              status: "Open",
+              createdAt: "2026-07-15T11:00:00.000Z",
+              articleUrl: "https://www.osha.gov/heat-exposure",
+              articleCanonicalUrl: "https://osha.gov/heat-exposure",
+              articleSource: "OSHA",
+              answers: [{ id: "heat-reply-1", author: "Field Pro", body: "We moved heavy work earlier.", verifiedFix: false, createdAt: "2026-07-15T11:30:00.000Z" }],
+            },
+          }],
+        },
+      }),
+    }),
+  );
   await page.route("**/api/news**", (route) => {
     const requestUrl = new URL(route.request().url());
     const payload = requestUrl.searchParams.has("location") ? newsPayload : nationalNewsPayload;
@@ -588,7 +679,7 @@ try {
       if (failure.includes("ERR_NETWORK_ACCESS_DENIED")) errors.push(`${failure}: ${request.url()}`);
     });
 
-    await configurePage(page);
+    await configurePage(page, { legacyDeviceChoices: viewport.name === "mobile" });
 
     await page.goto(`${baseUrl}/app/network/talk`, { waitUntil: "networkidle" });
     await page.getByLabel("Shop Talk community").getByRole("button", { name: "Feed" }).waitFor({ timeout: 15_000 });
@@ -816,6 +907,12 @@ try {
     await assertNoHorizontalOverflow(page);
     await page.getByRole("button", { name: /Customize/i }).click();
     const customize = page.getByLabel("Customize Trade News");
+    if (viewport.name === "mobile") {
+      await customize.getByRole("button", { name: "Move to my account" }).click();
+      await customize.getByText("This device's Trade News choices are now saved to your RIVT account.", { exact: true }).waitFor();
+    } else {
+      await customize.getByText("Account continuity", { exact: true }).waitFor();
+    }
     await customize.getByRole("button", { name: "Follow HVAC", exact: true }).click();
     await customize.getByRole("button", { name: "Close Trade News customization" }).click();
     await page.getByRole("button", { name: "Following", exact: true }).click();

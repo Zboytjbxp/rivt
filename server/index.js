@@ -88,6 +88,7 @@ import { captureException, errorMonitoringStatus } from "./monitoring.js";
 import { emitProductEvent } from "./product-analytics.js";
 import { createReferralToken, referralLinksConfigured, verifyReferralToken } from "./referrals.js";
 import { createNewsRouter } from "./news.js";
+import { registerNewsContinuityRoutes } from "./news-continuity.js";
 import { registerShopTalkRoutes } from "./shop-talk.js";
 import {
   assertPublicContentSafe,
@@ -5483,6 +5484,14 @@ registerShopTalkRoutes({
   runIdempotentMutation,
   sendIdempotentResult,
   createInAppNotification,
+});
+
+registerNewsContinuityRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
 });
 
 registerCommunityRoutes({

@@ -109,7 +109,7 @@ import { isPublicToolMode, type ToolMode } from "./features/tools/tool-catalog";
 import { linkedRecordTypeForTool } from "./features/tools/tool-record-links";
 import { fetchToolRecords, type ServerToolRecord } from "./features/tools/tool-records-api";
 import { safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
-import { apiPath, fetchWithTimeout, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
+import { apiPath, fetchWithTimeout, RivtApiError, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
 import { getAnonymousAnalyticsId, setAnalyticsIdentity, trackProductEvent } from "./lib/analytics";
 import {
   AuthGate,
@@ -503,6 +503,10 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
     communityAudience: post.communityAudience,
     webVisibility: post.webVisibility ?? "members",
     publicWebPublishedAt: post.publicWebPublishedAt ?? null,
+    articleUrl: post.articleUrl ?? null,
+    articleCanonicalUrl: post.articleCanonicalUrl ?? null,
+    articleSource: post.articleSource ?? null,
+    articlePublishedAt: post.articlePublishedAt ?? null,
     viewerCanDelete: post.viewerCanDelete,
     ...(thumbnailUrl ? { thumbnailUrl } : {}),
     ...(thumbnailUrl ? { thumbnailAlt: post.thumbnailAlt ?? firstMedia?.altText ?? firstMedia?.originalName ?? post.title } : {}),
@@ -1948,6 +1952,7 @@ function App() {
     communitySlugOverride?: string | null,
     photoFile?: File | null,
     webVisibility: "members" | "public" = "members",
+    article?: { url: string; source: string; publishedAt?: string | null } | null,
   ) {
     const localThumbnailUrl = photoFile ? URL.createObjectURL(photoFile) : undefined;
     const localPost: CommunityPost = {
@@ -1966,6 +1971,9 @@ function App() {
       type: postType,
       communitySlug: communitySlugOverride ?? defaultShopTalkCommunitySlug(trade),
       webVisibility,
+      articleUrl: article?.url ?? null,
+      articleSource: article?.source ?? null,
+      articlePublishedAt: article?.publishedAt ?? null,
       ...(localThumbnailUrl ? { thumbnailUrl: localThumbnailUrl, thumbnailAlt: photoFile?.name ?? title } : {}),
       ...(subTrade ? { subTrade } : {}),
       ...(subLocation ? { subLocation } : {}),
@@ -1984,6 +1992,7 @@ function App() {
           postType,
           communitySlug: communitySlugOverride ?? undefined,
           webVisibility,
+          article,
         });
         if (!serverPost) {
           addActivity(
@@ -2009,6 +2018,25 @@ function App() {
         photoUploadFailed ||= Boolean(photoFile && !mediaPost);
         postToAdd = toCommunityPostViewModel(mediaPost ?? serverPost);
       } catch (cause) {
+        if (
+          cause instanceof RivtApiError
+          && cause.code === "SHOP_TALK_ARTICLE_DISCUSSION_EXISTS"
+          && cause.details
+          && typeof cause.details === "object"
+          && "postId" in cause.details
+          && typeof cause.details.postId === "string"
+        ) {
+          const existingPost = await loadShopTalkPost(cause.details.postId);
+          if (existingPost) {
+            setShopTalkPostId(existingPost.id);
+            setShopTalkCompose(false);
+            addActivity(
+              "Existing discussion opened",
+              "RIVT kept one conversation for this article so replies stay together.",
+            );
+            return;
+          }
+        }
         addActivity(
           "Shop Talk post was not saved",
           cause instanceof Error ? cause.message : "RIVT could not save that post. Nothing was published.",

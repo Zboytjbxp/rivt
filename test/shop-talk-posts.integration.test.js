@@ -183,6 +183,144 @@ if (!testDatabaseUrl) {
     );
     assert.equal(restrictedExactPost.response.status, 404);
 
+    const emptyContinuity = await requestJson(baseUrl, "/api/v1/trade-news/preferences", { cookie: author.cookie });
+    assert.equal(emptyContinuity.response.status, 200);
+    assert.equal(emptyContinuity.payload.data.preference, null);
+    assert.deepEqual(emptyContinuity.payload.data.savedArticles, []);
+
+    const savedPreference = await requestJson(baseUrl, "/api/v1/trade-news/preferences", {
+      method: "PUT",
+      cookie: author.cookie,
+      body: {
+        scope: "local",
+        location: "Jacksonville, FL",
+        category: "Safety",
+        trade: "Electrical",
+        followedTrades: ["Electrical", "Electrical"],
+        followedTopics: ["Safety"],
+        expectedVersion: 0,
+      },
+    });
+    assert.equal(savedPreference.response.status, 200);
+    assert.equal(savedPreference.payload.data.preference.version, 1);
+    assert.deepEqual(savedPreference.payload.data.preference.followedTrades, ["Electrical"]);
+
+    const stalePreference = await requestJson(baseUrl, "/api/v1/trade-news/preferences", {
+      method: "PUT",
+      cookie: author.cookie,
+      body: {
+        scope: "all",
+        location: "",
+        category: "All topics",
+        trade: "All trades",
+        followedTrades: [],
+        followedTopics: [],
+        expectedVersion: 0,
+      },
+    });
+    assert.equal(stalePreference.response.status, 409);
+    assert.equal(stalePreference.payload.error.code, "TRADE_NEWS_PREFERENCE_CONFLICT");
+
+    const articlePath = `trade/story-${randomUUID()}`;
+    const articleCanonicalUrl = `https://example.com/${articlePath}`;
+    const savedArticle = await requestJson(baseUrl, "/api/v1/trade-news/saved-articles", {
+      method: "PUT",
+      cookie: author.cookie,
+      body: {
+        url: `https://www.example.com/${articlePath}/?utm_source=rivt#details`,
+        headline: "Jacksonville electrical safety update",
+        source: "Example Trade News",
+        publishedAt: "2026-07-27T12:00:00.000Z",
+        category: "Safety",
+        trades: ["Electrical"],
+        topics: ["Jobsite safety"],
+        thumbnailUrl: null,
+      },
+    });
+    assert.equal(savedArticle.response.status, 200);
+    assert.equal(savedArticle.payload.data.savedArticle.canonicalUrl, articleCanonicalUrl);
+
+    const ownerContinuity = await requestJson(baseUrl, "/api/v1/trade-news/preferences", { cookie: author.cookie });
+    assert.equal(ownerContinuity.response.status, 200);
+    assert.equal(ownerContinuity.payload.data.preference.trade, "Electrical");
+    assert.equal(ownerContinuity.payload.data.savedArticles.length, 1);
+    const isolatedContinuity = await requestJson(baseUrl, "/api/v1/trade-news/preferences", { cookie: answerer.cookie });
+    assert.equal(isolatedContinuity.response.status, 200);
+    assert.equal(isolatedContinuity.payload.data.preference, null);
+    assert.deepEqual(isolatedContinuity.payload.data.savedArticles, []);
+
+    const structuredArticle = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {
+      method: "POST",
+      cookie: author.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        title: "What changes for Jacksonville electrical crews?",
+        body: "The enforcement date could change bid and inspection planning.",
+        trade: "Electrical",
+        flair: "Discussion",
+        postType: "general",
+        communitySlug: "electrical-talk",
+        article: {
+          url: `https://www.example.com/${articlePath}/?utm_campaign=duplicate`,
+          source: "Example Trade News",
+          publishedAt: "2026-07-27T12:00:00.000Z",
+        },
+      },
+    });
+    assert.equal(structuredArticle.response.status, 201);
+    const articlePost = structuredArticle.payload.data.post;
+    assert.equal(articlePost.body.includes("https://"), false);
+    assert.equal(articlePost.articleCanonicalUrl, articleCanonicalUrl);
+    assert.equal(articlePost.articleSource, "Example Trade News");
+
+    const articleLookup = await requestJson(baseUrl, "/api/v1/shop-talk/article-discussions/lookup", {
+      method: "POST",
+      cookie: contractor.cookie,
+      body: { urls: [`${articleCanonicalUrl}?fbclid=123`] },
+    });
+    assert.equal(articleLookup.response.status, 200);
+    assert.equal(articleLookup.payload.data.discussions.length, 1);
+    assert.equal(articleLookup.payload.data.discussions[0].post.id, articlePost.id);
+
+    const duplicateArticle = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {
+      method: "POST",
+      cookie: answerer.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        title: "Duplicate discussion",
+        body: "This should point to the existing conversation.",
+        trade: "Electrical",
+        flair: "Discussion",
+        communitySlug: "electrical-talk",
+        article: {
+          url: `${articleCanonicalUrl}/?gclid=duplicate`,
+          source: "Another publisher label",
+        },
+      },
+    });
+    assert.equal(duplicateArticle.response.status, 409);
+    assert.equal(duplicateArticle.payload.error.code, "SHOP_TALK_ARTICLE_DISCUSSION_EXISTS");
+    assert.equal(duplicateArticle.payload.error.details.postId, articlePost.id);
+
+    const restrictedArticle = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        title: "Article in a restricted room",
+        body: "The single article discussion cannot be role-gated.",
+        trade: "Electrical",
+        flair: "Discussion",
+        communitySlug: restrictedCommunity.payload.data.community.slug,
+        article: {
+          url: "https://example.com/another-story",
+          source: "Example Trade News",
+        },
+      },
+    });
+    assert.equal(restrictedArticle.response.status, 422);
+    assert.equal(restrictedArticle.payload.error.code, "SHOP_TALK_ARTICLE_COMMUNITY_REQUIRED");
+
     // Create a post.
     const key = randomUUID();
     const created = await requestJson(baseUrl, "/api/v1/shop-talk/posts", {

@@ -2,10 +2,45 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Messages and private customer-note continuity production verified.
-Active packet: `docs/delivery/packets/82_MESSAGES_CUSTOMER_NOTES.md`
-Repository branch: `master` (feature branch `codex/messages-customer-notes`)
-Production feature release commit: `635d96d292bd32f73ecd0f42ad3d27386bfa789c`
+Current phase: Shop Talk and Trade News continuity locally verified; production release pending.
+Active packet: `docs/delivery/packets/83_SHOP_TALK_NEWS_CONTINUITY.md`
+Repository branch: `codex/shop-talk-news-continuity`
+Production feature release commit: pending
+
+## Shop Talk and Trade News continuity
+
+- Replaced browser-only Trade News coverage, follow, and saved-link state
+  with versioned account-owned preferences and canonical saved-article
+  snapshots. Device storage remains an offline cache, not the source of
+  truth.
+- Added an explicit, loss-safe move for older `rivt.news.*` choices. Local
+  choices are never silently cleared or overwritten; partial failures retain
+  every device value and expose retry.
+- Saved items retain only publisher metadata RIVT already displayed. They do
+  not copy article bodies, invent summaries, or create fallback images.
+- Added structured canonical article URL, publisher, and publication-date
+  fields to Shop Talk posts. The member's comment no longer needs a giant RSS
+  URL embedded in its body.
+- Added indexed, server-side discussion lookup with community-audience and
+  moderation filtering. Pagination or a different client filter cannot hide
+  an existing discussion and cause a second thread.
+- Article discussions are restricted to public-audience RIVT communities so
+  both account roles can reach the one canonical conversation. Public-web
+  discovery remains a separate per-post opt-in.
+- Duplicate creation races return and open the existing thread instead of
+  claiming failure. Older URL-in-body discussions remain readable and
+  recognized without rewriting member content.
+- Migration `0041_shop_talk_news_continuity` adds the preference,
+  saved-article, structured-post, and uniqueness boundaries with reviewed
+  rollback.
+- Local verification is complete: production build, application and security
+  lint, 112 unit/frontend tests, all 22 serial PostgreSQL integration suites,
+  fail-closed authentication and Jobs/discovery E2E, migration
+  rollback/reapply, Tools/Trade News/mobile-action/Work rendered QA, diff
+  integrity, and a zero-vulnerability production dependency audit.
+- Three-things review closed structured-link public discovery, duplicate-race
+  navigation, and silent legacy-device preference replacement before the
+  packet advanced.
 
 ## Messages and private customer-note continuity
 

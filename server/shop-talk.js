@@ -4,6 +4,7 @@ import { ApiError, asyncRoute, validate, z } from "./api.js";
 import { detectUploadContent, mediaKindForMime } from "./projects.js";
 import { emitProductEvent } from "./product-analytics.js";
 import { assertPublicContentSafe } from "./public-discovery.js";
+import { canonicalNewsArticleUrl } from "./news.js";
 
 const shopTalkTargetSchema = z.object({
   targetType: z.enum(["thread", "answer"]),
@@ -197,6 +198,15 @@ const shopTalkPostCreateSchema = z.object({
   postType: z.enum(["question", "sub-request", "safety", "general"]).optional().default("general"),
   communitySlug: z.string().trim().min(1).max(60).regex(/^[a-z0-9-]+$/).optional(),
   webVisibility: z.enum(["members", "public"]).optional().default("members"),
+  article: z.object({
+    url: z.url().max(2048),
+    source: z.string().trim().min(1).max(200),
+    publishedAt: z.iso.datetime({ offset: true }).nullable().optional().default(null),
+  }).nullable().optional().default(null),
+});
+
+const shopTalkArticleLookupSchema = z.object({
+  urls: z.array(z.string().trim().min(1).max(2048)).min(1).max(50),
 });
 
 const shopTalkAnswerCreateSchema = z.object({
@@ -284,6 +294,7 @@ function mapShopTalkPostRow(row, viewerAccountId = null) {
   const media = Array.isArray(row.media) ? row.media.map(mapShopTalkPostMediaRow) : [];
   return {
     id: row.id,
+    authorAccountId: row.author_account_id,
     author: row.author_name,
     trade: row.trade,
     flair: row.flair ?? undefined,
@@ -299,6 +310,10 @@ function mapShopTalkPostRow(row, viewerAccountId = null) {
     communityAudience: row.community_audience ?? "public",
     webVisibility: row.public_web_visibility ?? "members",
     publicWebPublishedAt: row.public_web_published_at ?? null,
+    articleUrl: row.article_url ?? null,
+    articleCanonicalUrl: row.article_canonical_url ?? null,
+    articleSource: row.article_source ?? null,
+    articlePublishedAt: row.article_published_at ?? null,
     answers: Array.isArray(row.answers) ? row.answers.map(mapShopTalkAnswerRow) : [],
     media,
     thumbnailUrl: media[0]?.signedUrl ?? null,
@@ -413,7 +428,12 @@ async function requireCommunityForPost(client, slug, actor) {
   return found.rows[0];
 }
 
-async function fetchShopTalkPostRows(client, { actor, communitySlug = null, postId = null } = {}) {
+async function fetchShopTalkPostRows(client, {
+  actor,
+  communitySlug = null,
+  postId = null,
+  articleCanonicalUrls = null,
+} = {}) {
   const params = [actorRole(actor)];
   let whereClause = `WHERE community.archived_at IS NULL
      AND community.moderation_status <> 'hidden'
@@ -431,6 +451,10 @@ async function fetchShopTalkPostRows(client, { actor, communitySlug = null, post
     params.push(communitySlug);
     whereClause += ` AND community.slug = $${params.length}`;
   }
+  if (articleCanonicalUrls?.length) {
+    params.push(articleCanonicalUrls);
+    whereClause += ` AND post.article_canonical_url = ANY($${params.length}::text[])`;
+  }
   const result = await client.query(
     `SELECT post.id,
             post.author_account_id,
@@ -446,6 +470,10 @@ async function fetchShopTalkPostRows(client, { actor, communitySlug = null, post
             post.moderation_status,
             post.public_web_visibility,
             post.public_web_published_at,
+            post.article_url,
+            post.article_canonical_url,
+            post.article_source,
+            post.article_published_at,
             post.community_id,
             community.slug AS community_slug,
             community.name AS community_name,
@@ -559,8 +587,33 @@ export function registerShopTalkRoutes({
     });
   }));
 
+  app.post("/api/v1/shop-talk/article-discussions/lookup", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+    const input = validate(shopTalkArticleLookupSchema, request.body);
+    const canonicalUrls = [...new Set(input.urls.map(canonicalNewsArticleUrl).filter(Boolean))];
+    if (!canonicalUrls.length) {
+      throw new ApiError(422, "SHOP_TALK_ARTICLE_URL_INVALID", "Use at least one valid HTTP or HTTPS article link.");
+    }
+    const rows = await fetchShopTalkPostRows(database, {
+      actor: request.actor,
+      articleCanonicalUrls: canonicalUrls,
+    });
+    response.json({
+      data: {
+        discussions: await Promise.all(rows.map(async (row) => ({
+          canonicalUrl: row.article_canonical_url,
+          post: await mapShopTalkPostRowWithMedia(row, signedObjectUrl, request.actor.account.id),
+        }))),
+      },
+      meta: { requestId: request.requestId },
+    });
+  }));
+
   app.post("/api/v1/shop-talk/posts", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const input = validate(shopTalkPostCreateSchema, request.body);
+    const articleCanonicalUrl = input.article ? canonicalNewsArticleUrl(input.article.url) : null;
+    if (input.article && !articleCanonicalUrl) {
+      throw new ApiError(422, "SHOP_TALK_ARTICLE_URL_INVALID", "Use a valid HTTP or HTTPS article link.");
+    }
     const result = await runIdempotentMutation(
       request,
       request.actor.account.id,
@@ -576,6 +629,32 @@ export function registerShopTalkRoutes({
           input.communitySlug ?? defaultCommunitySlugForTrade(input.trade),
           request.actor,
         );
+        if (input.article && community.audience !== "public") {
+          throw new ApiError(
+            422,
+            "SHOP_TALK_ARTICLE_COMMUNITY_REQUIRED",
+            "Trade News discussions must use a community open to all RIVT members.",
+          );
+        }
+        if (articleCanonicalUrl) {
+          await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [articleCanonicalUrl]);
+          const existing = await client.query(
+            `SELECT id
+             FROM shop_talk_posts
+             WHERE article_canonical_url = $1
+               AND moderation_status <> 'hidden'
+             LIMIT 1`,
+            [articleCanonicalUrl],
+          );
+          if (existing.rowCount) {
+            throw new ApiError(
+              409,
+              "SHOP_TALK_ARTICLE_DISCUSSION_EXISTS",
+              "A Shop Talk discussion already exists for this article.",
+              { postId: existing.rows[0].id, canonicalUrl: articleCanonicalUrl },
+            );
+          }
+        }
         if (input.webVisibility === "public") {
           if (community.audience !== "public") {
             throw new ApiError(
@@ -589,12 +668,14 @@ export function registerShopTalkRoutes({
         const inserted = await client.query(
           `INSERT INTO shop_talk_posts (
              author_account_id, author_name, community_id, trade, flair, post_type, title, body,
-             public_web_visibility, public_web_published_at
+             public_web_visibility, public_web_published_at, article_url,
+             article_canonical_url, article_source, article_published_at
            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,
-             CASE WHEN $9 = 'public' THEN now() ELSE NULL END)
+             CASE WHEN $9 = 'public' THEN now() ELSE NULL END, $10, $11, $12, $13)
            RETURNING id, author_account_id, author_name, community_id, trade, flair, post_type,
                      title, body, status, created_at, updated_at, moderation_status,
-                     public_web_visibility, public_web_published_at`,
+                     public_web_visibility, public_web_published_at, article_url,
+                     article_canonical_url, article_source, article_published_at`,
           [
             request.actor.account.id,
             authorName,
@@ -605,6 +686,10 @@ export function registerShopTalkRoutes({
             input.title,
             input.body,
             input.webVisibility,
+            input.article?.url ?? null,
+            articleCanonicalUrl,
+            input.article?.source ?? null,
+            input.article?.publishedAt ?? null,
           ],
         );
         inserted.rows[0].community_slug = community.slug;
@@ -618,7 +703,11 @@ export function registerShopTalkRoutes({
             request.requestId,
             request.actor.account.id,
             inserted.rows[0].id,
-            JSON.stringify({ webVisibility: input.webVisibility, communitySlug: community.slug }),
+            JSON.stringify({
+              webVisibility: input.webVisibility,
+              communitySlug: community.slug,
+              articleCanonicalUrl,
+            }),
           ],
         );
         return {

@@ -423,7 +423,7 @@ function _trades(item) {
   return matches.length ? matches : ["General construction"];
 }
 
-function _canonicalArticleUrl(value) {
+export function canonicalNewsArticleUrl(value) {
   try {
     const url = new URL(String(value ?? ""));
     if (!/^https?:$/.test(url.protocol)) return "";
@@ -438,6 +438,8 @@ function _canonicalArticleUrl(value) {
     return "";
   }
 }
+
+const _canonicalArticleUrl = canonicalNewsArticleUrl;
 
 function _normalizedTitle(value) {
   return _stripHtml(value).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();

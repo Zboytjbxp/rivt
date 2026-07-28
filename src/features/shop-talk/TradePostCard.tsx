@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import type { CommunityPost } from "./ShopTalkView";
 import type { CommunityReactionState } from "./ShopTalkView";
-import { parseShopTalkPostBody } from "./shop-talk-post-content";
+import { shopTalkPostContent } from "./shop-talk-post-content";
 import "../home/trade-feed.css";
 
 // Map a post's trade to its community label + icon so cards read like the references.
@@ -58,7 +58,7 @@ export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote
   const score = reactionState.upvotes - reactionState.downvotes;
   const comments = post.replies.length;
   const hasThumbnail = Boolean(post.thumbnailUrl && failedThumbnailUrl !== post.thumbnailUrl);
-  const postContent = parseShopTalkPostBody(post.body);
+  const postContent = shopTalkPostContent(post);
 
   const [shareResult, setShareResult] = useState<"copied" | "shared" | null>(null);
 

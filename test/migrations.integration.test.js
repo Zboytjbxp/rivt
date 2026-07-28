@@ -322,6 +322,19 @@ if (!testDatabaseUrl) {
       assert.equal((await database.query(
         "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'contact_notes' AND column_name = 'occurred_at'",
       )).rows[0].count, 1);
+      assert.notEqual((await database.query("SELECT to_regclass('trade_news_preferences') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('trade_news_saved_articles') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'shop_talk_posts' AND column_name IN ('article_url', 'article_canonical_url', 'article_source', 'article_published_at')",
+      )).rows[0].count, 4);
+
+      const rolledBackShopTalkNewsContinuity = await rollbackLatest(database);
+      assert.equal(rolledBackShopTalkNewsContinuity.latestVersion, 40);
+      assert.equal((await database.query("SELECT to_regclass('trade_news_preferences') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('trade_news_saved_articles') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'shop_talk_posts' AND column_name IN ('article_url', 'article_canonical_url', 'article_source', 'article_published_at')",
+      )).rows[0].count, 0);
 
       const rolledBackMessagingContinuity = await rollbackLatest(database);
       assert.equal(rolledBackMessagingContinuity.latestVersion, 39);

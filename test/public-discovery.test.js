@@ -79,6 +79,8 @@ test("public Shop Talk projection only includes explicitly supplied public answe
     community_slug: "electrical-talk",
     community_name: "Electrical Talk",
     answer_count: 1,
+    article_url: "https://example.com/code-update",
+    article_source: "Example Trade News",
   }, [{
     id: "6dcf145e-158a-4c22-b2b5-0a327b634d7a",
     author_name: "Alex",
@@ -90,6 +92,8 @@ test("public Shop Talk projection only includes explicitly supplied public answe
   assert.equal(post.author, "Michael");
   assert.equal(post.answers.length, 1);
   assert.equal(post.answers[0].verifiedFix, true);
+  assert.equal(post.article.url, "https://example.com/code-update");
+  assert.equal(post.article.source, "Example Trade News");
   assert.equal("authorAccountId" in post, false);
 });
 

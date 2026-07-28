@@ -3945,6 +3945,43 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   color: var(--v2-text-muted);
 }
 
+.news-continuity-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 11px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-surface);
+}
+
+.news-continuity-status > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.news-continuity-status small {
+  color: var(--v2-text-muted);
+}
+
+.news-continuity-status.is-error {
+  border-color: var(--v2-danger);
+}
+
+.news-continuity-status button {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--v2-accent);
+  border-radius: var(--v2-radius-sm);
+  background: var(--v2-accent-fill);
+  color: var(--v2-on-accent);
+  font: inherit;
+  font-weight: var(--v2-weight-bold);
+}
+
 .news-customize-panel fieldset {
   padding: 0;
   border: 0;

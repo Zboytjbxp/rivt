@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { newsInternals } from "../server/news.js";
+import { newsContinuityInternals } from "../server/news-continuity.js";
 import {
   createDurableRateLimiter,
   createOriginGuard,
@@ -158,6 +159,30 @@ test("news query validation and cache pruning bound anonymous amplification", ()
   assert.equal(newsInternals.newsCache.size, newsInternals.NEWS_CACHE_MAX_ENTRIES);
   assert.equal(newsInternals.newsCache.has("location-0"), false);
   newsInternals.newsCache.clear();
+});
+
+test("Trade News continuity validates preferences and loss-safe legacy saves", () => {
+  const preference = newsContinuityInternals.preferenceSchema.parse({
+    scope: "local",
+    location: "Jacksonville, FL",
+    category: "Safety",
+    trade: "Electrical",
+    followedTrades: ["Electrical"],
+    followedTopics: ["Safety & OSHA"],
+    expectedVersion: 0,
+  });
+  assert.equal(preference.expectedVersion, 0);
+  assert.deepEqual(
+    newsContinuityInternals.uniqueStrings(["Electrical", " Electrical ", "HVAC"]),
+    ["Electrical", "HVAC"],
+  );
+  const legacySave = newsContinuityInternals.savedArticleSchema.parse({
+    url: "https://example.com/news",
+    headline: "",
+    source: "",
+  });
+  assert.equal(legacySave.headline, "");
+  assert.equal(legacySave.source, "");
 });
 
 test("trade news canonicalizes URLs, deduplicates titles, and diversifies sources", () => {

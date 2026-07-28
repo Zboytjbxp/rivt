@@ -2,9 +2,9 @@
 
 Audit date: 2026-07-28 America/New_York
 
-Baseline: `origin/master` at `1735d7f`
+Baseline: `origin/master` at `5e838ab`
 
-Current packet: `docs/delivery/packets/82_MESSAGES_CUSTOMER_NOTES.md`
+Current packet: `docs/delivery/packets/83_SHOP_TALK_NEWS_CONTINUITY.md`
 
 ## Why this exists
 
@@ -106,7 +106,7 @@ production monitor, and disposable authenticated run
 preferences/reactions/media, private Contact-note CRUD/history/media,
 outsider denial, relogin continuity, and cleanup.
 
-### Next 3 — Shop Talk and Trade News continuity
+### Current — Shop Talk and Trade News continuity
 
 Evidence:
 
@@ -124,7 +124,15 @@ Completion boundary:
 - preserve source/image/freshness honesty and the existing public-consent
   boundary.
 
-### Next 4 — Offline and recovery behavior
+Status: **Locally verified; production release pending.** Migration
+`0041_shop_talk_news_continuity`, 112 unit/frontend tests, all 22 serial
+PostgreSQL integration suites, browser E2E, focused rendered suites, and the
+dependency audit pass. The implementation includes explicit loss-safe device
+migration, saved-article snapshots, structured clean-body discussions,
+indexed cross-filter lookup, public-audience enforcement, and duplicate-race
+navigation to the existing thread.
+
+### Next 3 — Offline and recovery behavior
 
 Evidence:
 
@@ -141,7 +149,7 @@ Completion boundary:
 - retry idempotently without duplicating financial or relationship records;
 - document records that intentionally remain online-only.
 
-### Next 5 — Security, accessibility, and operations closure
+### Next 4 — Security, accessibility, and operations closure
 
 Evidence:
 

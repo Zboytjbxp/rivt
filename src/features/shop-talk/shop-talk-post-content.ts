@@ -10,6 +10,13 @@ export interface ParsedShopTalkPostBody {
   article: ShopTalkArticleAttachment | null;
 }
 
+export interface StructuredShopTalkPostContent {
+  body: string;
+  articleUrl?: string | null;
+  articleSource?: string | null;
+  articlePublishedAt?: string | null;
+}
+
 const ARTICLE_URL_PATTERN = /https?:\/\/[^\s<>"']+/i;
 const ATTRIBUTION_PATTERN = /^Via\s+(.+?)(?:\s+(?:\u00b7|\u2022)\s+(.+))?$/i;
 
@@ -47,10 +54,16 @@ export function parseShopTalkPostBody(body: string): ParsedShopTalkPostBody {
   };
 }
 
-export function buildArticleDiscussionBody(
-  comment: string,
-  article: { source: string; date?: string; url: string },
-) {
-  const attribution = `Via ${article.source}${article.date ? ` \u00b7 ${article.date}` : ""}`;
-  return [comment.trim(), `${attribution}\n${article.url}`].filter(Boolean).join("\n\n");
+export function shopTalkPostContent(post: StructuredShopTalkPostContent): ParsedShopTalkPostBody {
+  if (!post.articleUrl) return parseShopTalkPostBody(post.body);
+  const domain = articleDomain(post.articleUrl);
+  return {
+    content: post.body.trim(),
+    article: {
+      url: post.articleUrl,
+      domain,
+      source: post.articleSource?.trim() || domain,
+      ...(post.articlePublishedAt ? { date: post.articlePublishedAt } : {}),
+    },
+  };
 }

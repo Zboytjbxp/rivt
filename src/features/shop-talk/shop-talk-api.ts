@@ -15,6 +15,11 @@ export interface ShopTalkPostInput {
   postType?: "question" | "sub-request" | "safety" | "general";
   communitySlug?: string;
   webVisibility?: "members" | "public";
+  article?: {
+    url: string;
+    source: string;
+    publishedAt?: string | null;
+  } | null;
 }
 
 export interface ServerShopTalkAnswer {
@@ -62,6 +67,15 @@ export interface ServerShopTalkPost {
   viewerCanDelete?: boolean;
   webVisibility?: "members" | "public";
   publicWebPublishedAt?: string | null;
+  articleUrl?: string | null;
+  articleCanonicalUrl?: string | null;
+  articleSource?: string | null;
+  articlePublishedAt?: string | null;
+}
+
+export interface ShopTalkArticleDiscussion {
+  canonicalUrl: string;
+  post: ServerShopTalkPost;
 }
 
 export type ShopTalkReportReason = "spam" | "harassment" | "unsafe_advice" | "misinformation" | "privacy" | "duplicate" | "other";
@@ -157,6 +171,21 @@ export async function fetchShopTalkPost(postId: string): Promise<ServerShopTalkP
   const response = await fetchWithTimeout(apiPath(`/api/v1/shop-talk/posts/${encodeURIComponent(postId)}`), { credentials: "include" });
   const body = await readShopTalkResponse<{ data?: { post?: ServerShopTalkPost } }>(response, "That Shop Talk post could not be opened.");
   return body.data?.post ?? null;
+}
+
+export async function findShopTalkArticleDiscussions(urls: string[]): Promise<ShopTalkArticleDiscussion[]> {
+  if (!urls.length) return [];
+  const response = await fetchWithTimeout(apiPath("/api/v1/shop-talk/article-discussions/lookup"), {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ urls: urls.slice(0, 50) }),
+  });
+  const body = await readShopTalkResponse<{ data?: { discussions?: ShopTalkArticleDiscussion[] } }>(
+    response,
+    "Article discussions could not be checked.",
+  );
+  return Array.isArray(body.data?.discussions) ? body.data.discussions : [];
 }
 
 export async function createShopTalkAnswer(
