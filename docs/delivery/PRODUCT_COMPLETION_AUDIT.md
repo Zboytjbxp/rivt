@@ -2,9 +2,9 @@
 
 Audit date: 2026-07-28 America/New_York
 
-Baseline: `origin/master` at `ef44c72`
+Baseline: `origin/master` at `9f42f0e`
 
-Current packet: `docs/delivery/packets/83_SHOP_TALK_NEWS_CONTINUITY.md`
+Current packet: `docs/delivery/packets/84_OFFLINE_RECOVERY_BEHAVIOR.md`
 
 ## Why this exists
 
@@ -133,7 +133,7 @@ and the dependency audit pass. Disposable authenticated run
 structured clean-body discussions, indexed cross-role lookup, duplicate
 prevention, answer visibility, and cleanup.
 
-### Next 3 — Offline and recovery behavior
+### Current — Offline and recovery behavior
 
 Evidence:
 
@@ -142,13 +142,22 @@ Evidence:
 - Field use on unstable jobsites is a defining RIVT context; a cached shell
   alone must not be described as offline work support.
 
-Completion boundary:
+Completed locally:
 
-- select the field-critical offline records (notes, checklist, daily log,
-  photos awaiting upload, calculator tape list where applicable);
-- show queued/synced/failed/conflicted states;
-- retry idempotently without duplicating financial or relationship records;
-- document records that intentionally remain online-only.
+- field-critical punch-list items, job notes, Daily Logs, accepted-work
+  photos, and private-album photos use one account-scoped outbox;
+- queued/syncing/failed/conflicted states, retry, discard, conflict refusal,
+  exponential backoff, storage limits, and stale-photo handling are visible;
+- first-attempt idempotency keys survive replay, including ambiguous timeout
+  recovery;
+- the cached account/Work projection opens only when the browser explicitly
+  reports offline and is removed on sign-out;
+- financial decisions, relationships, completion, messaging, publication,
+  delivery, and payments remain online-only;
+- calculator tape measurements remain intentionally device-local.
+
+Status: **Local verification complete; production deployment and physical
+iOS/Android field validation pending.**
 
 ### Next 4 — Security, accessibility, and operations closure
 
@@ -191,7 +200,8 @@ Completion boundary:
 
 ## Current launch statement
 
-RIVT is **not yet 100% product-complete** under this definition. Work
-workspace records are the current completion packet. The machine launch-readiness and
-incident-readiness gates pass, but they do not override the unfinished
-server-continuity and physical-acceptance items above.
+RIVT is **not yet 100% product-complete** under this definition. Offline and
+recovery behavior is the current completion packet. The machine
+launch-readiness and incident-readiness gates pass, but they do not override
+the unfinished security/accessibility/operations closure, final architecture
+subtraction, and physical-device acceptance items above.

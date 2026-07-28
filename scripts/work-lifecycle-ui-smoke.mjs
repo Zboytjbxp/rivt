@@ -399,6 +399,9 @@ function makeState({ jobs = [makeJob()], applications = [], offers = [], activeW
     workspaceRecords: makeWorkspaceRecords(),
     archivedWorkspaceRecords: [],
     workspaceEvents: [],
+    workspaceCreateFailures: 0,
+    workspaceFailedKey: "",
+    workspaceReplayKey: "",
   };
 }
 
@@ -747,6 +750,11 @@ async function configurePage(page, account, state) {
       return route.fulfill(json({ data: { records: state.workspaceRecords, archivedRecords: state.archivedWorkspaceRecords, events: state.workspaceEvents } }));
     }
     const body = route.request().postDataJSON();
+    if (method === "POST" && !isRestore && state.workspaceCreateFailures > 0) {
+      state.workspaceCreateFailures -= 1;
+      state.workspaceFailedKey = route.request().headers()["idempotency-key"] ?? "";
+      return route.fulfill(json({ error: { code: "TEMPORARY_UNAVAILABLE", message: "Try again." } }, 503));
+    }
     if (method === "POST" && isRestore) {
       const record = state.archivedWorkspaceRecords.find((item) => item.id === recordId);
       if (!record) return route.fulfill(json({ error: { code: "WORKSPACE_RECORD_NOT_FOUND" } }, 404));
@@ -756,6 +764,9 @@ async function configurePage(page, account, state) {
       return route.fulfill(json({ data: { record: restored } }));
     }
     if (method === "POST") {
+      if (body.title === "Verify offline breaker label") {
+        state.workspaceReplayKey = route.request().headers()["idempotency-key"] ?? "";
+      }
       const now = new Date().toISOString();
       const record = {
         id: crypto.randomUUID(),
@@ -972,6 +983,18 @@ async function runTradespersonOfferFlow(page) {
   await page.getByPlaceholder("Add a punch-list item…").fill("Photograph final directory");
   await page.getByRole("button", { name: "Add item", exact: true }).click();
   await page.getByText("Photograph final directory", { exact: true }).waitFor({ timeout: 15_000 });
+  state.workspaceCreateFailures = 1;
+  await page.getByPlaceholder("Add a punch-list item…").fill("Verify offline breaker label");
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page.getByText("Punch-list item saved on this device. RIVT will sync it when you're online.", { exact: true }).waitFor({ timeout: 15_000 });
+  const savedPunchList = page.getByLabel("1 saved punch list waiting to sync");
+  await savedPunchList.getByText("Verify offline breaker label", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.screenshot({ path: path.join(screenshotDir, "active-work-offline-queue.png"), fullPage: true });
+  await savedPunchList.getByRole("button", { name: "Retry", exact: true }).click();
+  await page.locator(".v2-checklist-item").filter({ hasText: "Verify offline breaker label" }).waitFor({ timeout: 15_000 });
+  await savedPunchList.waitFor({ state: "detached", timeout: 15_000 });
+  assert.ok(state.workspaceFailedKey, "The failed punch-list attempt should include an idempotency key");
+  assert.equal(state.workspaceReplayKey, state.workspaceFailedKey, "Queued punch-list replay should reuse the original idempotency key");
   await page.locator(".v2-checklist-item").filter({ hasText: "Photograph final directory" }).getByRole("button", { name: "Edit item" }).click();
   const recordEditor = page.getByLabel("Edit punch list record");
   await recordEditor.getByLabel("Item").fill("Photograph final panel directory");
@@ -1219,7 +1242,11 @@ try {
     const errors = [];
     const failedRequests = [];
     page.on("console", (message) => {
-      if (message.type() === "error" && message.text() !== "Failed to load resource: net::ERR_FAILED") errors.push(message.text());
+      if (
+        message.type() === "error"
+        && message.text() !== "Failed to load resource: net::ERR_FAILED"
+        && message.text() !== "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+      ) errors.push(message.text());
     });
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("requestfailed", (request) => failedRequests.push(`${request.failure()?.errorText ?? "request failed"}: ${request.url()}`));

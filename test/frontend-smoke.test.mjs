@@ -72,6 +72,78 @@ function createMemoryStorage(initial = {}) {
   };
 }
 
+test("offline recovery policy isolates accounts, coalesces drafts, and bounds retries and photos", async () => {
+  const {
+    OFFLINE_QUEUE_MAX_PHOTOS,
+    OFFLINE_QUEUE_MAX_PHOTO_BYTES,
+    findReplaceableOfflineOperation,
+    isOfflineOperationStale,
+    offlineFailureStatus,
+    offlinePhotoQueueUsage,
+    offlineRetryDelayMs,
+  } = await loadModule("/src/lib/offline-queue.ts");
+  const createdAt = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
+  const base = {
+    id: "offline-one",
+    accountId: "account-one",
+    kind: "daily_log_upsert",
+    status: "queued",
+    payload: { input: { localId: "daily-log-draft:work-one" } },
+    idempotencyKey: "stable-request-key",
+    dedupeKey: "daily-log-draft:work-one",
+    label: "Daily log",
+    destinationLabel: "Job one",
+    createdAt,
+    updatedAt: createdAt,
+    attempts: 0,
+    nextAttemptAt: null,
+    lastError: null,
+  };
+  const draftInput = {
+    accountId: "account-one",
+    kind: "daily_log_upsert",
+    payload: { input: { localId: "daily-log-draft:work-one" } },
+    idempotencyKey: "new-key-that-must-not-replace-the-original",
+    dedupeKey: "daily-log-draft:work-one",
+    label: "Daily log",
+    destinationLabel: "Job one",
+  };
+
+  assert.equal(findReplaceableOfflineOperation([base], draftInput)?.id, base.id);
+  assert.equal(findReplaceableOfflineOperation([{ ...base, accountId: "account-two" }], draftInput), null);
+  assert.equal(findReplaceableOfflineOperation([{ ...base, status: "syncing" }], draftInput), null);
+  assert.equal(offlineFailureStatus(0), "queued");
+  assert.equal(offlineFailureStatus(503), "queued");
+  assert.equal(offlineFailureStatus(409), "conflicted");
+  assert.equal(offlineFailureStatus(422), "failed");
+  assert.equal(offlineRetryDelayMs(99), 300_000);
+  assert.equal(isOfflineOperationStale(base), true);
+
+  const photo = {
+    ...base,
+    id: "photo-one",
+    kind: "project_media_upload",
+    dedupeKey: null,
+    payload: {
+      projectId: "project-one",
+      notes: "Progress",
+      file: {
+        blob: new Blob(["photo"]),
+        name: "photo.jpg",
+        type: "image/jpeg",
+        lastModified: Date.now(),
+        size: 5,
+      },
+    },
+  };
+  assert.deepEqual(offlinePhotoQueueUsage([photo, { ...photo, id: "other-photo", accountId: "account-two" }], "account-one"), {
+    count: 1,
+    bytes: 5,
+  });
+  assert.equal(OFFLINE_QUEUE_MAX_PHOTOS, 25);
+  assert.equal(OFFLINE_QUEUE_MAX_PHOTO_BYTES, 10 * 1024 * 1024);
+});
+
 test("public tool catalog contains launch tools and rejects contained legacy routes", async () => {
   const { isPublicToolMode, PUBLIC_TOOL_MODES, CONTAINED_TOOL_MODES } = await loadModule("/src/features/tools/tool-catalog.ts");
 

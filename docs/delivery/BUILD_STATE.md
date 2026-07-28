@@ -2,10 +2,51 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Shop Talk and Trade News continuity production verified.
-Active packet: `docs/delivery/packets/83_SHOP_TALK_NEWS_CONTINUITY.md`
-Repository branch: `master` (feature branch `codex/shop-talk-news-continuity`)
-Production feature release commit: `ef44c728c0af8afd004b735668f11f2c304087a6`
+Current phase: Offline and recovery behavior local verification complete; production deployment pending.
+Active packet: `docs/delivery/packets/84_OFFLINE_RECOVERY_BEHAVIOR.md`
+Repository branch: `codex/offline-recovery-behavior`
+Production feature release commit: pending
+
+## Offline and recovery behavior
+
+- Added an account-scoped IndexedDB outbox for the field records that are
+  useful during unstable jobsite connectivity: new punch-list items, job
+  notes, coalesced Daily Log snapshots, accepted-work photos, and
+  private-album photos.
+- Every saved item has a visible queued, syncing, failed, or conflicted state.
+  The global recovery panel and the owning Work/Tools surface expose retry and
+  discard. HTTP 409 never overwrites the server silently.
+- Replay retains the first request's idempotency key. Rendered Work, Daily
+  Log, and Camera tests force a `503`, retain the device copy, retry with the
+  exact original key, and confirm one canonical result.
+- Kept the boundary honest: payments, payment links, financial decisions,
+  Work state transitions, approvals, completion, messages, reviews,
+  Shop Talk/publication, and Estimate/Invoice delivery remain online-only.
+- A device that has opened RIVT online can reopen a limited cached account,
+  Jobs, and active-Work projection only while the browser explicitly reports
+  offline. A failed request while the browser reports online still produces
+  the connection-recovery screen and never falls back to cached identity.
+- Explicit sign-out clears the cached account/work projection. Unsynced
+  outbox rows remain isolated by account ID for recovery after that same
+  account signs in again; another account cannot see or replay them.
+- Photo recovery is bounded to 25 photos, 10 MB per file, 100 MB per account,
+  and a 30-day active retry window. Stale photos become visible failed items;
+  storage denial keeps the original form/capture and gives actionable copy.
+- Hardened service-worker installation so a partial new shell cannot replace
+  the last known-good build. Hashed app assets are strict cache-first, and
+  install/activation now require the full entry shell and self-hosted fonts.
+- Three-things review closed: account switching/sign-out is covered by a real
+  IndexedDB browser check; ambiguous post-commit timeouts reuse stable
+  idempotency keys across Work, Daily Log, and photos; storage exhaustion,
+  stale photos, and user-controlled cleanup are bounded and visible.
+- Local gates pass: production build, application/security lint, 113
+  unit/frontend tests, all 22 serial PostgreSQL integration suites,
+  fail-closed authentication, Jobs/discovery, and repeated offline-recovery
+  E2E, Work/Tools/Shop Talk/Trade News/mobile-action rendered QA, diff
+  integrity, and a zero-vulnerability production dependency audit.
+- No server schema or production-data migration is introduced. Exact-source
+  production deployment, health, monitor, and physical iOS/Android field
+  validation remain pending; Packet 84 is not yet marked Verified.
 
 ## Shop Talk and Trade News continuity
 

@@ -13,6 +13,11 @@ const screenshotDir = path.join(os.tmpdir(), "rivt-tools-pass");
 const quickEntryHoldMs = 380;
 const supplierContactId = "dededede-dede-dede-dede-dededededede";
 let savedPriceBookPayload = null;
+let failDailyLogSync = false;
+let queuedDailyLogKey = "";
+let replayedDailyLogKeyCount = 0;
+let queuedMediaKey = "";
+let replayedMediaKeyCount = 0;
 
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
   cwd: projectRoot,
@@ -151,6 +156,11 @@ async function waitForServer() {
 }
 
 async function configurePage(page) {
+  failDailyLogSync = false;
+  queuedDailyLogKey = "";
+  replayedDailyLogKeyCount = 0;
+  queuedMediaKey = "";
+  replayedMediaKeyCount = 0;
   await page.addInitScript(() => {
     localStorage.setItem("rivt.priceBook.v1", JSON.stringify([{
       id: "saved-price-1",
@@ -388,14 +398,17 @@ async function configurePage(page) {
     }),
   );
   await page.route(`**/api/v1/projects/${projectRecord.id}/media`, (route) => {
+    const idempotencyKey = route.request().headers()["idempotency-key"] ?? "";
     if (rejectNextMediaUpload) {
       rejectNextMediaUpload = false;
+      queuedMediaKey = idempotencyKey;
       return route.fulfill({
         status: 503,
         contentType: "application/json",
         body: JSON.stringify({ error: { code: "UPLOAD_TEMPORARILY_UNAVAILABLE", message: "Photo upload was interrupted." } }),
       });
     }
+    if (queuedMediaKey && idempotencyKey === queuedMediaKey) replayedMediaKeyCount += 1;
     mediaCounter += 1;
     const uploadId = `tools-media-upload-${mediaCounter}`;
     const createdAt = `2026-06-21T13:0${mediaCounter}:00.000Z`;
@@ -670,6 +683,18 @@ async function configurePage(page) {
     if (method === "POST") {
       const input = route.request().postDataJSON();
       if (input?.recordType === "price_book") savedPriceBookPayload = input.payload;
+      if (input?.recordType === "daily_report") {
+        const idempotencyKey = route.request().headers()["idempotency-key"] ?? "";
+        if (failDailyLogSync) {
+          if (!queuedDailyLogKey) queuedDailyLogKey = idempotencyKey;
+          return route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({ error: { code: "TEMPORARILY_UNAVAILABLE", message: "Daily log sync is temporarily unavailable." } }),
+          });
+        }
+        if (queuedDailyLogKey && idempotencyKey === queuedDailyLogKey) replayedDailyLogKeyCount += 1;
+      }
       return route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -1693,8 +1718,19 @@ async function runToolsFlow(page, viewportName) {
   await page.locator(".v2-daily-log-preview").getByText("Installed devices", { exact: false }).waitFor({ timeout: 15_000 });
   await page.getByRole("button", { name: "Save to Records" }).click();
   await page.getByText("Daily log saved to the server-backed Records timeline.", { exact: true }).waitFor({ timeout: 15_000 });
+  failDailyLogSync = true;
   await page.getByRole("button", { name: "Save draft" }).click();
   await page.getByText("Daily log draft saved.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Draft saved on this device and queued for account sync.", { exact: false }).waitFor({ timeout: 15_000 });
+  await page.getByText("Review saved work (1)", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.goto(`${baseUrl}/app/tools?tool=daily-log`, { waitUntil: "networkidle" });
+  await page.getByText("Review saved work (1)", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-daily-log-offline-queue.png`), fullPage: true });
+  failDailyLogSync = false;
+  await page.getByRole("button", { name: "Retry all saved items" }).click();
+  await page.getByText("Review saved work (1)", { exact: true }).waitFor({ state: "detached", timeout: 15_000 });
+  assert.ok(replayedDailyLogKeyCount >= 1, "Queued daily-log replay should reuse the idempotency key from the first failed attempt");
+  await page.getByLabel("Daily log steps").getByRole("button", { name: /Review/ }).click();
   await page.getByRole("button", { name: "Copy daily log" }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-daily-log.png`), fullPage: true });
@@ -1760,13 +1796,17 @@ async function runToolsFlow(page, viewportName) {
     return shutter instanceof HTMLButtonElement && !shutter.disabled;
   }, null, { timeout: 15_000 });
   await page.getByLabel("Take photo").click();
-  await page.locator(".v2-camera-save-status", { hasText: "1 of 1 didn't upload - retry the failed photo." }).waitFor({ timeout: 15_000 });
-  await page.locator(".v2-camera-retry").click();
-  await page.getByText("Saved to Tenant Build-Out.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-camera-save-status", { hasText: "Saved on this device for Tenant Build-Out. Waiting to sync." }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.locator(".v2-camera-retry").count(), 0, "A durable queued capture should not also render an in-memory retry");
   await page.getByLabel("1 photos saved in this camera session").waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera.png`) });
   await page.getByRole("button", { name: "Back" }).click();
+  await page.getByText("Review saved work (1)", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-camera-offline-queue.png`), fullPage: true });
+  await page.getByRole("button", { name: "Retry all saved items" }).click();
+  await page.getByText("Review saved work (1)", { exact: true }).waitFor({ state: "detached", timeout: 15_000 });
+  assert.ok(replayedMediaKeyCount >= 1, "Queued photo replay should reuse the idempotency key from the first failed attempt");
   await page.locator(".v2-job-photos-stats strong", { hasText: "1" }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-job-photo-timeline-row").first().waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page);

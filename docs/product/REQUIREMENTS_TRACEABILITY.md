@@ -1,5 +1,28 @@
 # Gate A Requirements Traceability
 
+## Packet 84 — Offline-recovery evidence
+
+- `GA-FND-004` gains an account-scoped device outbox whose replay still uses
+  the authenticated server cookie and the original idempotency key. Another
+  account's rows are excluded from display and replay.
+- `GA-PRJ-001` gains durable interrupted-connectivity recovery for accepted
+  Work punch-list items, job notes, Daily Logs, and project photos without
+  moving financial decisions, completion, or messaging into browser-only
+  state.
+- `GA-UX-005` gains explicit queued/syncing/failed/conflicted states,
+  retry/discard, conflict refusal, bounded backoff, storage-limit copy, and a
+  documented online-only action boundary.
+- `GA-UX-006` gains rendered Work, Daily Log, and Camera `503` recovery plus
+  a production-service-worker E2E that reopens the cached shell and active
+  Work at 390px while explicitly offline.
+- `GA-OPS-007` gains a clean build, application/security lint, 113
+  unit/frontend tests, all 22 serial PostgreSQL integration suites, three
+  browser E2E paths, focused Work/Tools/Shop Talk/Trade News/mobile-action
+  rendered QA, diff integrity, and zero production dependency
+  vulnerabilities.
+- Production source, health, monitor, and physical-device evidence remain
+  pending. Packet 84 is not yet Verified.
+
 ## Packet 82 — Messages and customer-note continuity evidence
 
 - `GA-FND-003` gains additive migration
