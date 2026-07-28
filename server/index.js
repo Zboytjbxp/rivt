@@ -106,6 +106,7 @@ import { registerWorkspaceRecordRoutes } from "./workspace-records.js";
 import { registerProfessionalProfileRoutes } from "./professional-profile.js";
 import { registerCustomerRoutes } from "./customers.js";
 import { registerContactRoutes } from "./contacts.js";
+import { registerMessagingContinuityRoutes } from "./messaging-continuity.js";
 import {
   pushProviderStatus,
   queuePushDeliveries,
@@ -5118,10 +5119,28 @@ app.get("/api/v1/conversations/:id/messages", requireV1AuthenticatedUser, requir
     : { rows: [] };
   const attachments = messageIds.length
     ? await database.query(
-      `SELECT * FROM message_attachments
-       WHERE message_id = ANY($1::uuid[])
-       ORDER BY created_at ASC, id ASC`,
+      `SELECT attachment.*, upload.object_key
+       FROM message_attachments attachment
+       LEFT JOIN uploads upload ON upload.id = attachment.upload_id
+       WHERE attachment.message_id = ANY($1::uuid[])
+         AND attachment.removed_at IS NULL
+         AND attachment.status = 'attached'
+       ORDER BY attachment.created_at ASC, attachment.id ASC`,
       [messageIds],
+    )
+    : { rows: [] };
+  for (const attachment of attachments.rows) {
+    attachment.url = attachment.object_key ? await signedObjectUrl(attachment.object_key).catch(() => null) : null;
+  }
+  const reactions = messageIds.length
+    ? await database.query(
+      `SELECT message_id, emoji, count(*)::int AS count,
+              bool_or(account_id = $2) AS reacted_by_me
+       FROM message_reactions
+       WHERE message_id = ANY($1::uuid[])
+       GROUP BY message_id, emoji
+       ORDER BY message_id, emoji`,
+      [messageIds, request.actor.account.id],
     )
     : { rows: [] };
   const receiptMap = new Map();
@@ -5136,11 +5155,22 @@ app.get("/api/v1/conversations/:id/messages", requireV1AuthenticatedUser, requir
     current.push(attachment);
     attachmentMap.set(attachment.message_id, current);
   }
+  const reactionMap = new Map();
+  for (const reaction of reactions.rows) {
+    const current = reactionMap.get(reaction.message_id) ?? [];
+    current.push({
+      emoji: reaction.emoji,
+      count: Number(reaction.count),
+      reactedByMe: Boolean(reaction.reacted_by_me),
+    });
+    reactionMap.set(reaction.message_id, current);
+  }
   response.json({
     data: {
       messages: rows.rows.map((row) => mapMessage(row, {
         receipts: receiptMap.get(row.id) ?? [],
         attachments: attachmentMap.get(row.id) ?? [],
+        reactions: reactionMap.get(row.id) ?? [],
       })),
     },
     meta: { requestId: request.requestId },
@@ -5169,12 +5199,22 @@ app.post("/api/v1/conversations/:id/messages", requireV1AuthenticatedUser, requi
       );
     }
     for (const attachment of input.attachments) {
-      await client.query(
-        `INSERT INTO message_attachments (
-           message_id, upload_id, original_name, mime_type, size_bytes, created_by_account_id
-         ) VALUES ($1, $2, $3, $4, $5, $6)`,
-        [messageId, attachment.uploadId, attachment.originalName, attachment.mimeType, attachment.sizeBytes, request.actor.account.id],
+      const authorized = await client.query(
+        `UPDATE message_attachments
+         SET message_id = $1, status = 'attached', expires_at = NULL, version = version + 1
+         WHERE upload_id = $2
+           AND conversation_id = $3
+           AND created_by_account_id = $4
+           AND message_id IS NULL
+           AND status = 'pending_authorization'
+           AND removed_at IS NULL
+           AND expires_at > now()
+         RETURNING id`,
+        [messageId, attachment.uploadId, conversationId, request.actor.account.id],
       );
+      if (!authorized.rowCount) {
+        throw new ApiError(409, "MESSAGE_ATTACHMENT_UNAVAILABLE", "One attachment is no longer available. Remove it and try again.");
+      }
     }
     await client.query("UPDATE conversations SET updated_at = now() WHERE id = $1", [conversationId]);
     await client.query(
@@ -5185,7 +5225,14 @@ app.post("/api/v1/conversations/:id/messages", requireV1AuthenticatedUser, requi
        WHERE conversation_id = $1`,
       [conversationId, request.actor.account.id, messageId],
     );
-    await notifyConversationParticipants(client, conversation, participants, request.actor.account.id, messageId, input.body);
+    await notifyConversationParticipants(
+      client,
+      conversation,
+      participants,
+      request.actor.account.id,
+      messageId,
+      input.body || `${input.attachments.length} ${input.attachments.length === 1 ? "attachment" : "attachments"}`,
+    );
     await client.query(
       `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
        VALUES ($1, $2::uuid, $3::uuid, 'message.sent', 'message', ($4::uuid)::text, $5::jsonb)`,
@@ -5194,11 +5241,21 @@ app.post("/api/v1/conversations/:id/messages", requireV1AuthenticatedUser, requi
     );
     const messageRow = (await client.query(`${messageSelectBase} WHERE cm.id = $1`, [messageId])).rows[0];
     const receipts = await client.query("SELECT * FROM message_receipts WHERE message_id = $1 ORDER BY delivered_at ASC", [messageId]);
-    const attachments = await client.query("SELECT * FROM message_attachments WHERE message_id = $1 ORDER BY created_at ASC, id ASC", [messageId]);
+    const attachments = await client.query(
+      `SELECT attachment.*, upload.object_key
+       FROM message_attachments attachment
+       LEFT JOIN uploads upload ON upload.id = attachment.upload_id
+       WHERE attachment.message_id = $1 AND attachment.removed_at IS NULL
+       ORDER BY attachment.created_at ASC, attachment.id ASC`,
+      [messageId],
+    );
+    for (const attachment of attachments.rows) {
+      attachment.url = attachment.object_key ? await signedObjectUrl(attachment.object_key).catch(() => null) : null;
+    }
     return {
       status: 201,
       body: {
-        data: { message: mapMessage(messageRow, { receipts: receipts.rows, attachments: attachments.rows }) },
+        data: { message: mapMessage(messageRow, { receipts: receipts.rows, attachments: attachments.rows, reactions: [] }) },
         meta: { requestId: request.requestId },
       },
     };
@@ -5536,6 +5593,28 @@ registerContactRoutes({
   requireV1AuthenticatedUser,
   requireV1Actor,
   writeRateLimit,
+  runIdempotentMutation,
+  sendIdempotentResult,
+});
+
+registerMessagingContinuityRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  uploadRateLimit,
+  upload,
+  loadConversationById,
+  loadConversationParticipantRows,
+  assertConversationParticipantsCanInteract,
+  detectUploadContent,
+  sha256Buffer,
+  safeObjectName,
+  signedObjectUrl,
+  s3Client,
+  s3Bucket,
+  withTransaction,
   runIdempotentMutation,
   sendIdempotentResult,
 });

@@ -241,6 +241,148 @@ if (!testDatabaseUrl) {
       [conversationId, messageBody],
     )).rows[0].count, 1);
 
+    const expiredUploadId = randomUUID();
+    const expiredAttachmentId = randomUUID();
+    await database.query(
+      `INSERT INTO uploads (
+         id, session_id, account_id, kind, name, object_key, original_name,
+         mime_type, size_bytes, upload_status, storage_scope, content_sha256, verified_at
+       ) VALUES (
+         $1, $2::text, $2::uuid, 'message-attachment', 'expired.txt',
+         $3, 'expired.txt', 'text/plain', 4, 'stored', 'message', $4, now()
+       )`,
+      [expiredUploadId, contractor.id, `messages/${conversationId}/expired.txt`, "0".repeat(64)],
+    );
+    await database.query(
+      `INSERT INTO message_attachments (
+         id, conversation_id, upload_id, original_name, mime_type, size_bytes,
+         status, created_by_account_id, expires_at
+       ) VALUES ($1, $2, $3, 'expired.txt', 'text/plain', 4,
+                 'pending_authorization', $4, now() - interval '1 minute')`,
+      [expiredAttachmentId, conversationId, expiredUploadId, contractor.id],
+    );
+    const settings = await requestJson(baseUrl, "/api/v1/messaging/settings", { cookie: contractor.cookie });
+    assert.equal(settings.response.status, 200);
+    assert.deepEqual(settings.payload.data.conversationPreferences, []);
+    const expiredDraft = (await database.query(
+      `SELECT attachment.status, attachment.removed_at, upload.upload_status
+       FROM message_attachments attachment
+       INNER JOIN uploads upload ON upload.id = attachment.upload_id
+       WHERE attachment.id = $1`,
+      [expiredAttachmentId],
+    )).rows[0];
+    assert.equal(expiredDraft.status, "rejected");
+    assert.ok(expiredDraft.removed_at);
+    assert.equal(expiredDraft.upload_status, "removed");
+
+    const preference = await requestJson(baseUrl, `/api/v1/conversations/${conversationId}/preference`, {
+      method: "PUT",
+      cookie: contractor.cookie,
+      body: { pinned: true, archived: false, expectedVersion: 0 },
+    });
+    assert.equal(preference.response.status, 200);
+    assert.equal(preference.payload.data.preference.pinned, true);
+    assert.equal(preference.payload.data.preference.version, 1);
+
+    const template = await requestJson(baseUrl, "/api/v1/message-templates", {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `template-${randomUUID()}`,
+      body: { body: "Gate is open. Meet at the south entrance.", sortOrder: 0 },
+    });
+    assert.equal(template.response.status, 201);
+    assert.equal(template.payload.data.template.version, 1);
+
+    const reacted = await requestJson(
+      baseUrl,
+      `/api/v1/conversations/${conversationId}/messages/${firstMessage.payload.data.message.id}/reaction`,
+      {
+        method: "PUT",
+        cookie: contractor.cookie,
+        body: { emoji: "✅" },
+      },
+    );
+    assert.equal(reacted.response.status, 200);
+    assert.deepEqual(reacted.payload.data.reactions, [{ emoji: "✅", count: 1, reactedByMe: true }]);
+    const sharedReaction = await requestJson(baseUrl, `/api/v1/conversations/${conversationId}/messages`, {
+      cookie: tradesperson.cookie,
+    });
+    assert.equal(sharedReaction.response.status, 200);
+    assert.deepEqual(
+      sharedReaction.payload.data.messages.find((message) => message.id === firstMessage.payload.data.message.id).reactions,
+      [{ emoji: "✅", count: 1, reactedByMe: false }],
+    );
+
+    const createdContact = await requestJson(baseUrl, "/api/v1/contacts", {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `contact-${randomUUID()}`,
+      body: {
+        entityType: "person",
+        name: "Private Notes Customer",
+        company: "",
+        notes: "",
+        favorite: false,
+        status: "active",
+        roles: [{ role: "customer", status: "active", details: {} }],
+        methods: [],
+        addresses: [],
+        tags: [],
+      },
+    });
+    assert.equal(createdContact.response.status, 201);
+    const contactId = createdContact.payload.data.contact.id;
+    const contactNote = await requestJson(baseUrl, `/api/v1/contacts/${contactId}/notes`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `contact-note-${randomUUID()}`,
+      body: { body: "Gate code is recorded in the signed work order." },
+    });
+    assert.equal(contactNote.response.status, 201);
+    assert.equal(contactNote.payload.data.note.version, 1);
+    assert.match(contactNote.payload.data.note.occurredAt, /^\d{4}-\d{2}-\d{2}T/);
+    const outsiderNotes = await requestJson(baseUrl, `/api/v1/contacts/${contactId}/notes`, { cookie: outsider.cookie });
+    assert.equal(outsiderNotes.response.status, 404);
+    const updatedNote = await requestJson(
+      baseUrl,
+      `/api/v1/contacts/${contactId}/notes/${contactNote.payload.data.note.id}`,
+      {
+        method: "PATCH",
+        cookie: contractor.cookie,
+        body: {
+          body: "Gate code and lockbox details are recorded in the signed work order.",
+          expectedVersion: 1,
+        },
+      },
+    );
+    assert.equal(updatedNote.response.status, 200);
+    assert.equal(updatedNote.payload.data.note.version, 2);
+    const noteHistory = await requestJson(
+      baseUrl,
+      `/api/v1/contacts/${contactId}/notes/${contactNote.payload.data.note.id}/history`,
+      { cookie: contractor.cookie },
+    );
+    assert.equal(noteHistory.response.status, 200);
+    assert.deepEqual(noteHistory.payload.data.history.map((entry) => entry.action), ["updated", "created"]);
+    assert.match(noteHistory.payload.data.history[0].body, /lockbox details/);
+    const outsiderHistory = await requestJson(
+      baseUrl,
+      `/api/v1/contacts/${contactId}/notes/${contactNote.payload.data.note.id}/history`,
+      { cookie: outsider.cookie },
+    );
+    assert.equal(outsiderHistory.response.status, 404);
+    const archivedNote = await requestJson(
+      baseUrl,
+      `/api/v1/contacts/${contactId}/notes/${contactNote.payload.data.note.id}/archive`,
+      {
+        method: "POST",
+        cookie: contractor.cookie,
+        body: { expectedVersion: 2 },
+      },
+    );
+    assert.equal(archivedNote.response.status, 200);
+    assert.ok(archivedNote.payload.data.note.archivedAt);
+
     const contractorUnread = await requestJson(baseUrl, "/api/v1/conversations", { cookie: contractor.cookie });
     assert.equal(contractorUnread.response.status, 200);
     assert.equal(contractorUnread.payload.data.conversations.find((conversation) => conversation.id === conversationId).unreadCount, 1);

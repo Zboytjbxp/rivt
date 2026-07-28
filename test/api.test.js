@@ -12,6 +12,8 @@ import {
 import express from "express";
 import { createSecurityHeadersMiddleware } from "../server/security-headers.js";
 import { toolRecordInternals } from "../server/tool-records.js";
+import { messageCreateSchema } from "../server/messaging.js";
+import { messagingContinuityInternals } from "../server/messaging-continuity.js";
 
 test("request context preserves valid request IDs and replaces invalid values", () => {
   for (const [incoming, expected] of [
@@ -77,4 +79,27 @@ test("server-owned expense export preserves cents and escapes CSV fields", () =>
   }]);
   assert.match(csv, /"12\.49"/);
   assert.match(csv, /"Wire, ""red"""/);
+});
+
+test("message send requires text or a managed staged attachment", () => {
+  assert.equal(messageCreateSchema.safeParse({ body: "", attachments: [] }).success, false);
+  assert.equal(messageCreateSchema.safeParse({
+    body: "",
+    attachments: [{ uploadId: "d9df7673-93fa-44fb-a194-5f74b3fd7cef" }],
+  }).success, true);
+  assert.equal(messageCreateSchema.safeParse({ body: "Real site update", attachments: [] }).success, true);
+});
+
+test("message continuity validates reactions, preferences, and private notes", () => {
+  for (const emoji of ["👍", "👎", "🔥", "✅", "❓", "😂"]) {
+    assert.equal(messagingContinuityInternals.reactionSchema.safeParse({ emoji }).success, true);
+  }
+  assert.equal(messagingContinuityInternals.reactionSchema.safeParse({ emoji: "invented" }).success, false);
+  assert.equal(messagingContinuityInternals.preferenceSchema.safeParse({
+    pinned: true,
+    archived: false,
+    expectedVersion: 0,
+  }).success, true);
+  assert.equal(messagingContinuityInternals.noteCreateSchema.safeParse({ body: "Follow up Friday" }).success, true);
+  assert.equal(messagingContinuityInternals.noteCreateSchema.safeParse({ body: "   " }).success, false);
 });

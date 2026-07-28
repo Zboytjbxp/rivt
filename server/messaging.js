@@ -1,13 +1,18 @@
 import { z } from "./api.js";
 
 export const messageCreateSchema = z.object({
-  body: z.string().trim().min(1).max(4000),
+  body: z.string().trim().max(4000).default(""),
   attachments: z.array(z.object({
-    uploadId: z.uuid().nullable().default(null),
-    originalName: z.string().trim().max(240).default(""),
-    mimeType: z.string().trim().max(120).default(""),
-    sizeBytes: z.number().int().nonnegative().max(50 * 1024 * 1024).nullable().default(null),
+    uploadId: z.uuid(),
   })).max(5).default([]),
+}).superRefine((value, context) => {
+  if (!value.body && value.attachments.length === 0) {
+    context.addIssue({
+      code: "custom",
+      path: ["body"],
+      message: "Write a message or attach a file.",
+    });
+  }
 });
 
 export const conversationMuteSchema = z.object({
@@ -85,7 +90,7 @@ export function mapConversationParticipant(row) {
   };
 }
 
-export function mapMessage(row, { receipts = [], attachments = [] } = {}) {
+export function mapMessage(row, { receipts = [], attachments = [], reactions = [] } = {}) {
   return {
     id: row.id,
     conversationId: row.conversation_id,
@@ -102,6 +107,7 @@ export function mapMessage(row, { receipts = [], attachments = [] } = {}) {
     } : undefined,
     receipts: receipts.map(mapMessageReceipt),
     attachments: attachments.map(mapMessageAttachment),
+    reactions,
   };
 }
 
@@ -123,6 +129,8 @@ export function mapMessageAttachment(row) {
     mimeType: row.mime_type || "",
     sizeBytes: row.size_bytes,
     status: row.status,
+    version: Number(row.version ?? 1),
+    url: row.url ?? null,
     createdByAccountId: row.created_by_account_id,
     createdAt: isoDateTime(row.created_at),
   };

@@ -312,6 +312,23 @@ if (!testDatabaseUrl) {
       assert.notEqual((await database.query("SELECT to_regclass('profile_availability_windows') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('profile_portfolio_items') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('professional_profile_events') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('conversation_preferences') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('message_templates') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('message_reactions') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('contact_notes') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'message_attachments' AND column_name IN ('conversation_id', 'removed_at', 'expires_at', 'version')",
+      )).rows[0].count, 4);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'contact_notes' AND column_name = 'occurred_at'",
+      )).rows[0].count, 1);
+
+      const rolledBackMessagingContinuity = await rollbackLatest(database);
+      assert.equal(rolledBackMessagingContinuity.latestVersion, 39);
+      assert.equal((await database.query("SELECT to_regclass('conversation_preferences') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('message_templates') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('message_reactions') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('contact_notes') AS table_name")).rows[0].table_name, null);
 
       const rolledBackProfessionalIdentity = await rollbackLatest(database);
       assert.equal(rolledBackProfessionalIdentity.latestVersion, 38);
