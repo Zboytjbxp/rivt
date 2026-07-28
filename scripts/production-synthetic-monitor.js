@@ -41,6 +41,11 @@ const health = await request("/api/health");
 assert.equal(health.payload?.ok, true, "Health endpoint must report ok=true.");
 const dependencies = health.payload?.dependencies ?? health.payload?.storage;
 const observability = health.payload?.observability ?? {};
+assert.equal(
+  health.payload?.security?.passwordBreachScreening?.mode,
+  "configured",
+  "Production breached-password screening must be configured.",
+);
 assert.ok(dependencies, "Health must expose dependency status.");
 if (dependencies.ok !== undefined) assert.equal(dependencies.ok, true, "Managed storage must report healthy.");
 assert.equal(dependencies.database, "postgres", "Database mode must be postgres.");

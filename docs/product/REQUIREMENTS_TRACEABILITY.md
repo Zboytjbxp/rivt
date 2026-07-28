@@ -1,5 +1,40 @@
 # Gate A Requirements Traceability
 
+## Packet 85 — Security, accessibility, and operations closure evidence
+
+- `GA-SEC-001` gains privacy-preserving breached-password screening on signup
+  and reset: the raw password and full digest remain inside RIVT, only a
+  padded five-character range prefix is sent, compromised values fail with a
+  typed error, and provider failure is redacted and fail-soft.
+- `GA-SEC-002` gains equal-work invalid login handling plus Fetch Metadata,
+  exact Origin, and Referer enforcement for state-changing browser requests.
+  Stripe webhooks remain outside the browser guard and the state/nonce-bound
+  Apple form-post callback has one exact path exemption.
+- `GA-SEC-004` gains resolved-address enforcement for Trade News Open Graph
+  requests and every redirect, closing private, loopback, link-local,
+  carrier-grade NAT, multicast, documentation, and reserved network targets.
+- `GA-UX-006` gains a current authenticated automation matrix for Home,
+  Work/People, Camera, Shop Talk, Tools, search, notifications, messages, and
+  account surfaces across mobile/desktop, light/dark, 200% text, reduced
+  motion, labels, keyboard focus, dialog focus, target size, overflow, and
+  landmarks. Physical iOS, Android, desktop keyboard-only, and real
+  screen-reader proof remains open and is not represented as automated.
+- `GA-OPS-002` and `GA-OPS-004` retain fresh approved incident rehearsal,
+  isolated restore, recovery-policy, and routing evidence. Both
+  `incident:readiness -- --require-ready` and
+  `launch:readiness -- --require-ready` pass.
+- `GA-OPS-007` gains a sealed 245-file standard security scan with complete
+  coverage and three remediated findings, plus passing build, application and
+  security lint, 118 unit/frontend tests, targeted PostgreSQL-backed
+  auth/server integration, all three E2E paths, five rendered product suites,
+  diff integrity, and zero production dependency vulnerabilities. The full
+  serial PostgreSQL aggregate exceeded a 20-minute local window after
+  progressing into Shop Talk reactions; no aggregate pass is claimed and the
+  unchanged required CI matrix remains authoritative.
+- `GA-OPS-008` remains pending until the merged exact source, configured
+  breached-password health signal, production monitor, and authenticated live
+  accessibility run are recorded.
+
 ## Packet 84 — Offline-recovery evidence
 
 - `GA-FND-004` gains an account-scoped device outbox whose replay still uses

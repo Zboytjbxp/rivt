@@ -1,5 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { Router } from "express";
+import { lookup as dnsLookup } from "node:dns/promises";
+import { isIP } from "node:net";
 
 const router = Router();
 const newsCache = new Map(); // key → { items, fetchedAt }
@@ -695,6 +697,63 @@ function _resolvePublicImageUrl(value, baseUrl) {
   }
 }
 
+function _isPublicNetworkAddress(value) {
+  const address = String(value ?? "").trim().toLowerCase();
+  const version = isIP(address);
+  if (!version) return false;
+
+  if (version === 4) {
+    const octets = address.split(".").map(Number);
+    const [a, b, c] = octets;
+    return !(
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 0 && c === 0) ||
+      (a === 192 && b === 0 && c === 2) ||
+      (a === 192 && b === 168) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      (a === 198 && b === 51 && c === 100) ||
+      (a === 203 && b === 0 && c === 113) ||
+      a >= 224
+    );
+  }
+
+  const mappedIpv4 = address.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/)?.[1];
+  if (mappedIpv4) return _isPublicNetworkAddress(mappedIpv4);
+  return !(
+    address === "::" ||
+    address === "::1" ||
+    address.startsWith("fc") ||
+    address.startsWith("fd") ||
+    /^fe[89ab]/.test(address) ||
+    address.startsWith("ff") ||
+    address.startsWith("2001:db8:") ||
+    address.startsWith("2001:10:") ||
+    address.startsWith("64:ff9b:1:")
+  );
+}
+
+async function _resolvePublicNetworkUrl(value, baseUrl, lookup = dnsLookup) {
+  const safeUrl = _resolvePublicImageUrl(value, baseUrl);
+  if (!safeUrl) return null;
+
+  try {
+    const parsed = new URL(safeUrl);
+    if (isIP(parsed.hostname)) {
+      return _isPublicNetworkAddress(parsed.hostname) ? safeUrl : null;
+    }
+    const addresses = await lookup(parsed.hostname, { all: true, verbatim: true });
+    if (!addresses.length || addresses.some((entry) => !_isPublicNetworkAddress(entry.address))) return null;
+    return safeUrl;
+  } catch {
+    return null;
+  }
+}
+
 function _imageCandidateFrom(value, baseUrl, depth = 0) {
   if (!value || depth > 4) return null;
   if (typeof value === "string") return _resolvePublicImageUrl(value, baseUrl);
@@ -771,15 +830,17 @@ async function _readBoundedText(response, maxBytes = 600_000) {
   return text + decoder.decode();
 }
 
-async function _fetchArticleImage(url) {
-  const safeUrl = _resolvePublicImageUrl(url);
+async function _fetchArticleImage(url, { fetchImpl = globalThis.fetch, lookup = dnsLookup } = {}) {
+  const safeUrl = await _resolvePublicNetworkUrl(url, undefined, lookup);
   if (!safeUrl) return null;
 
   try {
     let requestUrl = safeUrl;
     let res;
     for (let redirects = 0; redirects <= 3; redirects += 1) {
-      res = await fetch(requestUrl, {
+      requestUrl = await _resolvePublicNetworkUrl(requestUrl, undefined, lookup);
+      if (!requestUrl) return null;
+      res = await fetchImpl(requestUrl, {
         signal: AbortSignal.timeout(3500),
         headers: {
           Accept: "text/html,application/xhtml+xml",
@@ -788,7 +849,7 @@ async function _fetchArticleImage(url) {
         redirect: "manual",
       });
       if (![301, 302, 303, 307, 308].includes(res.status)) break;
-      const redirected = _resolvePublicImageUrl(res.headers.get("location"), requestUrl);
+      const redirected = await _resolvePublicNetworkUrl(res.headers.get("location"), requestUrl, lookup);
       if (!redirected || redirects === 3) return null;
       requestUrl = redirected;
     }
@@ -991,6 +1052,9 @@ export const newsInternals = {
   _normalizedTitle,
   _fetchFeed,
   _pruneNewsCache,
+  _isPublicNetworkAddress,
+  _resolvePublicNetworkUrl,
+  _fetchArticleImage,
   _resolvePublicImageUrl,
   _rssThumbnailUrl,
   _trades,

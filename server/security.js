@@ -4,6 +4,22 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const SESSION_ID_PATTERN = /^[0-9a-f-]{36}$/i;
 const LOCAL_DEV_ORIGIN_PATTERN = /^http:\/\/(?:127\.0\.0\.1|localhost):\d+$/i;
 
+function requestHeader(request, name) {
+  return request.get?.(name)
+    ?? request.headers?.[name.toLowerCase()]
+    ?? request.headers?.[name]
+    ?? null;
+}
+
+function sourceOriginFromReferer(value) {
+  if (!value) return null;
+  try {
+    return new URL(String(value)).origin;
+  } catch {
+    return "invalid";
+  }
+}
+
 function decodeCookiePart(value) {
   try {
     return decodeURIComponent(value);
@@ -42,15 +58,59 @@ export function isAllowedOrigin(origin, allowedOrigins) {
   return false;
 }
 
-export function createOriginGuard(allowedOrigins) {
+export function createOriginGuard(allowedOrigins, { exemptPaths = [] } = {}) {
+  const exemptions = new Set(exemptPaths);
   return function originGuard(request, response, next) {
     if (SAFE_METHODS.has(request.method)) {
       next();
       return;
     }
 
-    const origin = request.get("origin");
-    if (isAllowedOrigin(origin, allowedOrigins)) {
+    const requestPath = String(request.originalUrl ?? request.url ?? request.path ?? "").split("?", 1)[0];
+    if (exemptions.has(requestPath)) {
+      next();
+      return;
+    }
+
+    const fetchSite = String(requestHeader(request, "sec-fetch-site") ?? "").toLowerCase();
+    if (fetchSite === "cross-site" || fetchSite === "same-site") {
+      response.status(403).json({
+        ok: false,
+        error: "Request origin is not allowed.",
+      });
+      return;
+    }
+
+    const origin = requestHeader(request, "origin");
+    if (origin) {
+      if (isAllowedOrigin(origin, allowedOrigins)) {
+        next();
+        return;
+      }
+      response.status(403).json({
+        ok: false,
+        error: "Request origin is not allowed.",
+      });
+      return;
+    }
+
+    const refererOrigin = sourceOriginFromReferer(requestHeader(request, "referer"));
+    if (refererOrigin) {
+      if (refererOrigin !== "invalid" && isAllowedOrigin(refererOrigin, allowedOrigins)) {
+        next();
+        return;
+      }
+      response.status(403).json({
+        ok: false,
+        error: "Request origin is not allowed.",
+      });
+      return;
+    }
+
+    // Non-browser clients may omit browser source headers. Browser requests
+    // still carry Fetch Metadata and/or Origin in supported clients, while
+    // SameSite=Lax remains the legacy-browser defense in depth.
+    if (!fetchSite || fetchSite === "same-origin" || fetchSite === "none") {
       next();
       return;
     }

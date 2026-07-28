@@ -2,10 +2,65 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Offline and recovery behavior production verified.
-Active packet: `docs/delivery/packets/84_OFFLINE_RECOVERY_BEHAVIOR.md`
-Repository branch: `master` (feature branch `codex/offline-recovery-behavior`)
-Production feature release commit: `a33ee1adc91b124e202408730cd6f7381e1c3eb9`
+Current phase: Security, accessibility, and operations closure locally accepted; production verification pending.
+Active packet: `docs/delivery/packets/85_SECURITY_ACCESSIBILITY_OPERATIONS_CLOSURE.md`
+Repository branch: `codex/security-accessibility-operations-closure`
+Production feature release commit: pending
+
+## Security, accessibility, and operations closure
+
+- Packet 85 has a frozen machine-verifiable boundary covering breached
+  password screening, login enumeration resistance, browser-source/CSRF
+  evidence, Trade News outbound-fetch SSRF controls, current-route automated
+  accessibility, and operational-readiness proof.
+- Both committed readiness gates currently pass. Recovery evidence remains
+  fresh through 2026-08-24 and the latest named isolated restore and incident
+  rehearsal were completed on 2026-07-25.
+- Physical iPhone Safari, Android Chrome, desktop keyboard-only, and real
+  screen-reader acceptance remain a named human boundary. They will not be
+  represented as complete by headless Chromium.
+- No migration or production-data mutation is planned for this packet.
+- Password creation and reset now use the Pwned Passwords range protocol:
+  RIVT hashes locally, transmits only a padded five-character SHA-1 prefix,
+  rejects confirmed compromised values, and fails soft with a redacted
+  degraded-screening event when the provider is unavailable. Production
+  health and the synthetic monitor expose only configured/disabled status.
+- Login performs one scrypt verification for both present and absent account
+  rows. Browser mutations reject cross-site Fetch Metadata and foreign
+  Origin/Referer evidence while preserving the exact Apple form-post callback
+  and the pre-origin Stripe webhook routes.
+- Trade News now resolves every initial and redirect hostname before Open
+  Graph fetching and rejects any answer containing a private, loopback,
+  link-local, carrier-grade NAT, multicast, documentation, or reserved
+  address.
+- The sealed standard security scan for source
+  `50d7fed84724e3f2c4589de94bb849f8237218bb` is at
+  `C:\Users\zboyt\AppData\Local\Temp\codex-security-scans\Trade-Work\50d7fed84724_20260728T163144`.
+  It covers 245 tracked files, has no deferred surface, and reports the three
+  now-remediated controls: medium DNS-resolved SSRF, low login timing
+  enumeration, and low missing browser-source evidence.
+- Automated accessibility now sweeps current Home, Work/People, Camera, Shop
+  Talk, Tools, search, notifications, messages, and account routes across
+  compact/standard phones, tablet, laptop, desktop, light/dark themes, 200%
+  text, keyboard focus, and reduced motion. The physical checklist now uses
+  the current Work/People and Camera navigation.
+- Local deterministic evidence passes: production build, application and
+  security lint, 118 unit/frontend tests, fail-closed authentication,
+  Jobs/discovery, and offline-recovery E2E, all five rendered product suites,
+  targeted server/auth lifecycle integration against the isolated PostgreSQL
+  database, incident readiness, launch readiness, diff integrity, and a
+  zero-vulnerability production dependency audit.
+- The full serial PostgreSQL aggregate was attempted and progressed through
+  the Shop Talk reaction suite but did not exit inside a 20-minute local
+  window. No full-aggregate pass is claimed; the unchanged required CI matrix
+  remains the release authority for every database suite.
+- Three-things review closed the password privacy/availability boundary,
+  exact Stripe/OAuth callback handling, and the risk of presenting headless
+  accessibility automation as physical assistive-technology proof.
+- Packet 85 is **Locally Accepted**. Exact-source production deployment,
+  production monitor, and authenticated live accessibility evidence remain
+  pending. Physical iPhone, Android, keyboard-only, and real screen-reader
+  rows remain explicitly open for a human.
 
 ## Offline and recovery behavior
 

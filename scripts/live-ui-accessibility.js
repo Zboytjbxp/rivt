@@ -17,12 +17,12 @@ const browserOnlyFile = argValue("--browser-only");
 const screenshotDir = process.env.RIVT_UI_SMOKE_SCREENSHOT_DIR?.trim();
 
 const auditScenarios = [
-  { name: "phone-compact", viewport: { width: 360, height: 800 }, roles: ["contractor", "tradesperson"] },
-  { name: "phone-standard", viewport: { width: 390, height: 844 }, roles: ["contractor", "tradesperson"] },
-  { name: "tablet", viewport: { width: 768, height: 1024 }, roles: ["contractor"] },
-  { name: "laptop", viewport: { width: 1366, height: 768 }, roles: ["contractor"] },
-  { name: "desktop-wide", viewport: { width: 1440, height: 900 }, roles: ["contractor"] },
-  { name: "phone-200-percent-text", viewport: { width: 390, height: 844 }, roles: ["contractor"], textScale: 2 },
+  { name: "phone-compact-dark", viewport: { width: 360, height: 800 }, roles: ["contractor", "tradesperson"], colorScheme: "dark" },
+  { name: "phone-standard-light", viewport: { width: 390, height: 844 }, roles: ["contractor", "tradesperson"], colorScheme: "light" },
+  { name: "tablet-light", viewport: { width: 768, height: 1024 }, roles: ["contractor"], colorScheme: "light" },
+  { name: "laptop-dark", viewport: { width: 1366, height: 768 }, roles: ["contractor"], colorScheme: "dark" },
+  { name: "desktop-wide-light", viewport: { width: 1440, height: 900 }, roles: ["contractor"], colorScheme: "light" },
+  { name: "phone-200-percent-text-dark", viewport: { width: 390, height: 844 }, roles: ["contractor"], textScale: 2, colorScheme: "dark" },
 ];
 
 let pool;
@@ -268,7 +268,7 @@ async function collectUiAudit(page, label) {
         scrollWidth: document.documentElement.scrollWidth,
         scrollHeight: document.documentElement.scrollHeight,
       },
-      requiredNav: ["Home", "Work", "Shop Talk", "Tools"].map((name) => ({
+      requiredNav: ["Home", "Work", "Camera", "Shop Talk", "Tools"].map((name) => ({
         name,
         visible: controls.some((control) => control.name === name),
       })),
@@ -304,6 +304,27 @@ async function collectUiAudit(page, label) {
         }))
         .slice(0, 15),
       smallTargets: controls.filter((control) => control.width < 44 || control.height < 44).slice(0, 20),
+      nonReducedAnimations: [...document.querySelectorAll("*")]
+        .filter(visible)
+        .map((el) => {
+          const style = window.getComputedStyle(el);
+          const durations = style.animationDuration.split(",").map((value) => {
+            const trimmed = value.trim();
+            return trimmed.endsWith("ms") ? Number.parseFloat(trimmed) : Number.parseFloat(trimmed) * 1000;
+          });
+          const iterations = style.animationIterationCount.split(",").map((value) =>
+            value.trim() === "infinite" ? Number.POSITIVE_INFINITY : Number.parseFloat(value),
+          );
+          return {
+            name: textOf(el).slice(0, 80),
+            durationMs: Math.max(0, ...durations.filter(Number.isFinite)),
+            iterations: iterations.some((value) => !Number.isFinite(value))
+              ? Number.POSITIVE_INFINITY
+              : Math.max(0, ...iterations.filter(Number.isFinite)),
+          };
+        })
+        .filter((entry) => entry.durationMs > 1 || entry.iterations > 1)
+        .slice(0, 20),
       overflow,
       bodyStart: bodyText.slice(0, 500),
       frameworkOverlay: Boolean(document.querySelector("vite-error-overlay, nextjs-portal, [data-nextjs-dialog-overlay]"))
@@ -395,12 +416,22 @@ async function collectTopBarActionAudits(page, scenarioLabel) {
 
   await page.keyboard.press("Control+K");
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor({ timeout: 5000 });
+  assert.equal(
+    await page.getByRole("dialog", { name: "Search RIVT" }).evaluate((dialog) => dialog.contains(document.activeElement)),
+    true,
+    "Search dialog must contain keyboard focus when opened.",
+  );
   audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-search-dialog`));
   await page.keyboard.press("Escape");
   await assertNoDialog(page, "Search RIVT");
 
   await clickVisibleControl(page, { pattern: "^Notifications$", description: "notifications" });
   await page.getByRole("dialog", { name: "Notifications" }).waitFor({ timeout: 5000 });
+  assert.equal(
+    await page.getByRole("dialog", { name: "Notifications" }).evaluate((dialog) => dialog.contains(document.activeElement)),
+    true,
+    "Notifications dialog must contain keyboard focus when opened.",
+  );
   await page.getByRole("button", { name: /Mark read/i }).waitFor({ timeout: 5000 });
   audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-notifications-panel`));
   await page.getByRole("button", { name: "Close notifications" }).click();
@@ -423,7 +454,11 @@ async function collectTopBarActionAudits(page, scenarioLabel) {
 }
 
 async function loginAndAudit(browser, account, scenario) {
-  const context = await browser.newContext({ viewport: scenario.viewport, reducedMotion: "reduce" });
+  const context = await browser.newContext({
+    viewport: scenario.viewport,
+    reducedMotion: "reduce",
+    colorScheme: scenario.colorScheme,
+  });
   const page = await context.newPage();
   const logs = [];
   page.on("console", (message) => {
@@ -458,9 +493,13 @@ async function loginAndAudit(browser, account, scenario) {
 
     const scenarioLabel = `${account.role}-${scenario.name}-${scenario.viewport.width}x${scenario.viewport.height}`;
     const audits = [await collectAndCaptureUiAudit(page, `${scenarioLabel}-home`)];
-    for (const navItem of ["Work", "Shop Talk", "Tools", "Home"]) {
+    for (const navItem of ["Work", "Camera", "Shop Talk", "Tools", "Home"]) {
       await firstVisibleClick(page, navItem);
       audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-${navItem.toLowerCase().replace(/\s+/g, "-")}`));
+      if (navItem === "Work") {
+        await clickVisibleControl(page, { pattern: "^People$", description: "Work People" });
+        audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-work-people`));
+      }
     }
     const topBarActionAudits = await collectTopBarActionAudits(page, scenarioLabel);
 
@@ -482,6 +521,11 @@ async function loginAndAudit(browser, account, scenario) {
       assert.deepEqual(audit.missingImageAlt, [], `${audit.label} has visible images without alt attributes: ${JSON.stringify(audit.missingImageAlt)}`);
       assert.deepEqual(audit.unlabeledFields, [], `${audit.label} has visible form fields without labels/names: ${JSON.stringify(audit.unlabeledFields)}`);
       assert.deepEqual(audit.smallTargets, [], `${audit.label} has visible interactive controls below 44px: ${JSON.stringify(audit.smallTargets)}`);
+      assert.deepEqual(
+        audit.nonReducedAnimations,
+        [],
+        `${audit.label} has non-trivial animation under reduced motion: ${JSON.stringify(audit.nonReducedAnimations)}`,
+      );
       for (const [signal, present] of Object.entries(audit.topBarSignals)) {
         assert.equal(present, true, `${audit.label} is missing top-bar ${signal}.`);
       }
@@ -494,6 +538,7 @@ async function loginAndAudit(browser, account, scenario) {
       scenario: scenario.name,
       viewport: scenario.viewport,
       textScale: scenario.textScale ?? 1,
+      colorScheme: scenario.colorScheme,
       logs,
       reducedMotion: true,
       keyboard,

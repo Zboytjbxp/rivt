@@ -33,10 +33,11 @@ Run each route as Contractor and Tradesperson where role-correct.
 | Auth/login | Labels announced, invalid login error announced, no local fallback, 44px controls |
 | Onboarding/profile | Role is clear, selected state visible, required errors announced |
 | Home | Top-bar controls named, primary actions reachable, no overlap at 200% text |
-| Work | Filter/post/apply controls reachable, empty/error states understandable |
-| Crew | Cards readable, actions named, no horizontal scroll |
+| Work / Jobs | Filter/post/apply controls reachable, empty/error states understandable |
+| Work / People | People, subcontractor, customer, supplier, partner, and linked-contact records are reachable and understandable |
+| Camera | Destination, shutter, media picker, settings, permission/error, and recovery controls are named and reachable |
 | Shop Talk | Search, trade filter, reaction controls, Trade News toggle/link names |
-| Tools | Calculator, Invoice Draft, Daily Log, Records surfaces usable and readable |
+| Tools | Calculator, Estimate, Invoice, Materials, Jobsite, and Time & costs surfaces usable and readable |
 | Messages/Inbox | Thread list, composer, notifications, empty states, mute/report controls |
 | Profile/settings | Sign out, theme controls, notification preferences named |
 
@@ -52,6 +53,9 @@ For each route:
 - Error/success state is announced or visible near the triggering control.
 - Light/dark theme remains readable.
 - 200% text remains usable without hiding required actions.
+- Reduced-motion mode does not flash, pulse, or continuously animate.
+- Opening and closing a dialog moves focus into it and back to the control
+  that opened it.
 
 ## Evidence to Capture
 

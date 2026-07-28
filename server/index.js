@@ -27,7 +27,9 @@ import { registerBillingRoutes, registerStripeWebhookRoute } from "./billing.js"
 import { registerStripeConnectRoutes, registerStripeConnectWebhookRoute, stripeConnectProviderStatus } from "./stripe-connect.js";
 import { createSecurityHeadersMiddleware } from "./security-headers.js";
 import {
+  assertPasswordNotBreached,
   assertStrongPassword,
+  breachedPasswordScreeningStatus,
   buildAppleAuthorizationUrl,
   buildAppleClientSecret,
   buildGoogleAuthorizationUrl,
@@ -38,6 +40,7 @@ import {
   safeRedirectPath,
   verifyAppleIdToken,
   verifyGoogleIdToken,
+  verifyLoginPassword,
 } from "./auth.js";
 import { loadActorContext, requireOrganizationRole } from "./authorization.js";
 import { emailProviderStatus, sendTransactionalEmail } from "./email.js";
@@ -403,7 +406,9 @@ app.use(express.urlencoded({ extended: false, limit: "64kb" }));
 
 app.use("/api", createRequestContext);
 app.use("/api", createRequestLogger());
-app.use("/api", createOriginGuard(allowedOrigins));
+app.use("/api", createOriginGuard(allowedOrigins, {
+  exemptPaths: ["/api/auth/apple/callback"],
+}));
 
 function setSessionId(response, sessionId) {
   response.cookie(sessionCookieName, sessionId, {
@@ -1050,6 +1055,7 @@ app.get("/api/health", (_request, response) => {
   const monitoring = errorMonitoringStatus();
   const webPush = pushProviderStatus();
   const invoiceBankPayments = stripeConnectProviderStatus(productionOrigin);
+  const passwordScreening = breachedPasswordScreeningStatus();
   const ok = storage.ok && migrationState !== "failed";
 
   response.status(ok ? 200 : 503).json({
@@ -1080,6 +1086,9 @@ app.get("/api/health", (_request, response) => {
         mode: webPush.mode,
       },
       invoiceBankPayments,
+    },
+    security: {
+      passwordBreachScreening: passwordScreening,
     },
     engagement: {
       matchingJobAlerts: {
@@ -5875,7 +5884,7 @@ app.get("/api/auth/apple/callback", authRateLimit, asyncRoute(handleAppleCallbac
 
 const signupSchema = z.object({
   email: z.email().max(320).transform((value) => normalizeEmail(value)),
-  password: z.string(),
+  password: z.string().max(1024),
   role: z.enum(["contractor", "tradesperson"]),
   displayName: z.string().trim().min(2).max(100),
   inviteCode: z.string().trim().min(5).max(256).optional(),
@@ -5887,6 +5896,17 @@ const loginSchema = z.object({
   password: z.string().min(1).max(1024),
 });
 
+async function enforcePasswordSecurity(password, requestId) {
+  assertStrongPassword(password);
+  const result = await assertPasswordNotBreached(password);
+  if (!result.checked && result.reason !== "disabled") {
+    logWarn("auth.password_breach_screening_degraded", {
+      requestId,
+      reason: result.reason,
+    });
+  }
+}
+
 async function handleSignup(request, response) {
   requireAuthSecurity();
   const controls = operationalControls();
@@ -5896,7 +5916,7 @@ async function handleSignup(request, response) {
     });
   }
   const input = validate(signupSchema, request.body);
-  assertStrongPassword(input.password);
+  await enforcePasswordSecurity(input.password, request.requestId);
   if (!emailProviderStatus().ok) {
     throw new ApiError(503, "EMAIL_PROVIDER_UNAVAILABLE", "Email signup is temporarily unavailable.");
   }
@@ -5963,7 +5983,7 @@ async function handleLogin(request, response) {
     [sha256(input.email)],
   );
   const user = result.rows[0];
-  const passwordValid = user ? await verifyPassword(input.password, user.password_salt, user.password_hash) : false;
+  const passwordValid = await verifyLoginPassword(input.password, user, verifyPassword);
   if (!user || !passwordValid) {
     throw new ApiError(401, "INVALID_CREDENTIALS", "Invalid email or password.");
   }
@@ -6005,7 +6025,7 @@ const tokenSchema = z.object({ token: z.string().min(32).max(512) });
 const forgotPasswordSchema = z.object({
   email: z.email().max(320).transform((value) => normalizeEmail(value)),
 });
-const resetPasswordSchema = tokenSchema.extend({ password: z.string() });
+const resetPasswordSchema = tokenSchema.extend({ password: z.string().max(1024) });
 
 app.post("/api/v1/auth/email/resend", authRateLimit, requireV1AuthenticatedUser, asyncRoute(async (request, response) => {
   await ensureDatabaseReady();
@@ -6092,7 +6112,7 @@ app.post("/api/v1/auth/password/forgot", authRateLimit, asyncRoute(async (reques
 
 app.post("/api/v1/auth/password/reset", authRateLimit, asyncRoute(async (request, response) => {
   const input = validate(resetPasswordSchema, request.body);
-  assertStrongPassword(input.password);
+  await enforcePasswordSecurity(input.password, request.requestId);
   await ensureDatabaseReady();
   await withTransaction(async (client) => {
     const result = await client.query(

@@ -4,6 +4,8 @@ import { ApiError } from "./api.js";
 
 const googleJwks = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
 const appleJwks = createRemoteJWKSet(new URL("https://appleid.apple.com/auth/keys"));
+const dummyPasswordSalt = "00000000000000000000000000000000";
+const dummyPasswordHash = "0".repeat(128);
 
 export function createOpaqueToken(bytes = 32) {
   return randomBytes(bytes).toString("base64url");
@@ -16,6 +18,7 @@ export function hashOpaqueToken(token) {
 export function assertStrongPassword(password) {
   const value = String(password ?? "");
   const valid = value.length >= 8
+    && value.length <= 1024
     && /[a-z]/.test(value)
     && /[A-Z]/.test(value)
     && /\d/.test(value)
@@ -24,10 +27,93 @@ export function assertStrongPassword(password) {
     throw new ApiError(
       422,
       "PASSWORD_POLICY_FAILED",
-      "Use at least 8 characters with uppercase, lowercase, a number, and a symbol.",
+      "Use at least 8 characters (maximum 1,024) with uppercase, lowercase, a number, and a symbol.",
     );
   }
   return value;
+}
+
+export function breachedPasswordScreeningStatus() {
+  const setting = String(process.env.PASSWORD_BREACH_CHECK_MODE ?? "").trim().toLowerCase();
+  const enabled = setting
+    ? !["disabled", "off", "false", "0"].includes(setting)
+    : process.env.NODE_ENV === "production";
+  return {
+    ok: enabled,
+    provider: "pwned-passwords",
+    mode: enabled ? "configured" : "disabled",
+  };
+}
+
+export async function checkBreachedPassword(password, {
+  enabled = breachedPasswordScreeningStatus().ok,
+  fetchImpl = globalThis.fetch,
+  timeoutMs = 3_000,
+} = {}) {
+  const value = assertStrongPassword(password);
+  if (!enabled) return { checked: false, breached: false, count: 0, reason: "disabled" };
+
+  const digest = createHash("sha1").update(value, "utf8").digest("hex").toUpperCase();
+  const prefix = digest.slice(0, 5);
+  const suffix = digest.slice(5);
+
+  try {
+    const response = await fetchImpl(`https://api.pwnedpasswords.com/range/${prefix}`, {
+      headers: {
+        Accept: "text/plain",
+        "Add-Padding": "true",
+        "User-Agent": "RIVT password screening/1.0 (+https://rivt.pro)",
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!response.ok) {
+      return { checked: false, breached: false, count: 0, reason: `provider_http_${response.status}` };
+    }
+    const declaredLength = Number(response.headers?.get?.("content-length") ?? 0);
+    if (declaredLength > 200_000) {
+      return { checked: false, breached: false, count: 0, reason: "provider_response_too_large" };
+    }
+    const body = await response.text();
+    if (Buffer.byteLength(body) > 200_000) {
+      return { checked: false, breached: false, count: 0, reason: "provider_response_too_large" };
+    }
+    const match = body.split(/\r?\n/).find((line) => line.slice(0, 35).toUpperCase() === suffix);
+    const count = match ? Number(match.split(":")[1] ?? 0) : 0;
+    return {
+      checked: true,
+      breached: Number.isFinite(count) && count > 0,
+      count: Number.isFinite(count) ? count : 0,
+      reason: null,
+    };
+  } catch (error) {
+    return {
+      checked: false,
+      breached: false,
+      count: 0,
+      reason: error?.name === "TimeoutError" ? "provider_timeout" : "provider_unavailable",
+    };
+  }
+}
+
+export async function assertPasswordNotBreached(password, options) {
+  const result = await checkBreachedPassword(password, options);
+  if (result.breached) {
+    throw new ApiError(
+      422,
+      "PASSWORD_COMPROMISED",
+      "Choose a password that has not appeared in a known data breach.",
+    );
+  }
+  return result;
+}
+
+export async function verifyLoginPassword(password, user, verifyPassword) {
+  const passwordValid = await verifyPassword(
+    password,
+    user?.password_salt || dummyPasswordSalt,
+    user?.password_hash || dummyPasswordHash,
+  );
+  return Boolean(user) && passwordValid;
 }
 
 export function pkceChallenge(verifier) {

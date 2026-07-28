@@ -43,12 +43,49 @@ test("origin guard rejects unsafe cross-origin requests", () => {
   const guard = createOriginGuard(["https://rivt.pro"]);
   const response = responseDouble();
   let nextCalled = false;
-  guard({ method: "POST", get: () => "https://attacker.example" }, response, () => { nextCalled = true; });
+  guard({ method: "POST", get: (name) => name === "origin" ? "https://attacker.example" : null }, response, () => { nextCalled = true; });
   assert.equal(nextCalled, false);
   assert.equal(response.statusCode, 403);
 
-  guard({ method: "GET", get: () => "https://attacker.example" }, responseDouble(), () => { nextCalled = true; });
+  guard({ method: "GET", get: (name) => name === "origin" ? "https://attacker.example" : null }, responseDouble(), () => { nextCalled = true; });
   assert.equal(nextCalled, true);
+});
+
+test("origin guard uses Fetch Metadata and Referer while preserving exact callback exemptions", () => {
+  const guard = createOriginGuard(["https://rivt.pro"], {
+    exemptPaths: ["/api/auth/apple/callback"],
+  });
+  const crossSite = responseDouble();
+  guard({
+    method: "POST",
+    originalUrl: "/api/v1/profile",
+    get: (name) => name === "sec-fetch-site" ? "cross-site" : null,
+  }, crossSite, () => assert.fail("cross-site request should not continue"));
+  assert.equal(crossSite.statusCode, 403);
+
+  let referred = false;
+  guard({
+    method: "PATCH",
+    originalUrl: "/api/v1/profile",
+    get: (name) => name === "referer" ? "https://rivt.pro/app/settings" : null,
+  }, responseDouble(), () => { referred = true; });
+  assert.equal(referred, true);
+
+  const badReferer = responseDouble();
+  guard({
+    method: "PATCH",
+    originalUrl: "/api/v1/profile",
+    get: (name) => name === "referer" ? "https://rivt.pro.attacker.example/app" : null,
+  }, badReferer, () => assert.fail("foreign Referer should not continue"));
+  assert.equal(badReferer.statusCode, 403);
+
+  let callbackReached = false;
+  guard({
+    method: "POST",
+    originalUrl: "/api/auth/apple/callback",
+    get: (name) => name === "sec-fetch-site" ? "cross-site" : null,
+  }, responseDouble(), () => { callbackReached = true; });
+  assert.equal(callbackReached, true);
 });
 
 test("dev origin matcher allows localhost ports but still rejects arbitrary origins", () => {
@@ -241,6 +278,31 @@ test("trade news images accept public RSS media and reject local or decorative U
   );
   assert.equal(newsInternals._resolvePublicImageUrl("http://127.0.0.1/private.jpg"), null);
   assert.equal(newsInternals._resolvePublicImageUrl("https://example.com/favicon.ico"), null);
+});
+
+test("trade news article enrichment rejects hostnames resolving to private networks", async () => {
+  assert.equal(newsInternals._isPublicNetworkAddress("8.8.8.8"), true);
+  assert.equal(newsInternals._isPublicNetworkAddress("127.0.0.1"), false);
+  assert.equal(newsInternals._isPublicNetworkAddress("169.254.169.254"), false);
+  assert.equal(newsInternals._isPublicNetworkAddress("::1"), false);
+
+  const blocked = await newsInternals._resolvePublicNetworkUrl(
+    "https://article.example/story",
+    undefined,
+    async () => [{ address: "127.0.0.1", family: 4 }],
+  );
+  assert.equal(blocked, null);
+
+  let fetched = false;
+  const image = await newsInternals._fetchArticleImage("https://article.example/story", {
+    lookup: async () => [{ address: "169.254.169.254", family: 4 }],
+    fetchImpl: async () => {
+      fetched = true;
+      throw new Error("must not fetch");
+    },
+  });
+  assert.equal(image, null);
+  assert.equal(fetched, false);
 });
 
 test("trade news assigns useful trade filters without inventing a specialty", () => {
