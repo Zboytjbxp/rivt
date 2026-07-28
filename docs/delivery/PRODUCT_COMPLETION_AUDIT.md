@@ -1,10 +1,10 @@
 # RIVT product completion audit
 
-Audit date: 2026-07-27 America/New_York
+Audit date: 2026-07-28 America/New_York
 
-Baseline: `origin/master` at `2901255`
+Baseline: `origin/master` at `1735d7f`
 
-Current packet: `docs/delivery/packets/81_PROFESSIONAL_IDENTITY.md`
+Current packet: `docs/delivery/packets/82_MESSAGES_CUSTOMER_NOTES.md`
 
 ## Why this exists
 
@@ -84,26 +84,24 @@ Status: **Production deployed and exact-source verified at `2901255`.**
 Migration `0039_professional_identity`, the seven-check production monitor,
 and a disposable two-account privacy/media lifecycle all pass.
 
-### Next 2 — Messages and customer notes
+### Current — Messages and customer notes
 
-Evidence:
+Packet 82 closes the browser-only continuity and split-note boundary:
 
-- Canonical conversations/messages/receipts are server-owned, but message
-  attachments remain an API shape without a complete authorized upload/read
-  UI.
-- Conversation templates, pins, archives, and emoji reactions are
-  device-only.
-- A customer-note photo remains only in the local thread while the adjacent
-  text notes may sync; the product must not imply the photo synced.
+- participant-authorized managed message media with upload, local draft,
+  retry, transactional send, signed read, removal, and 24-hour abandoned
+  draft cleanup;
+- account-owned conversation pin/archive preferences and reusable templates;
+- persisted participant reactions with real shared counts;
+- canonical private Contact notes with correction, archive/restore,
+  immutable history, managed private media, and preserved legacy chronology;
+- explicit loss-safe device migration and copy that never describes a
+  private note as sent to a customer.
 
-Completion boundary:
-
-- participant-authorized message media with upload, failure, retry, download,
-  and removal states;
-- account-owned message preferences where cross-device continuity is
-  expected;
-- customer notes and their attachments either persist as canonical private
-  Contact activity or are explicitly limited to a local draft before save.
+Status: **Locally verified; production deployment and disposable
+authenticated production proof pending.** Migration
+`0040_messaging_customer_notes`, all 22 serial integration suites, browser
+E2E, focused rendered suites, and dependency audit pass.
 
 ### Next 3 — Shop Talk and Trade News continuity
 

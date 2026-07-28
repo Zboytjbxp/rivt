@@ -1,12 +1,58 @@
 # RIVT Build State
 
-Last updated: 2026-07-27 America/New_York
+Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Professional identity and people discovery production verification complete.
-Active packet: `docs/delivery/packets/81_PROFESSIONAL_IDENTITY.md`
-Repository branch: `master`
-Production feature release commit:
-`2901255fae8a6c4c8e5f7615e1a51d031dad8c92`
+Current phase: Messages and private customer-note continuity locally verified; production verification pending.
+Active packet: `docs/delivery/packets/82_MESSAGES_CUSTOMER_NOTES.md`
+Repository branch: `codex/messages-customer-notes`
+Production feature release commit: pending
+
+## Messages and private customer-note continuity
+
+- Finished accepted-work Messages as a durable two-party record. Managed
+  attachments are participant-authorized, private, content-checked, bounded
+  to 10 MB, stripped of any delivery claim until the message transaction
+  succeeds, readable through signed URLs, and removable only by their sender.
+- Staged message media remains a visible local draft until send succeeds.
+  Failed uploads expose retry/removal instead of fake sent or synced states.
+  Unused managed drafts expire after 24 hours and are removed in bounded
+  cleanup batches so abandoned objects do not become permanent storage.
+- Replaced browser-only pin/archive settings, reusable templates, and emoji
+  counts with account-backed preferences, templates, and participant
+  reactions. Counts come only from persisted reactions visible to both
+  participants; old private reactions are labeled private and migrate only
+  through an explicit clearing choice.
+- Replaced the split local customer-log/photo path with canonical private
+  notes on the same Contact used by Work, Estimates, Invoices, and Contacts.
+  Notes support create, correction, archive, restore, immutable change
+  history, managed files, signed reads, removal, loading/error/retry, and
+  explicit loss-safe device migration.
+- Preserved legacy note occurrence dates during migration and kept customer
+  notes explicitly private: they are never rendered or described as messages
+  to the Contact.
+- Migration `0040_messaging_customer_notes` adds versioned conversation
+  preferences, templates, reactions, note/media lifecycle records,
+  append-only continuity events, private upload scopes, attachment-only
+  messages, and a reviewed rollback that detaches Packet 82 media without
+  changing pre-existing jobs, Contacts, conversations, or messages.
+- Authorization is server-owned: conversation media/reactions/preferences
+  require an active participant; note/history/media reads and writes require
+  the owning account and canonical Contact; attachment removal requires the
+  original sender.
+- Rendered QA covers the revised mobile selected-conversation order, desktop
+  two-column Inbox, Customer Notes, and light/dark Messages. Adjacent Tools,
+  Shop Talk/Trade News, Work, and guest surfaces also pass their focused
+  smokes.
+- Local verification is complete: production build and lint, 111
+  unit/frontend tests, all 22 serial PostgreSQL integration suites,
+  fail-closed authentication and Jobs/discovery E2E, migration
+  rollback/reapply, every focused rendered suite, and a zero-vulnerability
+  production dependency audit pass.
+- Three-things review closed abandoned-upload retention, real note revision
+  history, and omitted legacy occurrence-date mapping before the packet
+  advanced. Production deployment, exact-source health, and disposable
+  authenticated production proof remain pending; Packet 82 is not yet
+  marked Verified.
 
 ## Professional identity and people discovery
 

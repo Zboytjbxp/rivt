@@ -1,5 +1,35 @@
 # Gate A Requirements Traceability
 
+## Packet 82 — Messages and customer-note continuity evidence
+
+- `GA-FND-003` gains additive migration
+  `0040_messaging_customer_notes`: versioned account conversation
+  preferences/templates/reactions, canonical private Contact notes, managed
+  attachment lifecycle fields, and append-only continuity events. The
+  rollback detaches only Packet 82 media and preserves prior conversations,
+  messages, jobs, Contacts, and work.
+- `GA-FND-004` gains participant authorization for conversation preferences,
+  reactions, and media; creator-only media removal; owner-only Contact
+  note/history/media access; optimistic versions; idempotent creates; signed
+  private reads; content/type/size validation; and embedded-GPS rejection.
+- `GA-UX-003` gains one coherent Inbox boundary: real accepted-work Messages
+  and explicitly private notes on the same canonical Contact used in Work,
+  Estimates, Invoices, and Contacts.
+- `GA-UX-005` gains honest staged/failed/retry message upload states, persisted
+  shared reaction counts, loss-safe explicit legacy migration, correction,
+  archive/restore, immutable note history, preserved occurrence dates, and a
+  24-hour abandoned-message-upload expiry.
+- `GA-UX-006` gains rendered mobile and desktop Inbox evidence in light and
+  dark themes, with the selected mobile conversation ahead of the thread
+  index and a stable desktop two-column layout.
+- `GA-OPS-007` has a clean build/lint, 111 unit/frontend tests, all 22 serial
+  PostgreSQL integration suites, migration rollback/reapply, fail-closed
+  authentication and Jobs/discovery E2E, every focused rendered suite, and
+  zero production dependency vulnerabilities.
+- Production deployment, exact-source health, and disposable authenticated
+  two-party/private-note proof remain pending. Packet 82 is not yet marked
+  Verified.
+
 ## Packet 81 — Professional-identity evidence
 
 - `GA-FND-003` gains additive migration
