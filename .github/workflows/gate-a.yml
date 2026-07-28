@@ -64,8 +64,14 @@ jobs:
       - name: Require current launch-readiness evidence
         run: npm run launch:readiness -- --require-ready
 
-      - name: Run fail-closed browser test
-        run: npm run test:e2e
+      - name: Run fail-closed authentication browser test
+        run: node test/auth-fail-closed.e2e.mjs
+
+      - name: Run jobs and discovery browser test
+        run: node test/jobs-discovery.e2e.mjs
+
+      - name: Run offline recovery browser test
+        run: node test/offline-recovery.e2e.mjs
 
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
