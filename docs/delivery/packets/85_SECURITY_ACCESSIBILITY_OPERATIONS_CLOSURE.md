@@ -90,5 +90,18 @@ Before advancing, explicitly review:
 3. whether automated accessibility evidence is being mistaken for physical
    device and screen-reader acceptance.
 
-Packet status: **Locally Accepted**. Production and physical-device evidence
-remain pending exactly as described above.
+Packet status: **Verified at the machine-verifiable acceptance boundary**.
+Railway deployment `a52b5201-57a4-4046-a3d1-4b8200653f63` serves exact
+source `ef468578ad19fc8dc94627baf0df9a9e308d9fae`. Production health,
+the 497 ms seven-private-route synthetic monitor, and authenticated
+accessibility run `ui-a11y-20260728220924-9f3afc` passed. The live matrix
+covered both roles, 360px/390px phones, tablet, laptop, desktop, light/dark,
+200% text, reduced motion, keyboard focus, dialogs, and all five primary
+surfaces; it found and closed the Contacts import name, Contacts/search/empty
+state targets, Camera actions/tool back target, and Shop Talk author targets.
+The full `npm run test` aggregate passed 118 unit/frontend tests and all 22
+serial PostgreSQL integration suites. GitHub Gate A Safety run `30405816013`
+also passed build, lint, the full aggregate, launch readiness, all three
+browser scenarios, and the dependency audit.
+Physical iPhone Safari, Android Chrome, desktop keyboard-only, and real
+screen-reader rows remain open for a human exactly as described above.

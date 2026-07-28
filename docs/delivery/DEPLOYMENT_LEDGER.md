@@ -1,5 +1,49 @@
 # Deployment Ledger
 
+## 2026-07-28 - Security, Accessibility, and Operations Closure
+
+- Production feature source commit:
+  `ef468578ad19fc8dc94627baf0df9a9e308d9fae`
+- Branch: `master` (source branch:
+  `codex/security-accessibility-operations-closure`)
+- Railway application deployment:
+  `a52b5201-57a4-4046-a3d1-4b8200653f63`
+- Production: `https://rivt.pro`
+- Scope: privacy-preserving breached-password screening; equal-work invalid
+  login; browser-source/CSRF enforcement; DNS-resolved Trade News SSRF
+  denial; current-route authenticated accessibility across both roles,
+  responsive layouts, themes, 200% text, keyboard, dialogs, reduced motion,
+  and touch targets; readiness evidence closure.
+- Migration before/after: unchanged at
+  `0041_shop_talk_news_continuity`.
+- Automated gates: production build, application/security lint, 118
+  unit/frontend tests, all 22 serial PostgreSQL integration suites, all three
+  browser E2E paths, five focused rendered suites, incident and launch
+  readiness, diff integrity, and zero known production dependency
+  vulnerabilities passed. GitHub Gate A Safety run `30405816013` passed after
+  the browser scenarios were made independently diagnosable and the existing
+  ignored Chromium resource condition was normalized across Windows and
+  Linux.
+- Post-deploy proof: `/api/health` returned exact source
+  `ef468578ad19fc8dc94627baf0df9a9e308d9fae`, ready migration, PostgreSQL,
+  S3-compatible storage, and configured Pwned Passwords screening, Sentry,
+  Web Push, and Stripe Connect. The production monitor passed in 497 ms with
+  seven anonymous private-route checks and operational controls open.
+  Authenticated run `ui-a11y-20260728220924-9f3afc` passed seven live
+  role/device/theme/text scenarios with zero target-size, labeling, image
+  alternative, overflow, reduced-motion, or console defects and closed both
+  temporary accounts.
+- Provider/config change: removed the stale manually pinned `SOURCE_COMMIT`
+  override. Runtime health now derives its immutable source from Railway's
+  `RAILWAY_GIT_COMMIT_SHA`; no auth, payment, email, storage, analytics,
+  moderation, or rollout credential changed.
+- Rollback target:
+  `50d7fed84724e3f2c4589de94bb849f8237218bb`; source rollback only, with no
+  schema or production-data rollback.
+- Human boundary: physical iPhone Safari, Android Chrome, desktop
+  keyboard-only, and real screen-reader evidence remains open in
+  `docs/quality/PHYSICAL_ACCESSIBILITY_CHECKLIST.md`.
+
 ## 2026-07-28 - Offline Recovery Behavior
 
 - Production feature source commit:

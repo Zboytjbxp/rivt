@@ -14,7 +14,7 @@
   requests and every redirect, closing private, loopback, link-local,
   carrier-grade NAT, multicast, documentation, and reserved network targets.
 - `GA-UX-006` gains a current authenticated automation matrix for Home,
-  Work/People, Camera, Shop Talk, Tools, search, notifications, messages, and
+  Work/Contacts, Camera, Shop Talk, Tools, search, notifications, messages, and
   account surfaces across mobile/desktop, light/dark, 200% text, reduced
   motion, labels, keyboard focus, dialog focus, target size, overflow, and
   landmarks. Physical iOS, Android, desktop keyboard-only, and real
@@ -25,15 +25,22 @@
   `launch:readiness -- --require-ready` pass.
 - `GA-OPS-007` gains a sealed 245-file standard security scan with complete
   coverage and three remediated findings, plus passing build, application and
-  security lint, 118 unit/frontend tests, targeted PostgreSQL-backed
-  auth/server integration, all three E2E paths, five rendered product suites,
-  diff integrity, and zero production dependency vulnerabilities. The full
-  serial PostgreSQL aggregate exceeded a 20-minute local window after
-  progressing into Shop Talk reactions; no aggregate pass is claimed and the
-  unchanged required CI matrix remains authoritative.
-- `GA-OPS-008` remains pending until the merged exact source, configured
-  breached-password health signal, production monitor, and authenticated live
-  accessibility run are recorded.
+  security lint, the full `npm run test` aggregate with 118 unit/frontend
+  tests and all 22 serial PostgreSQL integration suites, all three E2E paths,
+  five rendered product suites, diff integrity, and zero production
+  dependency vulnerabilities. GitHub Gate A Safety run `30405816013` passed
+  build, lint, the full aggregate, readiness, all three separately named
+  browser scenarios, and the production dependency audit.
+- `GA-OPS-008` gains production evidence: Railway deployment
+  `a52b5201-57a4-4046-a3d1-4b8200653f63` serves exact source
+  `ef468578ad19fc8dc94627baf0df9a9e308d9fae` with ready migration
+  `0041_shop_talk_news_continuity`, PostgreSQL, S3-compatible storage,
+  configured breached-password screening, Sentry, Web Push, and Stripe
+  Connect. The 497 ms production monitor passed seven anonymous private-route
+  checks with operational controls open. Authenticated accessibility run
+  `ui-a11y-20260728220924-9f3afc` passed seven live scenarios and closed both
+  disposable accounts. `GA-UX-006` remains Partial only for the explicitly
+  human physical-device and real-screen-reader boundary.
 
 ## Packet 84 — Offline-recovery evidence
 

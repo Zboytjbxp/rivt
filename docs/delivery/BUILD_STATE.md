@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Security, accessibility, and operations closure locally accepted; production verification pending.
+Current phase: Security, accessibility, and operations closure verified.
 Active packet: `docs/delivery/packets/85_SECURITY_ACCESSIBILITY_OPERATIONS_CLOSURE.md`
-Repository branch: `codex/security-accessibility-operations-closure`
-Production feature release commit: pending
+Repository branch: `master` (source branch: `codex/security-accessibility-operations-closure`)
+Production feature release commit: `ef468578ad19fc8dc94627baf0df9a9e308d9fae`
 
 ## Security, accessibility, and operations closure
 
@@ -39,28 +39,43 @@ Production feature release commit: pending
   It covers 245 tracked files, has no deferred surface, and reports the three
   now-remediated controls: medium DNS-resolved SSRF, low login timing
   enumeration, and low missing browser-source evidence.
-- Automated accessibility now sweeps current Home, Work/People, Camera, Shop
+- Automated accessibility now sweeps current Home, Work/Contacts, Camera, Shop
   Talk, Tools, search, notifications, messages, and account routes across
   compact/standard phones, tablet, laptop, desktop, light/dark themes, 200%
   text, keyboard focus, and reduced motion. The physical checklist now uses
-  the current Work/People and Camera navigation.
+  the current Work/Contacts and Camera navigation.
 - Local deterministic evidence passes: production build, application and
-  security lint, 118 unit/frontend tests, fail-closed authentication,
-  Jobs/discovery, and offline-recovery E2E, all five rendered product suites,
-  targeted server/auth lifecycle integration against the isolated PostgreSQL
-  database, incident readiness, launch readiness, diff integrity, and a
-  zero-vulnerability production dependency audit.
-- The full serial PostgreSQL aggregate was attempted and progressed through
-  the Shop Talk reaction suite but did not exit inside a 20-minute local
-  window. No full-aggregate pass is claimed; the unchanged required CI matrix
-  remains the release authority for every database suite.
+  security lint, the full `npm run test` aggregate with 118 unit/frontend
+  tests and all 22 serial PostgreSQL integration suites, fail-closed
+  authentication, Jobs/discovery, and offline-recovery E2E, all five rendered
+  product suites, incident readiness, launch readiness, diff integrity, and
+  a zero-vulnerability production dependency audit.
+- Gate A now runs its three browser scenarios as separately named steps. The
+  Jobs/discovery console assertion accepts the equivalent Chromium resource
+  failure spelling used by Linux without suppressing any other console error.
+  Gate A Safety run `30405816013` passed the production build, lint, full
+  aggregate, readiness, all three browser scenarios, and dependency audit on
+  source `aac287c3`.
 - Three-things review closed the password privacy/availability boundary,
   exact Stripe/OAuth callback handling, and the risk of presenting headless
   accessibility automation as physical assistive-technology proof.
-- Packet 85 is **Locally Accepted**. Exact-source production deployment,
-  production monitor, and authenticated live accessibility evidence remain
-  pending. Physical iPhone, Android, keyboard-only, and real screen-reader
-  rows remain explicitly open for a human.
+- Packet 85 is **Verified** at its machine-verifiable acceptance boundary.
+  Railway deployment `a52b5201-57a4-4046-a3d1-4b8200653f63` serves exact
+  source `ef468578ad19fc8dc94627baf0df9a9e308d9fae`; live health reports
+  migration `0041_shop_talk_news_continuity` ready, PostgreSQL,
+  S3-compatible storage, configured breached-password screening, Sentry,
+  Web Push, and Stripe Connect.
+- The exact-source production monitor passed in 497 ms with operational
+  controls open and seven anonymous private-route checks. Authenticated live
+  accessibility run `ui-a11y-20260728220924-9f3afc` passed seven
+  role/device/theme/text scenarios with zero small targets, unlabeled fields,
+  missing image alternatives, overflow, reduced-motion violations, or
+  console warnings/errors; both disposable accounts were closed.
+- Production source reporting no longer relies on a manually pinned
+  `SOURCE_COMMIT`; Railway's immutable `RAILWAY_GIT_COMMIT_SHA` is the
+  runtime source of truth. Physical iPhone, Android, keyboard-only, and real
+  screen-reader rows remain explicitly open for a human and are not claimed
+  by this packet.
 
 ## Offline and recovery behavior
 
