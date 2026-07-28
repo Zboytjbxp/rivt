@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Messages and private customer-note continuity locally verified; production verification pending.
+Current phase: Messages and private customer-note continuity production verified.
 Active packet: `docs/delivery/packets/82_MESSAGES_CUSTOMER_NOTES.md`
-Repository branch: `codex/messages-customer-notes`
-Production feature release commit: pending
+Repository branch: `master` (feature branch `codex/messages-customer-notes`)
+Production feature release commit: `635d96d292bd32f73ecd0f42ad3d27386bfa789c`
 
 ## Messages and private customer-note continuity
 
@@ -50,9 +50,21 @@ Production feature release commit: pending
   production dependency audit pass.
 - Three-things review closed abandoned-upload retention, real note revision
   history, and omitted legacy occurrence-date mapping before the packet
-  advanced. Production deployment, exact-source health, and disposable
-  authenticated production proof remain pending; Packet 82 is not yet
-  marked Verified.
+  advanced.
+- Packet 82 is **Verified**. Railway application deployment
+  `67d196bc-791a-4a8b-8101-ae2d9541032e` and exact-source metadata release
+  `6cf74104-0d57-4a12-9af6-4627e703d8a2` succeeded. Live health reports exact
+  source `635d96d292bd32f73ecd0f42ad3d27386bfa789c`, ready migration
+  `0040_messaging_customer_notes`, PostgreSQL, S3-compatible storage,
+  configured Sentry/Web Push/Stripe Connect, and operational controls off.
+- The exact-source production monitor passed with seven anonymous private
+  route probes. Disposable authenticated run
+  `packet82-20260728053258-287136` proved real two-party reaction visibility,
+  pin/template persistence across login, managed message attachment
+  upload/signed read/sender removal, private Contact-note
+  create/edit/archive/restore/history/media, outsider denial, unread
+  continuity, notification privacy, mute/report/block enforcement, and
+  cleanup/closure of all three temporary accounts.
 
 ## Professional identity and people discovery
 

@@ -6,7 +6,7 @@ import pg from "pg";
 const baseUrl = process.env.RIVT_SMOKE_BASE_URL ?? "https://rivt.pro";
 const databaseUrl = process.env.DATABASE_URL?.trim();
 const sourceCommit = process.env.SOURCE_COMMIT?.trim();
-const smokeRun = `packet05-${new Date().toISOString().replace(/[^0-9]/g, "").slice(0, 14)}-${randomBytes(3).toString("hex")}`;
+const smokeRun = `packet82-${new Date().toISOString().replace(/[^0-9]/g, "").slice(0, 14)}-${randomBytes(3).toString("hex")}`;
 
 if (!databaseUrl) throw new Error("DATABASE_URL is required.");
 
@@ -42,6 +42,21 @@ async function requestJson(path, { body, cookie, idempotencyKey, method = "GET",
   if (expected !== undefined) {
     assert.equal(response.status, expected, `${method} ${path} returned ${response.status}: ${text}`);
   }
+  return { response, payload };
+}
+
+async function requestMultipart(path, { cookie, expected, fields = {}, file } = {}) {
+  const body = new FormData();
+  for (const [name, value] of Object.entries(fields)) body.append(name, String(value));
+  if (file) body.append("file", new Blob([file.contents], { type: file.mimeType }), file.name);
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: { Origin: baseUrl, Cookie: cookie },
+    body,
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : null;
+  assert.equal(response.status, expected, `POST ${path} returned ${response.status}: ${text}`);
   return { response, payload };
 }
 
@@ -88,7 +103,7 @@ async function signupAndOnboard(role, label) {
       role,
       displayName: `${label} ${smokeRun}`,
       headline: role === "contractor" ? "RIVT smoke contractor" : "RIVT smoke electrician",
-      bio: "Temporary Packet 05 production smoke account.",
+      bio: "Temporary Packet 82 production smoke account.",
       serviceAreaCity: "Jacksonville",
       serviceAreaRegion: "FL",
       serviceRadiusMiles: 35,
@@ -159,9 +174,9 @@ async function createPublishedJob(contractor) {
     expected: 201,
     body: {
       organizationId: contractor.organizationId,
-      title: `Packet 05 messaging ${smokeRun}`,
+      title: `Packet 82 messaging ${smokeRun}`,
       tradeCode: "electrical",
-      summary: "Temporary production smoke test job for Packet 05.",
+      summary: "Temporary production smoke test job for Packet 82.",
       scopeDescription: "Verify conversations, notification state, mute, report, block, and private-address safety.",
       difficulty: "advanced",
       workType: "side_work",
@@ -204,7 +219,7 @@ async function createActiveWork(contractor, tradesperson, job) {
     idempotencyKey: `msg-apply-${smokeRun}`,
     expected: 201,
     body: {
-      message: "I can handle this Packet 05 smoke scope.",
+      message: "I can handle this Packet 82 smoke scope.",
       proposedStartDate: "2026-07-01",
       consentAccepted: true,
       consentVersion: "2026-06-19",
@@ -217,7 +232,9 @@ async function createActiveWork(contractor, tradesperson, job) {
     expected: 201,
     body: {
       startDate: "2026-07-02",
-      scopeSummary: "Panel scope accepted through Packet 05 smoke.",
+      agreedAmountCents: 95000,
+      agreedUnit: "fixed",
+      scopeSummary: "Panel scope accepted through Packet 82 smoke.",
       message: "Confirm and the address unlocks.",
     },
   });
@@ -283,12 +300,172 @@ try {
   assert.equal(replay.response.headers.get("idempotent-replayed"), "true");
   assert.equal(replay.payload.data.message.id, firstMessage.payload.data.message.id);
 
+  const preference = await requestJson(`/api/v1/conversations/${conversationId}/preference`, {
+    method: "PUT",
+    cookie: contractor.cookie,
+    expected: 200,
+    body: { pinned: true, archived: false, expectedVersion: 0 },
+  });
+  assert.equal(preference.payload.data.preference.pinned, true);
+
+  const template = await requestJson("/api/v1/message-templates", {
+    method: "POST",
+    cookie: contractor.cookie,
+    idempotencyKey: `msg-template-${smokeRun}`,
+    expected: 201,
+    body: { body: "Gate is open. Meet at the south entrance.", sortOrder: 0 },
+  });
+  assert.equal(template.payload.data.template.version, 1);
+
+  const reacted = await requestJson(
+    `/api/v1/conversations/${conversationId}/messages/${firstMessage.payload.data.message.id}/reaction`,
+    {
+      method: "PUT",
+      cookie: contractor.cookie,
+      expected: 200,
+      body: { emoji: "✅" },
+    },
+  );
+  assert.deepEqual(reacted.payload.data.reactions, [{ emoji: "✅", count: 1, reactedByMe: true }]);
+  const sharedReaction = await requestJson(`/api/v1/conversations/${conversationId}/messages`, {
+    cookie: tradesperson.cookie,
+    expected: 200,
+  });
+  assert.deepEqual(
+    sharedReaction.payload.data.messages.find((message) => message.id === firstMessage.payload.data.message.id).reactions,
+    [{ emoji: "✅", count: 1, reactedByMe: false }],
+  );
+
+  const messageDraft = await requestMultipart(`/api/v1/conversations/${conversationId}/attachments`, {
+    cookie: tradesperson.cookie,
+    expected: 201,
+    file: {
+      name: `field-note-${smokeRun}.txt`,
+      mimeType: "text/plain",
+      contents: `Managed message attachment ${smokeRun}`,
+    },
+  });
+  const attachmentMessage = await requestJson(`/api/v1/conversations/${conversationId}/messages`, {
+    method: "POST",
+    cookie: tradesperson.cookie,
+    idempotencyKey: `msg-attachment-send-${smokeRun}`,
+    expected: 201,
+    body: { body: "", attachments: [{ uploadId: messageDraft.payload.data.attachment.uploadId }] },
+  });
+  assert.equal(attachmentMessage.payload.data.message.attachments.length, 1);
+  const attachedMessageId = attachmentMessage.payload.data.message.id;
+  const messageAttachment = attachmentMessage.payload.data.message.attachments[0];
+  const attachmentRead = await requestJson(`/api/v1/conversations/${conversationId}/messages`, {
+    cookie: contractor.cookie,
+    expected: 200,
+  });
+  const signedMessageUrl = attachmentRead.payload.data.messages
+    .find((message) => message.id === attachedMessageId).attachments[0].url;
+  assert.ok(signedMessageUrl);
+  assert.equal((await fetch(signedMessageUrl)).status, 200);
+  await requestJson(`/api/v1/conversations/${conversationId}/attachments/${messageAttachment.id}`, {
+    method: "DELETE",
+    cookie: tradesperson.cookie,
+    expected: 200,
+  });
+
+  const createdContact = await requestJson("/api/v1/contacts", {
+    method: "POST",
+    cookie: contractor.cookie,
+    idempotencyKey: `msg-contact-${smokeRun}`,
+    expected: 201,
+    body: {
+      entityType: "person",
+      name: `Private Notes Customer ${smokeRun}`,
+      company: "",
+      notes: "",
+      favorite: false,
+      status: "active",
+      roles: [{ role: "customer", status: "active", details: {} }],
+      methods: [],
+      addresses: [],
+      tags: [],
+    },
+  });
+  const contactId = createdContact.payload.data.contact.id;
+  const contactNote = await requestJson(`/api/v1/contacts/${contactId}/notes`, {
+    method: "POST",
+    cookie: contractor.cookie,
+    idempotencyKey: `msg-contact-note-${smokeRun}`,
+    expected: 201,
+    body: {
+      body: "Gate code is recorded in the signed work order.",
+      occurredAt: "2026-07-01T14:30:00.000Z",
+    },
+  });
+  const noteId = contactNote.payload.data.note.id;
+  assert.equal(contactNote.payload.data.note.occurredAt, "2026-07-01T14:30:00.000Z");
+  await requestJson(`/api/v1/contacts/${contactId}/notes`, { cookie: outsider.cookie, expected: 404 });
+  const updatedNote = await requestJson(`/api/v1/contacts/${contactId}/notes/${noteId}`, {
+    method: "PATCH",
+    cookie: contractor.cookie,
+    expected: 200,
+    body: {
+      body: "Gate code and lockbox details are recorded in the signed work order.",
+      expectedVersion: 1,
+    },
+  });
+  const noteUpload = await requestMultipart(`/api/v1/contacts/${contactId}/notes/${noteId}/attachments`, {
+    cookie: contractor.cookie,
+    expected: 201,
+    fields: { expectedVersion: updatedNote.payload.data.note.version },
+    file: {
+      name: `customer-note-${smokeRun}.txt`,
+      mimeType: "text/plain",
+      contents: `Private customer note attachment ${smokeRun}`,
+    },
+  });
+  assert.equal(noteUpload.payload.data.note.attachments.length, 1);
+  const noteAttachment = noteUpload.payload.data.note.attachments[0];
+  assert.equal((await fetch(noteAttachment.url)).status, 200);
+  const archivedNote = await requestJson(`/api/v1/contacts/${contactId}/notes/${noteId}/archive`, {
+    method: "POST",
+    cookie: contractor.cookie,
+    expected: 200,
+    body: { expectedVersion: noteUpload.payload.data.note.version },
+  });
+  const restoredNote = await requestJson(`/api/v1/contacts/${contactId}/notes/${noteId}/restore`, {
+    method: "POST",
+    cookie: contractor.cookie,
+    expected: 200,
+    body: { expectedVersion: archivedNote.payload.data.note.version },
+  });
+  await requestJson(`/api/v1/contacts/${contactId}/notes/${noteId}/attachments/${noteAttachment.id}`, {
+    method: "DELETE",
+    cookie: contractor.cookie,
+    expected: 200,
+    body: { expectedVersion: restoredNote.payload.data.note.version },
+  });
+  const noteHistory = await requestJson(`/api/v1/contacts/${contactId}/notes/${noteId}/history`, {
+    cookie: contractor.cookie,
+    expected: 200,
+  });
+  assert.deepEqual(
+    new Set(noteHistory.payload.data.history.map((entry) => entry.action)),
+    new Set(["created", "updated", "uploaded", "archived", "restored", "removed"]),
+  );
+  await requestJson(`/api/v1/contacts/${contactId}/notes/${noteId}/history`, {
+    cookie: outsider.cookie,
+    expected: 404,
+  });
+
   const contractorConversations = await requestJson("/api/v1/conversations", { cookie: contractor.cookie, expected: 200 });
-  assert.equal(contractorConversations.payload.data.conversations.find((conversation) => conversation.id === conversationId).unreadCount, 1);
+  assert.equal(contractorConversations.payload.data.conversations.find((conversation) => conversation.id === conversationId).unreadCount, 2);
 
   const reloginCookie = await login(contractor);
   const reloginConversations = await requestJson("/api/v1/conversations", { cookie: reloginCookie, expected: 200 });
-  assert.equal(reloginConversations.payload.data.conversations.find((conversation) => conversation.id === conversationId).unreadCount, 1);
+  assert.equal(reloginConversations.payload.data.conversations.find((conversation) => conversation.id === conversationId).unreadCount, 2);
+  const reloginSettings = await requestJson("/api/v1/messaging/settings", { cookie: reloginCookie, expected: 200 });
+  assert.equal(
+    reloginSettings.payload.data.conversationPreferences.find((item) => item.conversationId === conversationId).pinned,
+    true,
+  );
+  assert.equal(reloginSettings.payload.data.templates.some((item) => item.id === template.payload.data.template.id), true);
 
   const notifications = await requestJson("/api/v1/notifications", { cookie: reloginCookie, expected: 200 });
   const notificationText = JSON.stringify(notifications.payload.data.notifications);
@@ -327,7 +504,7 @@ try {
     "SELECT count(*)::int AS count FROM in_app_notifications WHERE account_id = $1 AND source_type = 'message'",
     [contractor.accountId],
   );
-  assert.equal(messageNotifications.rows[0].count, 1);
+  assert.equal(messageNotifications.rows[0].count, 2);
 
   await requestJson(`/api/v1/conversations/${conversationId}/report`, {
     method: "POST",
@@ -363,7 +540,7 @@ try {
     [conversationId],
   );
   assert.equal(counts.rows[0].conversations, 1);
-  assert.equal(counts.rows[0].messages, 2);
+  assert.equal(counts.rows[0].messages, 3);
   assert.equal(counts.rows[0].reports, 1);
 
   console.log(JSON.stringify({
@@ -376,6 +553,10 @@ try {
     conversationId,
     messagesPersisted: counts.rows[0].messages,
     unreadSurvivedRelogin: true,
+    accountPreferencesSurvivedRelogin: true,
+    realReactionVisibleToBothParticipants: true,
+    managedMessageAttachmentReadAndRemoved: true,
+    privateContactNoteCrudHistoryMediaAndIsolation: true,
     privateAddressExcludedFromNotifications: true,
     muteSuppressedSecondMessageNotification: true,
     reportCreated: true,

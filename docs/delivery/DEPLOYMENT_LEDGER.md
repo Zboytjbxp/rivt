@@ -3331,3 +3331,45 @@ Add one entry per staging/production deployment.
   checks healthy and operational controls disabled. A disposable
   two-account production smoke passed managed uploads, private/public
   filtering, embedded-GPS rejection, block denial, and cleanup.
+
+# Current Production - Messages and Customer-Note Continuity
+
+- Environment: Production (`https://rivt.pro`)
+- Date/time/timezone: 2026-07-28 America/New_York
+- Deployer: Codex through `codex/messages-customer-notes`, fast-forward merge
+  to `master`, and Railway production auto-deploy
+- Runtime feature source:
+  `635d96d292bd32f73ecd0f42ad3d27386bfa789c`
+- Railway deployments: application source build
+  `67d196bc-791a-4a8b-8101-ae2d9541032e`; exact-source release
+  `6cf74104-0d57-4a12-9af6-4627e703d8a2`
+- Migration version before/after:
+  `0039_professional_identity` -> `0040_messaging_customer_notes`
+- Provider/config changes: only `SOURCE_COMMIT` release metadata advanced;
+  auth, billing, PostgreSQL, object storage, Sentry, Web Push, Stripe Connect,
+  email, moderation, and operational controls were preserved.
+- Rollback target:
+  `1735d7ff15d52f002fa90a9a0d1681013bfc289f`. Roll the application back
+  before applying `migrations/0040_messaging_customer_notes.down.sql`; the
+  rollback detaches only Packet 82 media and preserves prior conversations,
+  messages, Contacts, jobs, and accepted Work.
+- Automated gates: production build and lint, 111 unit/frontend tests, all
+  22 serial PostgreSQL integration suites, migration rollback/reapply,
+  fail-closed authentication plus Jobs/discovery E2E, focused Tools,
+  Shop Talk/Trade News, Work, mobile-action, and guest-preview rendered QA,
+  diff integrity, and a zero-vulnerability production dependency audit
+  passed.
+- Product evidence: Messages now own participant-authorized attachments,
+  account-backed pin/archive/templates, and persisted real reactions.
+  Canonical Contacts own private notes with correction, archive/restore,
+  immutable history, managed media, preserved occurrence dates, and explicit
+  loss-safe migration. Unused message uploads expire after 24 hours.
+- Post-deploy proof: live `/api/health` returned exact source
+  `635d96d292bd32f73ecd0f42ad3d27386bfa789c` with
+  `0040_messaging_customer_notes` ready. The exact-source monitor passed with
+  operational controls off and seven anonymous private-route checks.
+  Disposable authenticated run `packet82-20260728053258-287136` proved real
+  two-party preferences/reactions/media, private Contact-note
+  CRUD/history/media, outsider denial, relogin continuity, notification
+  privacy, mute/report/block enforcement, attachment removal, and closure of
+  all temporary accounts.

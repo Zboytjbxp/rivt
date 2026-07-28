@@ -77,3 +77,24 @@ new attachment lifecycle columns, and drops only Packet 82 tables.
 
 No additional record silo, fabricated delivery state, or public Contact
 surface was introduced by these closures.
+
+## Final evidence
+
+- Feature source: `635d96d292bd32f73ecd0f42ad3d27386bfa789c`
+- Railway application deployment:
+  `67d196bc-791a-4a8b-8101-ae2d9541032e`
+- Railway exact-source metadata release:
+  `6cf74104-0d57-4a12-9af6-4627e703d8a2`
+- Live health: exact feature source, migration
+  `0040_messaging_customer_notes` ready, PostgreSQL and S3-compatible storage
+  healthy.
+- Exact-source production monitor: passed with operational controls off and
+  seven anonymous private-route authorization checks.
+- Disposable authenticated proof:
+  `packet82-20260728053258-287136` passed real participant reactions,
+  account settings across relogin, managed message media read/removal,
+  private Contact-note CRUD/history/media/isolation, unread persistence,
+  private notification copy, mute/report/block enforcement, and closure of
+  all three temporary accounts.
+
+Packet status: **Verified in production.**

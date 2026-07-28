@@ -98,10 +98,13 @@ Packet 82 closes the browser-only continuity and split-note boundary:
 - explicit loss-safe device migration and copy that never describes a
   private note as sent to a customer.
 
-Status: **Locally verified; production deployment and disposable
-authenticated production proof pending.** Migration
-`0040_messaging_customer_notes`, all 22 serial integration suites, browser
-E2E, focused rendered suites, and dependency audit pass.
+Status: **Production deployed and exact-source verified at `635d96d`.**
+Migration `0040_messaging_customer_notes`, all 22 serial integration suites,
+browser E2E, focused rendered suites, dependency audit, the seven-check
+production monitor, and disposable authenticated run
+`packet82-20260728053258-287136` pass. The live run proved two-party
+preferences/reactions/media, private Contact-note CRUD/history/media,
+outsider denial, relogin continuity, and cleanup.
 
 ### Next 3 — Shop Talk and Trade News continuity
 

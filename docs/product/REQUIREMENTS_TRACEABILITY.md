@@ -26,9 +26,15 @@
   PostgreSQL integration suites, migration rollback/reapply, fail-closed
   authentication and Jobs/discovery E2E, every focused rendered suite, and
   zero production dependency vulnerabilities.
-- Production deployment, exact-source health, and disposable authenticated
-  two-party/private-note proof remain pending. Packet 82 is not yet marked
-  Verified.
+- `GA-OPS-008` gains production evidence: Railway application deployment
+  `67d196bc-791a-4a8b-8101-ae2d9541032e` and exact-source release
+  `6cf74104-0d57-4a12-9af6-4627e703d8a2` succeeded; live health serves
+  `635d96d292bd32f73ecd0f42ad3d27386bfa789c` with migration
+  `0040_messaging_customer_notes` ready; the exact-source monitor passed with
+  seven anonymous private-route checks; and authenticated disposable run
+  `packet82-20260728053258-287136` proved two-party
+  preferences/reactions/media plus owner-only Contact-note CRUD/history/media,
+  outsider denial, relogin persistence, and cleanup. Packet 82 is Verified.
 
 ## Packet 81 — Professional-identity evidence
 
