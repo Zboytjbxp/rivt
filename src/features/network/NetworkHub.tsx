@@ -2419,6 +2419,7 @@ function ContactDirectoryView({
                 ref={importInputRef}
                 type="file"
                 accept=".csv,text/csv"
+                aria-label="Import contacts from CSV"
                 disabled={importBusy}
                 onChange={(event) => {
                   const file = event.currentTarget.files?.[0];

@@ -497,8 +497,8 @@ async function loginAndAudit(browser, account, scenario) {
       await firstVisibleClick(page, navItem);
       audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-${navItem.toLowerCase().replace(/\s+/g, "-")}`));
       if (navItem === "Work") {
-        await clickVisibleControl(page, { pattern: "^People$", description: "Work People" });
-        audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-work-people`));
+        await clickVisibleControl(page, { pattern: "^Contacts$", description: "Work Contacts" });
+        audits.push(await collectAndCaptureUiAudit(page, `${scenarioLabel}-work-contacts`));
       }
     }
     const topBarActionAudits = await collectTopBarActionAudits(page, scenarioLabel);
