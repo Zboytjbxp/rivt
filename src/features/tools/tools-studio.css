@@ -10268,7 +10268,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app:not(.is-calculator-fullscree
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app:not(.is-calculator-fullscreen) .v2-tool-app-header > button {
-  min-height: 36px;
+  min-height: 44px;
   padding-inline: 8px;
   font-size: calc(12px * var(--v2-text-scale));
 }
@@ -12059,7 +12059,7 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
   }
 
   .v2-tools-app:not(.is-calculator-fullscreen) .v2-tool-app-header > button {
-    min-height: 40px;
+    min-height: 44px;
     padding: 0 6px;
     font-size: calc(12px * var(--v2-text-scale));
   }
