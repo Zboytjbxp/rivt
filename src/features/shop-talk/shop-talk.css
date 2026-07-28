@@ -4546,6 +4546,16 @@ html[data-rivt-compact-device="true"] .shop-talk-community-layout .shop-talk-sea
   text-transform: none;
 }
 
+.shop-question-author {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .shop-talk-community-layout .shop-question-header h2 {
   max-width: 26ch;
   margin: 12px 0 0;

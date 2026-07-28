@@ -119,6 +119,7 @@ interface WorkWorkspaceProps {
   onPostJob: () => void;
   onCompleteProfile: () => void;
   onOpenPeople: () => void;
+  onOpenProfessionalProfile?: (accountId: string) => void;
   onEditJob: (job: Job) => void;
   onTransition: (job: Job, action: JobAction) => Promise<void>;
   onJobLoaded: (job: Job) => void;
@@ -1266,6 +1267,7 @@ export function WorkWorkspace({
   onPostJob,
   onCompleteProfile,
   onOpenPeople,
+  onOpenProfessionalProfile,
   onEditJob,
   onTransition,
   onJobLoaded,
@@ -2327,6 +2329,9 @@ export function WorkWorkspace({
                                 {application.message ? <p>{application.message}</p> : null}
                               </div>
                               <div className="v2-match-actions">
+                                {application.applicant?.accountId && onOpenProfessionalProfile ? (
+                                  <button type="button" onClick={() => onOpenProfessionalProfile(application.applicant!.accountId)}>View profile</button>
+                                ) : null}
                                 {application.status === "submitted" ? <button type="button" disabled={Boolean(activeAction)} onClick={() => void handleShortlist(application)}>Shortlist</button> : null}
                                 {["submitted", "shortlisted"].includes(application.status) ? (
                                   <>

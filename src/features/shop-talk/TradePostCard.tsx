@@ -46,9 +46,10 @@ interface TradePostCardProps {
   onToggleSave: () => void;
   onVote: (direction: "up" | "down") => void;
   onOpen: () => void;
+  onOpenProfessionalProfile?: () => void;
 }
 
-export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote, onOpen }: TradePostCardProps) {
+export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote, onOpen, onOpenProfessionalProfile }: TradePostCardProps) {
   const [failedThumbnailUrl, setFailedThumbnailUrl] = useState<string | null>(null);
   const community = post.communityName
     ? { ...communityFor(post.trade), label: post.communityName }
@@ -83,10 +84,10 @@ export function TradePostCard({ post, reactionState, saved, onToggleSave, onVote
           {post.author.slice(0, 1).toUpperCase()}
         </span>
         <div className="trade-post-byline">
-          <span className="trade-post-author">
+          {onOpenProfessionalProfile ? <button type="button" className="trade-post-author trade-post-author-button" onClick={onOpenProfessionalProfile}>
             {post.author}
             {post.badge && <BadgeCheck size={13} className="trade-post-verified" />}
-          </span>
+          </button> : <span className="trade-post-author">{post.author}{post.badge && <BadgeCheck size={13} className="trade-post-verified" />}</span>}
           <span className="trade-post-community">
             <CIcon size={11} /> {community.label} · {post.createdAt}
           </span>

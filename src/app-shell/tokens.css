@@ -24,6 +24,7 @@
   --v2-focus-ring: color-mix(in srgb, var(--v2-accent) 40%, transparent);
   --v2-success: #2f7a4f;
   --v2-success-soft: #e8f4ec;
+  --v2-scrim: rgba(8, 13, 12, 0.7);
   --v2-warning: #9a5b0a;
   --v2-warning-soft: #fff2d9;
   --v2-danger: #b73d3d;
@@ -122,6 +123,7 @@
   --v2-focus-ring: color-mix(in srgb, var(--v2-accent) 48%, transparent);
   --v2-success: #66b986;
   --v2-success-soft: #173226;
+  --v2-scrim: rgba(0, 0, 0, 0.76);
   --v2-warning: #e0a44f;
   --v2-warning-soft: #372a17;
   --v2-danger: #e37878;

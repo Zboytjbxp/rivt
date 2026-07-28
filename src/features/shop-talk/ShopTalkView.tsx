@@ -106,6 +106,7 @@ export type PostType = "question" | "sub-request" | "safety" | "general";
 
 export interface CommunityPost {
   id: string;
+  authorAccountId?: string;
   title: string;
   trade: Trade | "General";
   author: string;
@@ -789,6 +790,7 @@ export function ShopTalkView({
   onSetPostWebVisibility,
   onCommunityCreated,
   onLoadPost,
+  onOpenProfessionalProfile,
   role,
   isGuest = false,
 }: {
@@ -820,6 +822,7 @@ export function ShopTalkView({
   onSetPostWebVisibility: (postId: string, webVisibility: "members" | "public") => boolean | Promise<boolean>;
   onCommunityCreated: (community: ServerCommunity) => void;
   onLoadPost: (postId: string) => Promise<CommunityPost | null>;
+  onOpenProfessionalProfile?: (accountId: string) => void;
   role: Role;
   isGuest?: boolean;
 }) {
@@ -1631,6 +1634,7 @@ export function ShopTalkView({
                     onToggleSave={() => toggleBookmark(post.id)}
                     onVote={(direction) => onVotePost(post.id, direction)}
                     onOpen={() => { setSelectedPostId(post.id); setMobileDetail(true); }}
+                    onOpenProfessionalProfile={post.authorAccountId && onOpenProfessionalProfile ? () => onOpenProfessionalProfile(post.authorAccountId as string) : undefined}
                   />
                 ))}
               </div>
@@ -2003,7 +2007,9 @@ export function ShopTalkView({
                     </div>
                   </div>
                   <p className="shop-question-byline">
-                    {selectedPost.author}
+                    {selectedPost.authorAccountId && onOpenProfessionalProfile ? (
+                      <button type="button" className="shop-question-author" onClick={() => onOpenProfessionalProfile(selectedPost.authorAccountId as string)}>{selectedPost.author}</button>
+                    ) : selectedPost.author}
                     {selectedPost.badge ? ` · ${selectedPost.badge}` : ""}
                     {` · ${selectedPost.trade} · ${selectedPost.createdAt}`}
                   </p>

@@ -103,6 +103,7 @@ import {
 } from "./document-brand.js";
 import { registerStandaloneProjectRoutes } from "./standalone-projects.js";
 import { registerWorkspaceRecordRoutes } from "./workspace-records.js";
+import { registerProfessionalProfileRoutes } from "./professional-profile.js";
 import { registerCustomerRoutes } from "./customers.js";
 import { registerContactRoutes } from "./contacts.js";
 import {
@@ -5498,6 +5499,25 @@ registerWorkspaceRecordRoutes({
   runIdempotentMutation,
   sendIdempotentResult,
   createInAppNotification,
+});
+
+registerProfessionalProfileRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  uploadRateLimit,
+  upload,
+  sha256Buffer,
+  detectUploadContent,
+  signedObjectUrl,
+  safeObjectName,
+  s3Client,
+  s3Bucket,
+  withTransaction,
+  runIdempotentMutation,
+  sendIdempotentResult,
 });
 
 registerCustomerRoutes({

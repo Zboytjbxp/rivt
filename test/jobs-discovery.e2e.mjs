@@ -269,6 +269,25 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
   }));
   await page.route("**/api/v1/sessions", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] }, meta: { requestId: "e2e-sessions" } }) }));
   await page.route("**/api/v1/profiles**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { profiles: [profileResult] }, meta: { requestId: "e2e-profiles", count: 1 } }) }));
+  await page.route(`**/api/v1/profiles/${profileResult.accountId}`, (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({
+      data: {
+        profile: {
+          ...profileResult,
+          bio: "Commercial electrical rough-in and service work.",
+          serviceArea: { city: "Jacksonville", region: "FL", radiusMiles: 35 },
+          avatarUrl: null,
+          rateCards: [],
+          credentials: [],
+          availabilityWindows: [],
+          portfolioItems: [],
+        },
+      },
+      meta: { requestId: "e2e-professional-profile" },
+    }),
+  }));
   await page.route("**/api/v1/conversations", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { conversations: [] }, meta: { requestId: "e2e-conversations" } }) }));
   await page.route("**/api/v1/notifications", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { notifications: [], unreadCount: 0 }, meta: { requestId: "e2e-notifications" } }) }));
   await page.route("**/api/v1/notifications/read", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { unreadCount: 0 }, meta: { requestId: "e2e-notifications-read" } }) }));
@@ -492,9 +511,10 @@ async function assertTopBarActions(page) {
   await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
   await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("riley");
   await page.getByRole("button", { name: /Riley Harper/i }).click();
-  await page.getByRole("heading", { name: "Contacts", exact: true }).waitFor();
-  await page.getByText("Search result", { exact: true }).waitFor();
-  await page.getByRole("heading", { name: "Riley Harper", exact: true }).waitFor();
+  const professionalProfile = page.getByRole("dialog", { name: "Professional profile" });
+  await professionalProfile.getByRole("heading", { name: "Riley Harper", exact: true }).waitFor();
+  await professionalProfile.getByText("Commercial electrical rough-in and service work.", { exact: true }).waitFor();
+  await professionalProfile.getByRole("button", { name: "Close professional profile" }).click();
 
   await page.getByRole("button", { name: "Notifications" }).click();
   await page.getByRole("dialog", { name: "Notifications" }).waitFor();

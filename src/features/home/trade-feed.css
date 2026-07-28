@@ -602,6 +602,16 @@
   color: var(--v2-text);
 }
 
+.trade-post-author-button {
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
 .trade-post-verified {
   color: var(--v2-teal-text);
 }

@@ -1,5 +1,36 @@
 # Gate A Requirements Traceability
 
+## Packet 81 — Professional-identity evidence
+
+- `GA-FND-003` gains additive migration
+  `0039_professional_identity`: versioned credentials, dated availability
+  windows, intentionally published portfolio items, and append-only identity
+  events. Its rollback removes only those new domains and safely detaches
+  their managed uploads.
+- `GA-FND-004` gains owner-only mutation, required optimistic versions,
+  idempotent creates, block/unpublished-profile denial, network/private
+  filtering, upload ownership, and one server-side viewer projection that
+  excludes contact details, exact address, credential evidence, and private
+  profile records.
+- `GA-PRO-002`, `GA-PRO-005`, and `GA-PRO-006` gain one durable professional
+  identity with credential evidence states, dated availability,
+  item-specific portfolio publication, managed avatar/work-proof media, and
+  embedded-GPS rejection.
+- `GA-UX-003` gains one profile-detail contract reused by global search,
+  Work applicants, Shop Talk authors, and linked Contacts instead of four
+  independently assembled identity cards.
+- `GA-UX-005` gains explicit local-credential migration, correction,
+  archive/restore/history, honest evidence language, loading/error/retry, and
+  loss-safe private defaults.
+- `GA-UX-006` gains rendered light/dark, Extra Large text, 390px, and 320px
+  coverage. Visual review found and fixed a transparent portal surface that
+  functional assertions alone missed.
+- `GA-OPS-007` has a clean build/lint, 109 unit/frontend tests, all 22 serial
+  database integration tests, E2E, focused rendered suites, migration
+  rollback/reapply, and zero production dependency vulnerabilities.
+- Deployment, exact-source/migration health, monitor, and authenticated live
+  proof remain pending; Packet 81 is not yet marked Verified.
+
 ## Packet 80 — Work-workspace-record evidence
 
 - `GA-FND-003` gains additive migration
@@ -1823,11 +1854,11 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | ID | Requirement | Current | Evidence / gap |
 |---|---|---:|---|
 | GA-PRO-001 | Resumable contractor/tradesperson onboarding | Partial | Canonical onboarding APIs persist selected role, organization/profile basics, and resume state; richer checklist/profile-strength guidance remains outside Gate A. |
-| GA-PRO-002 | Role-correct professional profile persists independently | Partial | Canonical account/profile records persist independently of legacy app-state and Packet 02 live smoke verified profile update/publish; portfolio/contact/availability completeness remains launch follow-up. |
+| GA-PRO-002 | Role-correct professional profile persists independently | Partial | Packet 81 adds canonical credentials, availability windows, avatar, portfolio, rate references, archive/restore/history, and one reusable network profile over the existing account profile. Local acceptance passes; production exact-source and authenticated proof remain before Verified. |
 | GA-PRO-003 | Trade specialties use canonical taxonomy | Partial | Versioned 25-trade taxonomy, profile relationship tables, and profile/onboarding APIs exist; broader profile-search and trade-management UX still need polish. |
 | GA-PRO-004 | Service area and location privacy | Partial | Public-area/private-address protection is verified for jobs and accepted work; profile-level service-area normalization/geospatial privacy remains incomplete. |
-| GA-PRO-005 | Availability and controlled contact visibility | Partial | Contact visibility is constrained through accepted-work messaging and server-owned profiles; source `436b83f` adds Home `Availability radar` that writes `available` / `limited` / `unavailable` to the authenticated server-owned profile through `PATCH /api/v1/profile`. A full availability calendar, schedule windows, and contractor-facing availability search remain open. |
-| GA-PRO-006 | Profile photos/portfolio use authorized private media | Partial | Private project evidence media is participant-authorized and signed; profile photo/portfolio ownership and moderation remain unresolved before broad launch. |
+| GA-PRO-005 | Availability and controlled contact visibility | Partial | Packet 81 adds dated private/network availability windows and exposes only chosen network windows through the authenticated profile used by search, applicants, Shop Talk, and linked Contacts. Email, phone, exact address, and all private records remain excluded; production proof is pending. |
+| GA-PRO-006 | Profile photos/portfolio use authorized private media | Partial | Packet 81 adds account-owned managed avatar and portfolio media, signed reads, private-by-default work proof, explicit publication/removal, file validation, cleanup, and hidden-GPS rejection. Production object-storage and live viewer proof remain pending. |
 
 ## Application Shell and UX
 

@@ -171,7 +171,7 @@ const savedContacts = [
     notes: "",
     favorite: false,
     status: "active",
-    linkedAccountId: null,
+    linkedAccountId: "70707070-7070-4070-8070-707070707070",
     lastUsedAt: null,
     roles: [{ role: "crew", status: "active", details: { trade: "Electrical", availability: "available" } }],
     methods: [],
@@ -181,6 +181,62 @@ const savedContacts = [
     updatedAt: crewMemberRecord.updatedAt,
   },
 ];
+
+const professionalProfile = {
+  accountId: "70707070-7070-4070-8070-707070707070",
+  displayName: "Elena Torres",
+  headline: "Commercial electrician",
+  bio: "Electrical rough-in, trim-out, and closeout support.",
+  primaryRole: "tradesperson",
+  locationText: "Jacksonville, FL",
+  serviceArea: { city: "Jacksonville", region: "FL", radiusMiles: 35 },
+  availabilityStatus: "available",
+  avatarUrl: null,
+  trades: [{ code: "electrical", name: "Electrical", primary: true }],
+  rateCards: [],
+  credentials: [{
+    id: "80808080-8080-4080-8080-808080808080",
+    kind: "training",
+    name: "OSHA 10",
+    issuer: "OSHA",
+    credentialNumber: "",
+    issueDate: "2026-01-01",
+    expiryDate: null,
+    notes: "",
+    evidenceState: "evidence_on_file",
+    evidenceUploadId: null,
+    evidenceUrl: null,
+    visibility: "network",
+    status: "active",
+    version: 1,
+    archivedAt: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  }],
+  availabilityWindows: [{
+    id: "90909090-9090-4090-8090-909090909090",
+    availability: "available",
+    startsOn: "2026-07-27",
+    endsOn: "2026-08-15",
+    notes: "Weekdays",
+    visibility: "network",
+    status: "active",
+    version: 1,
+    archivedAt: null,
+    createdAt: "2026-07-27T00:00:00.000Z",
+    updatedAt: "2026-07-27T00:00:00.000Z",
+  }],
+  portfolioItems: [],
+};
+
+const ownProfessionalProfile = {
+  avatarUploadId: null,
+  avatarUrl: null,
+  credentials: [],
+  availabilityWindows: [],
+  portfolioItems: [],
+  events: [],
+};
 
 const defaultPrivateAlbum = {
   id: "cccccccc-cccc-cccc-cccc-cccccccccccc",
@@ -241,6 +297,8 @@ async function configurePage(page) {
     routeResponse("**/api/v1/notifications/read", { data: { unreadCount: 0 } });
     routeResponse("**/api/v1/push/config", { data: { configured: false, publicKey: null, subscriptionCount: 0 } });
   routeResponse("**/api/v1/profiles?**", { data: { profiles: [] } });
+  routeResponse("**/api/v1/profile/professional", { data: { professionalProfile: ownProfessionalProfile } });
+  routeResponse(`**/api/v1/profiles/${professionalProfile.accountId}`, { data: { profile: professionalProfile } });
   routeResponse("**/api/v1/billing/status", {
     data: {
       trial: true,
@@ -713,11 +771,36 @@ async function runMobileFlow(page) {
     await page.getByText("Device delivery is not configured for this environment.", { exact: true }).waitFor({ timeout: 15_000 });
     assert.equal(await page.getByRole("button", { name: "Enable device alerts", exact: true }).count(), 0);
   await assertNoHorizontalOverflow(page, "Settings route");
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await page.getByRole("heading", { name: "Your reusable RIVT profile", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("New proof starts private", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByText("No account-backed credentials yet.", { exact: true }).count(), 1);
+  await assertNoHorizontalOverflow(page, "Professional identity settings");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-professional-identity-light.png"), fullPage: true });
+  await page.getByRole("button", { name: "Theme", exact: true }).click();
+  await page.locator(".appearance-preference").getByRole("button", { name: /Dark/i }).click();
+  await page.getByRole("button", { name: "Profile", exact: true }).click();
+  await page.getByRole("heading", { name: "Your reusable RIVT profile", exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Professional identity settings dark");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-professional-identity-dark.png"), fullPage: true });
   await page.getByRole("button", { name: "Work", exact: true }).click();
   await page.getByRole("navigation", { name: "Work and contacts" }).getByRole("button", { name: "Contacts", exact: true }).click();
   await page.getByRole("heading", { name: "Contacts", exact: true }).waitFor({ timeout: 15_000 });
   await page.locator(".v2-network-tab-bar").getByRole("button", { name: "Crew", exact: true }).click();
   await page.getByRole("button", { name: "Copy RIVT invite", exact: true }).waitFor({ timeout: 15_000 });
+  const viewProfessionalProfile = page.getByRole("button", { name: "View RIVT profile", exact: true });
+  await viewProfessionalProfile.waitFor({ state: "visible", timeout: 15_000 });
+  await page.waitForTimeout(500);
+  await viewProfessionalProfile.evaluate((button) => button.click());
+  const professionalDrawer = page.getByRole("dialog", { name: "Professional profile" });
+  await professionalDrawer.getByRole("heading", { name: "Elena Torres", exact: true }).waitFor({ timeout: 15_000 });
+  await professionalDrawer.getByText("Evidence on file — not verified by RIVT", { exact: true }).waitFor({ timeout: 15_000 });
+  await assertNoHorizontalOverflow(page, "Professional profile drawer");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-professional-profile-drawer-dark.png"), fullPage: false });
+  await page.setViewportSize({ width: 320, height: 720 });
+  await assertNoHorizontalOverflow(page, "Professional profile drawer at 320px");
+  await page.screenshot({ path: path.join(screenshotDir, "mobile-professional-profile-drawer-320.png"), fullPage: false });
+  await professionalDrawer.getByRole("button", { name: "Close professional profile" }).click();
   await assert.equal(await page.getByText("Plan an invite", { exact: true }).count(), 0);
   await page.getByRole("button", { name: "Add contact", exact: true }).click();
   await page.getByLabel("Name").waitFor({ timeout: 15_000 });

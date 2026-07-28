@@ -3,8 +3,6 @@
   BadgeCheck,
   Bell,
   BellOff,
-  Calendar,
-  Camera,
   CheckCircle,
   Clock3,
   Cloud,
@@ -67,6 +65,7 @@ import {
   type DocumentStyle,
 } from "../tools/document-brand-api";
 import { safetyQuizData, type SafetyQuiz, type SafetyQuizResult } from "./training-data";
+import { ProfessionalIdentitySection } from "./ProfessionalIdentitySection";
 import "./profile-hub.css";
 
 function getPortalTarget() {
@@ -454,127 +453,6 @@ function computeStorageStatus(storageUsage: {
 
 // ── Rate Card ─────────────────────────────────────────────────────────────────
 
-// ── Cert & License Tracker ────────────────────────────────────────────────────
-
-const certKey = "rivt.certs.v1";
-
-interface CertEntry {
-  id: string;
-  name: string;
-  number: string;
-  issuer: string;
-  issueDate: string;
-  expiryDate: string;
-  notes: string;
-}
-
-function readCerts(): CertEntry[] {
-  try {
-    const stored = localStorage.getItem(certKey);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as CertEntry[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
-}
-
-function persistCerts(certs: CertEntry[]) {
-  try { localStorage.setItem(certKey, JSON.stringify(certs.slice(0, 50))); } catch { /* noop */ }
-}
-
-function certStatus(expiryDate: string): "ok" | "soon" | "expired" {
-  if (!expiryDate) return "ok";
-  const expiry = new Date(expiryDate).getTime();
-  const now = Date.now();
-  if (expiry < now) return "expired";
-  if (expiry - now < 60 * 24 * 60 * 60 * 1000) return "soon";
-  return "ok";
-}
-
-function CertTrackerSection() {
-  const [certs, setCerts] = useState<CertEntry[]>(readCerts);
-  const [name, setName] = useState("");
-  const [number, setNumber] = useState("");
-  const [issuer, setIssuer] = useState("");
-  const [issueDate, setIssueDate] = useState("");
-  const [expiryDate, setExpiryDate] = useState("");
-  const [notes, setNotes] = useState("");
-  const [notice, setNotice] = useState("");
-
-  function addCert() {
-    if (!name.trim()) return;
-    const cert: CertEntry = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      number: number.trim(),
-      issuer: issuer.trim(),
-      issueDate,
-      expiryDate,
-      notes: notes.trim(),
-    };
-    const next = [cert, ...certs];
-    setCerts(next);
-    persistCerts(next);
-    setName(""); setNumber(""); setIssuer(""); setIssueDate(""); setExpiryDate(""); setNotes("");
-    setNotice("Certificate saved.");
-    setTimeout(() => setNotice(""), 3000);
-  }
-
-  function removeCert(id: string) {
-    const next = certs.filter((c) => c.id !== id);
-    setCerts(next);
-    persistCerts(next);
-  }
-
-  const expiredCount = certs.filter((c) => certStatus(c.expiryDate) === "expired").length;
-  const soonCount = certs.filter((c) => certStatus(c.expiryDate) === "soon").length;
-
-  return (
-    <section className="v2-profile-panel v2-profile-panel-wide v2-cert-tracker-section">
-      <header>
-        <span>Licenses &amp; certs {expiredCount > 0 ? <span className="v2-cert-alert-badge is-expired">{expiredCount} expired</span> : soonCount > 0 ? <span className="v2-cert-alert-badge is-soon">{soonCount} expiring soon</span> : null}</span>
-        <strong>License &amp; Certificate Tracker</strong>
-      </header>
-      <div className="v2-cert-form">
-        <div className="v2-cert-inputs">
-          <label>Cert / license name<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Electrician license, OSHA 10, CPR…" /></label>
-          <label>License #<input value={number} onChange={(e) => setNumber(e.target.value)} placeholder="Optional" /></label>
-          <label>Issuer<input value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder="State board, OSHA, Red Cross…" /></label>
-          <label>Issue date<input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} /></label>
-          <label>Expiry date<input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} /></label>
-          <label>Notes<input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Coverage area, endorsements…" /></label>
-        </div>
-        {notice ? <p className="v2-profile-action-message is-success" role="status">{notice}</p> : null}
-        <button type="button" className="v2-primary-button" disabled={!name.trim()} onClick={addCert}><Plus size={14} />Add certificate</button>
-      </div>
-      {certs.length ? (
-        <div className="v2-cert-list">
-          {certs.map((cert) => {
-            const status = certStatus(cert.expiryDate);
-            return (
-              <article key={cert.id} className={`v2-cert-item cert-status-${status}`}>
-                <div className="v2-cert-item-head">
-                  {status === "expired" ? <AlertTriangle size={16} className="v2-cert-status-icon" /> : status === "soon" ? <AlertTriangle size={16} className="v2-cert-status-icon is-soon" /> : <BadgeCheck size={16} className="v2-cert-status-icon is-ok" />}
-                  <strong>{cert.name}</strong>
-                  {cert.number ? <span className="v2-cert-number">#{cert.number}</span> : null}
-                  <button type="button" aria-label={`Remove ${cert.name}`} onClick={() => removeCert(cert.id)}><Trash2 size={13} /></button>
-                </div>
-                <div className="v2-cert-item-meta">
-                  {cert.issuer ? <small>{cert.issuer}</small> : null}
-                  {cert.issueDate ? <small><Calendar size={11} /> Issued {cert.issueDate}</small> : null}
-                  {cert.expiryDate ? <small className={status !== "ok" ? `is-${status}` : ""}><Calendar size={11} /> {status === "expired" ? "Expired" : "Expires"} {cert.expiryDate}</small> : null}
-                  {cert.notes ? <small>{cert.notes}</small> : null}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="v2-profile-note">No certs saved yet. Track your licenses, trade certs, OSHA cards, and insurance here.</p>
-      )}
-    </section>
-  );
-}
-
 function RateCardSection() {
   const [rates, setRates] = useState<RateCardEntry[]>(readRateCardEntries);
   const [trade, setTrade] = useState<Trade | "">("");
@@ -713,10 +591,8 @@ function ProfileCompletionCard({ profile, isDemo = false }: { profile: AccountPr
   const checks = [
     { label: "Display name", done: Boolean(profile.displayName?.trim()) },
     { label: "Location", done: Boolean(profile.location?.trim()) },
-    { label: "Bio", done: (() => { try { const c = JSON.parse(localStorage.getItem("rivt.canonicalProfile.v1") ?? "null"); return Boolean(c?.bio?.trim()); } catch { return false; } })() },
     { label: "Trade specialty", done: Boolean(profile.specialties?.length > 0) },
     { label: "Rate card", done: readRateCardEntries().length > 0 },
-    { label: "Safety cert", done: (() => { try { const c = JSON.parse(localStorage.getItem("rivt.certs.v1") ?? "[]"); return Array.isArray(c) && c.length > 0; } catch { return false; } })() },
   ];
   const score = isDemo ? 100 : Math.round((checks.filter((c) => c.done).length / checks.length) * 100);
   const missing = isDemo ? [] : checks.filter((c) => !c.done).slice(0, 3);
@@ -734,23 +610,6 @@ function ProfileCompletionCard({ profile, isDemo = false }: { profile: AccountPr
           {missing.map((m) => <li key={m.label}>Add {m.label}</li>)}
         </ul>
       )}
-    </div>
-  );
-}
-
-// ── Portfolio Section ─────────────────────────────────────────────────────────
-
-function PortfolioSection({ onNavigate }: { onNavigate?: (dest: string) => void }) {
-  return (
-    <div className="v2-portfolio-section">
-      <header>
-        <Camera size={16} />
-        <span>Portfolio &amp; Work Samples</span>
-      </header>
-      <p>Private until shared.</p>
-      <button type="button" className="v2-primary-button" onClick={() => onNavigate?.("tools")}>
-        View job photos
-      </button>
     </div>
   );
 }
@@ -1872,7 +1731,15 @@ export function ProfileHub({
         {view === "Settings" ? (
           <div className="v2-profile-panel v2-profile-panel-wide v2-profile-top-cards" data-settings-section="profile">
             <ProfileCompletionCard profile={profile} isDemo={isDemo} />
-            <PortfolioSection />
+          </div>
+        ) : null}
+
+        {view === "Settings" ? (
+          <div className="v2-settings-section-group" data-settings-section="profile">
+            <ProfessionalIdentitySection
+              displayName={profile.displayName || profile.organization || "RIVT member"}
+              specialties={profile.specialties}
+            />
           </div>
         ) : null}
 
@@ -2174,9 +2041,6 @@ export function ProfileHub({
             />
           </div>
         ) : null}
-
-        {/* Cert tracker — Settings only */}
-        {view === "Settings" ? <div className="v2-settings-section-group" data-settings-section="business"><CertTrackerSection /></div> : null}
 
         {/* Rate card — Settings only, tradesperson-facing */}
         {view === "Settings" ? <div className="v2-settings-section-group" data-settings-section="business"><RateCardSection /></div> : null}

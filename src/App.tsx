@@ -132,6 +132,7 @@ const NetworkHub = lazy(() => import("./features/network/NetworkHub").then((m) =
 const InboxCenter = lazy(() => import("./features/inbox/InboxCenter").then((m) => ({ default: m.InboxCenter })));
 const ShopTalkView = lazy(() => import("./features/shop-talk/ShopTalkView").then((m) => ({ default: m.ShopTalkView })));
 const ProfileRoute = lazy(() => import("./features/profile/ProfileRoute").then((m) => ({ default: m.ProfileRoute })));
+const ProfessionalProfileDrawer = lazy(() => import("./features/profile/ProfessionalProfileDrawer").then((m) => ({ default: m.ProfessionalProfileDrawer })));
 const ToolsStudio = lazy(() => import("./features/tools/ToolsStudio").then((m) => ({ default: m.ToolsStudio })));
 const ModerationConsole = lazy(() => import("./features/admin/ModerationConsole").then((m) => ({ default: m.ModerationConsole })));
 const LegacyBridge = lazy(() => import("./features/legacy/LegacyBridge").then((m) => ({ default: m.LegacyBridge })));
@@ -483,6 +484,7 @@ function toCommunityPostViewModel(post: ServerShopTalkPost): CommunityPost {
   const thumbnailUrl = post.thumbnailUrl ?? firstMedia?.signedUrl ?? undefined;
   return {
     id: post.id,
+    authorAccountId: post.authorAccountId,
     title: post.title,
     trade: normalizeShopTalkTrade(post.trade),
     author: post.author?.trim() || "RIVT member",
@@ -544,6 +546,7 @@ function App() {
   }, [activeView, authUser, onboardingComplete]);
   const [query, setQuery] = useState(() => readWorkFilterPrefs().query);
   const [profileSearchFocus, setProfileSearchFocus] = useState<ProfileSearchResult | null>(null);
+  const [professionalProfileId, setProfessionalProfileId] = useState<string | null>(null);
   const [shopTalkGlobalQuery, setShopTalkGlobalQuery] = useState("");
   const [shopTalkPostId, setShopTalkPostId] = useState<string | null>(() => readShopTalkPostFromUrl());
   const [shopTalkCompose, setShopTalkCompose] = useState(false);
@@ -2831,8 +2834,7 @@ function App() {
           handleNavigate("Work");
         }}
         onOpenProfileResult={(profileResult) => {
-          setProfileSearchFocus(profileResult);
-          handleNavigate("People");
+          setProfessionalProfileId(profileResult.accountId);
         }}
       >
 
@@ -2904,6 +2906,7 @@ function App() {
             onPostJob={openCreateJob}
             onCompleteProfile={handleOpenProfileSettings}
             onOpenPeople={() => handleNavigate("People")}
+            onOpenProfessionalProfile={(accountId) => setProfessionalProfileId(accountId)}
             onEditJob={(job) => void handleEditJob(job)}
             onTransition={handleJobTransition}
             onJobLoaded={handleJobLoaded}
@@ -2962,6 +2965,7 @@ function App() {
             onSetPostWebVisibility={handleShopTalkVisibility}
             onCommunityCreated={handleCommunityCreated}
             onLoadPost={loadShopTalkPost}
+            onOpenProfessionalProfile={(accountId) => setProfessionalProfileId(accountId)}
           />
         ) : ["People", "Crew", "Reviews"].includes(activeView) ? (
           <NetworkHub
@@ -2978,6 +2982,7 @@ function App() {
             onOpenPeople={() => handleNavigate("People")}
             onOpenWork={() => handleNavigate("Work")}
             onOpenReviews={() => handleNavigate("Reviews")}
+            onOpenProfessionalProfile={(accountId) => setProfessionalProfileId(accountId)}
             onAddShoutOut={handleAddShoutOut}
             isDemo={isGuest}
           />
@@ -3114,6 +3119,18 @@ function App() {
           onNavigate={handleNavigate}
         />
       )}
+
+      {professionalProfileId ? (
+        <RouteErrorBoundary>
+          <Suspense fallback={null}>
+            <ProfessionalProfileDrawer
+              key={professionalProfileId}
+              accountId={professionalProfileId}
+              onClose={() => setProfessionalProfileId(null)}
+            />
+          </Suspense>
+        </RouteErrorBoundary>
+      ) : null}
 
       {isPostOpen && primaryOrganizationId ? (
         <RouteErrorBoundary>

@@ -2,11 +2,55 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Work workspace records are production deployed and exact-source verified.
-Active packet: `docs/delivery/packets/80_WORK_WORKSPACE_RECORDS.md`
-Repository branch: `codex/work-workspace-records`
+Current phase: Professional identity and people discovery implementation.
+Active packet: `docs/delivery/packets/81_PROFESSIONAL_IDENTITY.md`
+Repository branch: `codex/professional-identity`
 Production feature release commit:
-`ec784d5a35c60294792853e479d3fdb492e8c3d1`
+Pending local verification and deployment.
+
+## Professional identity and people discovery
+
+- Replaced device-only certification/portfolio placeholders with one
+  authenticated professional identity made from the canonical account
+  profile plus account-owned credentials, dated availability windows,
+  avatar, and portfolio records.
+- Added migration `0039_professional_identity` with versioned active/archive
+  records, append-only identity events, account ownership, network/private
+  visibility, and a reviewed rollback that preserves all pre-existing
+  account, profile, rate, Contact, job, and project records.
+- Added correction, archive, restore, and history paths for credentials,
+  availability, and work samples. Older `rivt.certs.v1` entries move only
+  through an explicit action and remain on the device until the matching
+  account save succeeds.
+- Kept proof honest: an uploaded credential says `Evidence on file — not
+  verified by RIVT`; evidence files never leave the owner response and never
+  create a verification badge.
+- New portfolio proof starts private. Network publication is item-specific,
+  reversible, and separate from private project/job-photo storage.
+- Managed avatar, evidence, and portfolio uploads enforce ownership, content
+  detection, file/type bounds, signed reads, replacement/removal, and object
+  cleanup. Supported profile images carrying embedded EXIF GPS location data
+  are rejected before storage so a broad service area cannot be bypassed by
+  hidden photo metadata.
+- Added one reusable authenticated profile drawer. Global people search,
+  detailed Work applicants, Shop Talk authors, and Contacts already linked
+  to a RIVT account all use the same server-filtered response.
+- The network response excludes email, phone, exact address, evidence file
+  IDs/URLs, private credentials, private availability, private rate cards,
+  and private portfolio items; blocks and unpublished profiles fail closed.
+- Rendered QA found and fixed a portal-scoping defect that made the first
+  mobile drawer transparent. The final surface is tokenized, focus-trapped,
+  readable in light/dark and Extra Large text, and has no horizontal overflow
+  at 390px or 320px.
+- Local verification is complete: production build and lint, 109
+  unit/frontend tests including the embedded-location test, all 22 serial
+  PostgreSQL integration tests, fail-closed authentication and
+  Jobs/discovery E2E, Work-lifecycle, Shop Talk/Trade News, and mobile-action
+  rendered QA, migration rollback/reapply, and a zero-vulnerability
+  production dependency audit pass.
+- Production deployment, exact-source health, migration readiness, monitor,
+  and authenticated live proof remain pending; Packet 81 is not yet marked
+  Verified.
 
 ## Work workspace records
 

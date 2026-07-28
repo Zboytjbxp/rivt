@@ -308,6 +308,18 @@ if (!testDatabaseUrl) {
         [rollbackContactId, newUserId],
       );
 
+      assert.notEqual((await database.query("SELECT to_regclass('profile_credentials') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('profile_availability_windows') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('profile_portfolio_items') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('professional_profile_events') AS table_name")).rows[0].table_name, null);
+
+      const rolledBackProfessionalIdentity = await rollbackLatest(database);
+      assert.equal(rolledBackProfessionalIdentity.latestVersion, 38);
+      assert.equal((await database.query("SELECT to_regclass('profile_credentials') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('profile_availability_windows') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('profile_portfolio_items') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('professional_profile_events') AS table_name")).rows[0].table_name, null);
+
       const rolledBackWorkspaceRecords = await rollbackLatest(database);
       assert.equal(rolledBackWorkspaceRecords.latestVersion, 37);
       assert.equal((await database.query("SELECT to_regclass('project_workspace_records') AS table_name")).rows[0].table_name, null);

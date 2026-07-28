@@ -21,6 +21,7 @@ import {
   Search,
   ShieldCheck,
   Star,
+  UserRound,
   Users,
   X,
 } from "lucide-react";
@@ -108,6 +109,7 @@ interface NetworkHubProps {
   onOpenPeople: () => void;
   onOpenWork: () => void;
   onOpenReviews: () => void;
+  onOpenProfessionalProfile?: (accountId: string) => void;
   onAddShoutOut: (to: string, trade: string, message: string) => void;
   isDemo?: boolean;
 }
@@ -2153,12 +2155,14 @@ function ContactDirectoryView({
   workOptions = [],
   workOptionsLoading = false,
   workOptionsError = null,
+  onOpenProfessionalProfile,
 }: {
   role?: ContactRole;
   isDemo?: boolean;
   workOptions?: NetworkWorkOption[];
   workOptionsLoading?: boolean;
   workOptionsError?: string | null;
+  onOpenProfessionalProfile?: (accountId: string) => void;
 }) {
   const [contacts, setContacts] = useState<ContactRecord[]>(
     () => isDemo ? demoContactRecords : [],
@@ -2618,6 +2622,12 @@ function ContactDirectoryView({
                   <ContactEditor contact={contact} onSaved={replace} onCancel={() => setEditing(null)} />
                 ) : (
                   <footer>
+                    {contact.linkedAccountId && onOpenProfessionalProfile ? (
+                      <button type="button" onClick={() => onOpenProfessionalProfile(contact.linkedAccountId as string)}>
+                        <UserRound size={15} />
+                        View RIVT profile
+                      </button>
+                    ) : null}
                     <button type="button" onClick={() => toggleExpanded(contact)} aria-expanded={isExpanded}>
                       <FolderKanban size={15} />
                       {isExpanded ? "Close details" : "Details & work"}
@@ -2667,6 +2677,7 @@ export function NetworkHub({
   onOpenPeople,
   onOpenWork,
   onOpenReviews,
+  onOpenProfessionalProfile,
   onAddShoutOut,
   isDemo = false,
 }: NetworkHubProps) {
@@ -2756,6 +2767,7 @@ export function NetworkHub({
           workOptions={workOptions}
           workOptionsLoading={workOptionsLoading}
           workOptionsError={workOptionsError}
+          onOpenProfessionalProfile={onOpenProfessionalProfile}
         />
       </div>
     </section>

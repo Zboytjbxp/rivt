@@ -252,6 +252,7 @@ function assertCommunityAudience(community, actor) {
 function mapShopTalkAnswerRow(row) {
   return {
     id: row.id,
+    authorAccountId: row.author_account_id,
     author: row.author_name,
     body: row.body,
     verifiedFix: Boolean(row.verified_fix),

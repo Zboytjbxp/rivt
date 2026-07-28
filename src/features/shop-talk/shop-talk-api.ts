@@ -41,6 +41,7 @@ export interface ServerShopTalkMedia {
 
 export interface ServerShopTalkPost {
   id: string;
+  authorAccountId?: string;
   author: string;
   trade: string;
   flair?: string;

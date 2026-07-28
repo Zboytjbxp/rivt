@@ -2,9 +2,9 @@
 
 Audit date: 2026-07-27 America/New_York
 
-Baseline: `origin/master` at `770f885`
+Baseline: `origin/master` at `716a2dc`
 
-Current packet: `docs/delivery/packets/80_WORK_WORKSPACE_RECORDS.md`
+Current packet: `docs/delivery/packets/81_PROFESSIONAL_IDENTITY.md`
 
 ## Why this exists
 
@@ -64,25 +64,25 @@ Packet 80 closes the device-only accepted-job record boundary:
 
 Status: **Production deployed and exact-source verified at `ec784d5`.**
 
-### Next 1 — Professional identity and people discovery
+### Current — Professional identity and people discovery
 
-Evidence:
+Packet 81 closes the browser-only proof and fragmented-discovery boundary:
 
-- Profile completion still reads bio/certification/rate evidence partly from
-  browser storage.
-- Portfolio currently routes to job photos instead of owning a reviewed,
-  intentionally shareable professional portfolio.
-- Availability is a single server status rather than availability windows;
-  profile service-area/privacy and credential/portfolio ownership remain
-  partial in Gate A traceability.
+- canonical account profile plus account-owned credentials, dated
+  availability, avatar, rates, and portfolio;
+- explicit private/network visibility, correction, archive/restore, and
+  append-only history;
+- honest self-reported/evidence-on-file language without invented RIVT
+  verification;
+- managed media with ownership, signed reads, removal, and embedded-GPS
+  rejection;
+- explicit one-item-at-a-time portfolio publication;
+- one privacy-filtered professional profile reused by search, Work
+  applicants, Shop Talk authors, and linked Contacts.
 
-Completion boundary:
-
-- canonical server-owned bio, rate references, credentials with evidence
-  states, availability windows, service area, avatar, and portfolio items;
-- intentional portfolio publication and removal controls;
-- reusable profile detail from search, job applications, Shop Talk, and
-  Contacts without exposing private contact information.
+Status: **Local acceptance is complete. Production deployment,
+exact-source/migration health, monitor, and authenticated live proof are
+pending before this surface is marked production-complete.**
 
 ### Next 2 — Messages and customer notes
 
