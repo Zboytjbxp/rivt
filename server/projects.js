@@ -161,9 +161,18 @@ export function mapCompletionResolution(row) {
   };
 }
 
-export function buildCloseoutReport(project, entries, media, submissions, resolutions, invoices = []) {
+export function buildCloseoutReport(
+  project,
+  entries,
+  media,
+  submissions,
+  resolutions,
+  invoices = [],
+  workspaceRecords = [],
+  workspaceEvents = [],
+) {
   return {
-    reportVersion: "gate-a-project-closeout-v1",
+    reportVersion: "gate-a-project-closeout-v2",
     projectId: project.id,
     activeWorkId: project.active_work_id,
     jobId: project.job_id,
@@ -229,6 +238,29 @@ export function buildCloseoutReport(project, entries, media, submissions, resolu
         note: payment.note,
         createdAt: payment.createdAt,
       })),
+    })),
+    workspaceRecords: workspaceRecords.map((record) => ({
+      id: record.id,
+      type: record.record_type,
+      title: record.title || "",
+      details: record.details || "",
+      requestedBy: record.requested_by || "",
+      amountCents: Number(record.amount_cents ?? 0),
+      dueNote: record.due_note || "",
+      state: record.state,
+      archivedAt: isoDateTime(record.archived_at),
+      createdAt: isoDateTime(record.created_at),
+      updatedAt: isoDateTime(record.updated_at),
+    })),
+    workspaceHistory: workspaceEvents.map((event) => ({
+      id: event.id,
+      recordId: event.record_id,
+      actorAccountId: event.actor_account_id,
+      eventType: event.event_type,
+      priorVersion: event.prior_version == null ? null : Number(event.prior_version),
+      nextVersion: Number(event.next_version),
+      metadata: event.metadata ?? {},
+      createdAt: isoDateTime(event.created_at),
     })),
     updatedAt: isoDateTime(project.updated_at),
   };

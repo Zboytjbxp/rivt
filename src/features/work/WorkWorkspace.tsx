@@ -29,7 +29,6 @@ import {
   BookmarkPlus,
   Copy,
   DollarSign,
-  ListTodo,
   Phone,
   StickyNote,
   Zap,
@@ -67,6 +66,7 @@ import {
 import "./work-workspace.css";
 import { getProjectForActiveWork, type ProjectRecord } from "../tools/project-api";
 import { JobCloseoutPanel } from "./JobCloseoutPanel";
+import { WorkspaceRecordsPanel } from "./WorkspaceRecordsPanel";
 import { trackProductEvent } from "../../lib/analytics";
 import { ContactPicker } from "../contacts/ContactPicker";
 import {
@@ -231,38 +231,6 @@ function compensationAmount(offer: CanonicalOffer) {
 
 // ── Change Order Tracker ──────────────────────────────────────────────────────
 
-const changeOrderKey = "rivt.changeOrders.v1";
-
-type ChangeOrderStatus = "pending" | "approved" | "rejected";
-
-interface ChangeOrder {
-  id: string;
-  jobId: number;
-  description: string;
-  requestedBy: string;
-  costDelta: number;
-  status: ChangeOrderStatus;
-  createdAt: string;
-}
-
-function readChangeOrders(jobId: number): ChangeOrder[] {
-  try {
-    const stored = localStorage.getItem(changeOrderKey);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as ChangeOrder[];
-    return Array.isArray(parsed) ? parsed.filter((c) => c.jobId === jobId) : [];
-  } catch { return []; }
-}
-
-function persistChangeOrders(jobId: number, updated: ChangeOrder[]) {
-  try {
-    const stored = localStorage.getItem(changeOrderKey);
-    const all: ChangeOrder[] = stored ? (JSON.parse(stored) as ChangeOrder[]) : [];
-    const others = Array.isArray(all) ? all.filter((c) => c.jobId !== jobId) : [];
-    localStorage.setItem(changeOrderKey, JSON.stringify([...others, ...updated].slice(0, 200)));
-  } catch { /* noop */ }
-}
-
 function BudgetTracker({ jobId, budget }: { jobId: number; budget: number }) {
   const expenses = useMemo(() => {
     try {
@@ -303,96 +271,6 @@ function BudgetTracker({ jobId, budget }: { jobId: number; budget: number }) {
           {expenses.length > 4 ? <small className="v2-muted-copy">and {expenses.length - 4} more · open Expense Logger in Tools</small> : null}
         </div>
       ) : <p className="v2-muted-copy">No costs logged yet. Use the Expense Logger in Tools to track spending.</p>}
-    </div>
-  );
-}
-
-function ChangeOrderTracker({ jobId, jobTitle }: { jobId: number; jobTitle: string }) {
-  const [changeOrders, setChangeOrders] = useState<ChangeOrder[]>(() => readChangeOrders(jobId));
-  const [description, setDescription] = useState("");
-  const [requestedBy, setRequestedBy] = useState("");
-  const [costDelta, setCostDelta] = useState("");
-  const [notice, setNotice] = useState("");
-
-  function addChangeOrder() {
-    if (!description.trim()) return;
-    const co: ChangeOrder = {
-      id: crypto.randomUUID(),
-      jobId,
-      description: description.trim(),
-      requestedBy: requestedBy.trim() || "Not specified",
-      costDelta: parseFloat(costDelta) || 0,
-      status: "pending",
-      createdAt: new Date().toISOString(),
-    };
-    const next = [co, ...changeOrders];
-    setChangeOrders(next);
-    persistChangeOrders(jobId, next);
-    setDescription("");
-    setRequestedBy("");
-    setCostDelta("");
-    setNotice("Change order logged.");
-    setTimeout(() => setNotice(""), 3000);
-  }
-
-  function updateStatus(id: string, status: ChangeOrderStatus) {
-    const next = changeOrders.map((co) => co.id === id ? { ...co, status } : co);
-    setChangeOrders(next);
-    persistChangeOrders(jobId, next);
-  }
-
-  function deleteChangeOrder(id: string) {
-    const next = changeOrders.filter((co) => co.id !== id);
-    setChangeOrders(next);
-    persistChangeOrders(jobId, next);
-  }
-
-  const approvedDelta = changeOrders.filter((co) => co.status === "approved").reduce((sum, co) => sum + co.costDelta, 0);
-
-  return (
-    <div className="v2-change-orders">
-      <div className="v2-change-order-form">
-        <h3>Log a change order for {jobTitle}</h3>
-        <div className="v2-change-order-inputs">
-          <label className="is-wide">What changed
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Describe the scope change or addition..." />
-          </label>
-          <label>Requested by<input value={requestedBy} onChange={(e) => setRequestedBy(e.target.value)} placeholder="Owner, GC, inspector..." /></label>
-          <label>Cost delta ($)<input type="number" value={costDelta} onChange={(e) => setCostDelta(e.target.value)} placeholder="0 (negative = reduction)" /></label>
-        </div>
-        {notice ? <p className="v2-match-error" style={{ color: "var(--v2-accent)" }} role="status">{notice}</p> : null}
-        <button type="button" className="v2-primary-button" disabled={!description.trim()} onClick={addChangeOrder}><Plus size={14} />Log change order</button>
-      </div>
-      {approvedDelta !== 0 ? (
-        <div className="v2-co-approved-delta">
-          <span>Approved scope delta</span>
-          <strong className={approvedDelta < 0 ? "is-negative" : ""}>{approvedDelta > 0 ? "+" : ""}{money(approvedDelta)}</strong>
-        </div>
-      ) : null}
-      {changeOrders.length ? (
-        <div className="v2-change-order-list">
-          {changeOrders.map((co) => (
-            <article key={co.id} className={`v2-co-card co-status-${co.status}`}>
-              <div className="v2-co-card-header">
-                <span className={`v2-co-pill co-status-${co.status}`}>{co.status}</span>
-                <small>{new Date(co.createdAt).toLocaleDateString()}</small>
-                <button type="button" aria-label="Delete" onClick={() => deleteChangeOrder(co.id)}><Trash2 size={13} /></button>
-              </div>
-              <p>{co.description}</p>
-              <div className="v2-co-meta">
-                <span>By: {co.requestedBy}</span>
-                {co.costDelta !== 0 ? <strong className={co.costDelta < 0 ? "is-negative" : ""}>{co.costDelta > 0 ? "+" : ""}{money(co.costDelta)}</strong> : null}
-              </div>
-              {co.status === "pending" ? (
-                <div className="v2-co-actions">
-                  <button type="button" className="v2-primary-button" onClick={() => updateStatus(co.id, "approved")}>Approve</button>
-                  <button type="button" onClick={() => updateStatus(co.id, "rejected")}>Reject</button>
-                </div>
-              ) : null}
-            </article>
-          ))}
-        </div>
-      ) : <p className="v2-muted-copy">No change orders logged for this job yet.</p>}
     </div>
   );
 }
@@ -583,7 +461,8 @@ function persistChecklist(jobId: number, items: ChecklistItem[]) {
   try { localStorage.setItem(`rivt.checklist.${jobId}.v1`, JSON.stringify(items)); } catch { /* noop */ }
 }
 
-function JobChecklist({ jobId }: { jobId: number }) {
+/** @deprecated Device-only compatibility renderer. Production uses WorkspaceRecordsPanel. */
+export function LegacyDeviceJobChecklist({ jobId }: { jobId: number }) {
   const [items, setItems] = useState<ChecklistItem[]>(() => readChecklist(jobId));
   const [newText, setNewText] = useState("");
 
@@ -691,7 +570,8 @@ function persistMilestones(jobId: number, items: PaymentMilestone[]) {
   try { localStorage.setItem(`rivt.milestones.${jobId}.v1`, JSON.stringify(items)); } catch { /* noop */ }
 }
 
-function PaymentMilestones({ jobId, jobPay }: { jobId: number; jobPay: number }) {
+/** @deprecated Device-only compatibility renderer. Production uses WorkspaceRecordsPanel. */
+export function LegacyDevicePaymentMilestones({ jobId, jobPay }: { jobId: number; jobPay: number }) {
   const [milestones, setMilestones] = useState<PaymentMilestone[]>(() => readMilestones(jobId));
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
@@ -796,7 +676,8 @@ function persistJobNotes(jobId: number, notes: JobNote[]) {
   try { localStorage.setItem(`rivt.notes.${jobId}.v1`, JSON.stringify(notes.slice(0, 100))); } catch { /* noop */ }
 }
 
-function JobNotes({ jobId }: { jobId: number }) {
+/** @deprecated Device-only compatibility renderer. Production uses WorkspaceRecordsPanel. */
+export function LegacyDeviceJobNotes({ jobId }: { jobId: number }) {
   const [notes, setNotes] = useState<JobNote[]>(() => readJobNotes(jobId));
   const [text, setText] = useState("");
 
@@ -2562,37 +2443,63 @@ export function WorkWorkspace({
 
             {detailTab === "changes" ? (
               <div className="v2-detail-content">
-                <ChangeOrderTracker jobId={detailJob.id} jobTitle={detailJob.title} />
+                {currentActiveProject ? (
+                  <WorkspaceRecordsPanel
+                    key={`${currentActiveProject.id}:change_order`}
+                    projectId={currentActiveProject.id}
+                    jobId={detailJob.id}
+                    kind="change_order"
+                    role={role}
+                    currentAccountId={role === "contractor" ? activeWork?.contractorAccountId ?? "" : activeWork?.tradespersonAccountId ?? ""}
+                    jobTitle={detailJob.title}
+                  />
+                ) : <p className="v2-muted-copy">Change orders become available after both sides accept the work and the private job workspace opens.</p>}
               </div>
             ) : null}
 
             {detailTab === "checklist" ? (
               <div className="v2-detail-content">
-                <section className="v2-detail-section">
-                  <h3><ListTodo size={16} />Punch list</h3>
-                  <p className="v2-muted-copy" style={{ marginBottom: 16 }}>Track completion tasks per job. Items are saved to this device.</p>
-                  <JobChecklist jobId={detailJob.id} />
-                </section>
+                {currentActiveProject ? (
+                  <WorkspaceRecordsPanel
+                    key={`${currentActiveProject.id}:checklist`}
+                    projectId={currentActiveProject.id}
+                    jobId={detailJob.id}
+                    kind="checklist"
+                    role={role}
+                    currentAccountId={role === "contractor" ? activeWork?.contractorAccountId ?? "" : activeWork?.tradespersonAccountId ?? ""}
+                  />
+                ) : <p className="v2-muted-copy">The shared punch list opens when this job becomes accepted work.</p>}
               </div>
             ) : null}
 
             {detailTab === "payments" ? (
               <div className="v2-detail-content">
-                <section className="v2-detail-section">
-                  <h3><DollarSign size={16} />Payment milestones</h3>
-                  <p className="v2-muted-copy" style={{ marginBottom: 16 }}>Track deposit, progress, and final payments. Saved to this device.</p>
-                  <PaymentMilestones jobId={detailJob.id} jobPay={detailJob.pay} />
-                </section>
+                {currentActiveProject ? (
+                  <WorkspaceRecordsPanel
+                    key={`${currentActiveProject.id}:milestone`}
+                    projectId={currentActiveProject.id}
+                    jobId={detailJob.id}
+                    kind="milestone"
+                    role={role}
+                    currentAccountId={role === "contractor" ? activeWork?.contractorAccountId ?? "" : activeWork?.tradespersonAccountId ?? ""}
+                    jobPay={detailJob.pay}
+                  />
+                ) : <p className="v2-muted-copy">Payment milestones open after the job is accepted. They are job records, not payment processing.</p>}
               </div>
             ) : null}
 
             {detailTab === "notes" ? (
               <div className="v2-detail-content">
-                <section className="v2-detail-section">
-                  <h3><StickyNote size={16} />Job notes</h3>
-                  <p className="v2-muted-copy" style={{ marginBottom: 16 }}>Private field notes, decisions, and observations. Saved to this device.</p>
-                  <JobNotes jobId={detailJob.id} />
-                </section>
+                {currentActiveProject ? (
+                  <WorkspaceRecordsPanel
+                    key={`${currentActiveProject.id}:note`}
+                    projectId={currentActiveProject.id}
+                    jobId={detailJob.id}
+                    kind="note"
+                    role={role}
+                    currentAccountId={role === "contractor" ? activeWork?.contractorAccountId ?? "" : activeWork?.tradespersonAccountId ?? ""}
+                  />
+                ) : <p className="v2-muted-copy">Synced job notes open after the work is accepted.</p>}
               </div>
             ) : null}
 

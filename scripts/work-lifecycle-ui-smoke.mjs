@@ -344,6 +344,49 @@ function makeProject() {
   };
 }
 
+function makeWorkspaceRecords() {
+  return [
+    {
+      id: "0e4e129f-6fa5-4aa7-9f1d-4ae98fcb8a01",
+      projectId,
+      activeWorkId,
+      recordType: "milestone",
+      visibility: "shared",
+      title: "Final",
+      details: "",
+      requestedBy: "",
+      amountCents: 82500,
+      dueNote: "After closeout approval",
+      state: "pending",
+      version: 1,
+      createdByAccountId: contractorId,
+      updatedByAccountId: contractorId,
+      archivedAt: null,
+      createdAt: "2026-06-28T15:35:00.000Z",
+      updatedAt: "2026-06-28T15:35:00.000Z",
+    },
+    {
+      id: "b0f8ffda-58dc-4c43-a4d2-640073cc0f91",
+      projectId,
+      activeWorkId,
+      recordType: "checklist",
+      visibility: "shared",
+      title: "Label every panel circuit",
+      details: "",
+      requestedBy: "",
+      amountCents: 0,
+      dueNote: "",
+      state: "open",
+      version: 1,
+      createdByAccountId: tradespersonId,
+      updatedByAccountId: tradespersonId,
+      archivedAt: null,
+      createdAt: "2026-06-28T15:36:00.000Z",
+      updatedAt: "2026-06-28T15:36:00.000Z",
+    },
+  ];
+}
+
 function makeState({ jobs = [makeJob()], applications = [], offers = [], activeWork = [], notifications = [], conversations = [] } = {}) {
   return {
     jobs: structuredClone(jobs),
@@ -353,6 +396,9 @@ function makeState({ jobs = [makeJob()], applications = [], offers = [], activeW
     notifications: structuredClone(notifications),
     conversations: structuredClone(conversations),
     project: makeProject(),
+    workspaceRecords: makeWorkspaceRecords(),
+    archivedWorkspaceRecords: [],
+    workspaceEvents: [],
   };
 }
 
@@ -693,6 +739,58 @@ async function configurePage(page, account, state) {
     return route.fulfill(json({ data: { entry } }));
   });
 
+  await page.route(/\/api\/v1\/projects\/[0-9a-f-]{36}\/workspace-records(?:\/[0-9a-f-]{36}(?:\/restore)?)?$/, async (route) => {
+    const method = route.request().method();
+    const recordId = route.request().url().match(/workspace-records\/([0-9a-f-]{36})(?:\/restore)?$/)?.[1];
+    const isRestore = route.request().url().endsWith("/restore");
+    if (method === "GET") {
+      return route.fulfill(json({ data: { records: state.workspaceRecords, archivedRecords: state.archivedWorkspaceRecords, events: state.workspaceEvents } }));
+    }
+    const body = route.request().postDataJSON();
+    if (method === "POST" && isRestore) {
+      const record = state.archivedWorkspaceRecords.find((item) => item.id === recordId);
+      if (!record) return route.fulfill(json({ error: { code: "WORKSPACE_RECORD_NOT_FOUND" } }, 404));
+      state.archivedWorkspaceRecords = state.archivedWorkspaceRecords.filter((item) => item.id !== recordId);
+      const restored = { ...record, archivedAt: null, version: record.version + 1, updatedAt: new Date().toISOString() };
+      state.workspaceRecords.push(restored);
+      return route.fulfill(json({ data: { record: restored } }));
+    }
+    if (method === "POST") {
+      const now = new Date().toISOString();
+      const record = {
+        id: crypto.randomUUID(),
+        projectId,
+        activeWorkId,
+        visibility: "shared",
+        title: "",
+        details: "",
+        requestedBy: "",
+        amountCents: 0,
+        dueNote: "",
+        version: 1,
+        createdByAccountId: account.id,
+        updatedByAccountId: account.id,
+        archivedAt: null,
+        createdAt: now,
+        updatedAt: now,
+        ...body,
+      };
+      state.workspaceRecords.push(record);
+      return route.fulfill(json({ data: { record } }, 201));
+    }
+    const record = state.workspaceRecords.find((item) => item.id === recordId);
+    if (!record) return route.fulfill(json({ error: { code: "WORKSPACE_RECORD_NOT_FOUND" } }, 404));
+    if (method === "DELETE") {
+      state.workspaceRecords = state.workspaceRecords.filter((item) => item.id !== recordId);
+      const archived = { ...record, archivedAt: new Date().toISOString(), version: record.version + 1 };
+      state.archivedWorkspaceRecords.push(archived);
+      return route.fulfill(json({ data: { record: archived } }));
+    }
+    Object.assign(record, body, { version: record.version + 1, updatedAt: new Date().toISOString() });
+    delete record.expectedVersion;
+    return route.fulfill(json({ data: { record } }));
+  });
+
   await page.route(/\/api\/v1\/active-work\/?(?:\?.*)?$/, (route) =>
     route.fulfill(json({ data: { activeWork: state.activeWork.filter((item) => item.contractorAccountId === account.id || item.tradespersonAccountId === account.id) } })),
   );
@@ -860,6 +958,61 @@ async function runTradespersonOfferFlow(page) {
   await page.locator(".v2-site-contact-card").getByText("River City Inspections", { exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("Job contacts synced to your RIVT account.", { exact: false }).or(page.getByText("River City Inspections linked to this job.", { exact: true })).waitFor({ timeout: 15_000 });
   await page.screenshot({ path: path.join(screenshotDir, "active-work-people.png"), fullPage: true });
+  if (await mobileWorkspaceSelect.isVisible()) await mobileWorkspaceSelect.selectOption("money");
+  else await workspaceNav.getByRole("button", { name: "Money", exact: true }).click();
+  await page.getByRole("heading", { name: "Payment milestones", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Account synced", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("$825.00", { exact: true }).first().waitFor({ timeout: 15_000 });
+  await page.getByText("Paid status is recorded manually.", { exact: false }).waitFor({ timeout: 15_000 });
+  if (await mobileWorkspaceSelect.isVisible()) await mobileWorkspaceSelect.selectOption("more");
+  else await workspaceNav.getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("navigation", { name: "More job records" }).getByRole("button", { name: "Checklist", exact: true }).click();
+  await page.getByRole("heading", { name: "Punch list", exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Label every panel circuit", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByPlaceholder("Add a punch-list item…").fill("Photograph final directory");
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page.getByText("Photograph final directory", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.locator(".v2-checklist-item").filter({ hasText: "Photograph final directory" }).getByRole("button", { name: "Edit item" }).click();
+  const recordEditor = page.getByLabel("Edit punch list record");
+  await recordEditor.getByLabel("Item").fill("Photograph final panel directory");
+  await recordEditor.getByRole("button", { name: "Save changes", exact: true }).click();
+  const editedItem = page.locator(".v2-checklist-item").filter({ hasText: "Photograph final panel directory" });
+  await editedItem.waitFor({ timeout: 15_000 });
+  await editedItem.getByRole("button", { name: "Archive item" }).click();
+  await page.getByText("Record archived. Its audit history remains.", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Archived records (1)", { exact: true }).click();
+  await page.locator(".v2-workspace-archive").getByRole("button", { name: "Restore", exact: true }).click();
+  await page.getByText("Photograph final panel directory", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.screenshot({ path: path.join(screenshotDir, "active-work-records.png"), fullPage: true });
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "dark";
+  });
+  await page.screenshot({ path: path.join(screenshotDir, "active-work-records-dark.png"), fullPage: true });
+  await page.evaluate(() => {
+    document.documentElement.dataset.theme = "light";
+    document.documentElement.dataset.textScale = "extra-large";
+    document.documentElement.dataset.legibility = "extra-large";
+  });
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    true,
+    "Extra Large workspace records must not create horizontal overflow",
+  );
+  await page.screenshot({ path: path.join(screenshotDir, "active-work-records-extra-large.png"), fullPage: true });
+  const finalChecklistItem = page.locator(".v2-checklist-item").filter({ hasText: "Label every panel circuit" });
+  await finalChecklistItem.evaluate((element) => element.scrollIntoView({ block: "center" }));
+  const [finalItemBox, mobileNavBox] = await Promise.all([
+    finalChecklistItem.boundingBox(),
+    page.locator(".v2-mobile-nav").boundingBox(),
+  ]);
+  assert.ok(
+    finalItemBox && mobileNavBox && finalItemBox.y + finalItemBox.height <= mobileNavBox.y,
+    "Extra Large checklist records must remain reachable above the fixed navigation",
+  );
+  await page.evaluate(() => {
+    document.documentElement.dataset.textScale = "standard";
+    document.documentElement.dataset.legibility = "standard";
+  });
   if (await mobileWorkspaceSelect.isVisible()) await mobileWorkspaceSelect.selectOption("today");
   else await workspaceNav.getByRole("button", { name: "Today", exact: true }).click();
   await page.getByLabel("Exact jobsite").getByText("404 Acceptance Way, Suite 16, Jacksonville, FL 32202", { exact: true }).waitFor({ timeout: 15_000 });

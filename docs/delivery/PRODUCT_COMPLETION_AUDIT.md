@@ -2,9 +2,9 @@
 
 Audit date: 2026-07-27 America/New_York
 
-Baseline: `origin/master` at `8fb745a`
+Baseline: `origin/master` at `770f885`
 
-Current packet: `docs/delivery/packets/79_CONTACTS_COMPLETION.md`
+Current packet: `docs/delivery/packets/80_WORK_WORKSPACE_RECORDS.md`
 
 ## Why this exists
 
@@ -36,7 +36,7 @@ A surface is complete only when all applicable conditions are true:
 
 ## Completion register
 
-### Current — Contacts
+### Completed — Contacts
 
 Packet 79 closes the short-term-list problem:
 
@@ -49,25 +49,23 @@ Packet 79 closes the short-term-list problem:
 
 Status: **Production deployed and exact-source verified at `8d2a1a7`.**
 
-### Next 1 — Work workspace records
+### Current — Work workspace records
 
-Evidence:
+Packet 80 closes the device-only accepted-job record boundary:
 
-- `WorkWorkspace.tsx` still stores change orders, completion checklist,
-  payment milestones, field notes, and older contact records in
-  `localStorage`.
-- Visible copy correctly says checklist, payments, and notes are saved to the
-  device, which is honest but not a finished multi-device job workspace.
+- canonical checklist, milestones, notes, and change orders;
+- participant, author, and contractor decision authorization;
+- exact-cents money records and honest manual-payment copy;
+- correction, archive, restore, immutable history, and closeout export;
+- shared counterpart notifications without leaking private notes;
+- device-only unsent drafts and explicit loss-safe migration of older local
+  records;
+- conflict-safe, idempotent multi-device mutations.
 
-Completion boundary:
+Status: **Locally verified; all repository gates pass and the production
+deployment boundary is being completed.**
 
-- move checklist, milestones/payments, notes/decisions, and change orders to
-  canonical active-work/project records with participant authorization,
-  audit history, offline draft behavior, and conflict-safe retry;
-- preserve the one-time explicit move path for older device records;
-- prove contractor/tradesperson visibility and mutation boundaries.
-
-### Next 2 — Professional identity and people discovery
+### Next 1 — Professional identity and people discovery
 
 Evidence:
 
@@ -87,7 +85,7 @@ Completion boundary:
 - reusable profile detail from search, job applications, Shop Talk, and
   Contacts without exposing private contact information.
 
-### Next 3 — Messages and customer notes
+### Next 2 — Messages and customer notes
 
 Evidence:
 
@@ -108,7 +106,7 @@ Completion boundary:
 - customer notes and their attachments either persist as canonical private
   Contact activity or are explicitly limited to a local draft before save.
 
-### Next 4 — Shop Talk and Trade News continuity
+### Next 3 — Shop Talk and Trade News continuity
 
 Evidence:
 
@@ -126,7 +124,7 @@ Completion boundary:
 - preserve source/image/freshness honesty and the existing public-consent
   boundary.
 
-### Next 5 — Offline and recovery behavior
+### Next 4 — Offline and recovery behavior
 
 Evidence:
 
@@ -143,7 +141,7 @@ Completion boundary:
 - retry idempotently without duplicating financial or relationship records;
 - document records that intentionally remain online-only.
 
-### Next 6 — Security, accessibility, and operations closure
+### Next 5 — Security, accessibility, and operations closure
 
 Evidence:
 
@@ -184,7 +182,7 @@ Completion boundary:
 
 ## Current launch statement
 
-RIVT is **not yet 100% product-complete** under this definition. Contacts is
-the current completion packet. The machine launch-readiness and
+RIVT is **not yet 100% product-complete** under this definition. Work
+workspace records are the current completion packet. The machine launch-readiness and
 incident-readiness gates pass, but they do not override the unfinished
 server-continuity and physical-acceptance items above.

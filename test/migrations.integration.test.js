@@ -175,6 +175,8 @@ if (!testDatabaseUrl) {
       assert.notEqual((await database.query("SELECT to_regclass('push_delivery_outbox') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('project_invoices') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('project_invoice_payments') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('project_workspace_records') AS table_name")).rows[0].table_name, null);
+      assert.notEqual((await database.query("SELECT to_regclass('project_workspace_events') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('standalone_projects') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('profile_rate_cards') AS table_name")).rows[0].table_name, null);
       assert.equal((await database.query(
@@ -305,6 +307,11 @@ if (!testDatabaseUrl) {
          )`,
         [rollbackContactId, newUserId],
       );
+
+      const rolledBackWorkspaceRecords = await rollbackLatest(database);
+      assert.equal(rolledBackWorkspaceRecords.latestVersion, 37);
+      assert.equal((await database.query("SELECT to_regclass('project_workspace_records') AS table_name")).rows[0].table_name, null);
+      assert.equal((await database.query("SELECT to_regclass('project_workspace_events') AS table_name")).rows[0].table_name, null);
 
       const rolledBackContactIntegrity = await rollbackLatest(database);
       assert.equal(rolledBackContactIntegrity.latestVersion, 36);

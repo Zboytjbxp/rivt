@@ -247,6 +247,152 @@ if (!testDatabaseUrl) {
     const outsiderRead = await requestJson(baseUrl, `/api/v1/projects/${project.id}`, { cookie: outsider.cookie });
     assert.equal(outsiderRead.response.status, 404);
 
+    const checklist = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `workspace-checklist-${randomUUID()}`,
+      body: { recordType: "checklist", title: "Label every panel circuit", state: "open" },
+    });
+    assert.equal(checklist.response.status, 201);
+    assert.equal(checklist.payload.data.record.version, 1);
+
+    const privateNote = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `workspace-private-note-${randomUUID()}`,
+      body: { recordType: "note", details: "Remember to bring spare directory cards.", visibility: "private", state: "active" },
+    });
+    assert.equal(privateNote.response.status, 201);
+
+    const sharedNote = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `workspace-shared-note-${randomUUID()}`,
+      body: { recordType: "note", details: "Inspector moved final review to Friday.", visibility: "shared", state: "active" },
+    });
+    assert.equal(sharedNote.response.status, 201);
+
+    const deniedMilestone = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `workspace-denied-milestone-${randomUUID()}`,
+      body: { recordType: "milestone", title: "Final", amountCents: 95000, state: "pending" },
+    });
+    assert.equal(deniedMilestone.response.status, 403);
+    assert.equal(deniedMilestone.payload.error.code, "MILESTONE_WRITE_FORBIDDEN");
+
+    const milestone = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `workspace-milestone-${randomUUID()}`,
+      body: { recordType: "milestone", title: "Final", amountCents: 95000, dueNote: "After closeout approval", state: "pending" },
+    });
+    assert.equal(milestone.response.status, 201);
+
+    const changeOrder = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `workspace-change-${randomUUID()}`,
+      body: {
+        recordType: "change_order",
+        title: "Add two labeled spare breakers",
+        requestedBy: "Site superintendent",
+        amountCents: 12550,
+        state: "pending",
+      },
+    });
+    assert.equal(changeOrder.response.status, 201);
+
+    const tradespersonDecision = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records/${changeOrder.payload.data.record.id}`, {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `workspace-change-self-approve-${randomUUID()}`,
+      body: { expectedVersion: 1, state: "approved" },
+    });
+    assert.equal(tradespersonDecision.response.status, 403);
+    assert.equal(tradespersonDecision.payload.error.code, "CHANGE_ORDER_DECISION_FORBIDDEN");
+
+    const contractorDecision = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records/${changeOrder.payload.data.record.id}`, {
+      method: "PATCH",
+      cookie: contractor.cookie,
+      idempotencyKey: `workspace-change-approve-${randomUUID()}`,
+      body: { expectedVersion: 1, state: "approved" },
+    });
+    assert.equal(contractorDecision.response.status, 200);
+    assert.equal(contractorDecision.payload.data.record.version, 2);
+
+    const staleChecklistUpdate = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records/${checklist.payload.data.record.id}`, {
+      method: "PATCH",
+      cookie: contractor.cookie,
+      idempotencyKey: `workspace-checklist-done-${randomUUID()}`,
+      body: { expectedVersion: 1, state: "done" },
+    });
+    assert.equal(staleChecklistUpdate.response.status, 200);
+    const conflict = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records/${checklist.payload.data.record.id}`, {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `workspace-checklist-conflict-${randomUUID()}`,
+      body: { expectedVersion: 1, state: "open" },
+    });
+    assert.equal(conflict.response.status, 409);
+    assert.equal(conflict.payload.error.code, "WORKSPACE_RECORD_CONFLICT");
+    assert.equal(conflict.payload.error.details.current.version, 2);
+
+    const editedChecklist = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records/${checklist.payload.data.record.id}`, {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `workspace-checklist-edit-${randomUUID()}`,
+      body: { expectedVersion: 2, title: "Label and photograph every panel circuit" },
+    });
+    assert.equal(editedChecklist.response.status, 200);
+    assert.equal(editedChecklist.payload.data.record.version, 3);
+
+    const archivedChecklist = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records/${checklist.payload.data.record.id}`, {
+      method: "DELETE",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `workspace-checklist-archive-${randomUUID()}`,
+      body: { expectedVersion: 3 },
+    });
+    assert.equal(archivedChecklist.response.status, 200);
+    assert.equal(archivedChecklist.payload.data.record.version, 4);
+    const archivedWorkspace = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, { cookie: contractor.cookie });
+    assert.equal(archivedWorkspace.payload.data.records.some((record) => record.id === checklist.payload.data.record.id), false);
+    assert.equal(archivedWorkspace.payload.data.archivedRecords.some((record) => record.id === checklist.payload.data.record.id), true);
+
+    const restoredChecklist = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records/${checklist.payload.data.record.id}/restore`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `workspace-checklist-restore-${randomUUID()}`,
+      body: { expectedVersion: 4 },
+    });
+    assert.equal(restoredChecklist.response.status, 200);
+    assert.equal(restoredChecklist.payload.data.record.version, 5);
+
+    const contractorWorkspace = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, { cookie: contractor.cookie });
+    assert.equal(contractorWorkspace.response.status, 200);
+    assert.equal(contractorWorkspace.payload.data.records.some((record) => record.id === privateNote.payload.data.record.id), false);
+    assert.equal(contractorWorkspace.payload.data.records.some((record) => record.id === sharedNote.payload.data.record.id), true);
+    assert.equal(contractorWorkspace.payload.data.archivedRecords.length, 0);
+    assert.ok(contractorWorkspace.payload.data.events.some((event) => event.eventType === "state_changed"));
+    assert.ok(contractorWorkspace.payload.data.events.some((event) => event.metadata.action === "restored"));
+
+    const tradespersonWorkspace = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, { cookie: tradesperson.cookie });
+    assert.equal(tradespersonWorkspace.response.status, 200);
+    assert.equal(tradespersonWorkspace.payload.data.records.some((record) => record.id === privateNote.payload.data.record.id), true);
+    const outsiderWorkspace = await requestJson(baseUrl, `/api/v1/projects/${project.id}/workspace-records`, { cookie: outsider.cookie });
+    assert.equal(outsiderWorkspace.response.status, 404);
+    assert.ok((await database.query(
+      `SELECT count(*)::int AS count
+       FROM in_app_notifications
+       WHERE account_id = $1 AND source_type = 'project_workspace_record'`,
+      [contractor.id],
+    )).rows[0].count >= 2);
+
+    await assert.rejects(
+      database.query("UPDATE project_workspace_events SET event_type = 'updated' WHERE project_id = $1", [project.id]),
+      /append-only/,
+    );
+
     const noteKey = `note-${randomUUID()}`;
     const note = await requestJson(baseUrl, `/api/v1/projects/${project.id}/entries`, {
       method: "POST",
@@ -569,6 +715,10 @@ if (!testDatabaseUrl) {
     assert.equal(firstReport.payload.data.report.financialRecords.length, 1);
     assert.equal(firstReport.payload.data.report.financialRecords[0].status, "paid");
     assert.equal(firstReport.payload.data.report.financialRecords[0].payments.length, 2);
+    assert.equal(firstReport.payload.data.report.reportVersion, "gate-a-project-closeout-v2");
+    assert.equal(firstReport.payload.data.report.workspaceRecords.length, 4);
+    assert.equal(firstReport.payload.data.report.workspaceRecords.some((record) => record.id === privateNote.payload.data.record.id), false);
+    assert.ok(firstReport.payload.data.report.workspaceHistory.some((event) => event.eventType === "state_changed"));
     const reloginCookie = await login(baseUrl, contractor);
     const secondReport = await requestJson(baseUrl, `/api/v1/projects/${project.id}/report`, { cookie: reloginCookie });
     assert.deepEqual(secondReport.payload.data.report, firstReport.payload.data.report);

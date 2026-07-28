@@ -102,6 +102,7 @@ import {
   registerDocumentBrandRoutes,
 } from "./document-brand.js";
 import { registerStandaloneProjectRoutes } from "./standalone-projects.js";
+import { registerWorkspaceRecordRoutes } from "./workspace-records.js";
 import { registerCustomerRoutes } from "./customers.js";
 import { registerContactRoutes } from "./contacts.js";
 import {
@@ -4824,7 +4825,7 @@ app.post("/api/v1/projects/:id/completion/:submissionId/dispute", requireV1Authe
 app.get("/api/v1/projects/:id/report", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
   const projectId = validate(z.uuid(), request.params.id);
   const project = await loadProjectById(database, projectId, request.actor);
-  const [entries, media, submissions, resolutions, invoices] = await Promise.all([
+  const [entries, media, submissions, resolutions, invoices, workspaceRecords, workspaceEvents] = await Promise.all([
     database.query(
       "SELECT * FROM project_entries WHERE project_id = $1 ORDER BY created_at ASC, id ASC",
       [projectId],
@@ -4845,6 +4846,20 @@ app.get("/api/v1/projects/:id/report", requireV1AuthenticatedUser, requireV1Acto
       "SELECT * FROM project_invoices WHERE project_id = $1 ORDER BY created_at ASC, id ASC",
       [projectId],
     ),
+    database.query(
+      `SELECT * FROM project_workspace_records
+       WHERE project_id = $1 AND visibility = 'shared'
+       ORDER BY created_at ASC, id ASC`,
+      [projectId],
+    ),
+    database.query(
+      `SELECT pwe.*
+       FROM project_workspace_events pwe
+       INNER JOIN project_workspace_records pwr ON pwr.id = pwe.record_id
+       WHERE pwe.project_id = $1 AND pwr.visibility = 'shared'
+       ORDER BY pwe.created_at ASC, pwe.id ASC`,
+      [projectId],
+    ),
   ]);
   response.json({
     data: {
@@ -4855,6 +4870,8 @@ app.get("/api/v1/projects/:id/report", requireV1AuthenticatedUser, requireV1Acto
         submissions.rows,
         resolutions.rows,
         await mapProjectInvoicesWithPayments(database, invoices.rows),
+        workspaceRecords.rows,
+        workspaceEvents.rows,
       ),
     },
     meta: { requestId: request.requestId },
@@ -5470,6 +5487,17 @@ registerStandaloneProjectRoutes({
   writeRateLimit,
   runIdempotentMutation,
   sendIdempotentResult,
+});
+
+registerWorkspaceRecordRoutes({
+  app,
+  database,
+  requireV1AuthenticatedUser,
+  requireV1Actor,
+  writeRateLimit,
+  runIdempotentMutation,
+  sendIdempotentResult,
+  createInAppNotification,
 });
 
 registerCustomerRoutes({

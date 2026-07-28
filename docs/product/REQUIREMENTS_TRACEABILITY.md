@@ -1,5 +1,31 @@
 # Gate A Requirements Traceability
 
+## Packet 80 — Work-workspace-record evidence
+
+- `GA-FND-003` gains additive migration
+  `0038_project_workspace_records`: canonical, versioned checklist,
+  milestone, change-order, and note records plus append-only audit events.
+  The rollback removes only the new workspace tables.
+- `GA-FND-004` gains accepted-work participant authorization, author-only
+  private notes, contractor-only milestone writes and change-order
+  decisions, outsider denial, required optimistic versions, and idempotent
+  mutations.
+- `GA-PRJ-001` gains the durable operational layer around the accepted-work
+  project: shared records, counterpart notifications, archived-record
+  recovery, immutable history, and closeout report inclusion.
+- `GA-UX-003` gains one coherent Work record surface across checklist,
+  money, changes, and notes instead of browser-only silos.
+- `GA-UX-005` gains honest offline/manual-payment boundaries, cents-accurate
+  money, loss-safe device-record migration, correction controls, and private
+  note exclusion from notifications and closeout exports.
+- `GA-UX-006` gains a 390px light/dark lifecycle that creates, edits,
+  archives, restores, and reads a synced record without the fixed navigation
+  covering content.
+- `GA-OPS-007` currently has a clean production build and lint plus focused
+  project integration and Work rendered QA. Full repository, migration,
+  dependency, E2E, deployment, and production evidence remain in progress;
+  Packet 80 is not yet marked Verified.
+
 ## Packet 79 — Contacts-completion evidence
 
 - `GA-FND-003` gains migration `0037_contact_link_integrity`, a reversible

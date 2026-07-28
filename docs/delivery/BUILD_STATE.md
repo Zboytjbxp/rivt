@@ -2,11 +2,52 @@
 
 Last updated: 2026-07-27 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Contacts completion is deployed and exact-source verified.
-Active packet: `docs/delivery/packets/79_CONTACTS_COMPLETION.md`
-Repository branch: `master` (source branch: `codex/contacts-completion`)
+Current phase: Work workspace records are locally verified and awaiting deployment.
+Active packet: `docs/delivery/packets/80_WORK_WORKSPACE_RECORDS.md`
+Repository branch: `codex/work-workspace-records`
 Production feature release commit:
-`8d2a1a79c0377d269c840e3181594426bd959cad`
+Pending final verification and deployment.
+
+## Work workspace records
+
+- Replaced the routed device-only checklist, payment-milestone,
+  change-order, and job-note panels with canonical project records shared by
+  the two accepted-work participants.
+- Added participant-authorized create, edit, state, archive, restore, list,
+  and history APIs. Milestone writes and change-order decisions are
+  contractor-only; private notes are author-only; outsiders fail closed.
+- Added required optimistic versions and idempotency so stale devices reload
+  instead of silently overwriting another participant's change.
+- Added append-only event history and real counterpart notifications for
+  shared records. Private notes never notify the other side.
+- Kept offline behavior honest: only an unsubmitted draft is stored on the
+  device. Older local records move explicitly and are removed locally only
+  after each canonical save succeeds.
+- Added correction and recovery paths for every record type. Users can edit
+  the business fields, archive a record, inspect archived records, and
+  restore them without losing history.
+- Kept money honest: milestone amounts use cents and “paid” is labeled as a
+  manually recorded status, not RIVT payment processing.
+- Closeout report v2 includes shared workspace records and immutable history
+  while excluding private notes.
+- Migration `0038_project_workspace_records` adds the versioned record and
+  append-only event tables with a reviewed table-only rollback.
+- Three-things review also fixed fixed-nav clearance for the entire mobile
+  Work surface, not only the contractor branch.
+- Production build, application/security lint, 104 unit/frontend tests,
+  all 21 serial database integration tests, migration rollback/reapply, and
+  the full project integration lifecycle pass.
+- Focused Tools, Shop Talk/Trade News, mobile-action, guest-preview, and
+  Work-lifecycle rendered QA pass. The 390px Work smoke creates, edits,
+  archives, restores, and reopens a synced checklist record; locks exact
+  milestone cents and manual-payment copy; and captures light, dark, and
+  Extra Large text evidence with the final record reachable above the fixed
+  navigation.
+- Fail-closed authentication plus Jobs/discovery E2E pass, the production
+  dependency audit reports zero known vulnerabilities, and diff integrity
+  passes.
+- Merge, deployment, production migration, authenticated live proof, and
+  exact-source health are pending and are not yet claimed.
 
 ## Contacts completion
 
