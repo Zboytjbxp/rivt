@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, CloudSun, Copy, Download, FileText, FolderOpen, RefreshCw } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
-import { fetchWithTimeout } from "../../lib/api";
+import { fetchWithTimeout, requestKey, RivtApiError } from "../../lib/api";
+import { useOfflineQueue } from "../../lib/OfflineQueueProvider";
+import { enqueueOfflineOperation } from "../../lib/offline-queue";
 import type { CanonicalActiveWork } from "../work/job-api";
 import { addProjectNote, openProjectForActiveWork, ProjectApiError } from "./project-api";
-import { fetchToolRecords, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
+import { fetchToolRecords, upsertToolRecord, upsertToolRecordOrThrow, type ServerToolRecord } from "./tool-records-api";
 import { DAILY_LOG_PREFIX } from "./daily-log-constants";
 
 function formatNumber(value: number, digits = 1) {
@@ -120,10 +122,12 @@ export function DailyLogTool({
   activeJob,
   activeWork,
   focusedActiveWorkId = null,
+  accountId,
 }: {
   activeJob: Job | null;
   activeWork: CanonicalActiveWork[];
   focusedActiveWorkId?: string | null;
+  accountId: string;
 }) {
   const [activeStep, setActiveStep] = useState<"today" | "work" | "review">("today");
   const focusedWork = focusedActiveWorkId
@@ -140,6 +144,10 @@ export function DailyLogTool({
   const [notice, setNotice] = useState("");
   const [syncMessage, setSyncMessage] = useState("Draft saved on this device.");
   const [savingRecord, setSavingRecord] = useState(false);
+  const offlineQueue = useOfflineQueue();
+  const pendingDraft = offlineQueue.operations.find((operation) => (
+    operation.kind === "daily_log_upsert" && operation.dedupeKey === scopedRecordId
+  ));
   const [wxData, setWxData] = useState<{ temp: number; condition: string } | null>(() => {
     try { return JSON.parse(localStorage.getItem("rivt.lastWeather.v1") ?? "null") as { temp: number; condition: string } | null; } catch { return null; }
   });
@@ -249,7 +257,7 @@ export function DailyLogTool({
     setNotice("");
   }
 
-  function saveLocalDraft() {
+  async function saveLocalDraft() {
     try {
       localStorage.setItem(scopedStorageKey, JSON.stringify(draft));
       setNotice("Daily log draft saved.");
@@ -257,9 +265,38 @@ export function DailyLogTool({
       setNotice("Daily log draft could not be saved on this device.");
       return;
     }
-    void upsertToolRecord(dailyLogDraftToServerInput(draft, scopedRecordId)).then((record) => {
-      setSyncMessage(record ? "Draft synced to your RIVT account." : "Couldn't sync - draft saved on this device only.");
-    });
+    const input = dailyLogDraftToServerInput(draft, scopedRecordId);
+    const idempotencyKey = requestKey();
+    try {
+      await upsertToolRecordOrThrow(input, idempotencyKey);
+      setSyncMessage("Draft synced to your RIVT account.");
+    } catch (error) {
+      const retryable = !offlineQueue.online || (error instanceof RivtApiError && (
+        error.status === 0
+        || error.status === 408
+        || error.status === 425
+        || error.status === 429
+        || error.status >= 500
+      ));
+      if (!retryable) {
+        setSyncMessage(error instanceof Error ? error.message : "Draft saved on this device but account sync failed.");
+        return;
+      }
+      try {
+        await enqueueOfflineOperation({
+          accountId,
+          kind: "daily_log_upsert",
+          payload: { input },
+          idempotencyKey,
+          dedupeKey: scopedRecordId,
+          label: draft.site.trim() ? `Daily log · ${draft.site.trim()}` : "Daily log draft",
+          destinationLabel: recordWorkLabel,
+        });
+        setSyncMessage("Draft saved on this device and queued for account sync.");
+      } catch (queueError) {
+        setSyncMessage(queueError instanceof Error ? queueError.message : "Draft saved on this device only.");
+      }
+    }
   }
 
   function loadLocalDraft() {
@@ -432,7 +469,11 @@ export function DailyLogTool({
             <pre className="v2-daily-log-preview">{dailyLogText}</pre>
           </details>
           {notice ? <p className="v2-record-notice" role="status">{notice}</p> : null}
-          <p className="v2-record-notice" role="status">{syncMessage}</p>
+          <p className="v2-record-notice" role="status">
+            {pendingDraft
+              ? `${pendingDraft.status === "conflicted" ? "Needs review" : pendingDraft.status}: ${syncMessage}`
+              : syncMessage}
+          </p>
           <div className="v2-tool-action-row">
             <button type="button" className="v2-primary-button" onClick={() => void saveToRecords()} disabled={savingRecord || !recordWork}>
               <FolderOpen size={15} />
@@ -465,7 +506,7 @@ export function DailyLogTool({
             Next <ArrowRight size={16} />
           </button>
         ) : (
-          <button type="button" className="v2-primary-button" onClick={saveLocalDraft}>
+          <button type="button" className="v2-primary-button" onClick={() => void saveLocalDraft()}>
             <FileText size={15} /> Save draft
           </button>
         )}

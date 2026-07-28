@@ -63,7 +63,7 @@ export async function getAlbum(albumId: string) {
   return body.data.album;
 }
 
-export async function uploadAlbumPhoto(albumId: string, file: File, caption = "") {
+export async function uploadAlbumPhoto(albumId: string, file: File, caption = "", idempotencyKey = requestKey()) {
   const form = new FormData();
   form.append("file", file);
   form.append("name", file.name);
@@ -71,7 +71,7 @@ export async function uploadAlbumPhoto(albumId: string, file: File, caption = ""
   const response = await fetchWithTimeout(apiPath(`/api/v1/albums/${albumId}/photos`), {
     method: "POST",
     credentials: "include",
-    headers: { "Idempotency-Key": requestKey() },
+    headers: { "Idempotency-Key": idempotencyKey },
     body: form,
   }, UPLOAD_REQUEST_TIMEOUT_MS);
   const body = await response.json().catch(() => ({})) as ApiErrorBody & { data?: { photo: AlbumPhoto } };

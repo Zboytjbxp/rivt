@@ -2,6 +2,14 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Camera, Download, FileUp, FolderOpen, Grid3X3, Image, Loader2, Plus, RefreshCw, Settings2, X } from "lucide-react";
 import { ZoomableImage } from "../../components/ZoomableImage";
 import { DialogSurface } from "../../components/ui";
+import { requestKey, RivtApiError } from "../../lib/api";
+import { useOfflineQueue } from "../../lib/OfflineQueueProvider";
+import {
+  enqueueOfflineOperation,
+  offlineFilePayload,
+  type OfflineAlbumPhotoPayload,
+  type OfflineProjectMediaPayload,
+} from "../../lib/offline-queue";
 import { createPhotoComparison, type PhotoComparisonLayout } from "./photo-comparison";
 import type { CanonicalActiveWork } from "../work/job-api";
 import {
@@ -81,6 +89,7 @@ function readCameraPreferences(): CameraPreferences {
 interface UploadBatchResult {
   failedFiles: File[];
   message: string;
+  queuedCount: number;
 }
 
 const CAPTURE_INTENTS: Array<{
@@ -267,7 +276,7 @@ function CameraCapture({
   captureIntent,
   onCaptureIntentChange,
 }: {
-  onCapture: (blob: Blob) => Promise<void>;
+  onCapture: (blob: Blob) => Promise<{ queued: boolean }>;
   onClose: () => void;
   contextLabel: string;
   locationLabel?: string;
@@ -373,11 +382,13 @@ function CameraCapture({
     setSaveState("saving");
     setSaveMessage(`Saving to ${contextLabel}...`);
     try {
-      await onCapture(blob);
+      const result = await onCapture(blob);
       setFailedCapture(null);
       setCaptureCount((current) => current + 1);
       setSaveState("saved");
-      setSaveMessage(`Saved to ${contextLabel}.`);
+      setSaveMessage(result.queued
+        ? `Saved on this device for ${contextLabel}. Waiting to sync.`
+        : `Saved to ${contextLabel}.`);
     } catch (err) {
       setFailedCapture(blob);
       setSaveState("failed");
@@ -698,6 +709,7 @@ function PhotoGallery({
       return {
         failedFiles: files,
         message: error instanceof Error ? error.message : `${files.length} photos did not upload.`,
+        queuedCount: 0,
       };
     } finally {
       setPendingCount((current) => Math.max(0, current - count));
@@ -720,6 +732,7 @@ function PhotoGallery({
       throw new Error(result.message);
     }
     setRetryBatch(null);
+    return { queued: Boolean(result?.queuedCount) };
   }
 
   async function retryFailedBatch() {
@@ -1069,7 +1082,8 @@ function PhotoGallery({
   );
 }
 
-export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId = null, standaloneProject = null, selectedPrivateAlbum = null, autoOpenActiveJob = false, contextLabel = null, onRequestContext, onChooseActiveWork, onCaptureOpenChange, onDemoAction }: {
+export function JobPhotosTool({ accountId, activeWork, isDemo = false, focusedActiveWorkId = null, standaloneProject = null, selectedPrivateAlbum = null, autoOpenActiveJob = false, contextLabel = null, onRequestContext, onChooseActiveWork, onCaptureOpenChange, onDemoAction }: {
+  accountId: string;
   activeWork: CanonicalActiveWork[];
   isDemo?: boolean;
   focusedActiveWorkId?: string | null;
@@ -1109,7 +1123,18 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
   const jobFileRef = useRef<HTMLInputElement | null>(null);
   const [cameraLaunchToken, setCameraLaunchToken] = useState(0);
   const [captureIntent, setCaptureIntent] = useState<CaptureIntent>("progress");
+  const offlineQueue = useOfflineQueue();
   const currentProject = project?.activeWorkId === recordWorkId ? project : null;
+  const projectQueueCount = offlineQueue.operations.filter((operation) => (
+    operation.kind === "project_media_upload"
+    && (operation.payload as OfflineProjectMediaPayload).projectId === currentProject?.id
+  )).length;
+  const albumQueueCount = offlineQueue.operations.filter((operation) => (
+    operation.kind === "album_photo_upload"
+    && (operation.payload as OfflineAlbumPhotoPayload).albumId === openAlbum?.id
+  )).length;
+  const priorProjectQueueCount = useRef(0);
+  const priorAlbumQueueCount = useRef(0);
   const photoNotes = useMemo(() => projectPhotoNotes(currentProject), [currentProject]);
   const autoOpenedActiveJobRef = useRef<string | null>(null);
 
@@ -1182,6 +1207,24 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
     };
   }, [isDemo, recordWork, recordWorkId]);
 
+  useEffect(() => {
+    const prior = priorProjectQueueCount.current;
+    priorProjectQueueCount.current = projectQueueCount;
+    if (!offlineQueue.online || !currentProject || prior === 0 || projectQueueCount !== 0) return;
+    void getProject(currentProject.id).then(setProject).catch(() => {
+      setJobUploadError("The saved upload synced, but this feed could not refresh yet.");
+    });
+  }, [currentProject, offlineQueue.online, projectQueueCount]);
+
+  useEffect(() => {
+    const prior = priorAlbumQueueCount.current;
+    priorAlbumQueueCount.current = albumQueueCount;
+    if (!offlineQueue.online || !openAlbum || prior === 0 || albumQueueCount !== 0) return;
+    void getAlbum(openAlbum.id).then(setOpenAlbum).catch(() => {
+      setAlbumUploadError("The saved upload synced, but this album could not refresh yet.");
+    });
+  }, [albumQueueCount, offlineQueue.online, openAlbum]);
+
   async function openAlbumById(albumId: string) {
     setAlbumLoading(true);
     try {
@@ -1237,18 +1280,44 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
   }
 
   async function handleAlbumFiles(files: File[], note?: string): Promise<UploadBatchResult> {
-    if (!files.length) return { failedFiles: [], message: "" };
+    if (!files.length) return { failedFiles: [], message: "", queuedCount: 0 };
     if (!openAlbum) throw new Error("Open an album before adding photos.");
     setAlbumUploading(true);
     setAlbumUploadError("");
     const newPhotos: AlbumPhoto[] = [];
     const failedFiles: File[] = [];
+    let queuedCount = 0;
     for (const file of files) {
+      const idempotencyKey = requestKey();
       try {
-        newPhotos.push(await uploadAlbumPhoto(openAlbum.id, file, note ?? ""));
+        newPhotos.push(await uploadAlbumPhoto(openAlbum.id, file, note ?? "", idempotencyKey));
       } catch (err) {
+        const retryable = !offlineQueue.online || (err instanceof RivtApiError && (
+          err.status === 0 || err.status === 408 || err.status === 425 || err.status === 429 || err.status >= 500
+        ));
+        if (retryable) {
+          try {
+            await enqueueOfflineOperation({
+              accountId,
+              kind: "album_photo_upload",
+              payload: {
+                albumId: openAlbum.id,
+                caption: note ?? "",
+                file: offlineFilePayload(file),
+              },
+              idempotencyKey,
+              label: file.name || "Album photo",
+              destinationLabel: openAlbum.name,
+            });
+            queuedCount += 1;
+            continue;
+          } catch (queueError) {
+            setAlbumUploadError(queueError instanceof Error ? queueError.message : albumErrorMessage(err));
+          }
+        } else {
+          setAlbumUploadError(albumErrorMessage(err));
+        }
         failedFiles.push(file);
-        setAlbumUploadError(albumErrorMessage(err));
       }
     }
     if (newPhotos.length) {
@@ -1271,9 +1340,11 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
     if (albumFileRef.current) albumFileRef.current.value = "";
     const message = failedFiles.length
       ? `${failedFiles.length} of ${files.length} didn't upload - retry the failed ${failedFiles.length === 1 ? "photo" : "photos"}.`
-      : "";
+      : queuedCount
+        ? `${queuedCount} ${queuedCount === 1 ? "photo is" : "photos are"} saved on this device and will sync when connected.`
+        : "";
     if (message) setAlbumUploadError(message);
-    return { failedFiles, message };
+    return { failedFiles, message, queuedCount };
   }
 
   async function openActiveJob(options?: { launchCamera?: boolean }) {
@@ -1305,21 +1376,47 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
   }
 
   async function handleJobFiles(files: File[], note?: string): Promise<UploadBatchResult> {
-    if (!files.length) return { failedFiles: [], message: "" };
+    if (!files.length) return { failedFiles: [], message: "", queuedCount: 0 };
     if (!project) throw new Error("Open the live job project feed before adding photos.");
     setJobUploading(true);
     setJobUploadError("");
     const failedFiles: File[] = [];
     const uploadedMedia: ProjectMedia[] = [];
     const uploadedEntries: ProjectRecord["entries"] = [];
+    let queuedCount = 0;
     for (const file of files) {
+      const idempotencyKey = requestKey();
       try {
-        const uploaded = await uploadProjectMedia(project.id, file, note ?? captureIntentNote(captureIntent));
+        const uploaded = await uploadProjectMedia(project.id, file, note ?? captureIntentNote(captureIntent), idempotencyKey);
         if (uploaded?.media) uploadedMedia.push(uploaded.media);
         if (uploaded?.entry) uploadedEntries.push(uploaded.entry);
       } catch (err) {
+        const retryable = !offlineQueue.online || (err instanceof RivtApiError && (
+          err.status === 0 || err.status === 408 || err.status === 425 || err.status === 429 || err.status >= 500
+        ));
+        if (retryable) {
+          try {
+            await enqueueOfflineOperation({
+              accountId,
+              kind: "project_media_upload",
+              payload: {
+                projectId: project.id,
+                notes: note ?? captureIntentNote(captureIntent),
+                file: offlineFilePayload(file),
+              },
+              idempotencyKey,
+              label: file.name || "Job photo",
+              destinationLabel: recordWork?.job?.title ?? "Accepted work",
+            });
+            queuedCount += 1;
+            continue;
+          } catch (queueError) {
+            setJobUploadError(queueError instanceof Error ? queueError.message : projectErrorMessage(err));
+          }
+        } else {
+          setJobUploadError(projectErrorMessage(err));
+        }
         failedFiles.push(file);
-        setJobUploadError(projectErrorMessage(err));
       }
     }
     if (uploadedMedia.length || uploadedEntries.length) {
@@ -1341,9 +1438,11 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
     if (jobFileRef.current) jobFileRef.current.value = "";
     const message = failedFiles.length
       ? `${failedFiles.length} of ${files.length} didn't upload - retry the failed ${failedFiles.length === 1 ? "photo" : "photos"}.`
-      : "";
+      : queuedCount
+        ? `${queuedCount} ${queuedCount === 1 ? "photo is" : "photos are"} saved on this device and will sync when connected.`
+        : "";
     if (message) setJobUploadError(message);
-    return { failedFiles, message };
+    return { failedFiles, message, queuedCount };
   }
 
   if (mode === "active-job" && currentProject) {
@@ -1355,7 +1454,9 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
     return (
       <PhotoGallery
         title={recordWork?.job?.title ?? "Active job"}
-        subtitle="Live project feed"
+        subtitle={projectQueueCount
+          ? "Live project feed · saved uploads waiting"
+          : "Live project feed"}
         locationLabel={cameraLocationLabel(recordWork?.job?.publicLocation)}
         photos={jobPhotos}
         uploading={jobUploading}
@@ -1378,7 +1479,9 @@ export function JobPhotosTool({ activeWork, isDemo = false, focusedActiveWorkId 
     return (
       <PhotoGallery
         title={openAlbum.name}
-        subtitle={openAlbum.standaloneProjectId ? "Standalone project" : "Private album"}
+        subtitle={`${openAlbum.standaloneProjectId ? "Standalone project" : "Private album"}${
+          albumQueueCount ? " · saved uploads waiting" : ""
+        }`}
         locationLabel={openAlbum.standaloneProjectId ? standaloneProject?.locationText : undefined}
         photos={albumPhotos}
         uploading={albumUploading}

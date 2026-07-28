@@ -59,21 +59,30 @@ export async function fetchToolRecords(recordType?: ToolRecordType): Promise<Ser
   }
 }
 
+export async function upsertToolRecordOrThrow(input: ToolRecordInput, idempotencyKey = requestKey()): Promise<ServerToolRecord> {
+  const response = await fetchWithTimeout(apiPath("/api/v1/tool-records"), {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": idempotencyKey,
+    },
+    body: JSON.stringify(input),
+  });
+  const body = await response.json().catch(() => null) as {
+    data?: { record?: ServerToolRecord };
+    error?: { code?: string; message?: string; details?: unknown };
+  } | null;
+  if (response.status === 401) notifySessionExpired();
+  if (!response.ok || !body?.data?.record) {
+    throw new RivtApiError(response.status, body ?? {}, "RIVT could not sync this tool record.");
+  }
+  return body.data.record;
+}
+
 export async function upsertToolRecord(input: ToolRecordInput): Promise<ServerToolRecord | null> {
   try {
-    const response = await fetchWithTimeout(apiPath("/api/v1/tool-records"), {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        "Idempotency-Key": requestKey(),
-      },
-      body: JSON.stringify(input),
-    });
-    if (response.status === 401) notifySessionExpired();
-    if (!response.ok) return null;
-    const body = await response.json().catch(() => null) as { data?: { record?: ServerToolRecord } } | null;
-    return body?.data?.record ?? null;
+    return await upsertToolRecordOrThrow(input);
   } catch {
     return null;
   }

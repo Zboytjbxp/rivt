@@ -7,23 +7,39 @@ async function precacheAppShell() {
   const response = await fetch('/app', { cache: 'no-store' });
   if (!response.ok) throw new Error(`App shell returned ${response.status}`);
   const html = await response.clone().text();
-  await cache.put('/', response.clone());
-  await cache.put('/app', response);
   const assetPaths = [...html.matchAll(/(?:src|href)=["'](\/assets\/[^"'?#]+(?:\?[^"']*)?)["']/g)]
     .map((match) => match[1]);
-  await Promise.allSettled([...new Set(assetPaths)].map((assetPath) => cache.add(assetPath)));
+  const requiredPaths = [...new Set([
+    ...assetPaths,
+    '/assets/fonts/instrument-sans-latin.woff2',
+    '/assets/fonts/ibm-plex-mono-600-latin.woff2',
+  ])];
+
+  // Do not activate a partial shell. If any required asset cannot be cached,
+  // installation fails and the previous worker keeps serving its known-good cache.
+  await Promise.all(requiredPaths.map((assetPath) => cache.add(assetPath)));
+  await cache.put('/', response.clone());
+  await cache.put('/app', response);
 }
 
 self.addEventListener('install', e => {
-  e.waitUntil(precacheAppShell().catch(() => caches.open(CACHE)));
-  self.skipWaiting();
+  e.waitUntil(precacheAppShell().then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
+  e.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    const [rootShell, appShell] = await Promise.all([
+      cache.match('/'),
+      cache.match('/app'),
+    ]);
+    if (!rootShell || !appShell) {
+      throw new Error('Refusing to activate an incomplete RIVT app shell.');
+    }
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', e => {
@@ -55,22 +71,17 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (!url.pathname.startsWith('/assets/') && !url.pathname.startsWith('/brand/')) return;
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      const refreshed = fetch(e.request).then((response) => {
-        if (response.ok && response.type === 'basic') {
-          const clone = response.clone();
-          void caches.open(CACHE).then((cache) => cache.put(e.request, clone));
-        }
-        return response;
-      });
-      if (cached) {
-        void refreshed.catch(() => undefined);
-        return cached;
-      }
-      return refreshed;
-    })
-  );
+  e.respondWith((async () => {
+    const cache = await caches.open(CACHE);
+    const cached = await cache.match(e.request, { ignoreSearch: true });
+    if (cached) return cached;
+
+    const response = await fetch(e.request);
+    if (response.ok && response.type === 'basic') {
+      await cache.put(e.request, response.clone());
+    }
+    return response;
+  })());
 });
 
 // Push notification handler

@@ -8,6 +8,7 @@ import {
   useRef,
   useState } from "react";
 import { OfflineBanner } from "./components/OfflineBanner";
+import { OfflineQueueProvider } from "./lib/OfflineQueueProvider";
 import { LocalSetupPrompt } from "./components/LocalSetupPrompt";
 import { InstallAppPrompt } from "./components/InstallAppPrompt";
 import { PersonaProvider } from "./features/persona/usePersona";
@@ -281,6 +282,48 @@ type StorageUsageSnapshot = {
 };
 
 const SAFETY_QUIZ_RESULTS_KEY = "rivt.safetyQuizResults.v1";
+const OFFLINE_SESSION_KEY = "rivt.offlineSession.v1";
+const OFFLINE_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+interface OfflineSessionSnapshot {
+  account: CanonicalAccount;
+  jobs: Job[];
+  activeWork: CanonicalActiveWork[];
+  updatedAt: string;
+}
+
+function readOfflineSessionSnapshot() {
+  try {
+    const value = JSON.parse(localStorage.getItem(OFFLINE_SESSION_KEY) ?? "null") as Partial<OfflineSessionSnapshot> | null;
+    if (!value?.account?.id || !value.updatedAt) return null;
+    const updatedAt = Date.parse(value.updatedAt);
+    if (!Number.isFinite(updatedAt) || Date.now() - updatedAt > OFFLINE_SESSION_MAX_AGE_MS) return null;
+    return {
+      account: value.account,
+      jobs: Array.isArray(value.jobs) ? value.jobs : [],
+      activeWork: Array.isArray(value.activeWork) ? value.activeWork : [],
+      updatedAt: value.updatedAt,
+    } satisfies OfflineSessionSnapshot;
+  } catch {
+    return null;
+  }
+}
+
+function writeOfflineSessionSnapshot(patch: Partial<OfflineSessionSnapshot> & { account: CanonicalAccount }) {
+  try {
+    const current = readOfflineSessionSnapshot();
+    const sameAccount = current?.account.id === patch.account.id;
+    localStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify({
+      account: patch.account,
+      jobs: patch.jobs ?? (sameAccount ? current.jobs : []),
+      activeWork: patch.activeWork ?? (sameAccount ? current.activeWork : []),
+      updatedAt: new Date().toISOString(),
+    } satisfies OfflineSessionSnapshot));
+  } catch {
+    // The live account remains usable when a device denies local storage.
+  }
+}
+
 const PRESERVED_LOCAL_KEYS = new Set([
   THEME_STORAGE_KEY,
   THEME_SOURCE_KEY,
@@ -534,6 +577,7 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [authConnectionError, setAuthConnectionError] = useState<string | null>(null);
   const [authRetryKey, setAuthRetryKey] = useState(0);
+  const [offlineSessionRestored, setOfflineSessionRestored] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">(readAuthModePreference);
   const [authError, setAuthError] = useState<string | null>(() => {
     const authErrorProvider = new URLSearchParams(window.location.search).get("auth_error");
@@ -839,6 +883,9 @@ function App() {
     const accountRole = account.primaryRole === "tradesperson" ? "tradesperson" : "contractor";
     const authMethod: AuthMethod = account.provider === "google" ? "Google" : account.provider === "facebook" ? "Facebook" : account.provider === "apple" ? "Apple" : "Email";
     setCanonicalAccount(normalizedAccount);
+    if (normalizedAccount.status === "active" && normalizedAccount.profile.onboardingStatus === "complete") {
+      writeOfflineSessionSnapshot({ account: normalizedAccount });
+    }
     setAnalyticsIdentity({ account_id: account.id, role: account.primaryRole });
     try {
       const sessionKey = `rivt.analytics.session-start.v1:${account.id}`;
@@ -879,7 +926,6 @@ function App() {
   useEffect(() => {
     let cancelled = false;
     async function hydrateAuth() {
-      let sessionResolved = false;
       if (guestPreviewSessionActive()) {
         setAuthLoading(false);
         return;
@@ -935,8 +981,8 @@ function App() {
         if (cancelled) return;
         if (meResponse.ok && meBody.data) {
           setAuthConnectionError(null);
+          setOfflineSessionRestored(false);
           applyCanonicalAccount(meBody.data);
-          sessionResolved = true;
           setAuthLoading(false);
         } else if (meResponse.status === 401) {
           setAuthConnectionError(null);
@@ -969,10 +1015,20 @@ function App() {
 
       } catch {
         if (!cancelled) {
-          setAuthConnectionError("Your account is still here. Check your connection, then retry.");
+          const cached = navigator.onLine ? null : readOfflineSessionSnapshot();
+          if (cached) {
+            applyCanonicalAccount(cached.account);
+            setJobs(cached.jobs);
+            setSelectedId(cached.jobs[0]?.id ?? 0);
+            setActiveWork(cached.activeWork);
+            setOfflineSessionRestored(true);
+            setAuthConnectionError(null);
+          } else {
+            setAuthConnectionError("Your account is still here. Check your connection, then retry.");
+          }
         }
       } finally {
-        if (!cancelled && !sessionResolved) {
+        if (!cancelled) {
           setAuthLoading(false);
         }
       }
@@ -983,6 +1039,16 @@ function App() {
       cancelled = true;
     };
   }, [applyCanonicalAccount, authRetryKey, resetCommunityReactions]);
+
+  useEffect(() => {
+    if (!offlineSessionRestored) return;
+    const revalidate = () => {
+      setAuthLoading(true);
+      setAuthRetryKey((current) => current + 1);
+    };
+    window.addEventListener("online", revalidate, { once: true });
+    return () => window.removeEventListener("online", revalidate);
+  }, [offlineSessionRestored]);
 
   useEffect(() => {
     if (!authUser || isGuest || !["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView)) return;
@@ -1052,18 +1118,23 @@ function App() {
       if (jobsRequestRef.current !== requestId) return undefined;
       const nextJobs = canonicalJobs.map(toJobViewModel);
       setJobs(nextJobs);
+      if (canonicalAccount) writeOfflineSessionSnapshot({ account: canonicalAccount, jobs: nextJobs });
       setSelectedId((current) => nextJobs.some((job) => job.id === current) ? current : nextJobs[0]?.id ?? 0);
       return nextJobs;
     } catch (cause) {
       if (jobsRequestRef.current !== requestId) return undefined;
-      setJobs([]);
-      setSelectedId(0);
-      setJobsError(cause instanceof Error ? cause.message : "Jobs could not be loaded.");
+      if (navigator.onLine) {
+        setJobs([]);
+        setSelectedId(0);
+        setJobsError(cause instanceof Error ? cause.message : "Jobs could not be loaded.");
+      } else {
+        setJobsError("Showing the last work saved on this device. New jobs and changes need a connection.");
+      }
       return [];
     } finally {
       if (jobsRequestRef.current === requestId) setJobsLoading(false);
     }
-  }, [activeView, authUser, difficulty, isGuest, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
+  }, [activeView, authUser, canonicalAccount, difficulty, isGuest, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
 
   useEffect(() => {
     if (!["People", "Crew"].includes(activeView) || isGuest) return;
@@ -1106,11 +1177,13 @@ function App() {
     }
     if (!["Home", "Work", "People", "Crew", "Camera", "Tools", "Records"].includes(activeView)) return;
     try {
-      setActiveWork(await listActiveWork());
+      const nextActiveWork = await listActiveWork();
+      setActiveWork(nextActiveWork);
+      if (canonicalAccount) writeOfflineSessionSnapshot({ account: canonicalAccount, activeWork: nextActiveWork });
     } catch {
-      setActiveWork([]);
+      if (navigator.onLine) setActiveWork([]);
     }
-  }, [activeView, authUser, isGuest, onboardingComplete]);
+  }, [activeView, authUser, canonicalAccount, isGuest, onboardingComplete]);
 
   const networkWorkOptions = useMemo(() => {
     const options = new Map<string, { id: string; title: string; status: string }>();
@@ -2811,6 +2884,7 @@ function App() {
         ?? canonicalAccount?.profile.trades[0]?.name
         ?? null}
     >
+      <OfflineQueueProvider accountId={canonicalAccount?.id ?? authUser.id}>
       <AppShell
         activeDestination={primaryDestinationForView(activeView)}
         role={role}
@@ -2872,6 +2946,7 @@ function App() {
           setProfessionalProfileId(profileResult.accountId);
         }}
       >
+        <OfflineBanner />
 
         {["Home", "Work", "People", "Crew", "Shop Talk", "Reviews", "Messages", "Camera", "Tools", "Records", "Trust & Legal", "Safety & Training", "Feedback", "Settings", "Admin"].includes(activeView) ? null : (
           <header className="page-heading" aria-label={`${page.title} heading`}>
@@ -3089,6 +3164,7 @@ function App() {
           />
         ) : ["Camera", "Tools", "Records"].includes(activeView) ? (
           <ToolsStudio
+            accountId={canonicalAccount?.id ?? authUser.id}
             isDemo={isGuest}
             jobs={jobs}
             paymentRecords={paymentRecords}
@@ -3188,11 +3264,11 @@ function App() {
         />
       )}
 
-      <OfflineBanner />
       {!isGuest ? <InstallAppPrompt /> : null}
       {isGuest && localSetupOpen && (
         <LocalSetupPrompt onDone={() => setLocalSetupOpen(false)} />
       )}
+      </OfflineQueueProvider>
     </PersonaProvider>
   );
 }

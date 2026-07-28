@@ -89,6 +89,7 @@ interface PaymentRecord {
 }
 
 interface ToolsStudioProps {
+  accountId: string;
   isDemo?: boolean;
   jobs: Job[];
   paymentRecords: PaymentRecord[];
@@ -2789,12 +2790,14 @@ function JobsiteTool({
   activeJob,
   activeWork,
   focusedActiveWorkId,
+  accountId,
 }: {
   activeView: JobsiteView;
   onViewChange: (view: JobsiteView) => void;
   activeJob: Job | null;
   activeWork: CanonicalActiveWork[];
   focusedActiveWorkId: string | null;
+  accountId: string;
 }) {
   const views: Array<{ id: JobsiteView; label: string; icon: ToolIcon }> = [
     { id: "log", label: "Log", icon: Clipboard },
@@ -2805,7 +2808,7 @@ function JobsiteTool({
   return (
     <div className="v2-jobsite-workspace">
       <div className="v2-jobsite-workspace-content">
-        {activeView === "log" ? <DailyLogTool key={`daily-log:${activeJob?.id ?? "quick"}`} activeJob={activeJob} activeWork={activeWork} focusedActiveWorkId={focusedActiveWorkId} /> : null}
+        {activeView === "log" ? <DailyLogTool key={`daily-log:${activeJob?.id ?? "quick"}`} activeJob={activeJob} activeWork={activeWork} focusedActiveWorkId={focusedActiveWorkId} accountId={accountId} /> : null}
         {activeView === "punch" ? <PunchListTool /> : null}
         {activeView === "safety" ? <SafetyChecklistTool key={`safety-checklist:${activeJob?.id ?? "quick"}`} activeJob={activeJob} /> : null}
       </div>
@@ -2921,7 +2924,7 @@ function resolveActiveToolJob(jobs: Job[], orderedActiveWork: CanonicalActiveWor
   return null;
 }
 
-export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, focusedToolRecord = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onOpenActiveWorkWorkspace, onImmersiveChange, onDemoAction, onNavigate }: ToolsStudioProps) {
+export function ToolsStudio({ accountId, isDemo = false, jobs, paymentRecords, mode = "tools", openTool = null, focusedActiveWorkId = null, focusedToolRecord = null, activeWorkRecords = [], onOpenToolConsumed, onToolChange, onWorkContextChange, onOpenActiveWorkWorkspace, onImmersiveChange, onDemoAction, onNavigate }: ToolsStudioProps) {
   const controlledTool: "hub" | PublicToolMode | null = mode === "tools" && openTool !== null
     ? normalizePublicToolMode(openTool)
     : null;
@@ -3632,12 +3635,13 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
             activeJob={activeJob}
             activeWork={orderedActiveWork}
             focusedActiveWorkId={focusedActiveWorkId}
+            accountId={accountId}
           />
         ),
       },
       "daily-log": {
         title: "Jobsite",
-        node: <JobsiteTool activeView="log" onViewChange={changeJobsiteView} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} />,
+        node: <JobsiteTool activeView="log" onViewChange={changeJobsiteView} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} accountId={accountId} />,
       },
       materials: {
         title: "Materials",
@@ -3648,6 +3652,7 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
         node: (
           <JobPhotosTool
             key={`camera:${activeJobScopeKey}`}
+            accountId={accountId}
             activeWork={orderedActiveWork}
             isDemo={isDemo}
             focusedActiveWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null}
@@ -3699,7 +3704,7 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
       },
       "safety-checklist": {
         title: "Jobsite",
-        node: <JobsiteTool activeView="safety" onViewChange={changeJobsiteView} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} />,
+        node: <JobsiteTool activeView="safety" onViewChange={changeJobsiteView} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} accountId={accountId} />,
       },
       "tax-estimator": {
         title: "Tax estimator",
@@ -3707,7 +3712,7 @@ export function ToolsStudio({ isDemo = false, jobs, paymentRecords, mode = "tool
       },
       "punch-list": {
         title: "Jobsite",
-        node: <JobsiteTool activeView="punch" onViewChange={changeJobsiteView} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} />,
+        node: <JobsiteTool activeView="punch" onViewChange={changeJobsiteView} activeJob={activeJob} activeWork={orderedActiveWork} focusedActiveWorkId={focusedActiveWorkId} accountId={accountId} />,
       },
       contracts: {
         title: "Contract templates",

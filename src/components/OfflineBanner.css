@@ -1,34 +1,160 @@
 .rivt-offline-banner {
-  position: fixed;
-  bottom: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 70;
-  padding: 10px 20px;
-  border-radius: var(--v2-radius-pill);
+  position: sticky;
+  top: calc(var(--v2-topbar-height) + env(safe-area-inset-top) + 8px);
+  z-index: 20;
+  width: min(520px, calc(100vw - 24px));
+  margin: 0 0 14px auto;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: var(--v2-radius-lg);
+  box-shadow: var(--v2-shadow-lg);
   font-size: calc(13px * var(--v2-text-scale));
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-  transition: opacity 0.3s, transform 0.3s;
-  max-width: min(560px, calc(100vw - 24px));
-  text-align: center;
+  overflow: hidden;
 }
 
 .rivt-offline-banner.is-offline {
   background: var(--v2-warning-soft);
-  color: var(--v2-warning);
+  color: var(--v2-warning-text);
 }
 
 .rivt-offline-banner.is-online {
   background: var(--v2-success-soft);
-  color: var(--v2-success);
+  color: var(--v2-success-text);
 }
 
-.rivt-offline-banner.is-hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%) translateY(10px);
+.rivt-offline-banner.is-attention {
+  background: var(--v2-danger-soft);
+  color: var(--v2-danger-text);
+}
+
+.rivt-offline-banner-summary {
+  min-height: 48px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.rivt-offline-banner-summary > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.rivt-offline-banner-summary strong,
+.rivt-offline-banner-summary small {
+  line-height: 1.3;
+}
+
+.rivt-offline-banner-summary small {
+  color: inherit;
+  opacity: 0.82;
+}
+
+.rivt-offline-banner button {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: var(--v2-radius-md);
+  background: color-mix(in srgb, var(--v2-surface-raised) 74%, transparent);
+  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rivt-offline-banner button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.rivt-offline-queue {
+  border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  background: color-mix(in srgb, var(--v2-surface-raised) 70%, transparent);
+}
+
+.rivt-offline-queue summary {
+  min-height: 44px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.rivt-offline-queue ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 12px 12px;
+  display: grid;
+  gap: 8px;
+  max-height: min(42vh, 360px);
+  overflow: auto;
+}
+
+.rivt-offline-queue li {
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: var(--v2-radius-md);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  background: var(--v2-surface-raised);
+  color: var(--v2-text);
+}
+
+.rivt-offline-queue li > span:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rivt-offline-queue li small {
+  color: var(--v2-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.rivt-offline-queue li small.is-error {
+  color: var(--v2-danger-text);
+}
+
+.rivt-offline-queue-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.rivt-offline-queue-actions button {
+  width: 44px;
+  padding: 0;
+}
+
+.rivt-offline-banner .is-spinning {
+  animation: rivt-offline-spin 0.8s linear infinite;
+}
+
+@keyframes rivt-offline-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 620px) {
+  .rivt-offline-banner {
+    width: 100%;
+    margin-bottom: 12px;
+  }
+
+  .rivt-offline-banner-summary > button span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rivt-offline-banner .is-spinning {
+    animation: none;
+  }
 }

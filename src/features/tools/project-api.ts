@@ -331,7 +331,7 @@ export async function addProjectNote(projectId: string, body: string) {
   return result.data.entry;
 }
 
-export async function uploadProjectMedia(projectId: string, file: File, notes = "") {
+export async function uploadProjectMedia(projectId: string, file: File, notes = "", idempotencyKey = requestKey()) {
   const form = new FormData();
   form.append("name", file.name);
   form.append("notes", notes);
@@ -339,7 +339,7 @@ export async function uploadProjectMedia(projectId: string, file: File, notes = 
   const response = await fetchWithTimeout(apiPath(`/api/v1/projects/${projectId}/media`), {
     method: "POST",
     credentials: "include",
-    headers: { "Idempotency-Key": requestKey() },
+    headers: { "Idempotency-Key": idempotencyKey },
     body: form,
   }, UPLOAD_REQUEST_TIMEOUT_MS);
   const body = await response.json().catch(() => ({})) as ApiErrorBody & {

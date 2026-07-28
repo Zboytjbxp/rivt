@@ -1,5 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Check, DollarSign, ListTodo, Pencil, Plus, RefreshCw, RotateCcw, StickyNote, Trash2, X } from "lucide-react";
+import { requestKey } from "../../lib/api";
+import { useOfflineQueue } from "../../lib/OfflineQueueProvider";
+import {
+  enqueueOfflineOperation,
+  type OfflineWorkspaceRecordPayload,
+} from "../../lib/offline-queue";
 import {
   WorkspaceRecordsApiError,
   archiveWorkspaceRecord,
@@ -210,8 +216,15 @@ export function WorkspaceRecordsPanel({
   const [editDraft, setEditDraft] = useState<RecordDraft>(emptyDraft);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const offlineQueue = useOfflineQueue();
+  const pendingRecords = offlineQueue.operations.filter((operation) => {
+    if (operation.kind !== "workspace_record_create") return false;
+    const payload = operation.payload as OfflineWorkspaceRecordPayload;
+    return payload.projectId === projectId && payload.recordType === kind;
+  });
+  const pendingSignature = pendingRecords.map((operation) => `${operation.id}:${operation.status}`).join("|");
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setError("");
     try {
       const result = await listWorkspaceRecords(projectId);
@@ -223,18 +236,23 @@ export function WorkspaceRecordsPanel({
     } finally {
       setLoading(false);
     }
-  }
+  }, [kind, projectId]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void refresh();
-    // Project and panel are intentionally remounted with a stable key by the parent.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId, kind]);
+  }, [refresh]);
 
   useEffect(() => {
     localStorage.setItem(draftKey(projectId, kind), JSON.stringify(draft));
   }, [draft, kind, projectId]);
+
+  useEffect(() => {
+    if (!offlineQueue.online || pendingSignature) return;
+    const timer = window.setTimeout(() => { void refresh(); }, 0);
+    // Refresh once after this panel's queued records have left the outbox.
+    return () => window.clearTimeout(timer);
+  }, [offlineQueue.online, pendingSignature, refresh]);
 
   const sortedRecords = useMemo(
     () => [...records].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
@@ -262,23 +280,58 @@ export function WorkspaceRecordsPanel({
     setWorking("create");
     setError("");
     setNotice("");
+    const input = {
+      recordType: kind as WorkspaceRecordType,
+      visibility: kind === "note" ? draft.visibility : "shared" as WorkspaceRecordVisibility,
+      title,
+      details,
+      requestedBy: draft.requestedBy.trim(),
+      amountCents: Math.round((Number(draft.amount) || 0) * 100),
+      dueNote: draft.dueNote.trim(),
+      state: kind === "checklist" ? "open" as const : kind === "note" ? "active" as const : "pending" as const,
+    };
+    const idempotencyKey = requestKey();
     try {
-      const created = await createWorkspaceRecord(projectId, {
-        recordType: kind as WorkspaceRecordType,
-        visibility: kind === "note" ? draft.visibility : "shared",
-        title,
-        details,
-        requestedBy: draft.requestedBy.trim(),
-        amountCents: Math.round((Number(draft.amount) || 0) * 100),
-        dueNote: draft.dueNote.trim(),
-        state: kind === "checklist" ? "open" : kind === "note" ? "active" : "pending",
-      });
+      const created = await createWorkspaceRecord(projectId, input, idempotencyKey);
       setRecords((current) => [...current, created]);
       clearDraft();
       setNotice(kind === "note" && created.visibility === "private" ? "Private note saved to your account." : "Job record synced.");
       await refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "That record could not be saved. Your draft remains on this device.");
+      const retryable = !offlineQueue.online
+        || (cause instanceof WorkspaceRecordsApiError && (
+          cause.status === 0
+          || cause.status === 408
+          || cause.status === 425
+          || cause.status === 429
+          || cause.status >= 500
+        ));
+      if ((kind === "checklist" || kind === "note") && retryable) {
+        try {
+          await enqueueOfflineOperation({
+            accountId: currentAccountId,
+            kind: "workspace_record_create",
+            payload: {
+              projectId,
+              recordType: kind,
+              input: {
+                ...input,
+                recordType: kind,
+                state: kind === "checklist" ? "open" : "active",
+              },
+            },
+            idempotencyKey,
+            label: kind === "checklist" ? title : "Job note",
+            destinationLabel: jobTitle || kindCopy[kind].title,
+          });
+          clearDraft();
+          setNotice(`${kind === "checklist" ? "Punch-list item" : "Job note"} saved on this device. RIVT will sync it when you're online.`);
+        } catch (queueError) {
+          setError(queueError instanceof Error ? queueError.message : "That record could not be saved. Your draft remains on this device.");
+        }
+      } else {
+        setError(cause instanceof Error ? cause.message : "That record could not be saved. Your draft remains on this device.");
+      }
     } finally {
       setWorking("");
     }
@@ -436,8 +489,35 @@ export function WorkspaceRecordsPanel({
                 : "Both job participants can see this record and its change history."}
           </p>
         </div>
-        <span className="v2-workspace-sync-state">Account synced</span>
+        <span className={`v2-workspace-sync-state${!offlineQueue.online || pendingRecords.length || error ? " is-pending" : ""}`}>
+          {!offlineQueue.online
+            ? "Offline"
+            : pendingRecords.length
+              ? `${pendingRecords.length} saved on device`
+              : error
+                ? "Sync unavailable"
+                : "Account synced"}
+        </span>
       </div>
+
+      {pendingRecords.length ? (
+        <aside className="v2-workspace-offline-records" aria-label={`${pendingRecords.length} saved ${kindCopy[kind].title.toLowerCase()} waiting to sync`}>
+          <strong>{pendingRecords.length} saved on this device</strong>
+          <span>RIVT keeps these separate until the server confirms them.</span>
+          <ul>
+            {pendingRecords.map((operation) => (
+              <li key={operation.id}>
+                <span>{operation.label}</span>
+                <small>{operation.status === "conflicted" ? "Needs review" : operation.status}</small>
+                {offlineQueue.online ? (
+                  <button type="button" onClick={() => void offlineQueue.retry(operation.id)}>Retry</button>
+                ) : null}
+                <button type="button" onClick={() => void offlineQueue.discard(operation.id)}>Discard</button>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      ) : null}
 
       {legacy.length ? (
         <aside className="v2-workspace-legacy" aria-label="Older device records">

@@ -78,12 +78,12 @@ export class WorkspaceRecordsApiError extends RivtApiError {
 
 const request = makeRequest((status, body) => new WorkspaceRecordsApiError(status, body));
 
-function mutationOptions(method: "POST" | "PATCH" | "DELETE", body: unknown) {
+function mutationOptions(method: "POST" | "PATCH" | "DELETE", body: unknown, idempotencyKey = requestKey()) {
   return {
     method,
     headers: {
       "Content-Type": "application/json",
-      "Idempotency-Key": requestKey(),
+      "Idempotency-Key": idempotencyKey,
     },
     body: JSON.stringify(body),
   };
@@ -96,10 +96,10 @@ export async function listWorkspaceRecords(projectId: string) {
   return body.data;
 }
 
-export async function createWorkspaceRecord(projectId: string, input: WorkspaceRecordCreate) {
+export async function createWorkspaceRecord(projectId: string, input: WorkspaceRecordCreate, idempotencyKey = requestKey()) {
   const body = await request<{ data: { record: WorkspaceRecord } }>(
     `/api/v1/projects/${projectId}/workspace-records`,
-    mutationOptions("POST", input),
+    mutationOptions("POST", input, idempotencyKey),
   );
   return body.data.record;
 }
