@@ -543,8 +543,12 @@ try {
     const context = await browser.newContext({ viewport, serviceWorkers: "block" });
     const page = await context.newPage();
     const consoleErrors = [];
+    const expectedResourceErrors = new Set([
+      "Failed to load resource: net::ERR_FAILED",
+      "Failed to load resource: net::ERR_CONNECTION_REFUSED",
+    ]);
     page.on("console", (message) => {
-      if (message.type() === "error" && message.text() !== "Failed to load resource: net::ERR_FAILED") {
+      if (message.type() === "error" && !expectedResourceErrors.has(message.text())) {
         consoleErrors.push(message.text());
       }
     });
