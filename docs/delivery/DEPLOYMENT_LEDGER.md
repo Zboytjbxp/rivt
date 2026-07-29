@@ -1,5 +1,38 @@
 # Deployment Ledger
 
+## 2026-07-28 - Customer Documents and Contact Import
+
+- Production feature source commit:
+  `1acccf49f8223d432b5cdcff8d5455a27d31d150`
+- Branch: `master` (source branch:
+  `codex/customer-documents-contact-import`)
+- Railway application deployment:
+  `ee30fd80-da7a-4551-afb3-623b20d43736`
+- Production: `https://rivt.pro`
+- Scope: canonical account-owned contact ingestion from user-selected device
+  contacts and CSV/vCard exports; contextual single-contact selection in
+  Estimate/Invoice; truthful email/text delivery choices; independent bank
+  and direct-payment offers; real-logo-or-text-only customer documents.
+- Migration before/after: unchanged at
+  `0041_shop_talk_news_continuity`.
+- Automated gates: production build, application lint, 122 unit/frontend
+  tests, all 22 serial PostgreSQL integration suites, all three browser E2E
+  paths, focused Tools and mobile-action rendered suites, diff integrity, and
+  zero known production dependency vulnerabilities passed.
+- Post-deploy proof: `/api/health` returned exact feature source
+  `1acccf49f8223d432b5cdcff8d5455a27d31d150`, ready migration, PostgreSQL,
+  S3-compatible storage, configured breached-password screening, Sentry, Web
+  Push, and Stripe Connect ACH. The production monitor passed in 468 ms with
+  operational controls open and seven anonymous private-route checks.
+- Provider/config change: none. Text remains a device-opened draft and is not
+  represented as provider-sent; no address book is read in the background.
+- Rollback target:
+  `c4aeb363ff15893daa424bcca867b9328228e188`; source rollback only, with no
+  schema or production-data rollback.
+- Platform boundary: supported Android browsers expose the user-selected
+  Contact Picker. Unsupported browsers use manual creation or a user-exported
+  CSV/vCard; RIVT does not claim silent full-phone import.
+
 ## 2026-07-28 - Security, Accessibility, and Operations Closure
 
 - Production feature source commit:

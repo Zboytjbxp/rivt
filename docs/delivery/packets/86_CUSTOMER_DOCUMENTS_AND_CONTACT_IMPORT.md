@@ -110,4 +110,21 @@ Before advancing, explicitly review:
    customer relationship on an exact existing match instead of creating an
    invoice-only identity.
 
-Packet status: **Verified locally; production deployment pending**.
+## Production evidence
+
+- Source branch `codex/customer-documents-contact-import` was pushed and
+  fast-forwarded to `master`.
+- Railway application deployment `ee30fd80-da7a-4551-afb3-623b20d43736`
+  serves exact feature source
+  `1acccf49f8223d432b5cdcff8d5455a27d31d150`.
+- Live `/api/health` reports ready migration
+  `0041_shop_talk_news_continuity`, PostgreSQL, S3-compatible storage,
+  configured breached-password screening, Sentry, Web Push, and Stripe
+  Connect ACH.
+- `EXPECTED_SOURCE_COMMIT=1acccf49f8223d432b5cdcff8d5455a27d31d150
+  npm run monitor:production` passed in 468 ms with operational controls open
+  and seven anonymous private-route checks.
+- No schema, migration, provider credential, or production-data mutation was
+  introduced.
+
+Packet status: **Production verified**.

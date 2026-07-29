@@ -2,10 +2,10 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Customer documents and contact import verified; deployment pending.
+Current phase: Customer documents and contact import production verified.
 Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
-Repository branch: `codex/customer-documents-contact-import`
-Production feature release commit: pending
+Repository branch: `master` (source: `codex/customer-documents-contact-import`)
+Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 
 ## Customer documents and contact import
 
@@ -37,15 +37,21 @@ Production feature release commit: pending
 - One `Send` action replaces clipped email-only docks. The accessible sheet
   distinguishes server-sent email from a device-opened text draft and supports
   email followed by a text draft without claiming SMS delivery.
-- Packet 86 is **Verified locally**. Build, lint, 122 unit/frontend checks,
+- Packet 86 is **Production verified**. Build, lint, 122 unit/frontend checks,
   all 22 PostgreSQL integration suites, the three required E2E journeys,
   rendered Tools and mobile-action QA, diff integrity, and a zero-vulnerability
-  production dependency audit pass. Production remains on the Packet 85
-  release until this packet is merged and exact-source verified.
+  production dependency audit pass.
 - Three-things review closed silent/broad address-book access, cross-channel
   document drift, and duplicate contact identities. Platform boundary remains
   explicit: supported Android browsers provide the user-selected Contact
   Picker; other browsers use manual creation or a user-exported CSV/vCard.
+- Railway application deployment `ee30fd80-da7a-4551-afb3-623b20d43736`
+  serves exact feature source
+  `1acccf49f8223d432b5cdcff8d5455a27d31d150`. Live health reports ready
+  migration `0041_shop_talk_news_continuity`, PostgreSQL, S3-compatible
+  storage, configured breached-password screening, Sentry, Web Push, and
+  Stripe Connect ACH. The production monitor passed in 468 ms with
+  operational controls open and seven anonymous private-route checks.
 
 ## Security, accessibility, and operations closure
 

@@ -2889,8 +2889,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   build, application lint, 122 unit/frontend tests, all 22 serial PostgreSQL
   integration suites, fail-closed authentication, Jobs/discovery and offline
   recovery E2E, rendered Tools/mobile-action QA, diff integrity, and a
-  zero-vulnerability production dependency audit. Production deployment is
-  pending.
+  zero-vulnerability production dependency audit. Railway deployment
+  `ee30fd80-da7a-4551-afb3-623b20d43736` serves exact feature source
+  `1acccf49f8223d432b5cdcff8d5455a27d31d150`; live health and the production
+  synthetic monitor passed with the existing provider and privacy controls.
 
 ## Traceability Addendum - 2026-07-26 Document Trust and Resume
 
