@@ -30,6 +30,7 @@ if (!testDatabaseUrl) {
   const database = new Pool({ connectionString: testDatabaseUrl, ssl: false });
   const { app, closeDatabase, ensureDatabaseReady } = await import("../server/index.js");
   const { capturedEmailMessages, clearCapturedEmailMessages } = await import("../server/email.js");
+  const { pushNotificationInternals } = await import("../server/push-notifications.js");
 
   function sessionCookie(response) {
     return String(response.headers.get("set-cookie") ?? "").split(";", 1)[0];
@@ -151,6 +152,33 @@ if (!testDatabaseUrl) {
       "SELECT count(*)::int AS count FROM push_delivery_outbox WHERE notification_id = $1 AND status = 'pending'",
       [testPush.payload.data.notificationId],
     )).rows[0].count, 1);
+
+    const competingClaims = await Promise.all([
+      pushNotificationInternals.claimDeliveries(database),
+      pushNotificationInternals.claimDeliveries(database),
+    ]);
+    const firstAttempt = competingClaims
+      .flat()
+      .filter((delivery) => delivery.notification_id === testPush.payload.data.notificationId);
+    assert.equal(firstAttempt.length, 1);
+    await database.query(
+      `UPDATE push_delivery_outbox
+       SET claimed_at = now() - interval '6 minutes'
+       WHERE id = $1`,
+      [firstAttempt[0].id],
+    );
+    const reclaimed = (await pushNotificationInternals.claimDeliveries(database))
+      .find((delivery) => delivery.id === firstAttempt[0].id);
+    assert.ok(reclaimed);
+    assert.equal(reclaimed.attempt_count, firstAttempt[0].attempt_count + 1);
+    assert.equal(
+      await pushNotificationInternals.markDeliverySuccess(database, firstAttempt[0]),
+      false,
+    );
+    assert.equal(
+      await pushNotificationInternals.markDeliverySuccess(database, reclaimed),
+      true,
+    );
 
     const secondCookie = await login(baseUrl, account);
     const endpointTwo = `https://push.example.test/${randomUUID()}`;

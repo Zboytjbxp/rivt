@@ -56,6 +56,7 @@ export function createDependencyHealthProbe({
   failureCacheTtlMs = 5_000,
   live = true,
   now = Date.now,
+  onProbe = null,
 } = {}) {
   const probeTimeoutMs = requirePositiveInteger(timeoutMs, "timeoutMs");
   const successTtlMs = requirePositiveInteger(successCacheTtlMs, "successCacheTtlMs");
@@ -68,6 +69,7 @@ export function createDependencyHealthProbe({
   let inFlight = null;
 
   async function checkDependencies() {
+    const startedAt = now();
     if (!live) {
       return {
         ok: databaseConfigured === true && objectStorageConfigured === true,
@@ -95,6 +97,15 @@ export function createDependencyHealthProbe({
         ? "missing"
         : objectStorageReady ? "s3-compatible" : "unavailable",
     };
+    try {
+      onProbe?.({
+        databaseOk: databaseReady,
+        objectStorageOk: objectStorageReady,
+        durationMs: Math.max(0, now() - startedAt),
+      });
+    } catch {
+      // Telemetry must never change dependency health behavior.
+    }
     cached = {
       value,
       expiresAt: now() + (value.ok ? successTtlMs : failureTtlMs),

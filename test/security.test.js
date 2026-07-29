@@ -8,6 +8,7 @@ import {
 } from "../server/http-server-safety.js";
 import {
   pruneExpiredIdempotencyKeys,
+  runLeasedDatabaseMaintenance,
   startDatabaseMaintenance,
 } from "../server/database-maintenance.js";
 import { newsInternals } from "../server/news.js";
@@ -90,17 +91,114 @@ test("database maintenance prunes expired idempotency rows in bounded batches", 
 
 test("database maintenance starts once and can be stopped", async () => {
   let calls = 0;
-  const database = {
-    async query() {
+  const client = {
+    async query(sql) {
+      if (sql === "BEGIN" || sql === "COMMIT") return { rows: [] };
+      if (/pg_try_advisory_xact_lock/i.test(sql)) return { rows: [{ acquired: true }] };
       calls += 1;
       return { rowCount: 0, rows: [] };
+    },
+    release() {},
+  };
+  const database = {
+    async connect() {
+      return client;
     },
   };
 
   const stop = startDatabaseMaintenance(database, { intervalMs: 60_000 });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(calls, 1);
-  stop();
+  await stop();
+});
+
+test("database maintenance uses one cross-process advisory lease per overlapping cycle", async () => {
+  let lockHeld = false;
+  let releasePrune;
+  let firstPruneStarted;
+  const firstPruneReady = new Promise((resolve) => {
+    firstPruneStarted = resolve;
+  });
+  const pruneGate = new Promise((resolve) => {
+    releasePrune = resolve;
+  });
+  const clients = [];
+  const database = {
+    async connect() {
+      const client = {
+        released: false,
+        async query(sql) {
+          if (sql === "BEGIN") return { rows: [] };
+          if (/pg_try_advisory_xact_lock/i.test(sql)) {
+            if (lockHeld) return { rows: [{ acquired: false }] };
+            lockHeld = true;
+            return { rows: [{ acquired: true }] };
+          }
+          if (sql === "COMMIT" || sql === "ROLLBACK") {
+            lockHeld = false;
+            return { rows: [] };
+          }
+          throw new Error(`Unexpected SQL: ${sql}`);
+        },
+        release() {
+          this.released = true;
+        },
+      };
+      clients.push(client);
+      return client;
+    },
+  };
+
+  const first = runLeasedDatabaseMaintenance(database, {
+    prune: async () => {
+      firstPruneStarted();
+      await pruneGate;
+      return 3;
+    },
+  });
+  await firstPruneReady;
+  const second = await runLeasedDatabaseMaintenance(database, {
+    prune: async () => {
+      throw new Error("The second contender must not run maintenance.");
+    },
+  });
+  assert.equal(second.acquired, false);
+  assert.equal(second.pruned, 0);
+  assert.ok(second.durationMs >= 0);
+  releasePrune();
+  const winner = await first;
+  assert.equal(winner.acquired, true);
+  assert.equal(winner.pruned, 3);
+  assert.ok(winner.durationMs >= 0);
+  assert.ok(clients.every((client) => client.released));
+});
+
+test("database maintenance shutdown waits for the active leased cycle", async () => {
+  let resolveCycle;
+  let cycleStarted;
+  const started = new Promise((resolve) => {
+    cycleStarted = resolve;
+  });
+  const cycle = new Promise((resolve) => {
+    resolveCycle = resolve;
+  });
+  const stop = startDatabaseMaintenance({ query() {} }, {
+    intervalMs: 60_000,
+    runCycle: async () => {
+      cycleStarted();
+      return cycle;
+    },
+  });
+  await started;
+  let stopped = false;
+  const stopping = stop().then(() => {
+    stopped = true;
+  });
+  await flushAsyncWork();
+  assert.equal(stopped, false);
+  resolveCycle({ acquired: true, pruned: 0, durationMs: 1 });
+  await stopping;
+  assert.equal(stopped, true);
 });
 
 test("cookie parsing and session validation fail closed", () => {
@@ -1098,6 +1196,7 @@ test("dependency health uses bounded live probes, coalesces traffic, and redacts
   let databaseCalls = 0;
   let objectStorageCalls = 0;
   let clock = 1_000;
+  const probeResults = [];
   const probe = createDependencyHealthProbe({
     databaseConfigured: true,
     objectStorageConfigured: true,
@@ -1111,6 +1210,7 @@ test("dependency health uses bounded live probes, coalesces traffic, and redacts
     successCacheTtlMs: 1_000,
     failureCacheTtlMs: 100,
     now: () => clock,
+    onProbe: (result) => probeResults.push(result),
   });
 
   const [first, concurrent] = await Promise.all([probe(), probe()]);
@@ -1129,6 +1229,10 @@ test("dependency health uses bounded live probes, coalesces traffic, and redacts
   await probe();
   assert.equal(databaseCalls, 2);
   assert.equal(objectStorageCalls, 2);
+  assert.deepEqual(probeResults, [
+    { databaseOk: true, objectStorageOk: true, durationMs: 0 },
+    { databaseOk: true, objectStorageOk: true, durationMs: 0 },
+  ]);
 
   const failedProbe = createDependencyHealthProbe({
     databaseConfigured: true,

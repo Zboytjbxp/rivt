@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import pg from "pg";
+import { createDatabasePool } from "../server/database-pool.js";
 import { migrateUp, migrationStatus, rollbackLatest } from "../server/migrations.js";
 
 const databaseUrl = process.env.DATABASE_URL?.trim();
@@ -8,13 +8,7 @@ if (!databaseUrl) {
   console.error("DATABASE_URL is required.");
   process.exitCode = 1;
 } else {
-  const { Pool } = pg;
-  const pool = new Pool({
-    connectionString: databaseUrl,
-    ssl: process.env.PGSSL === "disable" || databaseUrl.includes("localhost")
-      ? false
-      : { rejectUnauthorized: false },
-  });
+  const pool = createDatabasePool({ role: "migrate" });
 
   const command = process.argv[2] ?? "up";
   try {
