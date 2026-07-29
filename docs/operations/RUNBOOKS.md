@@ -183,7 +183,7 @@ Gate A requires proof that a named backup object can be restored. Create the enc
 npm run backup:logical-artifact
 ```
 
-The command reads from `BACKUP_DATABASE_URL` or `DATABASE_URL`, requires `BACKUP_ENCRYPTION_KEY` or `RIVT_BACKUP_ENCRYPTION_KEY`, uses the configured private S3-compatible bucket, writes an AES-256-GCM encrypted gzip JSON object under `backups/postgres/`, and prints only non-secret evidence: bucket, object key, source commit, table count, row count, and duration.
+The command reads from `BACKUP_DATABASE_URL` or `DATABASE_URL`, requires `BACKUP_ENCRYPTION_KEY` or `RIVT_BACKUP_ENCRYPTION_KEY`, uses the configured private S3-compatible bucket, and writes an AES-256-GCM encrypted gzip JSON object under `backups/postgres/`. Version-2 artifacts capture schema, rows, counts, and sequence state from one read-only repeatable-read transaction, preserve canonical PostgreSQL text values and formatted types, and keep deterministic table/database content digests inside the encrypted payload. The command prints only non-secret operational evidence: bucket, object key, source commit, table count, row count, integrity format, and duration.
 
 Restore that named artifact into a freshly provisioned isolated target:
 
@@ -192,7 +192,21 @@ CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-
 CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" npm run restore:drill
 ```
 
-The artifact restore command refuses to run without the isolated-target confirmation, applies migrations when requested, checks table and column parity against the backup artifact, disables user-defined triggers during replay, restores sequences, and fails by default if target counts differ from the backup manifest. Do not persist `RESTORE_DATABASE_URL`, `RESTORE_BACKUP_S3_KEY`, or `CONFIRM_RESTORE_TARGET_ISOLATED` as normal app service variables; pass them only for the one restore command.
+The artifact restore command refuses to run without the isolated-target confirmation, applies migrations when requested, checks table/column/type parity against the backup artifact, disables user-defined triggers during replay, restores sequences, and fails by default if target counts differ from the backup manifest. Version-2 artifacts are authenticated and content-digest checked before replay, then exact target counts and table/database digests are recomputed inside the restore transaction before commit. Version-1 artifacts remain compatible but report `unavailable_legacy` rather than claiming content verification. Do not persist `RESTORE_DATABASE_URL`, `RESTORE_BACKUP_S3_KEY`, or `CONFIRM_RESTORE_TARGET_ISOLATED` as normal app service variables; pass them only for the one restore command.
+
+Review the provider-neutral object-recovery mechanics without any provider or
+production access:
+
+```text
+RECOVERY_HARNESS_MODE=local-memory CONFIRM_RECOVERY_LOCAL_ONLY=true NODE_ENV=test npm run recovery:harness:local
+```
+
+This guarded command uses three explicit in-memory fixtures and injected
+atomic stores. It proves bounded encryption, completion-last behavior, and
+exact local restore only. It imports no cloud client and must never be
+represented as an independent backup, a production object restore, or
+closure of `R-051`. Provider selection, object access, immutable retention,
+credentials, cost, and any proving drill require separate owner approval.
 
 Latest Packet 08 evidence: temporary Railway PostgreSQL target `Postgres-3Ei3` was migrated, populated with 59 public tables and 1,524 rows in 1,421 ms, strictly verified with migration `0009_durable_rate_limits`, zero pending migrations, zero source/target count diffs across critical Gate A tables, and a 220 ms verifier duration, then deleted. A named backup-artifact restore also passed on 2026-06-21: encrypted object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm` restored into isolated Railway target `Postgres-_FQz`, applied nine migrations through `0009_durable_rate_limits`, restored 59 public tables and 1,524 rows, verified strict manifest parity with zero diffs in 13,411 ms, passed `npm run restore:drill` in 1,862 ms, and then the temporary target was deleted.
 

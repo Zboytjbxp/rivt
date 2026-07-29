@@ -486,23 +486,31 @@ These are design work packages, not authorization to implement:
 - Reconcile missing/orphaned objects and align deletion, legal hold, and backup
   purge behavior.
 
-An implementation handoff is intentionally not present. The hardening
-workflow requires an owner-selected option before implementation planning.
+## Owner Selection Record
+
+On 2026-07-29, Michael selected Option 3,
+`cross-provider-immutable-backup`, as the target architecture and authorized
+the provider-neutral local foundation in Packet 90. The implementation
+handoff is
+`../implementation/cross-provider-immutable-backup.md`.
+
+This selection is not approval for a provider/account, production object
+access, immutable retention, the proposed US$1 proving drill, recurring
+spend, or deployment. Those boundaries remain open below.
 
 ## Open Questions
 
-1. Does Michael approve Option 3 as the target architecture?
-2. Does Michael authorize up to US$1.00 of incremental Railway usage for the
+1. Does Michael authorize up to US$1.00 of incremental Railway usage for the
    one-time proving drill after the local harness is reviewed?
-3. Which separate provider/account should own immutable backups? AWS S3
+2. Which separate provider/account should own immutable backups? AWS S3
    Compliance Object Lock is the current recommendation; an equivalent
    provider must demonstrate enforceable retention and separate credentials.
-4. Who holds the offline recovery credential and backup encryption-key escrow,
+3. Who holds the offline recovery credential and backup encryption-key escrow,
    and how is access recovered if that person is unavailable?
-5. Is 30-day immutable retention approved for every object class, or do legal
+4. Is 30-day immutable retention approved for every object class, or do legal
    hold, professional evidence, and customer deletion require different
    schedules?
-6. Which US region and provider DPA/subprocessor terms will legal and
+5. Which US region and provider DPA/subprocessor terms will legal and
    operations approve?
-7. How should legacy objects without SHA-256 be backfilled or quarantined from
+6. How should legacy objects without SHA-256 be backfilled or quarantined from
    a “fully verified” snapshot?

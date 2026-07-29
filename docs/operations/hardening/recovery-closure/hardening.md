@@ -63,15 +63,18 @@ invoice promise or spending authorization.
 
 ## Next Decisions
 
-1. Approve or reject Option 3 as the target recovery architecture.
-2. Separately approve or reject the US$1 Railway ceiling for the one-time
+Option 3 is selected as the target recovery architecture. Packet 90
+implements its provider-neutral local foundation without provider I/O,
+production-data access, deployment, or spend.
+
+1. Separately approve or reject the US$1 Railway ceiling for the one-time
    proving drill after the local harness is reviewed.
-3. Select the separately administered immutable destination. AWS S3
+2. Select the separately administered immutable destination. AWS S3
    Compliance Object Lock is the current recommendation, subject to account,
    region, DPA, retention, and cost approval.
-4. Name the backup-encryption key custodian and offline recovery-credential
+3. Name the backup-encryption key custodian and offline recovery-credential
    holder.
-5. Approve retention/deletion treatment for normal files, professional
+4. Approve retention/deletion treatment for normal files, professional
    evidence, legal hold, and account deletion.
 
 Until those decisions and the resulting restore evidence exist, R-051 remains

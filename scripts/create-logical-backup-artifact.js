@@ -2,7 +2,9 @@ import "dotenv/config";
 import {
   backupEncryptionSecret,
   countTableRows,
+  databaseSnapshotTimestamp,
   encryptSnapshot,
+  integrityForTables,
   poolFor,
   publicTables,
   putJsonObject,
@@ -12,6 +14,7 @@ import {
   sequenceStates,
   sumCounts,
   tableColumns,
+  withCanonicalReadSnapshot,
 } from "./logical-backup-utils.js";
 
 const sourceUrl = process.env.BACKUP_DATABASE_URL?.trim() || process.env.DATABASE_URL?.trim();
@@ -41,36 +44,40 @@ const pool = poolFor(sourceUrl);
 try {
   const client = await pool.connect();
   try {
-    await client.query("SET statement_timeout = '60s'");
+    const snapshot = await withCanonicalReadSnapshot(client, async () => {
+      const snapshotAt = await databaseSnapshotTimestamp(client);
+      const tableNames = await publicTables(client);
+      const counts = await countTableRows(client, tableNames);
+      const tables = [];
+      for (const tableName of tableNames) {
+        const columns = await tableColumns(client, tableName);
+        tables.push({
+          name: tableName,
+          columns,
+          rows: await rowsForTable(client, tableName, columns),
+        });
+      }
 
-    const tableNames = await publicTables(client);
-    const counts = await countTableRows(client, tableNames);
-    const tables = [];
-    for (const tableName of tableNames) {
-      const columns = await tableColumns(client, tableName);
-      tables.push({
-        name: tableName,
-        columns,
-        rows: await rowsForTable(client, tableName, columns),
-      });
-    }
-
-    const manifest = {
-      format: "rivt-logical-backup-manifest-v1",
-      createdAt,
-      sourceCommit,
-      tableCount: tableNames.length,
-      rowCount: sumCounts(counts),
-      counts,
-    };
-    const snapshot = {
-      format: "rivt-logical-backup-v1",
-      createdAt,
-      sourceCommit,
-      manifest,
-      sequences: await sequenceStates(client),
-      tables,
-    };
+      const manifest = {
+        format: "rivt-logical-backup-manifest-v2",
+        createdAt,
+        snapshotAt,
+        sourceCommit,
+        tableCount: tableNames.length,
+        rowCount: sumCounts(counts),
+        counts,
+      };
+      return {
+        format: "rivt-logical-backup-v2",
+        createdAt,
+        snapshotAt,
+        sourceCommit,
+        manifest,
+        integrity: integrityForTables(tables),
+        sequences: await sequenceStates(client),
+        tables,
+      };
+    });
     const encrypted = encryptSnapshot(snapshot, encryptionSecret);
     await putJsonObject(s3ClientFromEnv(), bucket, objectKey, encrypted);
 
@@ -81,8 +88,10 @@ try {
       key: objectKey,
       createdAt,
       sourceCommit,
-      tables: manifest.tableCount,
-      rows: manifest.rowCount,
+      tables: snapshot.manifest.tableCount,
+      rows: snapshot.manifest.rowCount,
+      contentVerifiedAtCapture: true,
+      integrityFormat: snapshot.integrity.format,
       durationMs: Date.now() - startedAt,
     }, null, 2));
   } finally {

@@ -9,7 +9,7 @@
     "artifactCount": 24,
     "targetRevision": "5a561a836834bae09d404628e7b0447b216bbfda",
     "sourceDrift": "present",
-    "driftDescription": "Recovery implementation source remains at the target revision. Derived Packet 89 delivery-state, risk, and traceability documentation changed after the evidence collection was hashed; the collection digest binds the pre-analysis snapshot."
+    "driftDescription": "Packet 90 implements the selected provider-neutral local foundation after the evidence collection was hashed. The collection digest still binds the pre-analysis snapshot; the implementation handoff records the exact source comparison and new local verification boundary."
   },
   "assessment": {
     "outcome": "opportunities_identified",
@@ -473,11 +473,23 @@
         }
       ],
       "recommendedOptionId": "cross-provider-immutable-backup",
-      "recommendation": "Use a cross-provider immutable backup as the launch target, with a locally reviewed harness and one capped same-provider full-corpus drill as the proving stage."
+      "recommendation": "Use a cross-provider immutable backup as the launch target, with a locally reviewed harness and one capped same-provider full-corpus drill as the proving stage.",
+      "selectedOptionId": "cross-provider-immutable-backup",
+      "selectionRecord": {
+        "selectedAt": "2026-07-29",
+        "authorizedScope": "Provider-neutral local foundation only.",
+        "implementationHandoff": "implementation/cross-provider-immutable-backup.md",
+        "notAuthorized": [
+          "Provider or production object access",
+          "The proposed US$1 proving drill",
+          "Provider resource creation or configuration",
+          "Recurring spend",
+          "Deployment"
+        ]
+      }
     }
   ],
   "openQuestions": [
-    "Does Michael approve cross-provider-immutable-backup as the target design?",
     "Does Michael authorize up to US$1.00 of incremental Railway usage for one proving drill after the local harness is reviewed?",
     "Which separately administered provider/account and US region are approved?",
     "Who owns backup-encryption key escrow and the offline recovery credential?",

@@ -71,19 +71,39 @@ export async function publicTables(client) {
   return result.rows.map((row) => row.table_name);
 }
 
+export async function databaseSnapshotTimestamp(client) {
+  const result = await client.query("SELECT transaction_timestamp()::text AS snapshot_at");
+  return result.rows[0].snapshot_at;
+}
+
 export async function tableColumns(client, tableName) {
   const result = await client.query(`
-    SELECT column_name, is_generated, identity_generation
-    FROM information_schema.columns
-    WHERE table_schema = 'public'
-      AND table_name = $1
-    ORDER BY ordinal_position
+    SELECT
+      column_info.column_name,
+      column_info.is_generated,
+      column_info.identity_generation,
+      pg_catalog.format_type(attribute.atttypid, attribute.atttypmod) AS formatted_type
+    FROM information_schema.columns column_info
+    JOIN pg_catalog.pg_namespace namespace
+      ON namespace.nspname = column_info.table_schema
+    JOIN pg_catalog.pg_class relation
+      ON relation.relnamespace = namespace.oid
+     AND relation.relname = column_info.table_name
+    JOIN pg_catalog.pg_attribute attribute
+      ON attribute.attrelid = relation.oid
+     AND attribute.attname = column_info.column_name
+     AND attribute.attnum > 0
+     AND NOT attribute.attisdropped
+    WHERE column_info.table_schema = 'public'
+      AND column_info.table_name = $1
+    ORDER BY column_info.ordinal_position
   `, [tableName]);
   return result.rows
     .filter((row) => row.is_generated !== "ALWAYS")
     .map((row) => ({
       name: row.column_name,
       identityGeneration: row.identity_generation,
+      formattedType: row.formatted_type,
     }));
 }
 
@@ -141,9 +161,93 @@ export function orderedTables(tables, dependencies) {
 
 export async function rowsForTable(client, tableName, columns) {
   if (!columns.length) return [];
-  const selectedColumns = columns.map((column) => quoteIdentifier(column.name)).join(", ");
+  const selectedColumns = columns
+    .map((column) => `${quoteIdentifier(column.name)}::text AS ${quoteIdentifier(column.name)}`)
+    .join(", ");
   const result = await client.query(`SELECT ${selectedColumns} FROM ${qualified(tableName)}`);
   return result.rows;
+}
+
+export async function withCanonicalReadSnapshot(client, work) {
+  await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+  try {
+    await client.query("SET LOCAL statement_timeout = '60s'");
+    await client.query("SET LOCAL TIME ZONE 'UTC'");
+    await client.query("SET LOCAL DateStyle = 'ISO, YMD'");
+    await client.query("SET LOCAL IntervalStyle = 'iso_8601'");
+    await client.query("SET LOCAL bytea_output = 'hex'");
+    await client.query("SET LOCAL extra_float_digits = 3");
+    const result = await work();
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  }
+}
+
+function canonicalTextRow(columns, row) {
+  return columns.map((column) => {
+    const value = row[column.name];
+    if (value === null) return null;
+    if (typeof value !== "string") {
+      throw new Error(`Canonical PostgreSQL value for ${column.name} must be text or null.`);
+    }
+    return value;
+  });
+}
+
+export function tableContentDigest(tableName, columns, rows) {
+  const canonicalRows = rows
+    .map((row) => JSON.stringify(canonicalTextRow(columns, row)))
+    .sort();
+  const preimage = JSON.stringify([
+    "rivt-table-content-digest-v1",
+    tableName,
+    columns.map((column) => [column.name, column.formattedType ?? null]),
+    canonicalRows,
+  ]);
+  return crypto.createHash("sha256").update(preimage).digest("hex");
+}
+
+export function databaseContentDigest(tableDigests) {
+  const preimage = JSON.stringify([
+    "rivt-database-content-digest-v1",
+    Object.entries(tableDigests).sort(([left], [right]) => left.localeCompare(right)),
+  ]);
+  return crypto.createHash("sha256").update(preimage).digest("hex");
+}
+
+export function integrityForTables(tables) {
+  const tableDigests = Object.fromEntries(
+    [...tables]
+      .sort((left, right) => left.name.localeCompare(right.name))
+      .map((table) => [table.name, tableContentDigest(table.name, table.columns, table.rows)]),
+  );
+  return {
+    format: "rivt-logical-backup-integrity-v1",
+    algorithm: "sha256",
+    canonicalization: "postgresql-text-v1",
+    tableDigests,
+    databaseDigest: databaseContentDigest(tableDigests),
+  };
+}
+
+export function diffContentDigests(expectedDigests, actualDigests) {
+  const tableNames = new Set([
+    ...Object.keys(expectedDigests ?? {}),
+    ...Object.keys(actualDigests ?? {}),
+  ]);
+  return [...tableNames]
+    .sort()
+    .flatMap((tableName) => {
+      if (!(tableName in (expectedDigests ?? {}))) return [{ tableName, reason: "unexpected" }];
+      if (!(tableName in (actualDigests ?? {}))) return [{ tableName, reason: "missing" }];
+      if (expectedDigests[tableName] !== actualDigests[tableName]) {
+        return [{ tableName, reason: "mismatch" }];
+      }
+      return [];
+    });
 }
 
 export async function countTableRows(client, tables) {

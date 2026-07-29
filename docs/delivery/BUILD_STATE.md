@@ -1,11 +1,56 @@
 # RIVT Build State
 
-Last updated: 2026-07-28 America/New_York
+Last updated: 2026-07-29 America/New_York
 Current gate: Gate B controlled engagement; public launch approval blocked
-Current phase: Recovery closure design and owner approval boundary.
-Active packet: `docs/delivery/packets/89_RECOVERY_CLOSURE_DESIGN.md`
-Repository branch: `codex/recovery-closure-plan`
+Current phase: Local recovery foundation; independent provider proof remains blocked.
+Active packet: `docs/delivery/packets/90_LOCAL_RECOVERY_HARNESS.md`
+Repository branch: `codex/recovery-harness`
 Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
+
+## Local recovery foundation
+
+- Michael selected the cross-provider, client-side encrypted immutable-backup
+  architecture as the target. This selection authorizes the local foundation,
+  not provider setup, production object reads, the proposed US$1 proving
+  drill, recurring spend, or deployment.
+- Logical backup v2 now captures one canonical read-only repeatable-read
+  PostgreSQL snapshot, preserves exact PostgreSQL text values and formatted
+  types, and embeds deterministic table/database content digests inside the
+  encrypted artifact.
+- Restore remains compatible with v1 artifacts while honestly labeling them
+  as lacking content verification. V2 restores verify encrypted-artifact
+  integrity before mutation and recompute exact counts plus content digests
+  before the restore transaction may commit.
+- A provider-neutral object harness now builds a conservative relational
+  inventory, requires explicit physical source binding, encrypts bounded
+  streams with AES-256-GCM, uses opaque HMAC-derived names, validates
+  plaintext before destination upload, and writes one encrypted completion
+  object last.
+- The local harness imports no provider client and reports
+  `providerIo=false`, `productionDataRead=false`,
+  `chargeBearingAction=false`, `completionWrittenLast=true`, and
+  `contentVerified=true` for its three explicit fixtures.
+- Legacy uploads without trustworthy hashes remain an explicit incomplete
+  boundary. Deletion/retention/legal-hold policy, provider/account/region,
+  DPA terms, key custody, recovery credentials, cost, immutable retention,
+  scheduling, monitoring, and independent restore proof still require
+  approval and implementation.
+- Exact branch gates pass: production build, application/security lint,
+  173/173 unit/frontend tests, 24/24 PostgreSQL integration tests with zero
+  skips, all four E2E paths, incident/launch readiness, hardening JSON
+  validation, diff integrity, and the production dependency audit with zero
+  reported vulnerabilities. The unit and integration commands are the exact
+  components of `npm run test`; the 23-minute integration leg was not rerun
+  only to duplicate the aggregate wrapper.
+- No provider resource or configuration changed, no production object or
+  database data was read or mutated, no charge-bearing action ran, and
+  nothing was deployed in Packet 90.
+- `R-051` and `GA-OPS-004` remain Critical/Blocker. Local harness success is
+  engineering evidence, not an independent backup or production recovery
+  result.
+- Packet status is **Local provider-neutral foundation complete; provider
+  proof and durable independent recovery blocked on explicit approval. Not
+  deployed**.
 
 ## Recovery closure design
 

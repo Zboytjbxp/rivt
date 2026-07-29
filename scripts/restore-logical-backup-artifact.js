@@ -5,15 +5,18 @@ import {
   backupEncryptionSecret,
   countTableRows,
   decryptSnapshot,
+  diffContentDigests,
   diffCounts,
   foreignKeyDependencies,
   getJsonObject,
+  integrityForTables,
   insertBatch,
   orderedTables,
   poolFor,
   publicTables,
   requiredEnv,
   restoreSequences,
+  rowsForTable,
   s3ClientFromEnv,
   setUserTriggers,
   tableColumns,
@@ -57,6 +60,13 @@ async function restoreTable(client, snapshotTable) {
   const targetColumnNames = targetColumns.map((column) => column.name).sort();
   const snapshotColumnNames = snapshotTable.columns.map((column) => column.name).sort();
   assert.deepEqual(targetColumnNames, snapshotColumnNames, `${snapshotTable.name} columns differ from backup artifact.`);
+  if (snapshotTable.columns.every((column) => column.formattedType)) {
+    assert.deepEqual(
+      targetColumns.map((column) => [column.name, column.formattedType]),
+      snapshotTable.columns.map((column) => [column.name, column.formattedType]),
+      `${snapshotTable.name} column types differ from backup artifact.`,
+    );
+  }
 
   for (let index = 0; index < snapshotTable.rows.length; index += batchSize) {
     await insertBatch(client, snapshotTable.name, targetColumns, snapshotTable.rows.slice(index, index + batchSize));
@@ -68,9 +78,35 @@ const targetPool = poolFor(targetUrl);
 try {
   const encrypted = await getJsonObject(s3ClientFromEnv(), bucket, objectKey);
   const snapshot = decryptSnapshot(encrypted, encryptionSecret);
-  assert.equal(snapshot.format, "rivt-logical-backup-v1", "Unsupported logical backup format.");
+  const isContentVerifiable = snapshot.format === "rivt-logical-backup-v2";
+  assert.ok(
+    snapshot.format === "rivt-logical-backup-v1" || isContentVerifiable,
+    "Unsupported logical backup format.",
+  );
   assert.ok(Array.isArray(snapshot.tables), "Backup artifact is missing table data.");
   assert.ok(Array.isArray(snapshot.sequences), "Backup artifact is missing sequence data.");
+  if (isContentVerifiable) {
+    assert.equal(
+      snapshot.integrity?.format,
+      "rivt-logical-backup-integrity-v1",
+      "Backup artifact is missing supported content integrity data.",
+    );
+    const artifactIntegrity = integrityForTables(snapshot.tables);
+    const artifactDigestDiffs = diffContentDigests(
+      snapshot.integrity.tableDigests,
+      artifactIntegrity.tableDigests,
+    );
+    assert.deepEqual(
+      artifactDigestDiffs,
+      [],
+      `Backup artifact content digests do not match its table data: ${JSON.stringify(artifactDigestDiffs)}`,
+    );
+    assert.equal(
+      snapshot.integrity.databaseDigest,
+      artifactIntegrity.databaseDigest,
+      "Backup artifact aggregate content digest does not match its table data.",
+    );
+  }
 
   if (applyMigrations) await migrateUp(targetPool);
   const status = await migrationStatus(targetPool);
@@ -86,6 +122,9 @@ try {
     const dependencies = await foreignKeyDependencies(targetClient, targetTables);
     const copyOrder = orderedTables(targetTables, dependencies);
     const snapshotTables = tableMapFromSnapshot(snapshot);
+    let targetCounts = {};
+    let countDiffs = [];
+    let contentDigestDiffs = [];
 
     await targetClient.query("BEGIN");
     try {
@@ -96,16 +135,45 @@ try {
       }
       await restoreSequences(targetClient, snapshot.sequences);
       await setUserTriggers(targetClient, copyOrder, true);
+      targetCounts = await countTableRows(targetClient, targetTables);
+      countDiffs = diffCounts(snapshot.manifest.counts, targetCounts);
+      if (strictCounts) {
+        assert.deepEqual(
+          countDiffs,
+          [],
+          `Restore target row counts differ from backup artifact: ${JSON.stringify(countDiffs)}`,
+        );
+      }
+      if (isContentVerifiable) {
+        const restoredTables = [];
+        for (const tableName of targetTables) {
+          const columns = await tableColumns(targetClient, tableName);
+          restoredTables.push({
+            name: tableName,
+            columns,
+            rows: await rowsForTable(targetClient, tableName, columns),
+          });
+        }
+        const restoredIntegrity = integrityForTables(restoredTables);
+        contentDigestDiffs = diffContentDigests(
+          snapshot.integrity.tableDigests,
+          restoredIntegrity.tableDigests,
+        );
+        assert.deepEqual(
+          contentDigestDiffs,
+          [],
+          `Restore target content differs from backup artifact: ${JSON.stringify(contentDigestDiffs)}`,
+        );
+        assert.equal(
+          snapshot.integrity.databaseDigest,
+          restoredIntegrity.databaseDigest,
+          "Restore target aggregate content digest differs from backup artifact.",
+        );
+      }
       await targetClient.query("COMMIT");
     } catch (error) {
       await targetClient.query("ROLLBACK");
       throw error;
-    }
-
-    const targetCounts = await countTableRows(targetClient, targetTables);
-    const countDiffs = diffCounts(snapshot.manifest.counts, targetCounts);
-    if (strictCounts) {
-      assert.deepEqual(countDiffs, [], `Restore target row counts differ from backup artifact: ${JSON.stringify(countDiffs)}`);
     }
 
     console.log(JSON.stringify({
@@ -124,6 +192,9 @@ try {
       rows: Object.values(targetCounts).reduce((total, count) => total + count, 0),
       countDiffs,
       strictCounts,
+      contentVerified: isContentVerifiable,
+      contentVerification: isContentVerifiable ? snapshot.integrity.format : "unavailable_legacy",
+      contentDigestDiffs,
       durationMs: Date.now() - startedAt,
     }, null, 2));
   } finally {
