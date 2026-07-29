@@ -37,6 +37,8 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql://rivt_test:rivt_test@127.0.0.1:5432/rivt_test
       PGSSL: disable
+      # postgres:16-alpine defaults to 100 total slots with 3 reserved.
+      RIVT_DB_MAX_CONNECTIONS: 97
 
     steps:
       - name: Check out source
