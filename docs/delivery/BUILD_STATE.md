@@ -2,10 +2,72 @@
 
 Last updated: 2026-07-29 America/New_York
 Current gate: Gate B controlled engagement; public launch approval blocked
-Current phase: Independent recovery activation decision; live provider proof remains blocked.
-Active packet: `docs/delivery/packets/91_RECOVERY_ACTIVATION_DECISION.md`
-Repository branch: `codex/recovery-activation-decision`
+Current phase: Railway production posture and AWS exit decision; live hardening remains blocked.
+Active packet: `docs/delivery/packets/92_RAILWAY_PRODUCTION_POSTURE.md`
+Repository branch: `codex/railway-production-posture`
 Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
+
+## Railway production posture and AWS exit decision
+
+- Packet 92 concludes that RIVT should stay on Railway and harden it rather
+  than migrate the entire platform to AWS without capacity, failure-domain,
+  or fully loaded TCO evidence. Michael independently activated Railway Pro
+  during the packet. That satisfies the plan prerequisite, but the last
+  observed single-app/single-PostgreSQL/single-region topology is still not
+  accepted for public launch.
+- The target source is `ae49a903`; live production remains `92a8451`. The
+  branch is five commits ahead and includes undeployed security/recovery work,
+  so no branch-only behavior is represented as live.
+- The primary scale prerequisite is source composition: each application
+  process currently starts HTTP, migrations, push delivery, hourly
+  maintenance, and a default 10-connection PostgreSQL pool. Packet 92 requires
+  fail-closed `web`, `worker`, and `migrate` roles, an explicit connection
+  budget, and multi-process failure tests before any replica is added.
+- The selected path collects seven days of privacy-safe capacity evidence,
+  approves a product SLO and cost ceiling, proves two web replicas plus worker
+  behavior, obtains written/staged PostgreSQL HA/PITR/failure-domain evidence,
+  adds webhook-safe edge controls, and passes load, failover, PITR, and
+  independent recovery gates one reversible stage at a time.
+- The initial proposed SLO is 99.9% rolling-30-day core availability with a
+  43-minute-12-second error budget, retaining the approved 24-hour RPO and
+  four-hour RTO. The 35-session pilot, 350-session headroom test, 0.1% 5xx
+  ceiling, and 30% headroom are tunable proposals, not observed demand or
+  owner-approved promises.
+- Railway Pro has a published US$20 floor including the first US$20 of usage;
+  the exact two-web/worker/HA/PITR total requires a dashboard-staged quote.
+  The theoretical AWS two-task Fargate plus ALB web-layer floor is about
+  US$34.45 before RDS Multi-AZ, WAF/CDN, storage, logs, transfer, backup,
+  support, or sensible sizing. AWS App Runner is closed to new customers, so
+  ECS Express Mode is the current AWS comparator.
+- AWS remains an explicit exit architecture with measured triggers: control
+  requirements Railway cannot meet, two months of provider-driven SLO/error
+  budget failure, repeated RPO/RTO failure, unacceptable database failure
+  domains, automatic-scaling need, sustained 70% optimized limits, or a
+  measured 20% fully loaded TCO advantage for three months.
+- The evidence-backed portfolio is at
+  `docs/operations/hardening/railway-production-posture/`. It contains the
+  source-bound context, machine-readable analysis, option comparison,
+  diagrams, and selected implementation handoff.
+- `R-054` remains High/open and `GA-OPS-009` is a public-launch Blocker.
+  Packet 92 is a decision and repository handoff, not HA, load, failover,
+  edge, recovery, provider, production, or spend evidence.
+- Michael supplied a screenshot showing Railway Pro active. It proves plan
+  activation only, not replica count, HA/PITR, edge controls, autoscaling,
+  support SLO, final bill, or RIVT availability.
+- Codex accessed no provider account and initiated no plan/replica/database/
+  volume/PITR/WAF/CDN/DNS/AWS/monitoring change, load test, production-data
+  operation, cost, or deployment.
+- Verification on the source passed: build; lint; 173 unit tests; 24
+  integration suites; four repository E2E scripts; production dependency
+  audit with zero vulnerabilities; hardening schema, local links, four
+  Mermaid files, and the 17-artifact evidence manifest.
+- Current `launch:readiness` and `incident:readiness` checks pass, but the
+  launch checker does not yet evaluate `GA-OPS-009`. That pass is not
+  public-launch approval; hosting capacity/HA/failover remains a manual
+  Blocker.
+- Packet status is **Railway-first decision and implementation handoff
+  complete; Pro active by owner action; public launch remains blocked. No
+  provider change, paid action, or deployment by Codex**.
 
 ## Independent recovery activation decision
 

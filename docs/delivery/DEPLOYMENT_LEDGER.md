@@ -1,5 +1,40 @@
 # Deployment Ledger
 
+## 2026-07-29 - Packet 92 Railway Production-Posture Decision
+
+- Packet source target:
+  `ae49a903db149023ac690f686bf0bac4c2197994`
+- Branch: `codex/railway-production-posture`
+- Live production source remained:
+  `92a8451b8190f5119384a4970fb1a324503df995`
+- Scope: evidence-backed Railway/AWS hosting comparison, product SLO and
+  migration-trigger proposal, source role/connection-budget diagnosis,
+  cost/load/failover gates, architecture diagrams, and a selected
+  Railway-hardening implementation handoff.
+- Decision: stay on Railway and harden it; do not migrate the full platform
+  to AWS without a measured trigger. Michael independently activated Railway
+  Pro during the packet; the last observed single-app/single-PostgreSQL
+  topology is still not accepted for public launch.
+- Provider and production change by Codex: none. The owner-supplied screenshot
+  proves Pro plan activation only. Codex accessed no provider account and
+  changed no plan, replica, worker, database, HA, PITR, volume, WAF, CDN, DNS,
+  monitoring, AWS, support, or billing setting. No load/failover/restore
+  test, production-data operation, cost authorization, or deployment was
+  performed by Codex.
+- Deployment ID: none.
+- Migration before/after: unchanged; no migration ran.
+- Verification: build and lint passed; 173 unit tests and 24 integration
+  suites passed; four repository E2E scripts passed; the production
+  dependency audit reported zero vulnerabilities; hardening schema, local
+  links, diagrams, and evidence-manifest checks passed.
+- Readiness note: the current launch/incident readiness scripts pass their
+  existing policy inputs, but `launch:readiness` does not evaluate
+  `GA-OPS-009`; its green result is not public-launch approval.
+- Rollback: documentation/source revert only. There is no provider resource
+  or production state to undo.
+- Public launch remains blocked on `R-051` through `R-055` and the new
+  `GA-OPS-009` hosting-capacity/redundancy/failover gate.
+
 ## 2026-07-28 - Packet 88 Fresh Encrypted Backup Artifact
 
 - Michael explicitly authorized one fresh production backup in this task.

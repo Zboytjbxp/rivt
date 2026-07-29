@@ -1,0 +1,6 @@
+flowchart LR
+    U["Browser / PWA"] --> RE["Railway public edge"]
+    RE --> APP["One RIVT Node process"]
+    APP --> PG["One PostgreSQL service"]
+    APP --> OBJ["Railway private buckets"]
+    NOTE["Pro plan / single process / single DB remains"] -.-> APP

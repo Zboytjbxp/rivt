@@ -1,0 +1,14 @@
+flowchart LR
+    U["Browser / PWA"] --> CF["CloudFront / WAF / Route 53"]
+    CF --> ALB["Application Load Balancer"]
+    ALB --> E1["ECS Express / Fargate task A"]
+    ALB --> E2["ECS Express / Fargate task B"]
+    WORKER["ECS worker service"] --> RDS
+    E1 --> PROXY["RDS Proxy / bounded pool"]
+    E2 --> PROXY
+    PROXY --> RDS["RDS PostgreSQL Multi-AZ + PITR"]
+    E1 --> S3["Private S3 objects"]
+    E2 --> S3
+    OBS["CloudWatch + external SLO checks"] --> CF
+    RDS --> BACKUP["Independent immutable recovery"]
+    S3 --> BACKUP

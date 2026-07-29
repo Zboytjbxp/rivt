@@ -1,0 +1,616 @@
+{
+  "documentType": "codex-security.hardening-analysis",
+  "schemaVersion": "1.0",
+  "analysisId": "hardening_20260729_railway_production_posture",
+  "sourceEvidence": {
+    "kind": "document_collection",
+    "label": "RIVT Railway production-posture repository evidence",
+    "collectionSha256": "db8eab9cc6aaa8cbfb50ca6c5f1b6c3bf620ffbb30188977c087a4c916760d17",
+    "artifactCount": 17,
+    "targetRevision": "ae49a903db149023ac690f686bf0bac4c2197994",
+    "sourceDrift": "present",
+    "driftDescription": "Target source is five commits ahead of live production 92a8451b8190f5119384a4970fb1a324503df995. Packet 92 updates delivery documentation after collection hashing. Branch-only behavior is not represented as deployed."
+  },
+  "assessment": {
+    "outcome": "opportunities_identified",
+    "summary": "RIVT should harden Railway in measured stages rather than migrate the whole platform to AWS without capacity, failure-domain, or TCO evidence."
+  },
+  "constraints": {
+    "profile": "reliability_and_security_first_with_explicit_cost_approval",
+    "changeHorizons": [
+      "incremental",
+      "medium_term",
+      "foundational"
+    ],
+    "nonNegotiables": [
+      "No potentially chargeable provider action without Michael's explicit approval immediately beforehand.",
+      "No branch-only behavior may be represented as deployed production behavior.",
+      "No provider limit, SLA, plan feature, or published price is end-to-end RIVT evidence.",
+      "Signed Stripe and provider webhooks must remain reachable and signature-verified under edge controls.",
+      "Scaling must not multiply unbounded database connections, maintenance execution, user-visible delivery, or spend.",
+      "No production data read, write, restore, migration, deployment, DNS change, plan change, or cloud resource creation is authorized by this analysis."
+    ],
+    "assumptions": [
+      "The currently approved recovery targets remain a 24-hour RPO and four-hour RTO until the owner changes them.",
+      "The proposed 99.9 percent product SLO and tuning thresholds require owner approval.",
+      "No current request-rate, concurrency, CPU, RAM, database-wait, storage-growth, latency, or load-test evidence exists.",
+      "Owner-supplied evidence shows Railway Pro is active, but the exact production topology and bill have not been re-observed.",
+      "Railway and AWS pricing must be recalculated from approved configurations and measured use before activation.",
+      "AWS App Runner is unavailable to new customers; ECS Express Mode is the immediate AWS comparator."
+    ]
+  },
+  "opportunities": [
+    {
+      "opportunityId": "production-hosting-posture",
+      "title": "Establish a measured production hosting posture",
+      "summary": "Make the current application replica-safe, prove Railway failure domains and capacity, and migrate only when explicit evidence triggers the exit architecture.",
+      "diagnosis": "Packet 88 observed one Railway application process plus one PostgreSQL service in one region. The owner has since independently activated Pro, but no evidence shows that topology changed. The application process also starts migrations, push delivery, and maintenance, so blind replication would multiply pools and periodic work before behavior is proved.",
+      "evidence": [
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-E007",
+          "path": "docs/delivery/packets/91_RECOVERY_ACTIVATION_DECISION.md",
+          "claim": "Packet 91 selected a separate immutable-recovery boundary but did not activate a provider, recurring schedule, or paid resource."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-E008",
+          "path": "docs/operations/SECURITY_INFRASTRUCTURE_ASSESSMENT.md",
+          "claim": "Packet 88 observed Railway Hobby, one application replica, one PostgreSQL replica, and one us-east4 region with WAF Under Attack mode and CDN disabled."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "RP92-E014",
+          "path": "server/index.js",
+          "claim": "Each process defaults to a 10-connection PostgreSQL pool and starts HTTP, migration readiness, push delivery, and database maintenance."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "RP92-E015",
+          "path": "server/migrations.js",
+          "claim": "Migration execution is serialized by a PostgreSQL advisory lock."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "RP92-E017",
+          "path": "server/push-notifications.js",
+          "claim": "Push deliveries are durably claimed with a transaction and FOR UPDATE SKIP LOCKED."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "RP92-E016",
+          "path": "server/database-maintenance.js",
+          "claim": "Database maintenance is bounded but each process starts its own timer."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-G001",
+          "path": "docs/product/NATIONWIDE_FINAL_LAUNCH_AUDIT_2026-07-09.md",
+          "claim": "No current traffic, growth, resource, load-test, or numeric availability/latency SLO evidence is recorded."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-O003",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "claim": "Recorded recovery evidence contains 109 tables, 8760 rows, 89 objects, and 40385105 object bytes; this is footprint evidence, not capacity evidence."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-O005",
+          "path": "docs/launch/JACKSONVILLE_SOFT_LAUNCH_SCRIPT.md",
+          "claim": "The controlled Jacksonville rollout describes approximately 35 invited users over its first three days; this is a rollout plan, not measured concurrency."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-O006",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "claim": "On 2026-07-29, the owner supplied a screenshot showing Railway Pro active. This proves plan activation only, not replica count, HA/PITR, edge controls, support SLO, bill, or product availability."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-P001",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "url": "https://docs.railway.com/pricing/plans",
+          "claim": "Railway publishes a Pro monthly minimum and metered compute, memory, egress, volume, and bucket rates; an exact RIVT topology still requires a quote."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-P002",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "url": "https://docs.railway.com/deployments/scaling",
+          "claim": "Railway vertically scales to plan limits, while horizontal replica count is manually configured and sticky sessions are unsupported."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-P010",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "url": "https://docs.railway.com/platform/support",
+          "claim": "Hobby support is community-only; Pro direct support is usually within 72 hours and excludes an SLO."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-P011",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "url": "https://docs.aws.amazon.com/apprunner/latest/dg/apprunner-availability-change.html",
+          "claim": "AWS App Runner is closed to new customers and AWS recommends ECS Express Mode."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-P014",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "url": "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html",
+          "claim": "RDS Multi-AZ uses synchronous standby replication and managed failover for the database component."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-P016",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "url": "https://aws.amazon.com/rds/sla/",
+          "claim": "Amazon publishes an RDS Multi-AZ component SLA; it is not an end-to-end RIVT product SLA."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-P017",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "url": "https://aws.amazon.com/ecs/pricing/",
+          "claim": "AWS publishes Fargate vCPU, memory, and ephemeral-storage rates that support a theoretical task-cost floor, not a final RIVT configuration."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "RP92-P018",
+          "path": "docs/operations/hardening/railway-production-posture/context.md",
+          "url": "https://aws.amazon.com/elasticloadbalancing/pricing/",
+          "claim": "AWS publishes Application Load Balancer hourly and LCU rates; RDS, WAF, storage, logging, transfer, support, and operator labor remain separate."
+        },
+        {
+          "claimType": "inferred",
+          "sourceKind": "source",
+          "evidenceId": "RP92-I002",
+          "path": "server/index.js",
+          "claim": "N default-configured application replicas can expose approximately 10 times N application-pool connections before administrative and provider reserve."
+        },
+        {
+          "claimType": "inferred",
+          "sourceKind": "source",
+          "evidenceId": "RP92-I003",
+          "path": "server/push-notifications.js",
+          "claim": "Migration and push code are coordination-aware, but multi-replica startup, maintenance, failover, and graceful-drain behavior are untested."
+        }
+      ],
+      "desiredInvariants": [
+        "No single application-process failure makes RIVT unavailable.",
+        "Web replicas remain stateless and do not run periodic maintenance.",
+        "Migrations run exactly once before traffic promotion.",
+        "Durable worker claims recover without permanent loss or duplicate user-visible outcomes.",
+        "Maximum database connections and upload-memory exposure are explicit and budgeted.",
+        "Acknowledged database-write loss and failover behavior are documented and tested.",
+        "PITR and independent database-plus-object recovery are separate tested controls.",
+        "Edge controls do not challenge or silently drop valid signed webhooks.",
+        "Capacity and spend stay inside explicit owner-approved ceilings.",
+        "Migration occurs only after a recorded trigger, rehearsed rollback, and fully loaded TCO comparison."
+      ],
+      "proposalPath": "proposals/production-hosting-posture.md",
+      "options": [
+        {
+          "optionId": "single-node-baseline",
+          "title": "Keep the single-node baseline",
+          "kind": "baseline",
+          "summary": "Continue the current one-process, one-database, one-region topology.",
+          "diagramPaths": {
+            "before": "diagrams/production-hosting-posture-before.mmd",
+            "after": "diagrams/production-hosting-posture-single-node-baseline-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "RP92-E008",
+              "effect": "unaffected",
+              "tacticalFixRequired": true,
+              "rationale": "The observed single application and database failure points remain."
+            },
+            {
+              "evidenceId": "RP92-G001",
+              "effect": "unaffected",
+              "tacticalFixRequired": true,
+              "rationale": "No capacity, SLO, load, failover, or cost evidence is created."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Existing application controls remain, but edge and administrative-failure containment do not improve.",
+              "validationPlan": "Preserve existing security gates; no new security claim is accepted."
+            },
+            {
+              "dimension": "performance",
+              "direction": "neutral",
+              "confidence": "low",
+              "basis": "source-derived",
+              "assessment": "The footprint is small, but capacity is unknown because no request/resource baseline exists.",
+              "validationPlan": "Collect seven days of privacy-safe capacity data and run an approved load test."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "A single process retains the current in-memory upload exposure.",
+              "validationPlan": "Measure peak RSS during bounded concurrent uploads."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Single process, database, and region failure points remain.",
+              "validationPlan": "Terminate the app/database only in an approved isolated environment and measure recovery."
+            },
+            {
+              "dimension": "operability",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "analogous",
+              "assessment": "It is the simplest and least expensive topology to operate.",
+              "validationPlan": "Record founder incident and maintenance hours."
+            },
+            {
+              "dimension": "migration",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "No immediate migration is required, but readiness debt remains.",
+              "validationPlan": "Maintain provider-neutral PostgreSQL and object formats."
+            }
+          ],
+          "residualRisks": [
+            "Application, database, or regional failure can interrupt all users.",
+            "Pro plan activation alone does not establish a support SLO or a resilient topology.",
+            "No HA, PITR, load, failover, or edge proof exists.",
+            "Public launch would leave R-054 fully open."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "No source change"
+            ],
+            "workPackages": [
+              "Continue blocking public launch."
+            ],
+            "acceptanceCriteria": [
+              "This option is not accepted as the public-launch target."
+            ],
+            "migrationNotes": [],
+            "rollback": "No change to roll back."
+          }
+        },
+        {
+          "optionId": "harden-railway-first",
+          "title": "Harden Railway first",
+          "kind": "incremental",
+          "summary": "Split process roles, measure capacity, prove two web replicas, database HA/PITR, webhook-safe edge controls, independent recovery, and cost bounds before public launch.",
+          "diagramPaths": {
+            "before": "diagrams/production-hosting-posture-before.mmd",
+            "after": "diagrams/production-hosting-posture-harden-railway-first-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "RP92-E014",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Explicit web, worker, and migrate roles prevent every web replica from starting background work."
+            },
+            {
+              "evidenceId": "RP92-E016",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "A database lease and worker-only timer prevent duplicate periodic maintenance."
+            },
+            {
+              "evidenceId": "RP92-E017",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Existing durable claims are retained and extended with failure/reclaim evidence."
+            },
+            {
+              "evidenceId": "RP92-E008",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Two tested web replicas and a proved HA database reduce current single-process/database exposure."
+            },
+            {
+              "evidenceId": "RP92-G001",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Seven-day telemetry plus pilot and 10x proving profiles create missing capacity and SLO evidence."
+            },
+            {
+              "evidenceId": "RP92-E007",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Independent recovery remains outside Railway's administrative failure domain."
+            },
+            {
+              "evidenceId": "RP92-P001",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "The provider rate formula is combined with a staged, owner-capped quote before activation."
+            },
+            {
+              "evidenceId": "RP92-P002",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Manual replica scaling is paired with measured headroom, alerting, and rollback rather than described as autoscaling."
+            },
+            {
+              "evidenceId": "RP92-P010",
+              "effect": "unaffected",
+              "tacticalFixRequired": true,
+              "rationale": "The lack of a support SLO remains and requires an internal incident owner."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Role separation and edge controls reduce blast radius while preserving private service networking; exact provider controls remain to be proved.",
+              "validationPlan": "Test invalid roles, origin bypass, signed webhooks, authorization isolation, and independent recovery."
+            },
+            {
+              "dimension": "performance",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "analogous",
+              "assessment": "Two web replicas and pooling add headroom, while HA replication/proxy overhead may add latency.",
+              "validationPlan": "Compare seven-day baseline with pilot and 10x profiles after each staged change."
+            },
+            {
+              "dimension": "memory",
+              "direction": "unknown",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Web replicas no longer carry every worker loop, but in-memory uploads still require a measured envelope.",
+              "validationPlan": "Measure peak RSS/heap under approved concurrent upload profiles."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "It can remove application/database single points if Railway's exact HA topology and failure behavior pass written and executable proof.",
+              "validationPlan": "Run two app and database failovers, PITR restore, and independent recovery inside the approved RPO/RTO."
+            },
+            {
+              "dimension": "operability",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Lower platform burden than AWS, but Railway database templates and manual horizontal scaling retain founder responsibility.",
+              "validationPlan": "Record maintenance, incident, scaling, recovery, and provider-support hours."
+            },
+            {
+              "dimension": "migration",
+              "direction": "improves",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Incremental role and observability work is reversible and also improves future portability.",
+              "validationPlan": "Keep OCI, PostgreSQL, S3-compatible storage, and DNS contracts provider-neutral."
+            }
+          ],
+          "residualRisks": [
+            "Railway's public docs do not prove exact database failure domains or acknowledged-write loss.",
+            "Pro direct support usually lacks an SLO and may respond within 72 hours.",
+            "Same-region operation remains exposed to a regional incident unless separately designed.",
+            "Manual horizontal scaling requires headroom, alerting, and operator response.",
+            "No provider/cost action is authorized by selection."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "server/index.js",
+              "server/migrations.js",
+              "server/database-maintenance.js",
+              "server/push-notifications.js",
+              "server/monitoring.js",
+              "scripts/production-synthetic-monitor.js",
+              "railway.json",
+              "docs/operations"
+            ],
+            "workPackages": [
+              "Collect a privacy-safe seven-day capacity baseline and approve the product SLO.",
+              "Introduce fail-closed web, worker, and migrate process roles.",
+              "Add database connection, upload-memory, backlog, and shutdown budgets.",
+              "Prove replica, worker, migration, and maintenance coordination locally.",
+              "Obtain a cost-capped Railway Pro/HA/PITR/edge quote.",
+              "Run approved synthetic load, app/database failover, PITR, and independent recovery.",
+              "Activate production one reversible stage at a time."
+            ],
+            "acceptanceCriteria": [
+              "Two web replicas pass termination and rolling-deploy tests without lost committed writes.",
+              "Worker and maintenance work recover without permanent loss or duplicate user-visible outcomes.",
+              "Database connection and upload-memory budgets retain at least 30 percent reserve.",
+              "PostgreSQL HA failover, PITR, and independent recovery meet approved loss and time bounds.",
+              "Webhook-safe edge controls pass valid and invalid Stripe/provider fixtures.",
+              "Pilot and 10x proving profiles pass within the approved cost ceiling.",
+              "SLO, spend, and migration triggers are reviewed monthly."
+            ],
+            "migrationNotes": [
+              "No database or object migration is required for the initial source-role work.",
+              "Provider activation must be canary-first and explicitly approved."
+            ],
+            "rollback": "Revert the exact source/config stage, drain only exact new replicas/workers, restore prior pool/edge settings, and preserve database, volumes, PITR, and independent recovery evidence."
+          }
+        },
+        {
+          "optionId": "migrate-to-aws-now",
+          "title": "Migrate the full platform to AWS now",
+          "kind": "foundational",
+          "summary": "Move to ECS Express Mode/Fargate, ALB, RDS Multi-AZ, S3, WAF/CloudFront, IAM, and CloudWatch.",
+          "diagramPaths": {
+            "before": "diagrams/production-hosting-posture-before.mmd",
+            "after": "diagrams/production-hosting-posture-migrate-to-aws-now-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "RP92-P011",
+              "effect": "addresses",
+              "tacticalFixRequired": false,
+              "rationale": "The design uses ECS Express Mode because App Runner is closed to new customers."
+            },
+            {
+              "evidenceId": "RP92-E008",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "ECS tasks and RDS Multi-AZ can remove current application/database single points after migration proof."
+            },
+            {
+              "evidenceId": "RP92-G001",
+              "effect": "unaffected",
+              "tacticalFixRequired": true,
+              "rationale": "AWS does not create missing RIVT load/SLO evidence by itself."
+            },
+            {
+              "evidenceId": "RP92-P014",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "RDS Multi-AZ is the proposed database control, subject to generated-data migration and failover proof."
+            },
+            {
+              "evidenceId": "RP92-P016",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "The database component SLA informs the design but remains separate from the RIVT product SLO."
+            },
+            {
+              "evidenceId": "RP92-P017",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Published Fargate rates support the task-cost formula; approved sizing and measured use remain required."
+            },
+            {
+              "evidenceId": "RP92-P018",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Published ALB rates support the load-balancer floor; LCUs and the rest of the platform remain quote inputs."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "AWS provides rich IAM, network, WAF, KMS, and managed database controls while creating a larger misconfiguration surface.",
+              "validationPlan": "Review IaC, least privilege, image provenance, network paths, WAF, secrets, and recovery."
+            },
+            {
+              "dimension": "performance",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "ECS automatic horizontal scaling and RDS sizing are flexible; ALB, proxy, cross-AZ, and logging overhead must be measured.",
+              "validationPlan": "Run the same baseline, pilot, 10x, failover, and cost profiles."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Task sizing is explicit, but the current in-memory upload behavior still requires headroom or source redesign.",
+              "validationPlan": "Measure task RSS under bounded upload concurrency."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "RDS Multi-AZ has a component SLA and synchronous standby, but end-to-end RIVT availability remains RIVT's responsibility.",
+              "validationPlan": "Run AZ/task/database/webhook/recovery failure tests and external SLO monitoring."
+            },
+            {
+              "dimension": "operability",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "analogous",
+              "assessment": "ECS, VPC, IAM, ALB, WAF, ECR, CloudWatch, Route 53, and RDS add substantial founder operating scope.",
+              "validationPlan": "Estimate and track setup, maintenance, incident, patch, cost, and recovery hours."
+            },
+            {
+              "dimension": "migration",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Database/object migration, secret rotation, image pipeline, DNS canary, and dual running introduce immediate risk.",
+              "validationPlan": "Rehearse full migration and weighted DNS rollback with generated data before any production cutover."
+            }
+          ],
+          "residualRisks": [
+            "Migration can create data divergence, downtime, duplicate webhooks, and rollback complexity.",
+            "AWS configuration complexity may exceed the current operating capacity.",
+            "AWS provider components do not close application, recovery, malware, or data-governance risks.",
+            "The exact RDS/WAF/logging/network/support total is unknown without a calculator quote."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "Dockerfile and image supply chain",
+              "AWS infrastructure as code",
+              "CI/CD and deployment provenance",
+              "database and object migration",
+              "DNS and edge routing",
+              "monitoring, security, backup, and incident runbooks"
+            ],
+            "workPackages": [
+              "Collect the same Railway baseline and fully loaded TCO.",
+              "Design ECS Express, RDS Multi-AZ, S3, WAF/CloudFront, IAM, observability, and recovery.",
+              "Rehearse generated-data migration and weighted DNS rollback.",
+              "Migrate only after a recorded trigger and explicit owner approval."
+            ],
+            "acceptanceCriteria": [
+              "One or more recorded migration triggers are satisfied.",
+              "A reviewed 12-month fully loaded TCO and named AWS operator are approved.",
+              "Generated-data migration, load, failover, security, recovery, and rollback all pass.",
+              "Production canary preserves data and webhook integrity at every DNS weight."
+            ],
+            "migrationNotes": [
+              "App Runner must not be selected for a new AWS account.",
+              "ECS Express Mode requires an OCI image and AWS infrastructure/IAM ownership."
+            ],
+            "rollback": "Use weighted DNS to return traffic to Railway while it remains intact, stop AWS writes, reconcile database/object/webhook state, and delete only exact disposable AWS resources after integrity proof."
+          }
+        }
+      ],
+      "recommendedOptionId": "harden-railway-first",
+      "recommendation": "Use hardened Railway under the current constraints; reopen AWS only when a measured migration trigger is satisfied.",
+      "implementationPath": "implementation/harden-railway-first.md",
+      "selectionStatus": "selected_for_repository_handoff_only",
+      "authorizationBoundary": "No provider, production, account, resource, configuration, cost, or deployment action is authorized."
+    }
+  ],
+  "openQuestions": [
+    "Does Michael approve 99.9 percent rolling-30-day core availability as the initial product SLO?",
+    "What monthly Railway ceiling may be quoted and later staged for approval?",
+    "What acknowledged-write-loss boundary is acceptable during database failover?",
+    "Will Railway confirm distinct database failure domains and replication behavior in writing?",
+    "Who owns production response when provider direct support has no SLO?",
+    "What loaded hourly cost should be used for the 12-month TCO comparison?"
+  ]
+}
