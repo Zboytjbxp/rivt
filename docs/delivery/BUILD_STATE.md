@@ -48,11 +48,12 @@ Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
   fail-closed, jobs/discovery desktop+mobile, offline-recovery, and production
   CSP E2E paths; production dependency audit with zero vulnerabilities; and
   diff integrity.
-- The implementation is committed. Packet documentation and branch-push
-  evidence remain pending.
-- Packet status is **Source implementation verified and committed; push
-  pending. No provider change, no paid action, no production-data operation,
-  and not deployed**.
+- The implementation and packet documentation are committed. Branch
+  `codex/railway-replica-safety` was pushed through documentation commit
+  `b1b5fa3`; it has not been merged or deployed.
+- Packet status is **Source implementation verified, committed, and pushed
+  for review. No provider change, no paid action, no production-data
+  operation, and not deployed**.
 
 ## Railway production posture and AWS exit decision
 

@@ -180,11 +180,12 @@ On 2026-07-29, exact local verification of implementation commit
 
 These are local source results. They do not establish a deployed role
 topology, provider configuration, capacity baseline, HA, failover, PITR,
-edge, load, production-data, or production-runtime result. Branch-push
-evidence remains pending.
+edge, load, production-data, or production-runtime result. Branch
+`codex/railway-replica-safety` was pushed through documentation commit
+`b1b5fa3`; it has not been merged or deployed.
 
 ## Status
 
-**Source implementation verified and committed; branch push pending.
-Source-only, no provider change, no paid action, no production-data operation,
-and not deployed.**
+**Source implementation verified, committed, and pushed for review.
+Source-only, no provider change, no paid action, no production-data
+operation, and not deployed.**
