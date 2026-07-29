@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import compression from "compression";
 import cors from "cors";
@@ -11,7 +11,6 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import pg from "pg";
 import {
   ApiError,
   asyncRoute,
@@ -43,6 +42,9 @@ import {
   verifyLoginPassword,
 } from "./auth.js";
 import { loadActorContext, requireOrganizationRole } from "./authorization.js";
+import { startDatabaseMaintenance } from "./database-maintenance.js";
+import { startCapacityRuntime } from "./capacity-runtime.js";
+import { createDatabasePool, databaseUrlForEnvironment } from "./database-pool.js";
 import { emailProviderStatus, sendTransactionalEmail } from "./email.js";
 import {
   assertPublishableJob,
@@ -86,6 +88,12 @@ import {
   reportConversationSchema,
 } from "./messaging.js";
 import { createRequestLogger, logError, logInfo, logWarn } from "./logger.js";
+import {
+  configureHttpServer,
+  createDependencyHealthProbe,
+  DEFAULT_HTTP_SERVER_TIMEOUTS,
+  serviceHealthReady,
+} from "./http-server-safety.js";
 import { registerLegacyIntegrationRoutes } from "./legacy-integrations.js";
 import { captureException, errorMonitoringStatus } from "./monitoring.js";
 import { emitProductEvent } from "./product-analytics.js";
@@ -115,6 +123,7 @@ import {
   pushProviderStatus,
   queuePushDeliveries,
   queuePushDeliveriesForNotifications,
+  readPushDeliveryBacklog,
   registerPushNotificationRoutes,
   startPushDeliveryWorker,
   stopPushDeliveryWorker,
@@ -159,7 +168,12 @@ import {
   supportCaseEventSchema,
   unsafeWorkReportSchema,
 } from "./reviews-safety.js";
-import { migrateUp, migrationStatus } from "./migrations.js";
+import { assertMigrationsCurrent, migrateUp } from "./migrations.js";
+import {
+  assertConnectionBudget,
+  processCapabilities,
+  resolveProcessRole,
+} from "./process-role.js";
 import {
   createOriginGuard,
   createDurableRateLimiter,
@@ -169,12 +183,14 @@ import {
   readSessionId,
 } from "./security.js";
 
-const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, "..");
 const distDir = path.join(rootDir, "dist");
 const port = Number(process.env.PORT ?? 8787);
+const processRole = resolveProcessRole(process.env, { allowLocalCombinedDefault: true });
+const roleCapabilities = processCapabilities(processRole);
+const connectionBudget = assertConnectionBudget(process.env);
 const maxUploadMb = Number(process.env.MAX_UPLOAD_MB ?? 10);
 const maxUploadBytes = maxUploadMb * 1024 * 1024;
 const signedUrlSeconds = Number(process.env.S3_SIGNED_URL_SECONDS ?? 900);
@@ -190,6 +206,9 @@ const sourceCommit = envValue("SOURCE_COMMIT", envValue("RAILWAY_GIT_COMMIT_SHA"
 let migrationVersion = envValue("MIGRATION_VERSION", "uninitialized");
 let migrationState = "pending"; // "pending" | "running" | "ready" | "failed"
 let migrationErrorDetail = null;
+let httpServer = null;
+let stopDatabaseMaintenance = null;
+let capacityRuntime = null;
 const productionOrigin = envValue("APP_ORIGIN", "https://rivt.pro");
 const securityTxt = `Contact: mailto:support@rivt.pro?subject=Security%20report
 Preferred-Languages: en
@@ -292,7 +311,7 @@ function sha256Buffer(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-const databaseUrl = envValue("DATABASE_URL");
+const databaseUrl = databaseUrlForEnvironment(process.env);
 const s3Bucket = envValue("S3_BUCKET");
 const s3Region = envValue("S3_REGION", "us-east-1");
 const s3Endpoint = envValue("S3_ENDPOINT");
@@ -300,16 +319,18 @@ const s3PublicBaseUrl = envValue("S3_PUBLIC_BASE_URL");
 const s3AccessKeyId = envValue("S3_ACCESS_KEY_ID");
 const s3SecretAccessKey = envValue("S3_SECRET_ACCESS_KEY");
 
-const database = databaseUrl
-  ? new Pool({
-      connectionString: databaseUrl,
-      max: Number(process.env.PG_POOL_MAX ?? 10),
-      ssl:
-        process.env.PGSSL === "disable" || databaseUrl.includes("localhost")
-          ? false
-          : { rejectUnauthorized: false },
-    })
-  : null;
+const database = createDatabasePool({
+  environment: process.env,
+  role: processRole,
+  requireDatabase: false,
+});
+database?.on("error", (error) => {
+  capacityRuntime?.telemetry?.recordPoolError();
+  const candidate = String(error?.code ?? "").trim().toUpperCase();
+  logError("database.pool_error", {
+    errorCode: /^[A-Z0-9_]{1,20}$/.test(candidate) ? candidate : "UNKNOWN",
+  });
+});
 
 const s3Configured = Boolean(s3Bucket && s3AccessKeyId && s3SecretAccessKey);
 const s3Client = s3Configured
@@ -323,9 +344,31 @@ const s3Client = s3Configured
       },
     })
   : null;
+const dependencyHealthProbeTimeoutMs = Number(process.env.HEALTH_DEPENDENCY_TIMEOUT_MS ?? 2_500);
+const dependencyHealth = createDependencyHealthProbe({
+  databaseConfigured: Boolean(database),
+  objectStorageConfigured: Boolean(s3Client && s3Bucket),
+  timeoutMs: dependencyHealthProbeTimeoutMs,
+  successCacheTtlMs: Number(process.env.HEALTH_DEPENDENCY_SUCCESS_CACHE_MS ?? 30_000),
+  failureCacheTtlMs: Number(process.env.HEALTH_DEPENDENCY_FAILURE_CACHE_MS ?? 5_000),
+  live: !(process.env.NODE_ENV === "test" && envFlag("HEALTH_DEPENDENCY_PROBES_DISABLED")),
+  probeDatabase: () => database.query({
+    text: "SELECT 1",
+    query_timeout: dependencyHealthProbeTimeoutMs,
+  }),
+  probeObjectStorage: (abortSignal) => s3Client.send(
+    new HeadBucketCommand({ Bucket: s3Bucket }),
+    { abortSignal },
+  ),
+  onProbe: (result) => capacityRuntime?.telemetry?.recordDependencyProbe(result),
+});
 
 const app = express();
 app.use(createSecurityHeadersMiddleware());
+const createCapacityRequestLogger = () => createRequestLogger({
+  onStart: (record) => capacityRuntime?.telemetry?.beginHttp(record),
+  onComplete: (record) => capacityRuntime?.telemetry?.recordHttp(record),
+});
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
@@ -390,7 +433,7 @@ registerStripeWebhookRoute({
   database,
   appOrigin: productionOrigin,
   createRequestContext,
-  createRequestLogger,
+  createRequestLogger: createCapacityRequestLogger,
 });
 registerStripeConnectWebhookRoute({
   app,
@@ -398,14 +441,14 @@ registerStripeConnectWebhookRoute({
   database,
   appOrigin: productionOrigin,
   createRequestContext,
-  createRequestLogger,
+  createRequestLogger: createCapacityRequestLogger,
   createInAppNotification,
 });
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "64kb" }));
 
 app.use("/api", createRequestContext);
-app.use("/api", createRequestLogger());
+app.use("/api", createCapacityRequestLogger());
 app.use("/api", createOriginGuard(allowedOrigins, {
   exemptPaths: ["/api/auth/apple/callback"],
 }));
@@ -472,26 +515,33 @@ function requireObjectStorage(response) {
   return false;
 }
 
-async function ensureDatabaseReady() {
+async function ensureDatabaseReady({ applyMigrations = roleCapabilities.appliesMigrations } = {}) {
   if (!database) {
     throw new Error("DATABASE_URL is required.");
   }
 
   databaseReadyPromise ??= (async () => {
     migrationState = "running";
+    migrationErrorDetail = null;
     try {
-      const status = await migrateUp(database);
+      const status = applyMigrations
+        ? await migrateUp(database)
+        : await assertMigrationsCurrent(database);
       migrationVersion = status.latestVersion
         ? `${String(status.latestVersion).padStart(4, "0")}_${status.latestName}`
         : "uninitialized";
       migrationState = "ready";
+      migrationErrorDetail = null;
       return status;
     } catch (error) {
       migrationState = "failed";
       migrationErrorDetail = error.message;
       throw error;
     }
-  })();
+  })().catch((error) => {
+    databaseReadyPromise = null;
+    throw error;
+  });
 
   return databaseReadyPromise;
 }
@@ -1050,13 +1100,18 @@ app.post("/api/client-errors", baseClientErrorRateLimit, asyncRoute(async (reque
   response.status(202).json({ ok: true });
 }));
 
-app.get("/api/health", (_request, response) => {
-  const storage = storageConfiguration();
+app.get("/api/health", asyncRoute(async (_request, response) => {
+  const dependencies = await dependencyHealth();
   const monitoring = errorMonitoringStatus();
   const webPush = pushProviderStatus();
   const invoiceBankPayments = stripeConnectProviderStatus(productionOrigin);
   const passwordScreening = breachedPasswordScreeningStatus();
-  const ok = storage.ok && migrationState !== "failed";
+  const sessionSecurity = authSecurityStatus();
+  const ok = serviceHealthReady({
+    dependenciesOk: dependencies.ok,
+    authSecurityOk: sessionSecurity.ok,
+    migrationState,
+  });
 
   response.status(ok ? 200 : 503).json({
     ok,
@@ -1070,10 +1125,7 @@ app.get("/api/health", (_request, response) => {
       version: migrationVersion,
       error: migrationErrorDetail,
     },
-    dependencies: {
-      database: storage.database,
-      objectStorage: storage.objectStorage,
-    },
+    dependencies,
     observability: {
       errorMonitoring: {
         ok: monitoring.ok,
@@ -1086,9 +1138,20 @@ app.get("/api/health", (_request, response) => {
         mode: webPush.mode,
       },
       invoiceBankPayments,
+      capacityTelemetry: {
+        ok: true,
+        provider: "structured_aggregate_log",
+        mode: capacityRuntime?.enabled ? "enabled" : "disabled",
+        schema: "capacity.aggregate.v1",
+      },
     },
     security: {
       passwordBreachScreening: passwordScreening,
+      sessionSecurity: {
+        ok: sessionSecurity.ok,
+        provider: sessionSecurity.provider,
+        mode: sessionSecurity.mode,
+      },
     },
     engagement: {
       matchingJobAlerts: {
@@ -1099,7 +1162,7 @@ app.get("/api/health", (_request, response) => {
     },
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
 app.get("/api/storage", requireAuthenticatedUser, async (_request, response, next) => {
   await runWithDatabase(response, next, async () => {
@@ -5734,7 +5797,7 @@ app.get("/api/readiness", requireAuthenticatedUser, async (_request, response, n
   await runWithDatabase(response, next, async () => {
     const storage = storageConfiguration();
     await database.query("SELECT 1");
-    const migrations = await migrationStatus(database);
+    const migrations = await assertMigrationsCurrent(database);
     migrationVersion = migrations.latestVersion
       ? `${String(migrations.latestVersion).padStart(4, "0")}_${migrations.latestName}`
       : "uninitialized";
@@ -6439,69 +6502,125 @@ app.use((error, request, response, _next) => {
 });
 
 export async function startServer(listenPort = port) {
-  await new Promise((resolve, reject) => {
-    const srv = app.listen(listenPort, resolve);
-    srv.once("error", reject);
-  });
+  if (!roleCapabilities.servesHttp) {
+    throw new Error(`The ${processRole} process role cannot open an HTTP listener.`);
+  }
+  if (database) {
+    await ensureDatabaseReady();
+    logInfo("server.migrations_ready", { migrationVersion, processRole });
+  } else if (process.env.NODE_ENV === "production") {
+    throw new Error("DATABASE_URL is required.");
+  }
+  if (httpServer?.listening) {
+    return httpServer;
+  }
+
+  const srv = app.listen(listenPort);
+  httpServer = srv;
+  try {
+    configureHttpServer(srv, {
+      requestTimeoutMs: Number(process.env.HTTP_REQUEST_TIMEOUT_MS ?? DEFAULT_HTTP_SERVER_TIMEOUTS.requestTimeoutMs),
+      headersTimeoutMs: Number(process.env.HTTP_HEADERS_TIMEOUT_MS ?? DEFAULT_HTTP_SERVER_TIMEOUTS.headersTimeoutMs),
+      keepAliveTimeoutMs: Number(process.env.HTTP_KEEP_ALIVE_TIMEOUT_MS ?? DEFAULT_HTTP_SERVER_TIMEOUTS.keepAliveTimeoutMs),
+      maxHeadersCount: Number(process.env.HTTP_MAX_HEADERS_COUNT ?? DEFAULT_HTTP_SERVER_TIMEOUTS.maxHeadersCount),
+      maxRequestsPerSocket: Number(process.env.HTTP_MAX_REQUESTS_PER_SOCKET ?? DEFAULT_HTTP_SERVER_TIMEOUTS.maxRequestsPerSocket),
+    });
+    await new Promise((resolve, reject) => {
+      const handleError = (error) => {
+        srv.off("listening", handleListening);
+        reject(error);
+      };
+      const handleListening = () => {
+        srv.off("error", handleError);
+        resolve();
+      };
+      srv.once("error", handleError);
+      srv.once("listening", handleListening);
+    });
+  } catch (error) {
+    httpServer = null;
+    srv.closeAllConnections?.();
+    if (srv.listening) {
+      srv.close();
+    }
+    throw error;
+  }
 
   const storage = storageConfiguration();
   logInfo("server.started", {
     appName,
     port: listenPort,
+    processRole,
     buildCommit: sourceCommit,
     storageOk: storage.ok,
     errorMonitoring: errorMonitoringStatus().mode,
+    databasePoolMax: database?.options?.max ?? 0,
+    plannedDatabaseConnections: connectionBudget.plannedConnections,
   });
   if (!storage.ok) {
     logWarn("server.storage_setup_required", { missing: storage.missing });
   }
 
-  if (database) {
-    ensureDatabaseReady().then(() => {
-      logInfo("server.migrations_ready", { migrationVersion });
-      const pushStatus = startPushDeliveryWorker(database);
-      if (!pushStatus.ok) {
-        logWarn("push.setup_required", { missing: pushStatus.missing });
-      }
-    }).catch((error) => {
-      logError("server.migration_failed", {
-        message: error.message,
-        cause: error.cause?.message ?? null,
-      });
+  return httpServer;
+}
+
+export function startCapacityMeasurements({ includeWorkerBacklog = false } = {}) {
+  capacityRuntime ??= startCapacityRuntime({
+    role: processRole,
+    pool: database,
+    beforeFlush: includeWorkerBacklog && database
+      ? async () => ({ workerBacklog: await readPushDeliveryBacklog(database) })
+      : null,
+  });
+  return capacityRuntime;
+}
+
+export function startBackgroundServices({ unref = true } = {}) {
+  if (!database) throw new Error("DATABASE_URL is required.");
+  if (!roleCapabilities.runsPushWorker && !roleCapabilities.runsMaintenance) {
+    throw new Error(`The ${processRole} process role cannot start background services.`);
+  }
+  const pushStatus = roleCapabilities.runsPushWorker
+    ? startPushDeliveryWorker(database, {
+        unref,
+        onResult: (result) => capacityRuntime?.telemetry?.recordWorker(result),
+        onError: (error) => {
+          capacityRuntime?.telemetry?.recordWorker({ failed: 1 });
+          logError("push.worker_failed", { error });
+        },
+      })
+    : { ok: true, mode: "disabled_for_role", missing: [] };
+  if (!pushStatus.ok) {
+    logWarn("push.setup_required", { missing: pushStatus.missing });
+  }
+  if (roleCapabilities.runsMaintenance) {
+    stopDatabaseMaintenance ??= startDatabaseMaintenance(database, {
+      intervalMs: Number(process.env.DATABASE_MAINTENANCE_INTERVAL_MS ?? 60 * 60 * 1000),
+      batchSize: Number(process.env.DATABASE_MAINTENANCE_BATCH_SIZE ?? 500),
+      unref,
+      onResult: (result) => capacityRuntime?.telemetry?.recordMaintenance(result),
+      onError: (error) => logWarn("database.maintenance_failed", { error }),
     });
   }
+  return { push: pushStatus, maintenance: roleCapabilities.runsMaintenance };
 }
 
 export async function closeDatabase() {
-  stopPushDeliveryWorker();
+  await stopDatabaseMaintenance?.();
+  stopDatabaseMaintenance = null;
+  await stopPushDeliveryWorker();
+  await capacityRuntime?.stop();
+  capacityRuntime = null;
   if (database) {
     await database.end();
   }
 }
 
-export { app, ensureDatabaseReady };
-
-if (path.resolve(process.argv[1] ?? "") === __filename) {
-  process.on("unhandledRejection", (reason) => {
-    const error = reason instanceof Error ? reason : new Error(String(reason ?? "Unhandled promise rejection"));
-    logError("process.unhandled_rejection", { error });
-    void captureOperationalError(error, { source: "process.unhandled_rejection" });
-  });
-
-  process.on("uncaughtException", (error) => {
-    logError("process.uncaught_exception", { error });
-    void captureOperationalError(error, { source: "process.uncaught_exception" })
-      .finally(() => {
-        process.exit(1);
-      });
-    setTimeout(() => process.exit(1), 1000).unref();
-  });
-
-  startServer().catch((error) => {
-    logError("server.startup_failed", { error });
-    void captureOperationalError(error, { source: "server.startup_failed" }).finally(() => {
-      process.exit(1);
-    });
-    setTimeout(() => process.exit(1), 2000).unref();
-  });
-}
+export {
+  app,
+  ensureDatabaseReady,
+  httpServer,
+  migrationState,
+  migrationVersion,
+  processRole,
+};

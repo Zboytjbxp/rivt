@@ -277,6 +277,41 @@ if (!testDatabaseUrl) {
     assert.equal(readiness.inventory.retired - baselineReadiness.inventory.retired, 0);
     assert.equal(readiness.inventory.active_with_success - baselineReadiness.inventory.active_with_success, 1);
 
+    const competingClaims = await Promise.all([
+      pushNotificationInternals.claimDeliveries(database),
+      pushNotificationInternals.claimDeliveries(database),
+    ]);
+    const firstAttempt = competingClaims
+      .flat()
+      .filter((delivery) => delivery.notification_id === testPush.payload.data.notificationId);
+    assert.equal(firstAttempt.length, 1);
+    await database.query(
+      `UPDATE push_delivery_outbox
+       SET claimed_at = now() - interval '6 minutes'
+       WHERE id = $1`,
+      [firstAttempt[0].id],
+    );
+    const reclaimed = (await pushNotificationInternals.claimDeliveries(database))
+      .find((delivery) => delivery.id === firstAttempt[0].id);
+    assert.ok(reclaimed);
+    assert.equal(reclaimed.attempt_count, firstAttempt[0].attempt_count + 1);
+      assert.equal(
+        await pushNotificationInternals.markDeliverySuccess(
+          database,
+          firstAttempt[0],
+          pushNotificationInternals.vapidGeneration(vapidKeys.publicKey),
+        ),
+        false,
+      );
+      assert.equal(
+        await pushNotificationInternals.markDeliverySuccess(
+          database,
+          reclaimed,
+          pushNotificationInternals.vapidGeneration(vapidKeys.publicKey),
+        ),
+        true,
+      );
+
     const secondCookie = await login(baseUrl, account);
     const endpointTwo = `https://push.example.test/${randomUUID()}`;
     assert.equal((await requestJson(baseUrl, "/api/v1/push-subscriptions", {
