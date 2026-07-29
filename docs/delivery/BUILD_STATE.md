@@ -2,10 +2,98 @@
 
 Last updated: 2026-07-29 America/New_York
 Current gate: Gate B controlled engagement; public launch approval blocked
-Current phase: Railway replica-safety source controls; live hardening remains blocked.
-Active packet: `docs/delivery/packets/93_RAILWAY_REPLICA_SAFETY.md`
-Repository branch: `codex/railway-replica-safety`
+Current phase: Railway activation-readiness source and operator controls; live hardening remains blocked.
+Active packet: `docs/delivery/packets/94_RAILWAY_ACTIVATION_READINESS.md`
+Repository branch: `codex/railway-activation-readiness`
 Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
+
+## Railway activation-readiness package
+
+- Packet 94 converts the Packet 93 role separation into an exact no-cost
+  activation package. Packet 93's final pushed tip and Packet 94's source base
+  are `037c5a0`; implementation commit
+  `e5d952ca454a2857c131e1b860ad9cd07dc6399a` is local on
+  `codex/railway-activation-readiness`; live production remains `92a8451`.
+  None of the Packet 93/94 role, drain, ceiling, or push behavior is
+  represented as deployed.
+- A bounded read-only Railway CLI status observation confirmed production
+  still runs exact source `92a8451` as one RIVT app service beside one
+  PostgreSQL service in `us-east4`, with no worker. The app still uses its
+  earlier `npm start`/Nixpacks-style effective config, `/` health, no
+  pre-deploy command, and no drain; app sleep is disabled and no volume is
+  attached to the app. A separate unattached `READY` 5 GB production volume
+  requires purpose, recovery-value, and cost review; it is not labeled
+  orphaned and no deletion is authorized. Historical `plan:hobby` deployment
+  metadata does not override current owner evidence that Pro is active.
+- `railway.json` is the web service contract: role-bound direct Node start,
+  sole advisory-locked schema-migration pre-deploy command, `/api/health`,
+  fail-on-error restart, and a 30-second provider drain.
+  `railway.worker.json` binds the worker role and runs a non-mutating
+  `worker-check` before replacement; it has no HTTP health check and encodes
+  no replica or region choice. Hosted starts reject a missing or conflicting
+  `RIVT_PROCESS_ROLE`; hosted migrations are accepted only from the
+  configured web pre-deploy command, never from a worker or standalone
+  migrate role.
+- Web, worker, and migration readiness query PostgreSQL's global total and
+  reserved slots plus current-database and current-role connection limits.
+  The effective ceiling is the minimum of global usable slots and any
+  applicable non-unlimited database/role limit; an operator declaration above
+  it fails closed. The topology must still retain at least 30% headroom,
+  including old/new overlap during transition.
+- A hosted worker requires `RIVT_PUSH_REQUIRED=true`; false, missing, or
+  invalid VAPID blocks readiness/activation before a delivery controller can
+  claim work. Each outbound web-push attempt has a bounded 1-10-second
+  deadline, default 8 seconds, and the worker
+  shutdown budget must reserve a nominal five-second scheduling margin after
+  that deadline while remaining inside Railway's 30-second drain. Forced
+  shutdown remains the actual bound if database work stalls; this package
+  does not overclaim guaranteed cleanup.
+- The selected future sequence is staged and manual: deploy web first,
+  retain its migration and ready-deployment evidence, then start one worker
+  from the exact same candidate source. A Git push is not cross-service
+  ordering. A second same-region web replica requires a separate cost/config
+  approval after Stage 1 proof. Stage 1 is process separation, not
+  redundancy; Stage 2 is not HA proof by configuration alone.
+- `docs/operations/RAILWAY_ACTIVATION_RUNBOOK.md` records the exact account
+  facts still needed, shared/per-role environment contract, actual database
+  query, transition/steady-state budgets, cost worksheet, explicit approval,
+  activation checks, DDoS/TLS cautions, and non-destructive rollback. The
+  redacted preflight plan is bound to a fresh read-only provider snapshot and
+  local source/config facts; a passing comparison proves only pre-activation
+  consistency, not that Railway or production was changed. The separate empty
+  evidence schema is
+  `docs/operations/templates/railway-activation-evidence.example.json`.
+  Preflight reconciles proposed service and transition replica counts against
+  the fresh snapshot. Approval must be at most 24 hours old and records
+  hard-limit amount/scope/workspace-stop acceptance plus a separate Agent
+  limit, or an accepted residual-risk manual stop within the approved
+  ceiling.
+- Railway Pro is not treated as free capacity or resilience. A later
+  provider action requires a current staged quote plus explicit project,
+  environment, services, resources, region, duration, cleanup, source,
+  rollback, one-time cost, incremental monthly ceiling, and total hard-limit
+  approval immediately before action. Any provider hard limit must have its
+  exact workspace scope and outage behavior recorded; estimates and alerts
+  are not caps, and a workspace-wide Compute stop can take all scoped
+  workloads offline. Without an acceptable enforced cap, the owner must
+  accept the residual risk and approve an immediate manual stop value.
+- This packet used read-only Railway status access without printing or
+  reading variables, credentials, or production data. It changed no provider
+  setting, created no service/replica, ran no load or failover, authorized no
+  spend, merged nothing, and deployed nothing.
+- `R-054` and `R-055` remain High/open; `R-056` remains Medium/open;
+  `GA-OPS-009` remains a public-launch Blocker; and `GA-OPS-005`,
+  `GA-OPS-007`, and `GA-OPS-008` remain Partial.
+- Local verification passes on the final implementation source: build;
+  application/security lint; 39/39 focused process-role, push-delivery,
+  preflight, and Railway-entrypoint tests; `npm run test` with 222/222
+  unit/frontend tests plus 27/27 serial PostgreSQL integration tests; four
+  browser E2E paths; zero production dependency vulnerabilities; parsed JSON
+  templates; and diff integrity.
+- Packet status is **Activation package implemented and fully repository-
+  verified locally; provider action and public launch remain unauthorized.
+  No provider change, paid action, production-data operation, merge, push, or
+  deployment**.
 
 ## Railway replica-safety source controls
 
@@ -49,8 +137,8 @@ Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
   CSP E2E paths; production dependency audit with zero vulnerabilities; and
   diff integrity.
 - The implementation and packet documentation are committed. Branch
-  `codex/railway-replica-safety` was pushed through documentation commit
-  `b1b5fa3`; it has not been merged or deployed.
+  `codex/railway-replica-safety` was pushed through final tip `037c5a0`; it
+  has not been merged or deployed.
 - Packet status is **Source implementation verified, committed, and pushed
   for review. No provider change, no paid action, no production-data
   operation, and not deployed**.
@@ -307,8 +395,10 @@ Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
   legal-hold/safety exceptions, orphan-object reconciliation, provider
   deletion, regions, DPAs, subprocessors, incident notice, and transfer
   controls remain unapproved or incomplete.
-- Read-only Railway inspection confirms the Hobby plan with one application
-  replica and one PostgreSQL replica in `us-east4`. WAF is available but
+- Packet 88's point-in-time read-only Railway inspection showed Hobby with
+  one application replica and one PostgreSQL replica in `us-east4`.
+  Subsequent owner evidence confirms Pro; historical `plan:hobby` deployment
+  metadata is not authoritative of the current plan. WAF is available but
   Under Attack mode is disabled and cannot be blindly enabled because it can
   block non-browser webhooks/API clients. CDN is available but disabled.
   Zone/database failover, PostgreSQL HA/PITR, object versioning, autoscaling,
@@ -317,9 +407,10 @@ Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
   negotiated TLS 1.3 with a valid certificate and HTTP redirect. Non-local
   database clients still permit `rejectUnauthorized: false`, so any public
   TCP-proxy backup/restore path remains a certificate-authentication boundary.
-- The attached production PostgreSQL volume uses 360.448 MB of 500 MB. A
-  separate unattached 5 GB volume exists; it was not attached, resized, or
-  deleted.
+- The attached production PostgreSQL volume used 360.448 MB of 500 MB at that
+  observation. A separate 5 GB volume remains `READY` and unattached; it was
+  not attached, resized, or deleted, and its purpose/recovery/cost require
+  owner review.
 - Other than the one explicitly authorized fresh logical artifact above, no
   WAF/CDN, replica, autoscale, PITR, restore infrastructure, recurring backup,
   scanner, logging, APM, paging, legal, certification, or penetration-test
