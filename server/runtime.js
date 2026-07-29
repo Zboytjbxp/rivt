@@ -15,21 +15,51 @@ import { assertMigrationsCurrent, migrateUp } from "./migrations.js";
 import { captureException } from "./monitoring.js";
 import {
   assertConnectionBudget,
+  assertDatabaseConnectionCeiling,
+  isHostedRuntime,
   processCapabilities,
   resolveProcessRole,
 } from "./process-role.js";
 import {
+  assertRequiredPushProvider,
+  pushDeliveryTimeoutMs,
+  pushProviderStatus,
   readPushDeliveryBacklog,
   startPushDeliveryWorker,
   stopPushDeliveryWorker,
 } from "./push-notifications.js";
+import { boundedRuntimeInterval } from "./runtime-interval.js";
+
+const WORKER_CLEANUP_MARGIN_MS = 5_000;
+const MAX_HOSTED_SHUTDOWN_MS = 25_000;
 
 function safePoolErrorCode(error) {
   const candidate = String(error?.code ?? "").trim().toUpperCase();
   return /^[A-Z0-9_]{1,20}$/.test(candidate) ? candidate : "UNKNOWN";
 }
 
-async function startWorkerRuntime(role, environment) {
+export function assertWorkerShutdownBudget(environment) {
+  const shutdownTimeoutMs = boundedRuntimeInterval(
+    environment.HTTP_SHUTDOWN_TIMEOUT_MS,
+    {
+      name: "HTTP_SHUTDOWN_TIMEOUT_MS",
+      fallback: DEFAULT_HTTP_SERVER_TIMEOUTS.shutdownTimeoutMs,
+      minimum: 5_000,
+      maximum: MAX_HOSTED_SHUTDOWN_MS,
+    },
+  );
+  const deliveryTimeoutMs = pushDeliveryTimeoutMs(environment);
+  if (shutdownTimeoutMs < deliveryTimeoutMs + WORKER_CLEANUP_MARGIN_MS) {
+    throw new Error(
+      "HTTP_SHUTDOWN_TIMEOUT_MS must reserve at least 5000 milliseconds beyond the push deadline.",
+    );
+  }
+  return { shutdownTimeoutMs, deliveryTimeoutMs };
+}
+
+async function startWorkerRuntime(role, environment, budget) {
+  const hosted = isHostedRuntime(environment);
+  if (hosted) assertWorkerShutdownBudget(environment);
   const database = createDatabasePool({ role, environment });
   let capacity = null;
   let stopMaintenance = null;
@@ -38,7 +68,13 @@ async function startWorkerRuntime(role, environment) {
     logError("database.pool_error", { errorCode: safePoolErrorCode(error) });
   });
   try {
+    const ceiling = await assertDatabaseConnectionCeiling(database, budget);
     const migrations = await assertMigrationsCurrent(database);
+    const requiredPushStatus = assertRequiredPushProvider(
+      environment,
+      pushProviderStatus(environment),
+      { required: hosted },
+    );
     capacity = startCapacityRuntime({
       role,
       pool: database,
@@ -53,7 +89,12 @@ async function startWorkerRuntime(role, environment) {
         capacity.telemetry?.recordWorker({ failed: 1 });
         logError("push.worker_failed", { error });
       },
+      environment,
+      required: hosted,
     });
+    if (pushStatus.mode !== requiredPushStatus.mode) {
+      throw new Error("Push provider status changed during worker startup.");
+    }
     if (!pushStatus.ok) {
       logWarn("push.setup_required", { missing: pushStatus.missing });
     }
@@ -68,6 +109,7 @@ async function startWorkerRuntime(role, environment) {
       processRole: role,
       migrationVersion: migrations.latestVersion,
       databasePoolMax: database.options.max,
+      databaseUsableConnections: ceiling.observedUsableConnections,
       pushMode: pushStatus.mode,
     });
   } catch (error) {
@@ -90,17 +132,49 @@ async function startWorkerRuntime(role, environment) {
   };
 }
 
-async function runMigrationRuntime(role, environment) {
+async function runWorkerReadinessRuntime(role, environment, budget) {
+  if (isHostedRuntime(environment)) assertWorkerShutdownBudget(environment);
   const database = createDatabasePool({ role, environment });
   database.on("error", (error) => {
     logError("database.pool_error", { errorCode: safePoolErrorCode(error) });
   });
   try {
+    const ceiling = await assertDatabaseConnectionCeiling(database, budget);
+    const migrations = await assertMigrationsCurrent(database);
+    const pushStatus = assertRequiredPushProvider(
+      environment,
+      pushProviderStatus(environment),
+      { required: isHostedRuntime(environment) },
+    );
+    logInfo("worker.predeploy_ready", {
+      processRole: role,
+      migrationVersion: migrations.latestVersion,
+      databasePoolMax: database.options.max,
+      databaseUsableConnections: ceiling.observedUsableConnections,
+      pushMode: pushStatus.mode,
+    });
+    return {
+      migrationVersion: migrations.latestVersion,
+      databaseUsableConnections: ceiling.observedUsableConnections,
+    };
+  } finally {
+    await database.end();
+  }
+}
+
+async function runMigrationRuntime(role, environment, budget) {
+  const database = createDatabasePool({ role, environment });
+  database.on("error", (error) => {
+    logError("database.pool_error", { errorCode: safePoolErrorCode(error) });
+  });
+  try {
+    const ceiling = await assertDatabaseConnectionCeiling(database, budget);
     const result = await migrateUp(database);
     logInfo("migrate.complete", {
       processRole: role,
       latestVersion: result.latestVersion,
       pendingCount: result.pending.length,
+      databaseUsableConnections: ceiling.observedUsableConnections,
     });
     return result;
   } finally {
@@ -131,8 +205,9 @@ export async function startConfiguredRuntime({
   requestedRole = process.argv[2] ?? null,
 } = {}) {
   const environment = process.env;
+  const workerReadinessCheck = requestedRole === "worker-check";
   const role = resolveProcessRole(environment, {
-    requestedRole,
+    requestedRole: workerReadinessCheck ? "worker" : requestedRole,
     allowLocalCombinedDefault: true,
   });
   environment.RIVT_PROCESS_ROLE = role;
@@ -144,11 +219,15 @@ export async function startConfiguredRuntime({
   });
 
   if (role === "migrate") {
-    await runMigrationRuntime(role, environment);
+    await runMigrationRuntime(role, environment, budget);
+    return { role, completed: true };
+  }
+  if (workerReadinessCheck) {
+    await runWorkerReadinessRuntime(role, environment, budget);
     return { role, completed: true };
   }
   if (role === "worker") {
-    return startWorkerRuntime(role, environment);
+    return startWorkerRuntime(role, environment, budget);
   }
   return startHttpRuntime(role);
 }

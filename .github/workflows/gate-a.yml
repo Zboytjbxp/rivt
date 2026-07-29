@@ -17,7 +17,9 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The serial PostgreSQL safety suite currently takes about 25 minutes.
+    # Keep a real ceiling without terminating the gate before it can finish.
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16-alpine

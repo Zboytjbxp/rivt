@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertDatabaseConnectionCeiling,
   connectionBudgetStatus,
   poolMaxForRole,
   processCapabilities,
@@ -20,11 +21,57 @@ test("hosted process roles fail closed when missing, invalid, or combined", () =
   );
   assert.throws(
     () => resolveProcessRole({ NODE_ENV: "production", RIVT_PROCESS_ROLE: "everything" }),
-    /web, worker, or migrate/i,
+    /web or worker/i,
   );
   assert.throws(
     () => resolveProcessRole({ NODE_ENV: "production", RIVT_PROCESS_ROLE: "combined" }),
     /local development and tests/i,
+  );
+});
+
+test("bound hosted web and worker roles reject missing or conflicting environment roles", () => {
+  const hosted = { NODE_ENV: "production" };
+  assert.throws(
+    () => resolveProcessRole(hosted, { requestedRole: "worker" }),
+    /must be set and match/i,
+  );
+  assert.throws(
+    () => resolveProcessRole(
+      { ...hosted, RIVT_PROCESS_ROLE: "web" },
+      { requestedRole: "worker" },
+    ),
+    /conflicts with the bound hosted process role/i,
+  );
+  assert.equal(
+    resolveProcessRole(
+      { ...hosted, RIVT_PROCESS_ROLE: "worker" },
+      { requestedRole: "worker" },
+    ),
+    "worker",
+  );
+  assert.equal(
+    resolveProcessRole(
+      { ...hosted, RIVT_PROCESS_ROLE: "web" },
+      { requestedRole: "migrate" },
+    ),
+    "migrate",
+  );
+  assert.throws(
+    () => resolveProcessRole(
+      { ...hosted, RIVT_PROCESS_ROLE: "worker" },
+      { requestedRole: "migrate" },
+    ),
+    /only as the web service pre-deploy/i,
+  );
+  assert.throws(
+    () => resolveProcessRole(hosted, { requestedRole: "migrate" }),
+    /only as the web service pre-deploy/i,
+  );
+  assert.throws(
+    () => resolveProcessRole(
+      { ...hosted, RIVT_PROCESS_ROLE: "migrate" },
+    ),
+    /only as the web service pre-deploy/i,
   );
 });
 
@@ -139,6 +186,96 @@ test("production connection budget requires explicit topology and thirty percent
   assert.equal(missing.ok, false);
   assert.ok(missing.missing.includes("RIVT_DB_MAX_CONNECTIONS"));
   assert.doesNotMatch(JSON.stringify(missing), /undefined|null/);
+});
+
+test("declared connection ceiling cannot exceed PostgreSQL's observed usable limit", async () => {
+  const budget = connectionBudgetStatus({
+    NODE_ENV: "production",
+    RIVT_WEB_REPLICAS: "2",
+    RIVT_WORKER_REPLICAS: "1",
+    RIVT_WEB_PG_POOL_MAX: "8",
+    RIVT_WORKER_PG_POOL_MAX: "4",
+    RIVT_MIGRATE_PG_POOL_MAX: "1",
+    RIVT_DB_RESERVED_CONNECTIONS: "4",
+    RIVT_DB_MAX_CONNECTIONS: "80",
+  });
+  const database = {
+    async query() {
+      return {
+        rows: [{
+          max_connections: 100,
+          superuser_reserved_connections: 3,
+          reserved_connections: 2,
+          database_connection_limit: -1,
+          role_connection_limit: -1,
+        }],
+      };
+    },
+  };
+
+  assert.deepEqual(await assertDatabaseConnectionCeiling(database, budget), {
+    declaredMaxConnections: 80,
+    observedMaxConnections: 100,
+    observedUsableConnections: 95,
+    globalUsableConnections: 95,
+    databaseConnectionLimit: -1,
+    roleConnectionLimit: -1,
+    superuserReservedConnections: 3,
+    reservedConnections: 2,
+  });
+
+  await assert.rejects(
+    assertDatabaseConnectionCeiling(database, {
+      ...budget,
+      databaseMaxConnections: 96,
+    }),
+    /exceeds PostgreSQL's observed usable connection ceiling/i,
+  );
+  await assert.rejects(
+    assertDatabaseConnectionCeiling({
+      async query() {
+        return {
+          rows: [{
+            max_connections: "unknown",
+            superuser_reserved_connections: 3,
+            reserved_connections: 0,
+            database_connection_limit: -1,
+            role_connection_limit: -1,
+          }],
+        };
+      },
+    }, budget),
+    /invalid max_connections/i,
+  );
+
+  assert.deepEqual(
+    await assertDatabaseConnectionCeiling({
+      async query() {
+        return {
+          rows: [{
+            max_connections: 100,
+            superuser_reserved_connections: 3,
+            reserved_connections: 2,
+            database_connection_limit: 70,
+            role_connection_limit: 60,
+          }],
+        };
+      },
+    }, {
+      ...budget,
+      databaseMaxConnections: 60,
+    }),
+    {
+      declaredMaxConnections: 60,
+      observedMaxConnections: 100,
+      observedUsableConnections: 60,
+      globalUsableConnections: 95,
+      databaseConnectionLimit: 70,
+      roleConnectionLimit: 60,
+      superuserReservedConnections: 3,
+      reservedConnections: 2,
+    },
+  );
 });
 
 test("database pools use bounded connection and idle timeouts", () => {
