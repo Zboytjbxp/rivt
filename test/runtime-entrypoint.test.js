@@ -1,16 +1,21 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import test, { after } from "node:test";
+import { assertWorkerShutdownBudget } from "../server/runtime.js";
 
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const runtimePath = resolve(repositoryRoot, "server", "runtime.js");
 const isolatedWorkingDirectory = mkdtempSync(join(tmpdir(), "rivt-runtime-entrypoint-"));
 const secretMarker = "rivt-test-secret-must-never-appear-92461";
+
+function deploymentConfig(name) {
+  return JSON.parse(readFileSync(resolve(repositoryRoot, name), "utf8"));
+}
 
 after(() => {
   rmSync(isolatedWorkingDirectory, { recursive: true, force: true });
@@ -50,18 +55,23 @@ function healthyConnectionBudget() {
     RIVT_MIGRATE_PG_POOL_MAX: "1",
     RIVT_DB_RESERVED_CONNECTIONS: "2",
     RIVT_DB_MAX_CONNECTIONS: "20",
+    HTTP_SHUTDOWN_TIMEOUT_MS: "20000",
   };
 }
 
-function runRuntime({ environment, timeoutMs = 4_000 } = {}) {
+function runRuntime({ environment, timeoutMs = 4_000, requestedRole = null } = {}) {
   return new Promise((resolveRun, rejectRun) => {
     const startedAt = Date.now();
-    const child = spawn(process.execPath, [runtimePath], {
+    const child = spawn(
+      process.execPath,
+      [runtimePath, ...(requestedRole ? [requestedRole] : [])],
+      {
       cwd: isolatedWorkingDirectory,
       env: environment,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
-    });
+      },
+    );
     let stdout = "";
     let stderr = "";
     let timedOut = false;
@@ -116,7 +126,7 @@ const hostedRoleFailures = [
   {
     name: "invalid hosted process role",
     role: "sidecar",
-    message: /RIVT_PROCESS_ROLE must be web, worker, or migrate/,
+    message: /RIVT_PROCESS_ROLE must be web or worker/,
   },
   {
     name: "hosted combined process role",
@@ -142,7 +152,7 @@ for (const scenario of hostedRoleFailures) {
   });
 }
 
-for (const role of ["worker", "migrate"]) {
+for (const role of ["worker"]) {
   test(`${role} fails closed without DATABASE_URL after validating a safe budget`, async () => {
     const result = await runRuntime({
       environment: cleanEnvironment({
@@ -160,6 +170,23 @@ for (const role of ["worker", "migrate"]) {
   });
 }
 
+test("web-owned migrate pre-deploy fails closed without DATABASE_URL after a safe budget", async () => {
+  const result = await runRuntime({
+    environment: cleanEnvironment({
+      ...healthyConnectionBudget(),
+      RIVT_PROCESS_ROLE: "web",
+    }),
+    requestedRole: "migrate",
+  });
+
+  assert.equal(result.timedOut, false);
+  assert.notEqual(result.code, 0);
+  assert.match(result.output, /runtime\.configuration_ready/);
+  assert.match(result.output, /DATABASE_URL is required/);
+  assert.doesNotMatch(result.output, /server\.started|EADDRINUSE/);
+  assert.doesNotMatch(result.output, new RegExp(secretMarker));
+});
+
 test("local runtime preserves the combined no-role compatibility path", async () => {
   const result = await withReservedPort((port) => runRuntime({
     environment: cleanEnvironment({
@@ -174,4 +201,71 @@ test("local runtime preserves the combined no-role compatibility path", async ()
   assert.match(result.output, /"processRole":"combined"/);
   assert.match(result.output, /EADDRINUSE/);
   assert.doesNotMatch(result.output, new RegExp(secretMarker));
+});
+
+test("Railway web and worker configs preserve role-specific health and graceful drain", () => {
+  const web = deploymentConfig("railway.json");
+  const worker = deploymentConfig("railway.worker.json");
+
+  for (const configuration of [web, worker]) {
+    assert.equal(configuration.build?.builder, "RAILPACK");
+    assert.equal(configuration.build?.buildCommand, "npm run build");
+    assert.equal(configuration.deploy?.restartPolicyType, "ON_FAILURE");
+    assert.equal(configuration.deploy?.restartPolicyMaxRetries, 10);
+    assert.equal(configuration.deploy?.drainingSeconds, 30);
+    assert.equal("numReplicas" in configuration.deploy, false);
+    assert.equal("region" in configuration.deploy, false);
+    assert.equal("multiRegionConfig" in configuration.deploy, false);
+  }
+
+  assert.equal(web.deploy.startCommand, "node server/runtime.js web");
+  assert.equal(web.deploy.preDeployCommand, "node server/runtime.js migrate");
+  assert.equal(web.deploy.healthcheckPath, "/api/health");
+  assert.equal(web.deploy.healthcheckTimeout, 300);
+  assert.equal(worker.deploy.startCommand, "node server/runtime.js worker");
+  assert.equal(worker.deploy.preDeployCommand, "node server/runtime.js worker-check");
+  assert.equal("healthcheckPath" in worker.deploy, false);
+  assert.equal("healthcheckTimeout" in worker.deploy, false);
+});
+
+test("worker pre-deploy check fails before replacement when readiness cannot be proved", async () => {
+  const result = await runRuntime({
+    environment: cleanEnvironment({
+      ...healthyConnectionBudget(),
+      RIVT_PROCESS_ROLE: "worker",
+      RIVT_PUSH_REQUIRED: "true",
+    }),
+    requestedRole: "worker-check",
+  });
+
+  assert.equal(result.timedOut, false);
+  assert.notEqual(result.code, 0);
+  assert.match(result.output, /runtime\.configuration_ready/);
+  assert.match(result.output, /DATABASE_URL is required/);
+  assert.doesNotMatch(result.output, /worker\.started|server\.started/);
+  assert.doesNotMatch(result.output, new RegExp(secretMarker));
+});
+
+test("hosted worker shutdown reserves nominal time beyond the push deadline", () => {
+  assert.deepEqual(assertWorkerShutdownBudget({
+    HTTP_SHUTDOWN_TIMEOUT_MS: "20000",
+    PUSH_DELIVERY_TIMEOUT_MS: "8000",
+  }), {
+    shutdownTimeoutMs: 20_000,
+    deliveryTimeoutMs: 8_000,
+  });
+  assert.throws(
+    () => assertWorkerShutdownBudget({
+      HTTP_SHUTDOWN_TIMEOUT_MS: "10000",
+      PUSH_DELIVERY_TIMEOUT_MS: "8000",
+    }),
+    /reserve at least 5000 milliseconds/i,
+  );
+  assert.throws(
+    () => assertWorkerShutdownBudget({
+      HTTP_SHUTDOWN_TIMEOUT_MS: "30000",
+      PUSH_DELIVERY_TIMEOUT_MS: "8000",
+    }),
+    /HTTP_SHUTDOWN_TIMEOUT_MS/i,
+  );
 });

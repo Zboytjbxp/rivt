@@ -7,6 +7,7 @@ const DELIVERY_BATCH_SIZE = 20;
 const MAX_DELIVERY_ATTEMPTS = 5;
 const WORKER_INTERVAL_MS = 5_000;
 const STALE_CLAIM_MINUTES = 5;
+const PUSH_DELIVERY_TIMEOUT_MS = 8_000;
 
 const pushSubscriptionSchema = z.object({
   endpoint: z.string().trim().min(16).max(4096),
@@ -23,14 +24,45 @@ const pushUnsubscribeSchema = z.object({
 
 let workerController = null;
 
-function envValue(name) {
-  return String(process.env[name] ?? "").trim();
+function envValue(name, environment = process.env) {
+  return String(environment?.[name] ?? "").trim();
 }
 
-export function pushProviderStatus() {
-  const publicKey = envValue("VAPID_PUBLIC_KEY");
-  const privateKey = envValue("VAPID_PRIVATE_KEY");
-  const subject = envValue("VAPID_SUBJECT");
+function pushDeliveryRequired(environment = process.env) {
+  const configured = String(environment?.RIVT_PUSH_REQUIRED ?? "").trim().toLowerCase();
+  if (!configured || configured === "false") return false;
+  if (configured === "true") return true;
+  throw new Error("RIVT_PUSH_REQUIRED must be true or false.");
+}
+
+export function pushDeliveryTimeoutMs(environment = process.env) {
+  return boundedRuntimeInterval(environment?.PUSH_DELIVERY_TIMEOUT_MS, {
+    name: "PUSH_DELIVERY_TIMEOUT_MS",
+    fallback: PUSH_DELIVERY_TIMEOUT_MS,
+    minimum: 1_000,
+    maximum: 10_000,
+  });
+}
+
+export function assertRequiredPushProvider(
+  environment = process.env,
+  status = pushProviderStatus(),
+  { required = false } = {},
+) {
+  const configuredAsRequired = pushDeliveryRequired(environment);
+  if (required && !configuredAsRequired) {
+    throw new Error("RIVT_PUSH_REQUIRED=true is required for a hosted worker.");
+  }
+  if (configuredAsRequired && !status.ok) {
+    throw new Error("Push delivery is required, but the VAPID provider is not configured.");
+  }
+  return status;
+}
+
+export function pushProviderStatus(environment = process.env) {
+  const publicKey = envValue("VAPID_PUBLIC_KEY", environment);
+  const privateKey = envValue("VAPID_PRIVATE_KEY", environment);
+  const subject = envValue("VAPID_SUBJECT", environment);
   const missing = [];
   if (!publicKey) missing.push("VAPID_PUBLIC_KEY");
   if (!privateKey) missing.push("VAPID_PRIVATE_KEY");
@@ -51,11 +83,15 @@ export function pushProviderStatus() {
   };
 }
 
-function configureWebPush() {
-  const status = pushProviderStatus();
+function configureWebPush(environment = process.env) {
+  const status = pushProviderStatus(environment);
   if (!status.ok) return status;
   try {
-    webpush.setVapidDetails(envValue("VAPID_SUBJECT"), status.publicKey, envValue("VAPID_PRIVATE_KEY"));
+    webpush.setVapidDetails(
+      envValue("VAPID_SUBJECT", environment),
+      status.publicKey,
+      envValue("VAPID_PRIVATE_KEY", environment),
+    );
     return status;
   } catch {
     return { ...status, ok: false, mode: "invalid_config", publicKey: null };
@@ -287,6 +323,7 @@ async function deliverClaimed(database, delivery) {
     }, pushPayload(delivery), {
       TTL: delivery.priority === "high" ? 60 * 60 : 24 * 60 * 60,
       urgency: delivery.priority === "high" ? "high" : "normal",
+      timeout: pushDeliveryTimeoutMs(),
     });
     const updated = await markDeliverySuccess(database, delivery);
     if (!updated) return "stale";
@@ -416,8 +453,14 @@ export function startPushDeliveryWorker(database, {
   onError,
   onResult,
   unref = true,
+  environment = process.env,
+  required = false,
 } = {}) {
-  const status = configureWebPush();
+  const status = assertRequiredPushProvider(
+    environment,
+    configureWebPush(environment),
+    { required },
+  );
   if (!database || !status.ok || workerController) return status;
   workerController = createPushDeliveryWorker({
     runBatch: () => processPushDeliveryBatchMetrics(database),
@@ -542,6 +585,8 @@ export const pushNotificationInternals = {
   deliveryFailureOutcome,
   markDeliveryFailure,
   markDeliverySuccess,
+  pushDeliveryRequired,
+  pushDeliveryTimeoutMs,
   pushSubscriptionSchema,
   retryDelaySeconds,
 };

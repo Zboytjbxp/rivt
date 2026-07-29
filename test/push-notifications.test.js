@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertRequiredPushProvider,
   createPushDeliveryWorker,
   pushNotificationInternals,
   pushProviderStatus,
+  startPushDeliveryWorker,
 } from "../server/push-notifications.js";
 
 test("web push provider fails closed until every VAPID value exists", () => {
@@ -34,6 +36,78 @@ test("web push retries back off and cap at one hour", () => {
   assert.equal(pushNotificationInternals.retryDelaySeconds(1), 15);
   assert.equal(pushNotificationInternals.retryDelaySeconds(2), 30);
   assert.equal(pushNotificationInternals.retryDelaySeconds(20), 3600);
+});
+
+test("required push delivery fails closed and outbound attempts have a hard deadline", () => {
+  assert.throws(
+    () => assertRequiredPushProvider(
+      { RIVT_PUSH_REQUIRED: "true" },
+      { ok: false, mode: "setup_required" },
+    ),
+    /push delivery is required/i,
+  );
+  assert.equal(
+    assertRequiredPushProvider(
+      { RIVT_PUSH_REQUIRED: "true" },
+      { ok: true, mode: "configured" },
+      { required: true },
+    ).ok,
+    true,
+  );
+  assert.throws(
+    () => assertRequiredPushProvider(
+      {},
+      { ok: true, mode: "configured" },
+      { required: true },
+    ),
+    /required for a hosted worker/i,
+  );
+  assert.throws(
+    () => assertRequiredPushProvider(
+      { RIVT_PUSH_REQUIRED: "false" },
+      { ok: true, mode: "configured" },
+      { required: true },
+    ),
+    /required for a hosted worker/i,
+  );
+  assert.equal(pushNotificationInternals.pushDeliveryTimeoutMs({}), 8_000);
+  assert.equal(
+    pushNotificationInternals.pushDeliveryTimeoutMs({
+      PUSH_DELIVERY_TIMEOUT_MS: "10000",
+    }),
+    10_000,
+  );
+  assert.throws(
+    () => pushNotificationInternals.pushDeliveryTimeoutMs({
+      PUSH_DELIVERY_TIMEOUT_MS: "10001",
+    }),
+    /1000 through 10000 milliseconds/i,
+  );
+  assert.throws(
+    () => pushNotificationInternals.pushDeliveryRequired({
+      RIVT_PUSH_REQUIRED: "yes",
+    }),
+    /must be true or false/i,
+  );
+});
+
+test("required worker push configuration is rejected before a delivery batch can start", () => {
+  let queries = 0;
+  const database = {
+    query() {
+      queries += 1;
+      throw new Error("delivery batch must not start");
+    },
+  };
+  assert.throws(
+    () => startPushDeliveryWorker(database, {
+      environment: { RIVT_PUSH_REQUIRED: "false" },
+      required: true,
+      unref: false,
+    }),
+    /required for a hosted worker/i,
+  );
+  assert.equal(queries, 0);
 });
 
 test("push delivery outcomes distinguish retryable, terminal, and stale work", () => {

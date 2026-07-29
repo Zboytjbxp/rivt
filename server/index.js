@@ -174,6 +174,7 @@ import {
 import { assertMigrationsCurrent, migrateUp } from "./migrations.js";
 import {
   assertConnectionBudget,
+  assertDatabaseConnectionCeiling,
   processCapabilities,
   resolveProcessRole,
 } from "./process-role.js";
@@ -210,6 +211,7 @@ const appVersion = envValue("APP_VERSION", "0.1.0");
 const sourceCommit = envValue("SOURCE_COMMIT", envValue("RAILWAY_GIT_COMMIT_SHA", "unknown"));
 let migrationVersion = envValue("MIGRATION_VERSION", "uninitialized");
 let migrationState = "pending"; // "pending" | "running" | "ready" | "failed"
+let databaseConnectionCeiling = null;
 let httpServer = null;
 let stopDatabaseMaintenance = null;
 let capacityRuntime = null;
@@ -530,6 +532,10 @@ async function ensureDatabaseReady({ applyMigrations = roleCapabilities.appliesM
   databaseReadyPromise ??= (async () => {
     migrationState = "running";
     try {
+      databaseConnectionCeiling = await assertDatabaseConnectionCeiling(
+        database,
+        connectionBudget,
+      );
       const status = applyMigrations
         ? await migrateUp(database)
         : await assertMigrationsCurrent(database);
@@ -6456,6 +6462,7 @@ export async function startServer(listenPort = port) {
     errorMonitoring: errorMonitoringStatus().mode,
     databasePoolMax: database?.options?.max ?? 0,
     plannedDatabaseConnections: connectionBudget.plannedConnections,
+    databaseUsableConnections: databaseConnectionCeiling?.observedUsableConnections ?? 0,
   });
   if (!storage.ok) {
     logWarn("server.storage_setup_required", { missing: storage.missing });
