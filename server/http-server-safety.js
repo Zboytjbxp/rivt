@@ -203,7 +203,8 @@ export function createGracefulShutdown({
         void closeResourcesOnce().catch(() => {});
         finish(null, true);
       }, shutdownTimeout);
-      deadline.unref?.();
+      // This deadline resolves the awaited shutdown contract, so it must keep
+      // the process alive long enough to force-close stalled connections.
 
       if (!server?.listening) {
         finishGracefully();
