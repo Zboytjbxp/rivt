@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import webpush from "web-push";
-import { pushNotificationInternals, pushProviderStatus } from "../server/push-notifications.js";
+import {
+  createPushDeliveryWorker,
+  pushNotificationInternals,
+  pushProviderStatus,
+} from "../server/push-notifications.js";
 
 const validActiveKeys = webpush.generateVAPIDKeys();
 const validPreviousKeys = webpush.generateVAPIDKeys();
@@ -104,6 +108,25 @@ test("web push accepts a legacy unclassified registration but rejects malformed 
     vapidGeneration: "A".repeat(64),
   });
   assert.equal(malformed.success, false);
+});
+
+test("push delivery outcomes distinguish retryable, terminal, and stale work", () => {
+  const delivery = { attempt_count: 2 };
+  assert.equal(
+    pushNotificationInternals.deliveryFailureOutcome(delivery, { statusCode: 500 }),
+    "retried",
+  );
+  assert.equal(
+    pushNotificationInternals.deliveryFailureOutcome(delivery, { statusCode: 410 }),
+    "failed",
+  );
+  assert.equal(
+    pushNotificationInternals.deliveryFailureOutcome(
+      { attempt_count: pushNotificationInternals.MAX_DELIVERY_ATTEMPTS },
+      { statusCode: 500 },
+    ),
+    "failed",
+  );
 });
 
 test("web push rejects malformed configured keys without exposing them", () => {
@@ -248,17 +271,24 @@ test("web push keeps active-first ordering and records the previous generation o
 test("web push records the generation that actually delivered", async () => {
   const calls = [];
   const generation = pushNotificationInternals.vapidGeneration(validActiveKeys.publicKey);
-  await pushNotificationInternals.markPushDeliverySuccess({
+  const delivery = {
+    id: "delivery-id",
+    attempt_count: 2,
+  };
+  const updated = await pushNotificationInternals.markDeliverySuccess({
     async query(sql, parameters) {
       calls.push({ sql, parameters });
-      return { rowCount: 1 };
+      return { rows: [{ updated: true }] };
     },
-  }, "delivery-id", generation);
+  }, delivery, generation);
 
+  assert.equal(updated, true);
   assert.equal(calls.length, 1);
-  assert.match(calls[0].sql, /SET vapid_generation = \$2/);
+  assert.match(calls[0].sql, /status = 'processing'/);
+  assert.match(calls[0].sql, /attempt_count = \$2/);
+  assert.match(calls[0].sql, /SET vapid_generation = \$3/);
   assert.match(calls[0].sql, /last_success_at = now\(\)/);
-  assert.deepEqual(calls[0].parameters, ["delivery-id", generation]);
+  assert.deepEqual(calls[0].parameters, ["delivery-id", 2, generation]);
 });
 
 test("web push does not retry ambiguous or terminal failures with the previous key", async () => {
@@ -289,4 +319,134 @@ test("web push does not retry ambiguous or terminal failures with the previous k
     );
     assert.equal(attempts, 1, `status ${statusCode || "timeout"} should not fallback`);
   }
+});
+
+test("push worker shutdown waits for the active batch", async () => {
+  let resolveBatch;
+  let batchStarted;
+  const started = new Promise((resolve) => {
+    batchStarted = resolve;
+  });
+  const batch = new Promise((resolve) => {
+    resolveBatch = resolve;
+  });
+  const worker = createPushDeliveryWorker({
+    runBatch: async () => {
+      batchStarted();
+      return batch;
+    },
+    intervalMs: 60_000,
+    unref: true,
+  });
+  worker.start();
+  await started;
+
+  let stopped = false;
+  const stopping = worker.stop().then(() => {
+    stopped = true;
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(stopped, false);
+  resolveBatch(1);
+  await stopping;
+  assert.equal(stopped, true);
+});
+
+test("push worker reports real per-delivery batch outcomes", async () => {
+  const results = [];
+  const worker = createPushDeliveryWorker({
+    runBatch: async () => ({
+      claimed: 4,
+      sent: 2,
+      retried: 1,
+      failed: 0,
+      stale: 1,
+    }),
+    intervalMs: 60_000,
+    unref: true,
+    onResult: (result) => results.push(result),
+  });
+  worker.start();
+  await new Promise((resolve) => setImmediate(resolve));
+  await worker.stop();
+
+  assert.equal(results.length, 1);
+  assert.deepEqual({
+    claimed: results[0].claimed,
+    sent: results[0].sent,
+    retried: results[0].retried,
+    failed: results[0].failed,
+    stale: results[0].stale,
+  }, {
+    claimed: 4,
+    sent: 2,
+    retried: 1,
+    failed: 0,
+    stale: 1,
+  });
+});
+
+test("push delivery state updates are fenced to the claimed attempt", async () => {
+  const calls = [];
+  const database = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      return { rowCount: 0, rows: [] };
+    },
+  };
+  const delivery = {
+    id: "delivery-id",
+    subscription_id: "subscription-id",
+    notification_id: "notification-id",
+    account_id: "account-id",
+    attempt_count: 3,
+  };
+
+  assert.equal(
+    await pushNotificationInternals.markDeliverySuccess(database, delivery, "a".repeat(64)),
+    false,
+  );
+  await pushNotificationInternals.markDeliveryFailure(
+    database,
+    delivery,
+    Object.assign(new Error("provider failure"), { statusCode: 500 }),
+  );
+
+  assert.match(calls[0].sql, /status = 'processing'/i);
+  assert.match(calls[0].sql, /attempt_count = \$2/i);
+  assert.deepEqual(calls[0].params, ["delivery-id", 3, "a".repeat(64)]);
+  assert.match(calls[1].sql, /status = 'processing'/i);
+  assert.match(calls[1].sql, /attempt_count = \$5/i);
+  assert.equal(calls[1].params[4], 3);
+});
+
+test("expired push subscriptions are removed only by the current claimed attempt", async () => {
+  const calls = [];
+  const database = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      return { rowCount: 0, rows: [{ updated: false }] };
+    },
+  };
+  const delivery = {
+    id: "delivery-id",
+    subscription_id: "subscription-id",
+    notification_id: "notification-id",
+    account_id: "account-id",
+    attempt_count: 4,
+  };
+
+  const updated = await pushNotificationInternals.markDeliveryFailure(
+    database,
+    delivery,
+    Object.assign(new Error("gone"), { statusCode: 410 }),
+  );
+
+  assert.equal(updated, false);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].sql, /delete from push_delivery_outbox/i);
+  assert.match(calls[0].sql, /status = 'processing'/i);
+  assert.match(calls[0].sql, /attempt_count = \$2/i);
+  assert.match(calls[0].sql, /using current_claim/i);
+  assert.deepEqual(calls[0].params, ["delivery-id", 4]);
 });
