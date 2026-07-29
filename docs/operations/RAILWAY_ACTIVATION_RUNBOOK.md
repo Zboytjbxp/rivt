@@ -84,6 +84,11 @@ Official references:
 - <https://docs.railway.com/volumes/point-in-time-recovery>
 - <https://docs.railway.com/storage-buckets/billing>
 
+The current unauthorized, read-only Stage 1 worksheet is
+`docs/operations/RAILWAY_STAGE1_COST_BRIEF.md`. It must be refreshed from
+the account immediately before approval and must not be treated as provider
+or activation evidence.
+
 ## Selected staged topology
 
 The safe transition is intentionally smaller than the final launch target.

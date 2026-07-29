@@ -112,6 +112,30 @@ Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
   paths, and the production dependency audit. The public standard runner and
   approximately 57 MB Actions cache were inside GitHub's free allowances, so
   this review run cost $0. It did not deploy or change Railway.
+- Final documentation tip `c357f513ccd21bafd69aa7fe68d23f9e157832d7`
+  also passed the complete public Gate A workflow in run `30497449412`.
+- A fresh read-only Railway cost observation reports US$2.18 current usage,
+  a US$4.06 cycle estimate, US$0 Agent usage, no Compute hard limit, and a
+  separate US$20 Agent hard limit. The topology remains one production web,
+  one production PostgreSQL service, equivalent staging services, and no
+  worker. No credentials, variables, bucket objects, or production data were
+  read.
+- `docs/operations/RAILWAY_STAGE1_COST_BRIEF.md` models one private worker
+  capped at 0.5 GB RAM and 0.25 vCPU plus 1 GB egress at a conservative
+  US$10.05/month. The combined staged resource estimate is US$14.11, below
+  the Pro plan's included US$20, so the expected subtotal remains US$20
+  before tax. This is a draft, not approval.
+- The proposed later controls are a US$12 Compute alert, workspace-wide
+  US$20 Compute hard stop, US$0 Agent hard limit, US$18 manual intervention
+  point, US$1 one-time activation maximum, US$10.05 incremental monthly
+  maximum, and US$21 total monthly ceiling before tax. The owner must
+  explicitly accept that the Compute stop can take every scoped workload
+  offline. No limit or provider setting was changed.
+- The unattached production volume currently uses approximately 166 MB, for
+  a planning-rate cost near US$0.025/month because actual used storage is
+  billed. Its owner and recovery relationship remain unknown, so deletion is
+  still unauthorized. The production buckets total approximately 40.4 MB;
+  their credentials and contents were not accessed.
 - Packet status is **Activation package implemented and fully repository-
   verified locally and pushed for review; provider action and public launch
   remain unauthorized. No provider change, paid action, production-data

@@ -249,6 +249,42 @@ dependency audit. The standard runner was free because the repository is
 public, and the approximately 57 MB Actions cache remained inside GitHub's
 10 GB repository allowance. This $0 repository proof did not change Railway.
 
+The final documentation tip `c357f513ccd21bafd69aa7fe68d23f9e157832d7`
+also passed the complete public Gate A workflow in run `30497449412`.
+
+## Zero-cost Stage 1 cost observation
+
+A later read-only CLI and dashboard observation on 2026-07-29 confirmed that
+the workspace currently reports US$2.18 of metered usage and a US$4.06
+resource estimate for the July 9-August 9 billing cycle, against the Pro
+plan's US$20 minimum and included usage. Railway Agent usage is US$0.00.
+Compute has no configured hard limit or email alert; the separate Agent hard
+limit is US$20.
+
+The observation also confirmed the current one-web/one-PostgreSQL production
+and staging topology, no worker, approximately 370 MB in the attached
+production database volume, approximately 161 MB in the attached staging
+database volume, and approximately 166 MB in the unattached 5 GB production
+volume. Railway bills actual volume bytes used, making the unattached
+volume's current planning cost approximately US$0.025/month rather than the
+US$0.75 full-capacity amount. Its purpose remains unverified, so no deletion
+is authorized. Two production storage buckets contain approximately 40.4 MB
+and 35 bytes; no credentials or objects were read.
+
+`docs/operations/RAILWAY_STAGE1_COST_BRIEF.md` records the zero-cost
+worksheet. One proposed private worker capped at 0.5 GB RAM and 0.25 vCPU,
+with a 1 GB monthly egress reserve and no volume, has a conservative
+US$10.05 monthly ceiling. Added to Railway's US$4.06 estimate, the staged
+resource model is US$14.11, so the expected invoice remains the existing
+US$20 Pro minimum before tax. The proposal is not authorization.
+
+The future approval should pair a US$12 Compute alert, a workspace-wide
+US$20 Compute hard limit, a US$0 Agent hard limit, and a US$18 manual
+intervention threshold with a US$1 one-time maximum, US$10.05 incremental
+monthly maximum, and US$21 total monthly ceiling before tax. The owner must
+explicitly accept that a Compute hard-limit stop can take the entire
+workspace, including production, offline. No provider setting was changed.
+
 Local source evidence is not deployment evidence.
 
 ## Status

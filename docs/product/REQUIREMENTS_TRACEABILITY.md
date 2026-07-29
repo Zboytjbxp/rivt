@@ -35,6 +35,17 @@
   unattached `READY` 5 GB production volume needs purpose, recovery, and cost
   review; no label or deletion decision is inferred. Historical
   `plan:hobby` deployment metadata does not disprove the current Pro plan.
+- A later read-only cost observation reports US$2.18 current resource usage,
+  a US$4.06 cycle estimate, US$0 Agent usage, no Compute hard limit, and a
+  separate US$20 Agent hard limit. The proposed one-worker Stage 1 envelope
+  is US$10.05/month at 0.5 GB RAM, 0.25 vCPU, and a 1 GB egress reserve,
+  producing a US$14.11 modeled resource total below Pro's included US$20.
+  `docs/operations/RAILWAY_STAGE1_COST_BRIEF.md` is an unauthorized draft;
+  no maturity is promoted and no provider setting changed.
+- The unattached volume currently uses approximately 166 MB, which models
+  near US$0.025/month because Railway bills actual used storage. Its purpose
+  and recovery relationship remain unknown, so deletion remains
+  unauthorized.
 - `GA-OPS-005` remains **Partial**. Worker startup/backlog/lease/drain and web
   health are defined as evidence requirements, but no deployed baseline,
   continuous monitor, alert, or SLO proof exists.
@@ -73,9 +84,12 @@
   subsequently passed every step on exact verification tip
   `d6806dac2bb7d8504fbe5c10762fdbfe967393be`, including the full test
   aggregate, launch-readiness enforcement, browser paths, and dependency
-  audit. This does not promote `GA-OPS-007`, `GA-OPS-008`, or `GA-OPS-009`;
-  repository CI is not deployed topology, capacity, failover, or recovery
-  evidence.
+  audit. Final documentation tip
+  `c357f513ccd21bafd69aa7fe68d23f9e157832d7` also passed the complete
+  public Gate A workflow in run `30497449412`. This does not promote
+  `GA-OPS-007`, `GA-OPS-008`, or `GA-OPS-009`; repository CI and a
+  read-only cost worksheet are not deployed topology, capacity, failover,
+  or recovery evidence.
 
 ## Traceability Addendum - 2026-07-29 Railway Replica-Safety Source Controls
 
