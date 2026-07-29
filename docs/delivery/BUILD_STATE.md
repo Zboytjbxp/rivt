@@ -2,10 +2,57 @@
 
 Last updated: 2026-07-29 America/New_York
 Current gate: Gate B controlled engagement; public launch approval blocked
-Current phase: Railway production posture and AWS exit decision; live hardening remains blocked.
-Active packet: `docs/delivery/packets/92_RAILWAY_PRODUCTION_POSTURE.md`
-Repository branch: `codex/railway-production-posture`
+Current phase: Railway replica-safety source controls; live hardening remains blocked.
+Active packet: `docs/delivery/packets/93_RAILWAY_REPLICA_SAFETY.md`
+Repository branch: `codex/railway-replica-safety`
 Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
+
+## Railway replica-safety source controls
+
+- Packet 93 implements the first source prerequisite selected by Packet 92.
+  Hosted execution is now an explicit, fail-closed `web`, `worker`, or
+  `migrate` role; the legacy `combined` role remains local/test-only.
+- The source base is `b556962`; the verified implementation commit is
+  `234f73455e2283d20ef06c09077123ee1afa61d1`. Live production remains
+  `92a8451`, so none of the branch-only role, lease, pool, or telemetry
+  behavior is represented as deployed.
+- `web` serves HTTP and checks the migration ledger without mutating it;
+  `worker` owns push delivery and leased maintenance without an HTTP listener;
+  and `migrate` applies checksummed migrations under the existing advisory
+  lock, then exits.
+- Hosted topology and role-specific pool sizes must be explicit. The declared
+  PostgreSQL connection plan fails closed unless it retains at least 30%
+  headroom against the configured database ceiling.
+- Maintenance uses a cross-process PostgreSQL transaction advisory lease.
+  Push delivery retains `SKIP LOCKED` claims, fences completion/failure to the
+  claimed attempt, and shutdown awaits active work. Provider delivery remains
+  honestly at-least-once.
+- A disabled-by-default fixed-schema capacity collector aggregates
+  allowlisted route families, latency buckets, memory, event-loop, pool,
+  upload, worker-backlog, maintenance, and dependency signals. Exact shutdown
+  outcome/duration stays in the bounded coordinator's structured events. The
+  capacity stream does not accept raw paths, query strings, actor IDs, names,
+  messages, or other free text.
+- This packet creates no Railway service or replica, changes no provider
+  setting or production data, runs no load/failover test, incurs no cost, and
+  deploys nothing. Any provider configuration, staged topology, generated
+  load, or incremental cost requires explicit approval immediately before the
+  action.
+- `R-054` remains High/open; `R-056` remains Medium/open; `GA-OPS-009`
+  remains a public-launch Blocker; and `GA-OPS-005`/`GA-OPS-008` remain
+  Partial. Source composition is not HA, capacity, load, recovery, edge, or
+  deployment evidence.
+- Exact local verification passes: build; application lint; security lint;
+  79/79 focused runtime/security tests; 204/204 unit/frontend tests; 26/26
+  PostgreSQL integration suites in 1,489.1 seconds; authentication
+  fail-closed, jobs/discovery desktop+mobile, offline-recovery, and production
+  CSP E2E paths; production dependency audit with zero vulnerabilities; and
+  diff integrity.
+- The implementation is committed. Packet documentation and branch-push
+  evidence remain pending.
+- Packet status is **Source implementation verified and committed; push
+  pending. No provider change, no paid action, no production-data operation,
+  and not deployed**.
 
 ## Railway production posture and AWS exit decision
 
