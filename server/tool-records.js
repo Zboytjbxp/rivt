@@ -283,6 +283,36 @@ function invoiceDeliverySnapshot(record, actor, bankPaymentUrl = null, documentB
   if (subtotalCents > totalCents) {
     throw new ApiError(409, "INVOICE_SNAPSHOT_OUT_OF_DATE", "Save the invoice again before sending it.");
   }
+  const storedPaymentOptions = objectValue(payload.paymentOptions);
+  const hasExplicitPaymentOptions = typeof storedPaymentOptions.bank === "boolean"
+    || typeof storedPaymentOptions.outside === "boolean";
+  const legacyPaymentMethod = textValue(payload.paymentMethod, "", 320);
+  const bankRequested = hasExplicitPaymentOptions
+    ? storedPaymentOptions.bank === true
+    : Boolean(bankPaymentUrl || /bank payment|ach/i.test(legacyPaymentMethod));
+  const outsideRequested = hasExplicitPaymentOptions
+    ? storedPaymentOptions.outside === true
+    : !bankRequested || Boolean(legacyPaymentMethod && !/^secure bank payment$/i.test(legacyPaymentMethod));
+  const outsidePaymentInstructions = outsideRequested
+    ? textValue(
+      payload.outsidePaymentInstructions,
+      legacyPaymentMethod.replace(/^secure bank payment(?:\s+or\s+)?/i, ""),
+      320,
+    )
+    : "";
+  if (bankRequested && !bankPaymentUrl) {
+    throw new ApiError(409, "INVOICE_PAYMENT_LINK_REQUIRED", "Create a current bank-payment link before sending this invoice.");
+  }
+  if (outsideRequested && !outsidePaymentInstructions) {
+    throw new ApiError(422, "INVOICE_PAYMENT_INSTRUCTIONS_REQUIRED", "Add the direct payment instructions before sending this invoice.");
+  }
+  if (!bankRequested && !outsideRequested) {
+    throw new ApiError(422, "INVOICE_PAYMENT_OPTION_REQUIRED", "Choose at least one payment option before sending this invoice.");
+  }
+  const paymentOptions = [
+    bankRequested ? "Secure bank payment" : "",
+    outsideRequested ? outsidePaymentInstructions : "",
+  ].filter(Boolean);
 
   return {
     recipientEmail,
@@ -295,9 +325,9 @@ function invoiceDeliverySnapshot(record, actor, bankPaymentUrl = null, documentB
     terms: textValue(payload.terms, "Due on receipt", 160),
     senderName: textValue(payload.payTo, textValue(documentBrand?.businessName, textValue(actor.profile.displayName, "RIVT member", 160), 160), 160),
     brand: documentBrand ?? deliveryBrandFallback(actor),
-    paymentMethod: bankPaymentUrl
-      ? "Secure bank payment"
-      : textValue(payload.paymentMethod, "Contact the sender for payment instructions", 160),
+    paymentMethod: paymentOptions.join(" or "),
+    bankPaymentOffered: bankRequested,
+    outsidePaymentInstructions,
     bankPaymentUrl,
     totalCents,
     subtotalCents,
@@ -322,13 +352,14 @@ function invoiceEmailContent(snapshot, attachments = []) {
     `Tax: ${formatCurrency(snapshot.taxCents)}`,
     `Total due: ${formatCurrency(snapshot.totalCents)}`,
     `Terms: ${snapshot.terms}`,
-    `Payment method: ${snapshot.paymentMethod}`,
+    `Payment options: ${snapshot.paymentMethod}`,
     snapshot.note ? `Note: ${snapshot.note}` : "",
     snapshot.bankPaymentUrl ? `Pay securely from a US bank account: ${snapshot.bankPaymentUrl}` : "",
+    snapshot.outsidePaymentInstructions ? `Other payment instructions: ${snapshot.outsidePaymentInstructions}` : "",
     "",
-    snapshot.bankPaymentUrl
-      ? "Bank payment is handled by Stripe for the sender. RIVT does not hold or protect job funds."
-      : "Payment is arranged directly with the sender. Reply to this email with any questions.",
+    snapshot.bankPaymentUrl ? "Bank payment is handled by Stripe for the sender. RIVT does not hold or protect job funds." : "",
+    snapshot.outsidePaymentInstructions ? "Other payment is arranged directly with the sender." : "",
+    "Reply to this email with any questions.",
   ].filter(Boolean).join("\n");
   const lineRows = snapshot.lines.map((line) => (
     `<tr><td style="padding:9px 0;border-bottom:1px solid #e7e7e7">${escapeHtml(line.description)}</td><td style="padding:9px 0;border-bottom:1px solid #e7e7e7;text-align:right;font-weight:700">${formatCurrency(line.totalCents)}</td></tr>`
@@ -336,10 +367,15 @@ function invoiceEmailContent(snapshot, attachments = []) {
   const bankPaymentHtml = snapshot.bankPaymentUrl
     ? `<p style="margin:24px 0"><a href="${escapeHtml(snapshot.bankPaymentUrl)}" style="display:inline-block;padding:13px 18px;border-radius:8px;background:#ff4b00;color:#111111;font-weight:700;text-decoration:none">Pay from a US bank account</a></p>`
     : "";
-  const boundaryCopy = snapshot.bankPaymentUrl
-    ? "Bank payment is handled by Stripe for the sender. RIVT does not hold or protect job funds."
-    : "Payment is arranged directly with the sender. Reply to this email with any questions.";
-  const body = `<p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 6px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an invoice for ${escapeHtml(snapshot.workLabel)}.</p>${snapshot.issueDate ? `<p style="margin:0;color:${emailPalette.muted}">Invoice date: ${escapeHtml(snapshot.issueDate)}</p>` : ""}${snapshot.dueDate ? `<p style="margin:4px 0 16px;color:${emailPalette.muted}">Due date: ${escapeHtml(snapshot.dueDate)}</p>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:12px">Subtotal</td><td style="padding-top:12px;text-align:right">${formatCurrency(snapshot.subtotalCents)}</td></tr><tr><td style="padding-top:8px">Tax</td><td style="padding-top:8px;text-align:right">${formatCurrency(snapshot.taxCents)}</td></tr><tr><td style="padding-top:16px;font-size:17px;font-weight:700">Total due</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0"><strong>Terms:</strong> ${escapeHtml(snapshot.terms)}</p><p style="margin:8px 0 0"><strong>Payment method:</strong> ${escapeHtml(snapshot.paymentMethod)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}${bankPaymentHtml}<p style="margin:24px 0 0;color:${emailPalette.muted};font-size:13px">${escapeHtml(boundaryCopy)}</p>`;
+  const outsidePaymentHtml = snapshot.outsidePaymentInstructions
+    ? `<p style="margin:14px 0 0"><strong>Other payment instructions:</strong> ${escapeHtml(snapshot.outsidePaymentInstructions)}</p>`
+    : "";
+  const boundaryCopy = [
+    snapshot.bankPaymentUrl ? "Bank payment is handled by Stripe for the sender. RIVT does not hold or protect job funds." : "",
+    snapshot.outsidePaymentInstructions ? "Other payment is arranged directly with the sender." : "",
+    "Reply to this email with any questions.",
+  ].filter(Boolean).join(" ");
+  const body = `<p style="margin:0 0 16px">Hi ${escapeHtml(snapshot.recipientName)},</p><p style="margin:0 0 6px"><strong>${escapeHtml(snapshot.senderName)}</strong> sent you an invoice for ${escapeHtml(snapshot.workLabel)}.</p>${snapshot.issueDate ? `<p style="margin:0;color:${emailPalette.muted}">Invoice date: ${escapeHtml(snapshot.issueDate)}</p>` : ""}${snapshot.dueDate ? `<p style="margin:4px 0 16px;color:${emailPalette.muted}">Due date: ${escapeHtml(snapshot.dueDate)}</p>` : ""}<table role="presentation" width="100%" style="border-collapse:collapse;margin:18px 0">${lineRows}<tr><td style="padding-top:12px">Subtotal</td><td style="padding-top:12px;text-align:right">${formatCurrency(snapshot.subtotalCents)}</td></tr><tr><td style="padding-top:8px">Tax</td><td style="padding-top:8px;text-align:right">${formatCurrency(snapshot.taxCents)}</td></tr><tr><td style="padding-top:16px;font-size:17px;font-weight:700">Total due</td><td style="padding-top:16px;text-align:right;font-size:20px;font-weight:800">${formatCurrency(snapshot.totalCents)}</td></tr></table><p style="margin:18px 0 0"><strong>Terms:</strong> ${escapeHtml(snapshot.terms)}</p><p style="margin:8px 0 0"><strong>Payment options:</strong> ${escapeHtml(snapshot.paymentMethod)}</p>${snapshot.note ? `<p style="margin:12px 0 0"><strong>Note:</strong> ${escapeHtml(snapshot.note)}</p>` : ""}${bankPaymentHtml}${outsidePaymentHtml}<p style="margin:24px 0 0;color:${emailPalette.muted};font-size:13px">${escapeHtml(boundaryCopy)}</p>`;
   const html = documentEmailShell({
     brand: snapshot.brand,
     documentType: "Invoice",
@@ -736,4 +772,6 @@ export function registerToolRecordRoutes({
 export const toolRecordInternals = {
   expenseCsv,
   hasActiveProEntitlement,
+  invoiceDeliverySnapshot,
+  invoiceEmailContent,
 };

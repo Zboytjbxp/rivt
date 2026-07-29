@@ -2862,6 +2862,36 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   directly passing affected suites are claimed. No deployment evidence is
   claimed.
 
+## Traceability Addendum - 2026-07-28 Customer Documents and Contact Import
+
+- `GA-UX-003` gains one canonical contact-ingestion model: Contacts supports
+  user-selected device people plus complete CSV/vCard migration, while
+  Estimate and Invoice reuse a one-contact shortcut instead of duplicating an
+  address-book manager inside every form.
+- `GA-DATA-001` retains one account-owned identity: every imported person is
+  written through the authenticated Contacts API, exact existing matches gain
+  or reactivate the requested relationship, and no device-only or
+  document-only customer store is introduced.
+- `GA-UX-003` gains truthful customer-document delivery: one `Send` action
+  exposes real server email, a user-controlled device text draft, or email
+  followed by a text draft. Invoice may offer bank payment, exact
+  sender-provided instructions, or both; the recipient chooses among the
+  options actually printed and delivered.
+- `GA-UX-005` gains payment and branding honesty: the server refuses a bank
+  option without a current Stripe payment link and refuses direct payment
+  without usable instructions. Documents render only a real uploaded logo or
+  a clean text letterhead, never generated initials presented as branding.
+- `GA-UX-006` gains rendered desktop, 390px, and compact-phone evidence for
+  unclipped Estimate/Invoice action docks, independent payment choices,
+  customer previews, the accessible Send sheet, and the Contacts import
+  privacy boundary.
+- Requirement maturity does not change. Local evidence includes production
+  build, application lint, 122 unit/frontend tests, all 22 serial PostgreSQL
+  integration suites, fail-closed authentication, Jobs/discovery and offline
+  recovery E2E, rendered Tools/mobile-action QA, diff integrity, and a
+  zero-vulnerability production dependency audit. Production deployment is
+  pending.
+
 ## Traceability Addendum - 2026-07-26 Document Trust and Resume
 
 - `GA-UX-003` gains reload-safe document continuity: account-owned Estimate

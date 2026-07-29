@@ -2573,6 +2573,17 @@
   align-items: center;
 }
 
+.v2-invoice-summary-panel .v2-tool-breakdown div {
+  grid-template-columns: minmax(0, 0.38fr) minmax(0, 0.62fr);
+}
+
+.v2-invoice-summary-panel .v2-tool-breakdown strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  line-height: 1.25;
+}
+
 .v2-tool-action-row {
   display: flex;
   flex-wrap: wrap;
@@ -2681,8 +2692,7 @@
   min-width: 0;
 }
 
-.v2-document-letterhead > img,
-.v2-document-logo-fallback {
+.v2-document-letterhead > img {
   display: grid;
   width: 58px;
   height: 48px;
@@ -2691,17 +2701,11 @@
   border: 1px solid var(--v2-document-border);
   border-radius: 6px;
   background: var(--v2-document-bg);
-}
-
-.v2-document-letterhead > img {
   padding: 5px;
 }
 
-.v2-document-logo-fallback {
-  background: var(--v2-accent-fill);
-  color: var(--v2-on-accent);
-  font-size: calc(17px * var(--v2-text-scale));
-  font-weight: var(--v2-weight-display);
+.v2-document-letterhead.has-text-only {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .v2-document-letterhead > div {
@@ -2736,8 +2740,7 @@
   border-bottom-width: 1px;
 }
 
-.v2-invoice-print-preview.is-template-compact .v2-document-letterhead > img,
-.v2-invoice-print-preview.is-template-compact .v2-document-logo-fallback {
+.v2-invoice-print-preview.is-template-compact .v2-document-letterhead > img {
   width: 46px;
   height: 38px;
 }
@@ -2868,6 +2871,108 @@
   color: var(--v2-text-muted);
   font-size: calc(12px * var(--v2-text-scale));
   line-height: 1.4;
+}
+
+.v2-document-style-status a {
+  color: var(--v2-accent-text);
+  font-weight: 750;
+  text-underline-offset: 2px;
+}
+
+.v2-document-send-backdrop {
+  position: fixed;
+  z-index: var(--v2-z-dialog);
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  background: var(--v2-scrim);
+}
+
+.v2-document-send-sheet {
+  display: grid;
+  width: min(100%, 34rem);
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-lg);
+  background: var(--v2-surface-raised);
+  box-shadow: var(--v2-shadow-md);
+}
+
+.v2-document-send-sheet > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.v2-document-send-sheet > header > div,
+.v2-document-send-options > * > span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.v2-document-send-sheet > header strong {
+  color: var(--v2-text);
+  font-size: var(--v2-text-lg);
+}
+
+.v2-document-send-sheet > header small,
+.v2-document-send-sheet > p,
+.v2-document-send-options small {
+  color: var(--v2-text-muted);
+  line-height: 1.4;
+}
+
+.v2-document-send-sheet > header > button {
+  display: inline-flex;
+  flex: 0 0 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  color: var(--v2-text-muted);
+}
+
+.v2-document-send-options {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-document-send-options > button,
+.v2-document-send-options > a {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 68px;
+  padding: 12px;
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  background: var(--v2-surface-muted);
+  color: var(--v2-text);
+  text-align: left;
+  text-decoration: none;
+}
+
+.v2-document-send-options > button:hover:not(:disabled),
+.v2-document-send-options > a:not([aria-disabled="true"]):hover {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+}
+
+.v2-document-send-options > button:disabled,
+.v2-document-send-options > a[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.v2-document-send-sheet > p {
+  margin: 0;
+  font-size: var(--v2-text-sm);
 }
 
 .v2-invoice-preview-meta {
@@ -3966,6 +4071,24 @@
   .v2-tool-action-row button,
   .v2-tool-summary-panel > button {
     width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .v2-invoice-workbench.is-review .v2-tool-action-dock,
+  .v2-estimate-workbench .v2-tool-action-dock.is-review {
+    grid-template-columns: 48px minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .v2-invoice-workbench.is-review .v2-tool-action-dock > span,
+  .v2-estimate-workbench .v2-tool-action-dock.is-review > span {
+    display: none;
+  }
+
+  .v2-invoice-workbench.is-review .v2-tool-action-dock > button,
+  .v2-estimate-workbench .v2-tool-action-dock.is-review > button {
+    min-width: 0;
+    padding-inline: 8px;
   }
 }
 

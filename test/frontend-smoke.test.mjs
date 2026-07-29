@@ -195,6 +195,69 @@ test("contact CSV import preserves multi-role identities and skips empty rows", 
   assert.match(exported, /"morgan@example\.test"/);
 });
 
+test("contact vCard import preserves selected details and applies the intended relationship", async () => {
+  const { parseContactsVCard } = await loadModule("/src/features/contacts/contact-import.ts");
+  const parsed = parseContactsVCard(
+    "BEGIN:VCARD\r\n"
+    + "VERSION:3.0\r\n"
+    + "N:Rivera;Ana;;;\r\n"
+    + "FN:Ana Rivera\r\n"
+    + "ORG:Rivera Electric\r\n"
+    + "EMAIL;TYPE=WORK:ANA@EXAMPLE.TEST\r\n"
+    + "TEL;TYPE=CELL:+1 904 555 0124\r\n"
+    + "ADR;TYPE=WORK:;;6563 Ector Place;Jacksonville;FL;32211;US\r\n"
+    + "END:VCARD\r\n"
+    + "BEGIN:VCARD\r\nVERSION:3.0\r\nEND:VCARD\r\n",
+    "customer",
+  );
+
+  assert.equal(parsed.contacts.length, 1);
+  assert.equal(parsed.skipped, 1);
+  assert.equal(parsed.contacts[0].name, "Ana Rivera");
+  assert.equal(parsed.contacts[0].company, "Rivera Electric");
+  assert.deepEqual(parsed.contacts[0].roles.map(({ role }) => role), ["customer"]);
+  assert.equal(parsed.contacts[0].methods[0].value, "ana@example.test");
+  assert.match(parsed.contacts[0].addresses[0].address, /Jacksonville, FL, 32211/);
+});
+
+test("device contact picker imports only the contacts and fields the user selects", async () => {
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  let requestedProperties = [];
+  let requestedMultiple = null;
+  Object.defineProperty(globalThis, "navigator", {
+    configurable: true,
+    value: {
+      contacts: {
+        getProperties: async () => ["name", "email", "tel", "address"],
+        select: async (properties, options) => {
+          requestedProperties = properties;
+          requestedMultiple = options.multiple;
+          return [{
+            name: ["Jordan Miller"],
+            email: ["JORDAN@EXAMPLE.TEST"],
+            tel: ["+1 904 555 0199"],
+            address: [{ addressLine: ["100 Billing Lane"], city: "Jacksonville", region: "FL" }],
+          }];
+        },
+      },
+    },
+  });
+  try {
+    const { deviceContactPickerSupported, pickDeviceContacts } = await loadModule("/src/features/contacts/contact-import.ts");
+    assert.equal(deviceContactPickerSupported(), true);
+    const contacts = await pickDeviceContacts({ multiple: true, role: "customer" });
+    assert.deepEqual(requestedProperties, ["name", "email", "tel", "address"]);
+    assert.equal(requestedMultiple, true);
+    assert.equal(contacts.length, 1);
+    assert.equal(contacts[0].name, "Jordan Miller");
+    assert.equal(contacts[0].methods[0].value, "jordan@example.test");
+    assert.equal(contacts[0].roles[0].role, "customer");
+  } finally {
+    if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+    else delete globalThis.navigator;
+  }
+});
+
 test("only account-owned estimate and invoice records receive document deep links", async () => {
   const { linkedRecordTypeForTool } = await loadModule("/src/features/tools/tool-record-links.ts");
 

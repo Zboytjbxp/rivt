@@ -663,7 +663,9 @@ if (!testDatabaseUrl) {
           dueDate: "2026-07-31",
           customerNote: "Thank you for your business.",
           terms: "Due on completion",
-          paymentMethod: "Direct payment",
+          paymentMethod: "Secure bank payment or Pay by check to RIVT Cabinet Co.",
+          paymentOptions: { bank: true, outside: true },
+          outsidePaymentInstructions: "Pay by check to RIVT Cabinet Co.",
           payTo: "RIVT Cabinet Co.",
           documentFingerprint: "invoice-fingerprint-one",
           customerLines: [
@@ -745,7 +747,8 @@ if (!testDatabaseUrl) {
     assert.match(deliveredInvoice.text, /Invoice date: 2026-07-14/);
     assert.match(deliveredInvoice.text, /Due date: 2026-07-31/);
     assert.match(deliveredInvoice.text, /Thank you for your business/);
-    assert.match(deliveredInvoice.text, /Payment method: Secure bank payment/);
+    assert.match(deliveredInvoice.text, /Payment options: Secure bank payment or Pay by check to RIVT Cabinet Co\./);
+    assert.match(deliveredInvoice.text, /Other payment instructions: Pay by check to RIVT Cabinet Co\./);
     assert.match(deliveredInvoice.text, new RegExp(`https://rivt\\.pro/pay/${toolPaymentRequestId}`));
     assert.match(deliveredInvoice.html, />Pay from a US bank account</);
     assert.doesNotMatch(deliveredInvoice.html, /checkout\.stripe\.com/);

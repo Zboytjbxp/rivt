@@ -1264,8 +1264,7 @@
   gap: 8px !important;
 }
 
-.v2-contact-header-actions > button,
-.v2-contact-import-action {
+.v2-contact-header-actions > button {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
@@ -1279,6 +1278,113 @@
   font: inherit;
   font-weight: var(--v2-weight-bold);
   cursor: pointer;
+}
+
+.v2-contact-import-backdrop {
+  align-items: flex-end;
+  background: var(--v2-scrim);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 16px;
+  position: fixed;
+  z-index: var(--v2-z-dialog);
+}
+
+.v2-contact-import-sheet {
+  background: var(--v2-surface-raised);
+  border: 1px solid var(--v2-border-strong);
+  border-radius: var(--v2-radius-lg);
+  box-shadow: var(--v2-shadow-md);
+  display: grid;
+  gap: 16px;
+  max-width: 34rem;
+  padding: 18px;
+  width: 100%;
+}
+
+.v2-contact-import-sheet > header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.v2-contact-import-sheet > header > div,
+.v2-contact-import-choices > button > span,
+.v2-contact-import-file > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.v2-contact-import-sheet > header strong {
+  color: var(--v2-text);
+  font-size: var(--v2-text-lg);
+}
+
+.v2-contact-import-sheet small,
+.v2-contact-import-sheet > p {
+  color: var(--v2-text-muted);
+  line-height: 1.45;
+}
+
+.v2-contact-import-sheet > p {
+  margin: 0;
+  max-width: 58ch;
+}
+
+.v2-contact-import-sheet > header > button {
+  align-items: center;
+  border: 0;
+  color: var(--v2-text-muted);
+  display: inline-flex;
+  flex: 0 0 44px;
+  height: 44px;
+  justify-content: center;
+}
+
+.v2-contact-import-choices {
+  display: grid;
+  gap: 8px;
+}
+
+.v2-contact-import-choices > button,
+.v2-contact-import-file {
+  align-items: center;
+  background: var(--v2-surface-muted);
+  border: 1px solid var(--v2-border);
+  border-radius: var(--v2-radius-md);
+  color: var(--v2-text);
+  cursor: pointer;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  min-height: 68px;
+  padding: 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.v2-contact-import-choices > button:hover,
+.v2-contact-import-file:hover {
+  border-color: var(--v2-accent);
+  background: var(--v2-accent-soft);
+}
+
+.v2-contact-import-file input {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+.v2-contact-import-file:has(input:focus-visible) {
+  outline: 3px solid var(--v2-focus-ring);
+  outline-offset: 2px;
 }
 
 .v2-contact-directory > .v2-client-sync-note {
@@ -1508,21 +1614,6 @@
   font: inherit;
   font-size: var(--v2-text-xs);
   cursor: pointer;
-}
-
-.v2-contact-import-action input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-.v2-contact-import-action:has(input:focus-visible) {
-  outline: 3px solid var(--v2-focus);
-  outline-offset: 2px;
 }
 
 .v2-contact-link-form {
@@ -1793,8 +1884,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .v2-contact-header-actions > button,
-  .v2-contact-import-action {
+  .v2-contact-header-actions > button {
     justify-content: center;
   }
 
@@ -1803,13 +1893,8 @@
     grid-row: 2;
   }
 
-  .v2-contact-import-action {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
   .v2-contact-header-actions > button:not(:last-child) {
-    grid-column: 2;
+    grid-column: auto;
     grid-row: 1;
   }
 

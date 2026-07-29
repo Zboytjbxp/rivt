@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Banknote, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, FileText, LoaderCircle, Mail, MessageSquare, Plus, Save, Trash2 } from "lucide-react";
+import { Banknote, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, FileText, LoaderCircle, MessageSquare, Plus, Save, Send, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
 import { CustomerPicker } from "../clients/CustomerPicker";
@@ -31,6 +31,7 @@ import {
 } from "./project-api";
 import { toolContextLabel, toolContextRecordFields, toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
 import { DocumentBrandHeader, DocumentStylePicker } from "./DocumentBrandControls";
+import { DocumentSendSheet } from "./DocumentSendSheet";
 import {
   defaultDocumentBrand,
   fetchDocumentBrand,
@@ -64,6 +65,8 @@ interface InvoiceTemplate {
   payTo: string;
   terms: string;
   paymentMethod: string;
+  paymentOptions?: InvoicePaymentOptions;
+  outsidePaymentInstructions?: string;
   recipientEmail: string;
   recipientPhone: string;
   taxPct: number;
@@ -79,8 +82,14 @@ function normalizePaymentMethod(value: string | undefined) {
   return /^direct payment$/i.test(method) ? "" : method;
 }
 
-function paymentChoiceFromMethod(value: string | undefined): "bank" | "outside" {
-  return /bank payment|ach/i.test(value ?? "") ? "bank" : "outside";
+interface InvoicePaymentOptions {
+  bank: boolean;
+  outside: boolean;
+}
+
+function paymentOptionsFromMethod(value: string | undefined): InvoicePaymentOptions {
+  const bank = /bank payment|ach/i.test(value ?? "");
+  return { bank, outside: !bank };
 }
 
 interface InvoiceDraftSnapshot {
@@ -93,6 +102,8 @@ interface InvoiceDraftSnapshot {
   payTo: string;
   terms: string;
   paymentMethod: string;
+  paymentOptions?: InvoicePaymentOptions;
+  outsidePaymentInstructions?: string;
   recipientEmail: string;
   recipientPhone: string;
   taxPct: number;
@@ -170,6 +181,7 @@ interface InvoicePrefs {
   payTo: string;
   terms: string;
   paymentMethod: string;
+  paymentOptions: InvoicePaymentOptions;
   taxPct: number;
 }
 
@@ -178,6 +190,7 @@ function readInvoicePrefs(): InvoicePrefs {
     payTo: "",
     terms: "Due on completion",
     paymentMethod: "",
+    paymentOptions: { bank: false, outside: true },
     taxPct: 0,
   };
   try {
@@ -188,6 +201,11 @@ function readInvoicePrefs(): InvoicePrefs {
       payTo: typeof parsed.payTo === "string" ? parsed.payTo : fallback.payTo,
       terms: typeof parsed.terms === "string" && parsed.terms.trim() ? parsed.terms : fallback.terms,
       paymentMethod: typeof parsed.paymentMethod === "string" && parsed.paymentMethod.trim() ? parsed.paymentMethod : fallback.paymentMethod,
+      paymentOptions: parsed.paymentOptions
+        && typeof parsed.paymentOptions.bank === "boolean"
+        && typeof parsed.paymentOptions.outside === "boolean"
+        ? parsed.paymentOptions
+        : paymentOptionsFromMethod(typeof parsed.paymentMethod === "string" ? parsed.paymentMethod : ""),
       taxPct: clampNumber(Number(parsed.taxPct), fallback.taxPct),
     };
   } catch {
@@ -298,9 +316,11 @@ export function InvoiceDraftTool({
   const initialPaymentMethod = normalizePaymentMethod(
     estimateDraft?.paymentMethod ?? initialDraft.paymentMethod ?? invoicePrefs.paymentMethod,
   );
-  const [paymentMethod, setPaymentMethod] = useState(initialPaymentMethod);
-  const [paymentChoice, setPaymentChoice] = useState<"bank" | "outside">(
-    paymentChoiceFromMethod(initialPaymentMethod),
+  const [paymentMethod, setPaymentMethod] = useState(
+    /bank payment|ach/i.test(initialPaymentMethod) ? "" : initialPaymentMethod,
+  );
+  const [paymentOptions, setPaymentOptions] = useState<InvoicePaymentOptions>(
+    initialDraft.paymentOptions ?? paymentOptionsFromMethod(initialPaymentMethod),
   );
   const [recipientEmail, setRecipientEmail] = useState(estimateDraft?.recipientEmail ?? initialDraft.recipientEmail ?? "");
   const [recipientPhone, setRecipientPhone] = useState(initialDraft.recipientPhone ?? "");
@@ -333,6 +353,7 @@ export function InvoiceDraftTool({
   const [toolPaymentRequest, setToolPaymentRequest] = useState<ProjectInvoiceOnlinePayment | null>(null);
   const [connectBusy, setConnectBusy] = useState(false);
   const [invoiceEmailBusy, setInvoiceEmailBusy] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethodDraft, setPaymentMethodDraft] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
@@ -376,9 +397,10 @@ export function InvoiceDraftTool({
       ? toolPaymentRequest
       : null);
   const bankPaymentUrl = activeBankPayment?.paymentUrl ?? activeBankPayment?.checkoutUrl ?? null;
-  const customerPaymentMethod = paymentChoice === "bank"
-    ? bankPaymentMethod
-    : paymentMethod.trim();
+  const customerPaymentMethod = [
+    paymentOptions.bank ? bankPaymentMethod : "",
+    paymentOptions.outside ? paymentMethod.trim() : "",
+  ].filter(Boolean).join(" or ");
   const documentCustomerSnapshot = customerId && selectedCustomerSnapshot
     ? {
         ...selectedCustomerSnapshot,
@@ -396,6 +418,7 @@ export function InvoiceDraftTool({
     payTo: payTo.trim(),
     terms: terms.trim(),
     paymentMethod: customerPaymentMethod,
+    paymentOptions,
     recipientEmail: recipientEmail.trim().toLowerCase(),
     recipientPhone: recipientPhone.trim(),
     customerId,
@@ -448,13 +471,16 @@ export function InvoiceDraftTool({
     `Tax: ${currency(tax)}`,
     `Total due: ${currency(total)}`,
     `Terms: ${terms}`,
-    `Payment method: ${customerPaymentMethod || "Not entered"}`,
+    `Payment options: ${customerPaymentMethod || "Choose before sending"}`,
     customerNote.trim() ? `Note: ${customerNote.trim()}` : "",
     bankPaymentUrl ? `Pay securely from a US bank account: ${bankPaymentUrl}` : "",
-    paymentChoice === "bank"
+    paymentOptions.bank
       ? "Bank payment is handled by Stripe for the sender. RIVT does not hold job funds."
-      : "Payment is arranged directly with the sender using the instructions above.",
-  ].filter(Boolean).join("\n"), [bankPaymentUrl, billTo, customerNote, customerPaymentMethod, documentBrand.businessName, dueDate, invoiceNumber, issueDate, lines, payTo, paymentChoice, subtotal, tax, terms, total, workContext]);
+      : "",
+    paymentOptions.outside
+      ? "Other payment is arranged directly with the sender using the instructions above."
+      : "",
+  ].filter(Boolean).join("\n"), [bankPaymentUrl, billTo, customerNote, customerPaymentMethod, documentBrand.businessName, dueDate, invoiceNumber, issueDate, lines, payTo, paymentOptions, subtotal, tax, terms, total, workContext]);
   const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(
     `RIVT invoice ${invoiceNumber}: ${currency(total)} due. ${terms}. ${customerPaymentMethod || "Contact the sender for payment instructions"}.${bankPaymentUrl ? ` Pay: ${bankPaymentUrl}` : ""}`,
   )}`;
@@ -485,8 +511,7 @@ export function InvoiceDraftTool({
         if (!cancelled) {
           setToolPaymentRequest(payment);
           if (payment && ["created", "open", "processing"].includes(payment.status)) {
-            setPaymentChoice("bank");
-            setPaymentMethod(bankPaymentMethod);
+            setPaymentOptions((current) => ({ ...current, bank: true }));
           }
         }
       })
@@ -518,12 +543,13 @@ export function InvoiceDraftTool({
         payTo,
         terms,
         paymentMethod,
+        paymentOptions,
         taxPct,
       }));
     } catch {
       // Invoice defaults are a convenience only; templates and manual entry still work.
     }
-  }, [paymentMethod, payTo, taxPct, terms]);
+  }, [paymentMethod, paymentOptions, payTo, taxPct, terms]);
 
   useEffect(() => {
     const snapshot: InvoiceDraftSnapshot = {
@@ -536,6 +562,7 @@ export function InvoiceDraftTool({
       payTo,
       terms,
       paymentMethod,
+      paymentOptions,
       recipientEmail,
       recipientPhone,
       taxPct,
@@ -552,7 +579,7 @@ export function InvoiceDraftTool({
         setDraftSaveMessage("This draft could not be saved on this device. Keep this page open and copy your work.");
       });
     }
-  }, [billTo, customerId, customerNote, dueDate, invoiceNumber, issueDate, lines, localDraftStorageKey, paymentMethod, payTo, recipientEmail, recipientPhone, recordLocalId, selectedCustomerSnapshot, taxPct, templateName, terms]);
+  }, [billTo, customerId, customerNote, dueDate, invoiceNumber, issueDate, lines, localDraftStorageKey, paymentMethod, paymentOptions, payTo, recipientEmail, recipientPhone, recordLocalId, selectedCustomerSnapshot, taxPct, templateName, terms]);
 
   useEffect(() => {
     let cancelled = false;
@@ -661,6 +688,7 @@ export function InvoiceDraftTool({
       payTo: "",
       terms,
       paymentMethod,
+      paymentOptions,
       recipientEmail: "",
       recipientPhone: "",
       taxPct,
@@ -675,8 +703,8 @@ export function InvoiceDraftTool({
     if (template.payTo.trim()) setPayTo(template.payTo);
     if (template.terms.trim()) setTerms(template.terms);
     const nextPaymentMethod = normalizePaymentMethod(template.paymentMethod);
-    setPaymentMethod(nextPaymentMethod);
-    setPaymentChoice(paymentChoiceFromMethod(nextPaymentMethod));
+    setPaymentMethod(/bank payment|ach/i.test(nextPaymentMethod) ? "" : nextPaymentMethod);
+    setPaymentOptions(template.paymentOptions ?? paymentOptionsFromMethod(nextPaymentMethod));
     setTaxPct(template.taxPct);
     setLines(template.lines.length ? template.lines.map((line) => ({ ...line, id: crypto.randomUUID() })) : [{ id: crypto.randomUUID(), description: "", qty: 1, rate: 0, kind: "other" }]);
     setTemplateNotice(`Loaded ${template.name}. Customer and invoice identity were kept separate.`);
@@ -700,8 +728,8 @@ export function InvoiceDraftTool({
     setPayTo(latestPrefs.payTo);
     setTerms(latestPrefs.terms);
     const nextPaymentMethod = normalizePaymentMethod(latestPrefs.paymentMethod);
-    setPaymentMethod(nextPaymentMethod);
-    setPaymentChoice(paymentChoiceFromMethod(nextPaymentMethod));
+    setPaymentMethod(/bank payment|ach/i.test(nextPaymentMethod) ? "" : nextPaymentMethod);
+    setPaymentOptions(latestPrefs.paymentOptions);
     setRecipientEmail("");
     setRecipientPhone("");
     setCustomerId(null);
@@ -756,6 +784,8 @@ export function InvoiceDraftTool({
       payTo,
       terms,
       paymentMethod: methodOverride,
+      paymentOptions,
+      outsidePaymentInstructions: paymentMethod.trim(),
       recipientEmail,
       recipientPhone,
       taxPct,
@@ -906,11 +936,14 @@ export function InvoiceDraftTool({
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
     try {
-      setPaymentChoice("bank");
-      setPaymentMethod(bankPaymentMethod);
+      setPaymentOptions((current) => ({ ...current, bank: true }));
       let savedProjectInvoice = projectInvoice;
       if (activeWorkId && !savedProjectInvoice) {
-        const saved = await createProjectInvoice(activeWorkId, projectInvoiceInput(bankPaymentMethod));
+        const offeredMethods = [
+          bankPaymentMethod,
+          paymentOptions.outside ? paymentMethod.trim() : "",
+        ].filter(Boolean).join(" or ");
+        const saved = await createProjectInvoice(activeWorkId, projectInvoiceInput(offeredMethods));
         setProjectInvoice(saved);
         setPaymentAmount((saved.balanceCents / 100).toFixed(2));
         savedProjectInvoice = saved;
@@ -926,7 +959,11 @@ export function InvoiceDraftTool({
           ],
         } : current);
       } else {
-        const record = await upsertToolRecord(invoiceToolRecordInput(bankPaymentMethod));
+        const offeredMethods = [
+          bankPaymentMethod,
+          paymentOptions.outside ? paymentMethod.trim() : "",
+        ].filter(Boolean).join(" or ");
+        const record = await upsertToolRecord(invoiceToolRecordInput(offeredMethods));
         if (!record) {
           throw new Error("Save this invoice to your RIVT account before creating its payment link.");
         }
@@ -1043,51 +1080,96 @@ export function InvoiceDraftTool({
     setStep("review");
   }
 
-  async function emailInvoice() {
-    const customerError = validateCustomerStep(true);
+  function openInvoiceSendOptions() {
+    const customerError = validateCustomerStep();
     if (customerError) {
       setStep("customer");
       setValidationMessage(customerError);
-      setDraftSaveMessage(customerError);
-      setDraftSaveState("error");
       return;
+    }
+    if (!isValidEmail(recipientEmail) && !recipientPhone.trim()) {
+      setStep("customer");
+      setValidationMessage("Add a customer email or phone number before sending.");
+      return;
+    }
+    if (!paymentOptions.bank && !paymentOptions.outside) {
+      setProjectInvoiceError("Offer at least one payment option before sending.");
+      return;
+    }
+    if (paymentOptions.outside && !paymentMethod.trim()) {
+      setProjectInvoiceError("Add clear payment instructions so the customer knows how and where to pay.");
+      return;
+    }
+    if (paymentOptions.bank && !connectStatus?.ready) {
+      setProjectInvoiceError("Finish Stripe bank-payment setup before sending an invoice with a pay button.");
+      return;
+    }
+    if (paymentOptions.bank && !bankPaymentUrl) {
+      setProjectInvoiceError("Create the secure bank-payment link before opening delivery options.");
+      return;
+    }
+    if (paymentOptions.bank && activeBankPayment?.status === "processing") {
+      setProjectInvoiceError("This bank payment is already processing. Do not send a second payment request.");
+      return;
+    }
+    setProjectInvoiceError("");
+    setSendOpen(true);
+  }
+
+  async function emailInvoice(): Promise<boolean> {
+    const customerError = validateCustomerStep(true);
+    if (customerError) {
+      setSendOpen(false);
+      setStep("customer");
+      setValidationMessage(customerError);
+      setDraftSaveMessage(customerError);
+      return false;
     }
     if (!totalCents) {
+      setSendOpen(false);
       setStep("items");
       setDraftSaveMessage("Add at least one priced line before sending.");
-      return;
+      return false;
     }
-    if (paymentChoice === "outside" && !paymentMethod.trim()) {
+    if (!paymentOptions.bank && !paymentOptions.outside) {
+      setSendOpen(false);
+      setStep("review");
+      setProjectInvoiceError("Offer at least one payment option before sending.");
+      return false;
+    }
+    if (paymentOptions.outside && !paymentMethod.trim()) {
+      setSendOpen(false);
       setStep("review");
       setProjectInvoiceError("Add clear payment instructions so the customer knows how and where to pay.");
       setDraftSaveMessage("Payment instructions are still required.");
-      setDraftSaveState("error");
-      return;
+      return false;
     }
-    if (paymentChoice === "bank" && !connectStatus?.ready) {
+    if (paymentOptions.bank && !connectStatus?.ready) {
+      setSendOpen(false);
       setProjectInvoiceError("Finish Stripe bank-payment setup before emailing this invoice with a pay button.");
-      return;
+      return false;
     }
     setInvoiceEmailBusy(true);
     let preparedBankPayment = activeBankPayment;
-    if (paymentChoice === "bank" && !bankPaymentUrl) {
+    if (paymentOptions.bank && !bankPaymentUrl) {
       preparedBankPayment = await createBankPaymentLink();
       if (!preparedBankPayment?.paymentUrl && !preparedBankPayment?.checkoutUrl) {
+        setSendOpen(false);
         setInvoiceEmailBusy(false);
-        return;
+        return false;
       }
     }
-    if (paymentChoice === "bank" && preparedBankPayment?.status === "processing") {
+    if (paymentOptions.bank && preparedBankPayment?.status === "processing") {
+      setSendOpen(false);
       setProjectInvoiceError("This bank payment is already processing. Do not send a second payment request.");
       setInvoiceEmailBusy(false);
-      return;
+      return false;
     }
-    const record = await saveInvoiceDraft(
-      paymentChoice === "bank" ? bankPaymentMethod : paymentMethod.trim(),
-    );
+    const record = await saveInvoiceDraft(customerPaymentMethod);
     if (!record) {
+      setSendOpen(false);
       setInvoiceEmailBusy(false);
-      return;
+      return false;
     }
     try {
       const sent = await sendInvoiceByLocalId(record.localId);
@@ -1097,21 +1179,19 @@ export function InvoiceDraftTool({
       setLastSentFingerprint(documentFingerprint);
       setDraftSaveMessage(`Invoice emailed to ${recipient}.`);
       setDraftSaveState("saved");
+      return true;
     } catch (error) {
+      setSendOpen(false);
       setDraftSaveMessage(error instanceof Error ? error.message : "RIVT could not send the invoice.");
       setDraftSaveState("error");
+      return false;
     } finally {
       setInvoiceEmailBusy(false);
     }
   }
 
-  function choosePaymentPath(next: "bank" | "outside") {
-    setPaymentChoice(next);
-    if (next === "bank") {
-      setPaymentMethod(bankPaymentMethod);
-    } else if (paymentChoice === "bank" || paymentMethod === bankPaymentMethod) {
-      setPaymentMethod("");
-    }
+  function togglePaymentOption(option: keyof InvoicePaymentOptions) {
+    setPaymentOptions((current) => ({ ...current, [option]: !current[option] }));
     setProjectInvoiceError("");
   }
 
@@ -1138,58 +1218,40 @@ export function InvoiceDraftTool({
             <header>
               <div>
                 <span>Customer action</span>
-                <h3 id="invoice-payment-path-title">How should the customer pay?</h3>
+                <h3 id="invoice-payment-path-title">Payment options to offer</h3>
+                <small>The customer chooses from the options you include.</small>
               </div>
               {bankPaymentUrl ? <strong><Check size={16} />Pay link ready</strong> : null}
             </header>
-            <div
-              className="v2-invoice-payment-options"
-              role="radiogroup"
-              aria-label="Invoice payment method"
-              onKeyDown={(event) => {
-                const next = event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === "End"
-                  ? "outside"
-                  : event.key === "ArrowLeft" || event.key === "ArrowUp" || event.key === "Home"
-                    ? "bank"
-                    : null;
-                if (!next) return;
-                event.preventDefault();
-                choosePaymentPath(next);
-                event.currentTarget.querySelector<HTMLElement>(`[data-payment-choice="${next}"]`)?.focus();
-              }}
-            >
+            <div className="v2-invoice-payment-options" aria-label="Invoice payment options">
               <button
                 type="button"
-                role="radio"
-                data-payment-choice="bank"
-                aria-checked={paymentChoice === "bank"}
-                tabIndex={paymentChoice === "bank" ? 0 : -1}
-                className={paymentChoice === "bank" ? "is-selected" : ""}
-                onClick={() => choosePaymentPath("bank")}
+                role="checkbox"
+                aria-checked={paymentOptions.bank}
+                className={paymentOptions.bank ? "is-selected" : ""}
+                onClick={() => togglePaymentOption("bank")}
               >
                 <Banknote size={20} aria-hidden="true" />
                 <span>
                   <strong>Pay securely by bank</strong>
-                  <small>A pay button is included in the email and invoice.</small>
+                  <small>Include a secure Stripe ACH pay button.</small>
                 </span>
               </button>
               <button
                 type="button"
-                role="radio"
-                data-payment-choice="outside"
-                aria-checked={paymentChoice === "outside"}
-                tabIndex={paymentChoice === "outside" ? 0 : -1}
-                className={paymentChoice === "outside" ? "is-selected" : ""}
-                onClick={() => choosePaymentPath("outside")}
+                role="checkbox"
+                aria-checked={paymentOptions.outside}
+                className={paymentOptions.outside ? "is-selected" : ""}
+                onClick={() => togglePaymentOption("outside")}
               >
                 <MessageSquare size={20} aria-hidden="true" />
                 <span>
-                  <strong>Pay another way</strong>
-                  <small>You provide the exact cash, check, card, or transfer instructions.</small>
+                  <strong>Use my instructions</strong>
+                  <small>Include your cash, check, card, or transfer directions.</small>
                 </span>
               </button>
             </div>
-            {paymentChoice === "bank" ? (
+            {paymentOptions.bank ? (
               <div className="v2-invoice-bank-payment is-primary">
                 <div>
                   <Banknote size={18} aria-hidden="true" />
@@ -1232,7 +1294,8 @@ export function InvoiceDraftTool({
                   </button>
                 ) : null}
               </div>
-            ) : (
+            ) : null}
+            {paymentOptions.outside ? (
               <label className="v2-invoice-payment-instructions">
                 Payment instructions
                 <textarea
@@ -1250,7 +1313,10 @@ export function InvoiceDraftTool({
                 />
                 <small>This exact instruction appears on the invoice and in the email. Do not include private account credentials.</small>
               </label>
-            )}
+            ) : null}
+            {!paymentOptions.bank && !paymentOptions.outside ? (
+              <p className="v2-record-error" role="alert">Choose at least one payment option.</p>
+            ) : null}
             {projectInvoiceNotice ? <p className="v2-record-notice" role="status">{projectInvoiceNotice}</p> : null}
             {projectInvoiceError ? <p className="v2-record-error" role="alert">{projectInvoiceError}</p> : null}
           </section>
@@ -1424,9 +1490,9 @@ export function InvoiceDraftTool({
             label="Invoice appearance"
             value={documentBrand.invoiceStyle}
             onChange={(style) => void changeInvoiceStyle(style)}
-            footer={<small className="v2-document-style-status">{brandMessage} Logo and business details are managed in Profile → Business.</small>}
+            footer={<small className="v2-document-style-status">{brandMessage} <a href="/app/profile/settings?section=business">Customize logo and business details</a>.</small>}
           />
-          <p className="v2-tool-note">Choose bank payment or enter other payment instructions on the final review.</p>
+          <p className="v2-tool-note">Choose the payment options shown to the customer on Review.</p>
           {validationMessage ? <p className="v2-record-error" role="alert">{validationMessage}</p> : null}
         </section> : null}
         {step === "items" ? <div className="v2-invoice-lines" aria-label="Invoice line items">
@@ -1501,28 +1567,7 @@ export function InvoiceDraftTool({
             <div><span>Subtotal</span><strong>{currency(subtotal)}</strong></div>
             <div><span>Tax</span><strong>{currency(tax)}</strong></div>
             <div><span>Terms</span><strong>{terms}</strong></div>
-            <div><span>Method</span><strong>{customerPaymentMethod || "Not selected"}</strong></div>
-          </div>
-          <p className="v2-tool-note">
-            {paymentChoice === "bank"
-              ? "Email includes the secure customer pay button and records delivery."
-              : "Email includes the payment instructions you entered and records delivery."}
-          </p>
-          {!isValidEmail(recipientEmail) ? (
-            <p className="v2-tool-note">Add a valid recipient email in Customer before delivery. Copy and print remain available.</p>
-          ) : null}
-          <div className="v2-invoice-delivery" aria-label="Invoice draft delivery">
-            <a href={recipientPhone ? smsHref : undefined} aria-disabled={!recipientPhone} onClick={(event) => {
-              if (!recipientPhone) {
-                event.preventDefault();
-                setDraftSaveMessage("Add a recipient phone number before opening a text draft.");
-                return;
-              }
-              setDraftSaveMessage("Text draft opened on this device.");
-            }}>
-              <MessageSquare size={15} />
-              Text summary
-            </a>
+            <div><span>Payment options</span><strong>{customerPaymentMethod || "Choose before sending"}</strong></div>
           </div>
         </Panel>
 
@@ -1565,7 +1610,7 @@ export function InvoiceDraftTool({
               </section>
               <footer>
                 {customerNote.trim() ? <p>{customerNote.trim()}</p> : null}
-                {paymentChoice === "bank" ? (
+                {paymentOptions.bank ? (
                   <>
                     <span>Secure bank payment</span>
                     {bankPaymentUrl ? (
@@ -1575,13 +1620,13 @@ export function InvoiceDraftTool({
                     )}
                     <p>Payment is processed by Stripe for {payTo || "the sender"}. RIVT does not hold job funds.</p>
                   </>
-                ) : (
+                ) : null}
+                {paymentOptions.outside ? (
                   <>
                     <span>Payment instructions</span>
-                    <strong>{paymentMethod.trim() || "Not entered"}</strong>
-                    <p>Use the sender's instructions above. RIVT records the invoice but does not collect this payment.</p>
+                    <strong>{paymentMethod.trim() || "Add instructions before sending."}</strong>
                   </>
-                )}
+                ) : null}
                 <small className="v2-document-powered-by">Created with RIVT.</small>
               </footer>
           </article>
@@ -1601,8 +1646,18 @@ export function InvoiceDraftTool({
         </button>
         {step === "items" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")} disabled={totalCents <= 0}><span>Customer</span><ChevronRight size={18} /></button> : null}
         {step === "customer" ? <button type="button" className="v2-primary-button" onClick={openInvoiceReview}><span>Review</span><ChevronRight size={18} /></button> : null}
-        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void emailInvoice()} disabled={invoiceEmailBusy || totalCents <= 0 || !isValidEmail(recipientEmail)}><Mail size={18} />{invoiceEmailBusy ? "Sending" : delivery?.status === "sent" ? "Send update" : paymentChoice === "bank" ? "Send link" : "Email invoice"}</button> : null}
+        {step === "review" ? <button type="button" className="v2-primary-button" onClick={openInvoiceSendOptions} disabled={invoiceEmailBusy || totalCents <= 0}><Send size={18} />Send</button> : null}
       </div>
+      <DocumentSendSheet
+        open={sendOpen}
+        title="invoice"
+        email={recipientEmail}
+        phone={recipientPhone}
+        smsHref={smsHref}
+        busy={invoiceEmailBusy}
+        onClose={() => setSendOpen(false)}
+        onSendEmail={emailInvoice}
+      />
     </div>
   );
 }

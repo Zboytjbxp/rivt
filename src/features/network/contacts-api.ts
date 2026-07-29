@@ -565,7 +565,10 @@ const csvRoleAliases: Record<string, ContactRole> = {
   other: "other",
 };
 
-export function parseContactsCsv(csv: string): { contacts: ContactInput[]; skipped: number } {
+export function parseContactsCsv(
+  csv: string,
+  defaultRole: ContactRole = "other",
+): { contacts: ContactInput[]; skipped: number } {
   const rows = parseCsvRows(csv);
   if (rows.length < 2) return { contacts: [], skipped: Math.max(0, rows.length - 1) };
   const headers = rows[0].map((header) => header.trim().toLowerCase());
@@ -609,7 +612,7 @@ export function parseContactsCsv(csv: string): { contacts: ContactInput[]; skipp
       status: statusIndex >= 0 && row[statusIndex]?.trim().toLowerCase() === "archived"
         ? "archived"
         : "active",
-      roles: roles.length ? roles : [{ role: "other", status: "active", details: {} }],
+      roles: roles.length ? roles : [{ role: defaultRole, status: "active", details: {} }],
       methods,
       addresses: [],
       tags: tagsIndex >= 0

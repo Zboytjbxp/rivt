@@ -20,14 +20,23 @@ import {
   Save,
   Search,
   ShieldCheck,
+  Smartphone,
   Star,
+  Upload,
   UserRound,
   Users,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ProfileSearchResult } from "../../app-shell/types";
-import { Avatar, EmptyState, PageHeader, Panel } from "../../components/ui";
+import {
+  Avatar,
+  DialogBackdrop,
+  DialogSurface,
+  EmptyState,
+  PageHeader,
+  Panel,
+} from "../../components/ui";
 import {
   customerDisplayName,
   emptyClientRecord,
@@ -70,6 +79,11 @@ import {
   listStandaloneProjects,
   type StandaloneProject,
 } from "../tools/standalone-project-api";
+import {
+  deviceContactPickerSupported,
+  parseContactsVCard,
+  pickDeviceContacts,
+} from "../contacts/contact-import";
 import {
   approveWorkReview,
   disputeWorkReview,
@@ -2182,6 +2196,7 @@ function ContactDirectoryView({
   const [linkBusy, setLinkBusy] = useState(false);
   const [inviteBusyId, setInviteBusyId] = useState<string | null>(null);
   const [importBusy, setImportBusy] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -2373,25 +2388,75 @@ function ContactDirectoryView({
   async function importDirectory(file: File) {
     setImportBusy(true);
     setMessage("Checking contact file…");
-    const parsed = parseContactsCsv(await file.text());
-    let created = 0;
-    let duplicates = 0;
-    let failed = parsed.skipped;
-    for (const contact of parsed.contacts) {
-      const result = await createContact(contact);
-      if (result.contact) created += 1;
-      else if (result.duplicateCandidates.length) duplicates += 1;
-      else failed += 1;
+    try {
+      const source = await file.text();
+      const defaultRole = role ?? "other";
+      const parsed = /\.vcf$/i.test(file.name) || /(?:text\/vcard|text\/x-vcard)/i.test(file.type)
+        ? parseContactsVCard(source, defaultRole)
+        : parseContactsCsv(source, defaultRole);
+      let created = 0;
+      let duplicates = 0;
+      let failed = parsed.skipped;
+      for (const contact of parsed.contacts) {
+        const result = await createContact(contact);
+        if (result.contact) created += 1;
+        else if (result.duplicateCandidates.length) duplicates += 1;
+        else failed += 1;
+      }
+      const refreshed = await fetchContacts({ role, status: showArchived ? "all" : "active" });
+      if (refreshed) setContacts(refreshed);
+      setImportOpen(false);
+      setMessage(
+        `Imported ${created} contact${created === 1 ? "" : "s"}.`
+        + (duplicates ? ` Skipped ${duplicates} existing match${duplicates === 1 ? "" : "es"}.` : "")
+        + (failed ? ` ${failed} entr${failed === 1 ? "y needs" : "ies need"} correction.` : ""),
+      );
+    } catch {
+      setMessage("RIVT could not read that contact file. Use a CSV or vCard export and try again.");
+    } finally {
+      setImportBusy(false);
+      if (importInputRef.current) importInputRef.current.value = "";
     }
-    const refreshed = await fetchContacts({ role, status: showArchived ? "all" : "active" });
-    if (refreshed) setContacts(refreshed);
-    setImportBusy(false);
-    if (importInputRef.current) importInputRef.current.value = "";
-    setMessage(
-      `Imported ${created} contact${created === 1 ? "" : "s"}.`
-      + (duplicates ? ` Skipped ${duplicates} existing match${duplicates === 1 ? "" : "es"}.` : "")
-      + (failed ? ` ${failed} row${failed === 1 ? "" : "s"} need correction.` : ""),
-    );
+  }
+
+  async function importFromPhone() {
+    setImportBusy(true);
+    setMessage("Choose the contacts and details you want to share with RIVT.");
+    try {
+      const selected = await pickDeviceContacts({
+        multiple: true,
+        role: role ?? "other",
+      });
+      if (!selected.length) {
+        setImportBusy(false);
+        setMessage("No phone contacts were selected.");
+        return;
+      }
+      let created = 0;
+      let duplicates = 0;
+      let failed = 0;
+      for (const contact of selected) {
+        const result = await createContact(contact);
+        if (result.contact) created += 1;
+        else if (result.duplicateCandidates.length) duplicates += 1;
+        else failed += 1;
+      }
+      const refreshed = await fetchContacts({ role, status: showArchived ? "all" : "active" });
+      if (refreshed) setContacts(refreshed);
+      setImportBusy(false);
+      setImportOpen(false);
+      setMessage(
+        `Imported ${created} contact${created === 1 ? "" : "s"}.`
+        + (duplicates ? ` Skipped ${duplicates} existing match${duplicates === 1 ? "" : "es"}.` : "")
+        + (failed ? ` ${failed} entr${failed === 1 ? "y needs" : "ies need"} correction.` : ""),
+      );
+    } catch (error) {
+      setImportBusy(false);
+      const cancelled = error instanceof DOMException && error.name === "AbortError";
+      setMessage(cancelled
+        ? "Phone contact selection was cancelled."
+        : "RIVT could not open phone contacts. Import a contact file or add a contact manually.");
+    }
   }
 
   const directoryTitle = role ? `${contactRoleLabels[role]} contacts` : "All contacts";
@@ -2414,20 +2479,9 @@ function ContactDirectoryView({
         </div>
         <div className="v2-contact-header-actions">
           {!isDemo ? (
-            <label className="v2-contact-import-action">
-              <input
-                ref={importInputRef}
-                type="file"
-                accept=".csv,text/csv"
-                aria-label="Import contacts from CSV"
-                disabled={importBusy}
-                onChange={(event) => {
-                  const file = event.currentTarget.files?.[0];
-                  if (file) void importDirectory(file);
-                }}
-              />
-              <Plus size={16} /> {importBusy ? "Importing…" : "Import CSV"}
-            </label>
+            <button type="button" onClick={() => setImportOpen(true)} disabled={importBusy}>
+              <Upload size={16} /> {importBusy ? "Importing…" : "Import"}
+            </button>
           ) : null}
           {!isDemo && contacts.length ? (
             <button type="button" onClick={exportDirectory}>
@@ -2442,6 +2496,56 @@ function ContactDirectoryView({
         </div>
       </header>
       <p className="v2-client-sync-note" role="status">{message}</p>
+
+      {importOpen ? (
+        <DialogBackdrop className="v2-contact-import-backdrop" onClose={() => setImportOpen(false)}>
+          <DialogSurface
+            className="v2-contact-import-sheet"
+            labelledBy="contact-import-title"
+            onClose={() => setImportOpen(false)}
+          >
+            <header>
+              <div>
+                <strong id="contact-import-title">Import contacts</strong>
+                <small>Only contacts you choose are saved to your private RIVT account.</small>
+              </div>
+              <button type="button" aria-label="Close contact import" onClick={() => setImportOpen(false)}>
+                <X size={18} />
+              </button>
+            </header>
+            <div className="v2-contact-import-choices">
+              {deviceContactPickerSupported() ? (
+                <button type="button" onClick={() => void importFromPhone()} disabled={importBusy}>
+                  <Smartphone size={20} />
+                  <span>
+                    <strong>Choose from phone</strong>
+                    <small>Select one or several contacts in your phone's private picker.</small>
+                  </span>
+                </button>
+              ) : null}
+              <label className="v2-contact-import-file">
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept=".csv,.vcf,text/csv,text/vcard,text/x-vcard"
+                  aria-label="Import contacts from CSV or vCard"
+                  disabled={importBusy}
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    if (file) void importDirectory(file);
+                  }}
+                />
+                <FileText size={20} />
+                <span>
+                  <strong>Import all from a contact file</strong>
+                  <small>Choose a CSV or vCard export for a complete work-phone address book.</small>
+                </span>
+              </label>
+            </div>
+            <p>RIVT cannot read every phone contact automatically. Your phone or exported file controls what is shared.</p>
+          </DialogSurface>
+        </DialogBackdrop>
+      ) : null}
 
       {editing === "new" ? (
         <ContactEditor

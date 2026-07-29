@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, ChevronRight, Copy, FileText, LoaderCircle, Mail, Plus, Save, Trash2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Copy, FileText, LoaderCircle, Plus, Save, Send, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Panel } from "../../components/ui";
 import { requestKey } from "../../lib/api";
@@ -15,6 +15,7 @@ import { centsToDollars, currency, toCents } from "./money";
 import { deleteToolRecordByLocalId, fetchToolRecords, sendEstimateByLocalId, upsertToolRecord, type ServerToolRecord } from "./tool-records-api";
 import { toolContextLabel, toolContextRecordFields, toolContextStorageId, type ToolWorkContext } from "./tool-work-context";
 import { DocumentBrandHeader, DocumentStylePicker } from "./DocumentBrandControls";
+import { DocumentSendSheet } from "./DocumentSendSheet";
 import {
   defaultDocumentBrand,
   fetchDocumentBrand,
@@ -39,6 +40,7 @@ export interface EstimateInvoiceDraft {
   templateName: string;
   billTo: string;
   recipientEmail: string;
+  recipientPhone: string;
   terms: string;
   paymentMethod: string;
   lines: EstimateInvoiceDraftLine[];
@@ -88,6 +90,7 @@ interface EstimateDraftState {
   estimateDate: string;
   recipientName: string;
   recipientEmail: string;
+  recipientPhone: string;
   scope: string;
   validThrough: string;
   customerNote: string;
@@ -271,6 +274,7 @@ export function EstimateTool({
   const [estimateDate, setEstimateDate] = useState(initialDraft.estimateDate ?? today());
   const [recipientName, setRecipientName] = useState(initialDraft.recipientName ?? (workContext.kind === "standalone" ? workContext.project.clientName : activeJob?.contractor ?? ""));
   const [recipientEmail, setRecipientEmail] = useState(initialDraft.recipientEmail ?? "");
+  const [recipientPhone, setRecipientPhone] = useState(initialDraft.recipientPhone ?? "");
   const [scope, setScope] = useState(initialDraft.scope ?? activeJob?.title ?? (workContext.kind === "standalone" ? workContext.project.title : ""));
   const [validThrough, setValidThrough] = useState(initialDraft.validThrough ?? futureDate(30));
   const [customerNote, setCustomerNote] = useState(initialDraft.customerNote ?? "");
@@ -286,6 +290,7 @@ export function EstimateTool({
   const [lastSentFingerprint, setLastSentFingerprint] = useState("");
   const [validationMessage, setValidationMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const [step, setStep] = useState<"price" | "customer" | "review">("price");
   const [documentBrand, setDocumentBrand] = useState<DocumentBrand>(() => defaultDocumentBrand());
   const [brandMessage, setBrandMessage] = useState("Document style syncs to your RIVT account.");
@@ -359,7 +364,7 @@ export function EstimateTool({
     const draft: EstimateDraftState = {
       localId: recordLocalId,
       laborHours, hourlyRate, crewSize, materials, subCosts, overheadPct, marginPct, contingencyPct,
-      estimateNumber, estimateDate, recipientName, recipientEmail, scope, validThrough, customerNote,
+      estimateNumber, estimateDate, recipientName, recipientEmail, recipientPhone, scope, validThrough, customerNote,
       customerId, customerSnapshot: selectedCustomerSnapshot,
     };
     try {
@@ -370,7 +375,7 @@ export function EstimateTool({
         setSaveMessage("This draft could not be saved on this device. Keep this page open and copy your work.");
       });
     }
-  }, [contingencyPct, crewSize, customerId, customerNote, estimateDate, estimateNumber, hourlyRate, laborHours, localDraftStorageKey, marginPct, materials, overheadPct, recipientEmail, recipientName, recordLocalId, scope, selectedCustomerSnapshot, subCosts, validThrough]);
+  }, [contingencyPct, crewSize, customerId, customerNote, estimateDate, estimateNumber, hourlyRate, laborHours, localDraftStorageKey, marginPct, materials, overheadPct, recipientEmail, recipientName, recipientPhone, recordLocalId, scope, selectedCustomerSnapshot, subCosts, validThrough]);
 
   useEffect(() => {
     let active = true;
@@ -434,6 +439,7 @@ export function EstimateTool({
         customerId,
         displayName: recipientName.trim() || selectedCustomerSnapshot.displayName,
         email: recipientEmail.trim().toLowerCase(),
+        phone: recipientPhone.trim(),
       }
     : null;
   const documentFingerprint = JSON.stringify({
@@ -441,6 +447,7 @@ export function EstimateTool({
     estimateDate,
     recipientName: recipientName.trim(),
     recipientEmail: recipientEmail.trim().toLowerCase(),
+    recipientPhone: recipientPhone.trim(),
     scope: scope.trim(),
     validThrough,
     customerNote: customerNote.trim(),
@@ -461,10 +468,9 @@ export function EstimateTool({
 
   useEffect(() => {
     sendIdempotencyKeyRef.current = null;
-  }, [customerId, customerNote, documentBrand.updatedAt, estimateDate, estimateNumber, recipientEmail, recipientName, scope, selectedCustomerSnapshot, validThrough, target]);
+  }, [customerId, customerNote, documentBrand.updatedAt, estimateDate, estimateNumber, recipientEmail, recipientName, recipientPhone, scope, selectedCustomerSnapshot, validThrough, target]);
 
-  async function copyCustomerEstimate() {
-    const summary = [
+  const customerEstimateText = [
       `${documentBrand.businessName || "RIVT member"} estimate ${estimateNumber}`,
       `Date: ${estimateDate}`,
       `Prepared for: ${recipientName.trim() || "Customer"}`,
@@ -478,8 +484,11 @@ export function EstimateTool({
       "",
       "This is an estimate, not a payment request.",
     ].filter(Boolean).join("\n");
+  const smsHref = `sms:${encodeURIComponent(recipientPhone)}?body=${encodeURIComponent(customerEstimateText)}`;
+
+  async function copyCustomerEstimate() {
     try {
-      await navigator.clipboard.writeText(summary);
+      await navigator.clipboard.writeText(customerEstimateText);
       setSaveMessage("Estimate copied.");
     } catch {
       setSaveMessage("Copy failed. Select the estimate text and try again.");
@@ -596,6 +605,21 @@ export function EstimateTool({
     setStep("review");
   }
 
+  function openEstimateSendOptions() {
+    const customerError = validateCustomerStep();
+    if (customerError) {
+      setStep("customer");
+      setValidationMessage(customerError);
+      return;
+    }
+    if (!isValidEmail(recipientEmail) && !recipientPhone.trim()) {
+      setStep("customer");
+      setValidationMessage("Add a customer email or phone number before sending.");
+      return;
+    }
+    setSendOpen(true);
+  }
+
   function startNewEstimate() {
     const nextId = `estimate:${toolContextStorageId(workContext)}:${crypto.randomUUID()}`;
     setRecordLocalId(nextId);
@@ -608,6 +632,7 @@ export function EstimateTool({
     setSubCosts(0);
     setRecipientName(workContext.kind === "standalone" ? workContext.project.clientName : activeJob?.contractor ?? "");
     setRecipientEmail("");
+    setRecipientPhone("");
     setScope(activeJob?.title ?? (workContext.kind === "standalone" ? workContext.project.title : ""));
     setValidThrough(futureDate(30));
     setCustomerNote("");
@@ -627,7 +652,7 @@ export function EstimateTool({
     const draft: EstimateDraftState = {
       localId: recordLocalId,
       laborHours, hourlyRate, crewSize, materials, subCosts, overheadPct, marginPct, contingencyPct,
-      estimateNumber, estimateDate, recipientName, recipientEmail, scope, validThrough, customerNote,
+      estimateNumber, estimateDate, recipientName, recipientEmail, recipientPhone, scope, validThrough, customerNote,
       customerId, customerSnapshot: documentCustomerSnapshot,
     };
     const record = await upsertToolRecord({
@@ -654,25 +679,27 @@ export function EstimateTool({
     return record;
   }
 
-  async function sendEstimateEmail() {
+  async function sendEstimateEmail(): Promise<boolean> {
     const customerError = validateCustomerStep(true);
     if (customerError) {
+      setSendOpen(false);
       setStep("customer");
       setValidationMessage(customerError);
       setSaveMessage(customerError);
-      setSaveState("error");
-      return;
+      return false;
     }
     if (target <= 0) {
+      setSendOpen(false);
       setSaveMessage("Add a price before sending.");
-      return;
+      return false;
     }
     setSending(true);
     const saved = await saveDraft(false);
     if (!saved) {
+      setSendOpen(false);
       setSaveMessage("RIVT could not save this estimate. Check your connection and try again.");
       setSending(false);
-      return;
+      return false;
     }
     try {
       const idempotencyKey = sendIdempotencyKeyRef.current ?? requestKey();
@@ -684,9 +711,12 @@ export function EstimateTool({
       sendIdempotencyKeyRef.current = null;
       setSaveMessage(sentDelivery?.sentAt ? `Sent to ${sentDelivery.recipientEmail}.` : "Estimate sent.");
       setSaveState("saved");
+      return true;
     } catch (error) {
+      setSendOpen(false);
       setSaveMessage(error instanceof Error ? error.message : "RIVT could not send the estimate.");
       setSaveState("error");
+      return false;
     } finally {
       setSending(false);
     }
@@ -704,6 +734,7 @@ export function EstimateTool({
     setSelectedCustomerSnapshot(snapshot);
     setRecipientName(snapshot.displayName);
     setRecipientEmail(snapshot.email);
+    setRecipientPhone(snapshot.phone);
   }
 
   function convertToInvoice() {
@@ -755,6 +786,7 @@ export function EstimateTool({
       templateName: `${title} invoice`,
       billTo: recipientName.trim() || activeJob?.contractor || (workContext.kind === "standalone" ? workContext.project.clientName : ""),
       recipientEmail: recipientEmail.trim(),
+      recipientPhone: recipientPhone.trim(),
       terms: documentCustomerSnapshot?.defaultTerms?.trim() || "Due on completion",
       paymentMethod: "",
       lines: draftLines,
@@ -838,6 +870,7 @@ export function EstimateTool({
           <div className="v2-tool-input-grid v2-estimate-delivery-grid">
             <label>Customer name<input value={recipientName} onChange={(event) => setRecipientName(event.target.value)} placeholder="Customer or company" /></label>
             <label>Customer email<input type="email" inputMode="email" value={recipientEmail} onChange={(event) => setRecipientEmail(event.target.value)} placeholder="name@example.com" /></label>
+            <label>Customer phone<input type="tel" inputMode="tel" value={recipientPhone} onChange={(event) => setRecipientPhone(event.target.value)} placeholder="+1 904 555 0123" /></label>
             <label>Estimate number<input value={estimateNumber} onChange={(event) => setEstimateNumber(event.target.value)} aria-label="Estimate number" /></label>
             <label>Estimate date<input type="date" value={estimateDate} onChange={(event) => setEstimateDate(event.target.value)} /></label>
             <label>Valid through<input type="date" value={validThrough} onChange={(event) => setValidThrough(event.target.value)} /></label>
@@ -848,7 +881,7 @@ export function EstimateTool({
             label="Estimate appearance"
             value={documentBrand.estimateStyle}
             onChange={(style) => void changeEstimateStyle(style)}
-            footer={<small className="v2-document-style-status">{brandMessage} Logo and business details are managed in Profile → Business.</small>}
+            footer={<small className="v2-document-style-status">{brandMessage} <a href="/app/profile/settings?section=business">Customize logo and business details</a>.</small>}
           />
           {validationMessage ? <p className="v2-record-error" role="alert">{validationMessage}</p> : null}
         </section> : null}
@@ -856,8 +889,8 @@ export function EstimateTool({
         {step === "review" ? <section className="v2-estimate-delivery" aria-labelledby="estimate-review-title">
           <div>
             <span>Customer copy</span>
-            <strong id="estimate-review-title">{recipientEmail.trim() ? `Ready for ${recipientEmail}` : "Add an email before sending"}</strong>
-            <small>RIVT emails this estimate. It does not request payment or claim online approval.</small>
+            <strong id="estimate-review-title">Ready for {recipientName.trim() || "the customer"}</strong>
+            <small>Send by email or open a text draft. This is not a payment request.</small>
           </div>
           <article className={`v2-invoice-print-preview v2-estimate-print-preview is-template-${documentBrand.estimateStyle}`} aria-label="Printable estimate preview">
             <DocumentBrandHeader
@@ -929,8 +962,18 @@ export function EstimateTool({
         </button>
         {step === "price" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")}><span>Customer</span><ChevronRight size={18} /></button> : null}
         {step === "customer" ? <button type="button" className="v2-primary-button" onClick={openReview}><span>Review</span><ChevronRight size={18} /></button> : null}
-        {step === "review" ? <button type="button" className="v2-primary-button" onClick={() => void sendEstimateEmail()} disabled={sending || target <= 0 || !isValidEmail(recipientEmail)}><Mail size={18} /><span>{sending ? "Sending" : delivery?.status === "sent" ? "Send update" : "Send email"}</span></button> : null}
+        {step === "review" ? <button type="button" className="v2-primary-button" onClick={openEstimateSendOptions} disabled={sending || target <= 0}><Send size={18} /><span>Send</span></button> : null}
       </div>
+      <DocumentSendSheet
+        open={sendOpen}
+        title="estimate"
+        email={recipientEmail}
+        phone={recipientPhone}
+        smsHref={smsHref}
+        busy={sending}
+        onClose={() => setSendOpen(false)}
+        onSendEmail={sendEstimateEmail}
+      />
     </div>
   );
 }

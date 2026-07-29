@@ -19,19 +19,10 @@ export function DocumentBrandHeader({
 }) {
   const contactLines = documentBrandContactLines(brand);
   const businessName = brand.businessName.trim() || "RIVT member";
-  const initials = businessName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
   return (
     <header className="v2-document-brand-header">
-      <div className="v2-document-letterhead">
-        {brand.logoUrl ? <img src={brand.logoUrl} alt={`${businessName} logo`} width="640" height="240" /> : (
-          <span className="v2-document-logo-fallback" aria-hidden="true">{initials || "R"}</span>
-        )}
+      <div className={`v2-document-letterhead ${brand.logoUrl ? "has-logo" : "has-text-only"}`}>
+        {brand.logoUrl ? <img src={brand.logoUrl} alt={`${businessName} logo`} width="640" height="240" /> : null}
         <div>
           <strong>{businessName}</strong>
           {status ? <span>{status}</span> : null}

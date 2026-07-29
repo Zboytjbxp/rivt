@@ -736,6 +736,11 @@ async function runMobileFlow(page) {
   await page.getByRole("heading", { name: "Contacts", exact: true }).waitFor({ timeout: 15_000 });
   await assertNoHorizontalOverflow(page, "Contacts");
   await page.getByText("All contacts (2)", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  const contactImportDialog = page.getByRole("dialog", { name: "Import contacts" });
+  await contactImportDialog.getByText("Import all from a contact file", { exact: true }).waitFor({ timeout: 15_000 });
+  await contactImportDialog.getByText("RIVT cannot read every phone contact automatically.", { exact: false }).waitFor({ timeout: 15_000 });
+  await contactImportDialog.getByRole("button", { name: "Close contact import" }).click();
   await page.setViewportSize({ width: 1280, height: 900 });
   await assertNoHorizontalOverflow(page, "Contacts desktop");
   await page.screenshot({ path: path.join(screenshotDir, "desktop-contacts.png"), fullPage: true });

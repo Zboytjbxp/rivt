@@ -81,6 +81,56 @@ test("server-owned expense export preserves cents and escapes CSV fields", () =>
   assert.match(csv, /"Wire, ""red"""/);
 });
 
+test("invoice delivery keeps bank and direct payment options distinct", () => {
+  const record = {
+    id: "a1b2c3d4-0000-4000-8000-000000000000",
+    title: "Panel replacement invoice",
+    record_date: new Date("2026-07-28T00:00:00.000Z"),
+    amount_cents: 12500,
+    payload: {
+      recipientName: "Jordan Miller",
+      recipientEmail: "jordan@example.test",
+      invoiceNumber: "INV-100",
+      payTo: "RIVT Test Electric",
+      terms: "Due on completion",
+      paymentMethod: "Secure bank payment or Pay by check to RIVT Test Electric.",
+      paymentOptions: { bank: true, outside: true },
+      outsidePaymentInstructions: "Pay by check to RIVT Test Electric.",
+      customerLines: [{ description: "Panel work", quantity: 1, totalCents: 12500 }],
+    },
+  };
+  const actor = { profile: { displayName: "RIVT Test Electric" } };
+  const snapshot = toolRecordInternals.invoiceDeliverySnapshot(
+    record,
+    actor,
+    "https://rivt.pro/pay/payment-one",
+    { businessName: "RIVT Test Electric" },
+  );
+  assert.equal(snapshot.paymentMethod, "Secure bank payment or Pay by check to RIVT Test Electric.");
+  assert.equal(snapshot.outsidePaymentInstructions, "Pay by check to RIVT Test Electric.");
+  const content = toolRecordInternals.invoiceEmailContent(snapshot);
+  assert.match(content.text, /Pay securely from a US bank account/);
+  assert.match(content.text, /Other payment instructions: Pay by check/);
+  assert.match(content.html, /<strong>Payment options:<\/strong>/);
+});
+
+test("invoice delivery refuses to advertise bank payment without a current link", () => {
+  assert.throws(
+    () => toolRecordInternals.invoiceDeliverySnapshot({
+      id: "a1b2c3d4-0000-4000-8000-000000000000",
+      title: "Panel replacement invoice",
+      record_date: new Date("2026-07-28T00:00:00.000Z"),
+      amount_cents: 12500,
+      payload: {
+        recipientEmail: "jordan@example.test",
+        paymentOptions: { bank: true, outside: false },
+        customerLines: [{ description: "Panel work", quantity: 1, totalCents: 12500 }],
+      },
+    }, { profile: { displayName: "RIVT Test Electric" } }),
+    (error) => error instanceof ApiError && error.code === "INVOICE_PAYMENT_LINK_REQUIRED",
+  );
+});
+
 test("message send requires text or a managed staged attachment", () => {
   assert.equal(messageCreateSchema.safeParse({ body: "", attachments: [] }).success, false);
   assert.equal(messageCreateSchema.safeParse({

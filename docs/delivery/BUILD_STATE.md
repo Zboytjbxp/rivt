@@ -2,10 +2,50 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Security, accessibility, and operations closure verified.
-Active packet: `docs/delivery/packets/85_SECURITY_ACCESSIBILITY_OPERATIONS_CLOSURE.md`
-Repository branch: `master` (source branch: `codex/security-accessibility-operations-closure`)
-Production feature release commit: `ef468578ad19fc8dc94627baf0df9a9e308d9fae`
+Current phase: Customer documents and contact import verified; deployment pending.
+Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
+Repository branch: `codex/customer-documents-contact-import`
+Production feature release commit: pending
+
+## Customer documents and contact import
+
+- Packet 86 keeps one canonical, account-owned Contacts directory while
+  adding user-selected phone contact import where the browser supports it and
+  CSV/vCard import for bulk address-book migration.
+- Estimate and Invoice will reuse the shared Contact picker for contextual
+  single-contact import; bulk import remains in Contacts so document forms do
+  not become address-book managers.
+- The document pass removes unexplained generated logo tiles, makes existing
+  brand controls discoverable, lets invoice senders offer real payment paths,
+  and replaces clipped email-only actions with truthful delivery choices.
+- Privacy boundary: RIVT cannot and will not programmatically read an entire
+  phone address book. A complete work-phone import requires a user-exported
+  CSV/vCard file.
+- Contact import is intentionally split by context: Contacts owns
+  choose-one/choose-many device import plus complete CSV/vCard migration;
+  Estimate and Invoice expose a one-contact shortcut through the shared
+  picker. Imported identities always persist through the canonical
+  account-owned Contacts API.
+- Invoice payment paths are now independent offers. A sender may include
+  Stripe-hosted ACH, exact direct-payment instructions, or both; the customer
+  chooses from what the finished invoice actually contains. Estimate remains
+  a proposal and never asks for payment.
+- Customer documents no longer generate an unexplained initials tile. A real
+  uploaded business logo renders when present; otherwise the letterhead is
+  clean text. Both tools link directly to the existing account-owned document
+  branding settings.
+- One `Send` action replaces clipped email-only docks. The accessible sheet
+  distinguishes server-sent email from a device-opened text draft and supports
+  email followed by a text draft without claiming SMS delivery.
+- Packet 86 is **Verified locally**. Build, lint, 122 unit/frontend checks,
+  all 22 PostgreSQL integration suites, the three required E2E journeys,
+  rendered Tools and mobile-action QA, diff integrity, and a zero-vulnerability
+  production dependency audit pass. Production remains on the Packet 85
+  release until this packet is merged and exact-source verified.
+- Three-things review closed silent/broad address-book access, cross-channel
+  document drift, and duplicate contact identities. Platform boundary remains
+  explicit: supported Android browsers provide the user-selected Contact
+  Picker; other browsers use manual creation or a user-exported CSV/vCard.
 
 ## Security, accessibility, and operations closure
 

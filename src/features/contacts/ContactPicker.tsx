@@ -5,6 +5,7 @@ import {
   Phone,
   Plus,
   Search,
+  Smartphone,
   Star,
   UserRound,
   X,
@@ -21,6 +22,10 @@ import {
   type ContactRecord,
   type ContactRole,
 } from "../network/contacts-api";
+import {
+  deviceContactPickerSupported,
+  pickDeviceContacts,
+} from "./contact-import";
 import "./contact-picker.css";
 
 interface ContactPickerProps {
@@ -224,6 +229,65 @@ export function ContactPicker({
     await choose(result.contact);
   }
 
+  async function importFromPhone() {
+    setSaving(true);
+    setStatus("Choose one contact and the details you want to share with RIVT.");
+    try {
+      const imported = await pickDeviceContacts({
+        multiple: false,
+        role: role ?? "other",
+      });
+      const input = imported[0];
+      if (!input) {
+        setSaving(false);
+        setStatus("No phone contact was selected.");
+        return;
+      }
+      const result = await createContact(input);
+      if (result.contact) {
+        setSaving(false);
+        setContacts((current) => [result.contact!, ...current]);
+        await choose(result.contact);
+        return;
+      }
+      const duplicate = result.duplicateCandidates[0];
+      if (!duplicate) {
+        setSaving(false);
+        setStatus(result.error ?? "RIVT could not import that phone contact.");
+        return;
+      }
+      const existing = await fetchContact(duplicate.id);
+      if (!existing) {
+        setSaving(false);
+        setStatus("The matching saved contact could not be loaded.");
+        return;
+      }
+      const contactRole = role ?? "other";
+      const matchingRole = existing.roles.find((candidate) => candidate.role === contactRole);
+      const roles = matchingRole
+        ? existing.roles.map((candidate) => candidate.role === contactRole
+            ? { ...candidate, status: "active" as const }
+            : candidate)
+        : [...existing.roles, { role: contactRole, status: "active" as const, details: {} }];
+      const updated = matchingRole?.status === "active"
+        ? existing
+        : (await updateContact(existing.id, { roles })).contact;
+      setSaving(false);
+      if (!updated) {
+        setStatus("The matching contact could not be updated.");
+        return;
+      }
+      setContacts((current) => [updated, ...current.filter((candidate) => candidate.id !== updated.id)]);
+      await choose(updated);
+    } catch (error) {
+      setSaving(false);
+      const cancelled = error instanceof DOMException && error.name === "AbortError";
+      setStatus(cancelled
+        ? "Phone contact selection was cancelled."
+        : "RIVT could not open phone contacts. Create the contact manually instead.");
+    }
+  }
+
   return (
     <section className="v2-contact-picker" aria-label={`${label} selection`}>
       <div className="v2-contact-picker-label">
@@ -274,6 +338,11 @@ export function ContactPicker({
                 )) : <p>No contacts match that search.</p>}
               </div>
               <div className="v2-contact-picker-actions">
+                {deviceContactPickerSupported() ? (
+                  <button type="button" disabled={saving} onClick={() => void importFromPhone()}>
+                    <Smartphone size={17} /> From phone
+                  </button>
+                ) : null}
                 <button type="button" onClick={() => {
                   setDraft(emptyDraft(query.trim(), role));
                   setDuplicateId(null);
