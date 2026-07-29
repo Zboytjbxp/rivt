@@ -1,0 +1,487 @@
+{
+  "documentType": "codex-security.hardening-analysis",
+  "schemaVersion": "1.0",
+  "analysisId": "hardening_20260728_recovery_closure",
+  "sourceEvidence": {
+    "kind": "document_collection",
+    "label": "RIVT recovery closure repository evidence",
+    "collectionSha256": "f170d32f0da2b2527ff003afebae195112dea6d20aaaa01c4f9d27ae47589080",
+    "artifactCount": 24,
+    "targetRevision": "5a561a836834bae09d404628e7b0447b216bbfda",
+    "sourceDrift": "present",
+    "driftDescription": "Recovery implementation source remains at the target revision. Derived Packet 89 delivery-state, risk, and traceability documentation changed after the evidence collection was hashed; the collection digest binds the pre-analysis snapshot."
+  },
+  "assessment": {
+    "outcome": "opportunities_identified",
+    "summary": "RIVT needs one coordinated database-and-object recovery boundary; the fresh logical artifact restores PostgreSQL metadata but not file bytes."
+  },
+  "constraints": {
+    "profile": "security_and_reliability_first_with_explicit_cost_approval",
+    "changeHorizons": [
+      "incremental",
+      "medium_term",
+      "foundational"
+    ],
+    "nonNegotiables": [
+      "No potentially chargeable provider action without Michael's explicit approval immediately beforehand.",
+      "No production file contents, object keys, account identifiers, credentials, or database URLs in repository evidence or operator logs.",
+      "No production database writes, public restore endpoints, plan upgrades, PITR, or recurring features in the one-time proving drill.",
+      "Recovery evidence must distinguish primary availability, one-time copy recovery, and durable independent backup."
+    ],
+    "assumptions": [
+      "The approved targets remain a 24-hour RPO, 4-hour RTO, 30-day retention, and 30-day restore-drill cadence.",
+      "The read-only 89-object, 40,385,105-byte inventory is a point-in-time observation and can change.",
+      "No measured production backup-runner CPU or memory budget was supplied.",
+      "Malware scanning, legal retention approval, and provider-contract approval remain separate work."
+    ]
+  },
+  "opportunities": [
+    {
+      "opportunityId": "complete-recovery-boundary",
+      "title": "Establish a complete database-and-object recovery boundary",
+      "summary": "Bind a consistent encrypted database snapshot and every referenced object to one independently retained recovery point.",
+      "diagnosis": "The logical artifact can rebuild PostgreSQL rows, keys, hashes, and sequences, but object bytes and the database artifact share the production Railway administrative failure domain.",
+      "evidence": [
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "E005",
+          "path": "docs/delivery/packets/88_SECURITY_INFRASTRUCTURE_HARDENING.md",
+          "claim": "The fresh artifact records 109 tables and 8,760 rows but has not been restored and does not contain object bytes."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E010",
+          "path": "scripts/create-logical-backup-artifact.js",
+          "claim": "The backup creator serializes public PostgreSQL table rows and sequences, then uploads the encrypted envelope; it does not read referenced file objects."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E011",
+          "path": "scripts/restore-logical-backup-artifact.js",
+          "claim": "The restorer requires an isolation attestation, can compare source and target identity, migrates a fresh target, restores transactionally, restores sequences, and enforces strict table-count parity."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E014-E024",
+          "path": "migrations/0007_project_completion.up.sql",
+          "claim": "Current media classes retain object keys, byte counts, MIME types, and generally SHA-256 values that can support cryptographic recovery verification."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "O004",
+          "path": "docs/operations/hardening/recovery-closure/context.md",
+          "claim": "A read-only aggregate check observed 89 objects totaling 40,385,105 bytes across the production buckets without reading keys or contents."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "P004",
+          "path": "https://docs.railway.com/storage-buckets",
+          "claim": "Railway buckets currently do not support object versioning, Object Lock, lifecycle configuration, or native bucket snapshots/backups."
+        },
+        {
+          "claimType": "inferred",
+          "sourceKind": "source",
+          "evidenceId": "I001",
+          "path": "scripts/logical-backup-utils.js",
+          "claim": "Reading and hashing a current primary-bucket object proves present availability rather than recovery after loss."
+        },
+        {
+          "claimType": "inferred",
+          "sourceKind": "document",
+          "evidenceId": "I002",
+          "path": "docs/operations/SECURITY_INFRASTRUCTURE_ASSESSMENT.md",
+          "claim": "A second bucket in the same Railway workspace can prove a one-time copy/restore but remains exposed to the same administrative compromise."
+        }
+      ],
+      "desiredInvariants": [
+        "Every accepted backup has one immutable snapshot ID binding the encrypted database artifact, source revision, complete object manifest, counts, bytes, and completion state.",
+        "Every active referenced object is backed up and cryptographically verified; samples are never represented as full-corpus coverage.",
+        "Production backup credentials can append new snapshots but cannot read, overwrite, shorten retention, or delete historical backups.",
+        "Recovery credentials are separate from production credentials and are not stored in normal application configuration.",
+        "A production Railway account compromise cannot erase retained backups.",
+        "Restore targets are provably distinct, empty, private, disposable, and deleted by exact provider identifiers.",
+        "Evidence output contains no sensitive identifiers, credentials, URLs, filenames, keys, or customer content."
+      ],
+      "proposalPath": "proposals/complete-recovery-boundary.md",
+      "options": [
+        {
+          "optionId": "restore-only-baseline",
+          "title": "Restore-only baseline",
+          "kind": "baseline",
+          "summary": "Restore the exact database artifact and hash objects read from the production bucket.",
+          "diagramPaths": {
+            "before": "diagrams/complete-recovery-boundary-before.mmd",
+            "after": "diagrams/complete-recovery-boundary-restore-only-baseline-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E001",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "It satisfies a database restore drill but leaves the complete object-recovery contract open."
+            },
+            {
+              "evidenceId": "E004",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "It can prove the exact fresh artifact is restorable."
+            },
+            {
+              "evidenceId": "E005",
+              "effect": "unaffected",
+              "tacticalFixRequired": true,
+              "rationale": "Primary-bucket reads do not create an independent object recovery source."
+            },
+            {
+              "evidenceId": "P004",
+              "effect": "unaffected",
+              "tacticalFixRequired": true,
+              "rationale": "The design remains entirely inside the existing Railway boundary."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "It proves database decryption and replay, but object deletion and production-account compromise remain unrecoverable.",
+              "validationPlan": "Restore the exact artifact to a distinct empty target and verify strict schema, sequence, count, and future content-digest parity."
+            },
+            {
+              "dimension": "performance",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "There is no normal request-path change; a drill temporarily consumes backup-runner and target resources.",
+              "validationPlan": "Measure public health, restore duration, CPU, and object-read throughput during a time-boxed drill."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Database inserts are batched; any object checker must stream rather than buffer full files or the corpus.",
+              "validationPlan": "Record peak RSS during the largest qualifying object and full database replay."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "A database-only recovery path becomes current, while object recovery remains a single-point failure.",
+              "validationPlan": "Inject database replay failure and prove transaction rollback and exact temporary-resource cleanup."
+            },
+            {
+              "dimension": "operability",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "analogous",
+              "assessment": "It reuses prior runbooks but still requires manual temporary service lifecycle and careful secret handling.",
+              "validationPlan": "Run a two-operator checklist review and verify that captured evidence contains no secrets or customer identifiers."
+            },
+            {
+              "dimension": "migration",
+              "direction": "neutral",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "The existing application and stored data format remain unchanged.",
+              "validationPlan": "Run all existing backup utility tests and repository gates without schema changes."
+            }
+          ],
+          "residualRisks": [
+            "No object can be recovered if it is missing from the primary bucket.",
+            "Equal table counts do not prove equal field values.",
+            "The current backup creator does not use one repeatable-read database transaction.",
+            "The fresh artifact does not cryptographically bind its externally observed source commit."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "scripts/logical-backup-utils.js",
+              "scripts/restore-logical-backup-artifact.js",
+              "scripts/restore-drill.js"
+            ],
+            "workPackages": [
+              "Add exact source/target identity and empty-target preflight.",
+              "Add canonical per-table content digests.",
+              "Run the exact named-artifact restore under a cost authorization."
+            ],
+            "acceptanceCriteria": [
+              "The exact fresh artifact restores 109 tables and 8,760 rows with zero count differences and zero pending migrations.",
+              "The temporary service and volume are absent after cleanup."
+            ],
+            "migrationNotes": [],
+            "rollback": "Interrupt the drill and delete only the exact temporary service and volume identifiers; production receives no write."
+          }
+        },
+        {
+          "optionId": "railway-full-corpus-snapshot",
+          "title": "Full-corpus Railway snapshot",
+          "kind": "incremental",
+          "summary": "Copy every qualifying referenced object to a blank second Railway bucket and restore from that copy.",
+          "diagramPaths": {
+            "before": "diagrams/complete-recovery-boundary-before.mmd",
+            "after": "diagrams/complete-recovery-boundary-railway-full-corpus-snapshot-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E001",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "It demonstrates one complete database-and-object recovery cycle but not durable recurrence."
+            },
+            {
+              "evidenceId": "E004",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "It restores the exact database artifact and binds recovered objects to its metadata."
+            },
+            {
+              "evidenceId": "E005",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "A complete copy and restore from the second bucket is honest one-time object-byte recovery evidence."
+            },
+            {
+              "evidenceId": "P004",
+              "effect": "unaffected",
+              "tacticalFixRequired": true,
+              "rationale": "Both copies remain deletable under one Railway administrative boundary."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "A complete second copy closes one-time recovery proof but does not contain a compromised Railway workspace.",
+              "validationPlan": "Copy every qualifying object, restore representative classes only from the second bucket, and verify full manifest parity."
+            },
+            {
+              "dimension": "performance",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "The drill adds full-corpus reads, writes, hashing, and database restore load outside the request path.",
+              "validationPlan": "Measure bytes per second, duration, CPU, public health, and abort if the corpus exceeds the recorded bound plus 10 percent."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "hypothetical",
+              "assessment": "A streaming design needs bounded hash/encryption buffers rather than corpus-sized memory.",
+              "validationPlan": "Assert a fixed stream buffer and measure peak RSS against the largest object."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "The copy proves recovery from source-object loss after snapshot creation, but a common provider/account failure remains.",
+              "validationPlan": "Inject missing objects, mismatches, partial writes, retry exhaustion, and teardown failure."
+            },
+            {
+              "dimension": "operability",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Operators must inventory, cap, create, verify, empty, and delete a database service, volume, and bucket by exact ID.",
+              "validationPlan": "Use before/after provider inventories and fail the drill until every temporary identifier is absent."
+            },
+            {
+              "dimension": "migration",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "The repository needs a manifest, bounded copier, privacy-safe logging, storage-scope coverage, and local S3 tests.",
+              "validationPlan": "Test every storage scope against disposable local PostgreSQL and mocked S3 before any deployment."
+            }
+          ],
+          "residualRisks": [
+            "The same Railway account can delete or alter both buckets.",
+            "Railway buckets do not provide versioning or Object Lock.",
+            "One successful copy does not establish daily recurrence or 30-day retention.",
+            "Legacy objects without reliable hashes cannot be represented as fully verified."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "scripts/logical-backup-utils.js",
+              "scripts/create-logical-backup-artifact.js",
+              "scripts/restore-logical-backup-artifact.js",
+              "new object manifest and recovery verifier",
+              "test/logical-backup-utils.test.js",
+              "docs/operations/RUNBOOKS.md"
+            ],
+            "workPackages": [
+              "Build and locally test complete object inventory and bounded streaming copy.",
+              "Add privacy-safe manifest and recovery evidence.",
+              "Run one owner-approved capped full-corpus proving drill.",
+              "Delete and verify all temporary resources."
+            ],
+            "acceptanceCriteria": [
+              "Every qualifying object referenced by the restored snapshot is copied and hash/size verified.",
+              "Available album photo, attachment, logo, and evidence classes restore from the temporary copy and pass hash and format checks.",
+              "No sensitive identifiers or content appear in evidence.",
+              "All temporary resources are removed by exact ID."
+            ],
+            "migrationNotes": [
+              "Use this option as a proving stage for the separate immutable destination rather than the final architecture."
+            ],
+            "rollback": "Empty the temporary bucket, delete it, then delete the exact temporary PostgreSQL service and volume; stop if any deletion cannot be verified."
+          }
+        },
+        {
+          "optionId": "cross-provider-immutable-backup",
+          "title": "Cross-provider immutable backup",
+          "kind": "isolation",
+          "summary": "Write coordinated client-side-encrypted database and object snapshots to a separately administered provider with versioning and enforced retention.",
+          "diagramPaths": {
+            "before": "diagrams/complete-recovery-boundary-before.mmd",
+            "after": "diagrams/complete-recovery-boundary-cross-provider-immutable-backup-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E001",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Scheduled coordinated snapshots plus drills can satisfy the complete recovery contract."
+            },
+            {
+              "evidenceId": "E004",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "The existing named-artifact path becomes one component of an independently retained recovery point."
+            },
+            {
+              "evidenceId": "E005",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "File bytes are retained and restored independently of the primary bucket."
+            },
+            {
+              "evidenceId": "P004",
+              "effect": "addresses",
+              "tacticalFixRequired": false,
+              "rationale": "The final backup no longer depends on unsupported Railway versioning or immutability."
+            },
+            {
+              "evidenceId": "P008",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Versioning and compliance retention protect retained versions, while credentials, key custody, and complete manifests still need direct controls."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Separate administration, append-only production authority, client-side encryption, versioning, and immutable retention contain production-account deletion and overwrite paths.",
+              "validationPlan": "Attempt deletion/overwrite with production credentials, verify denial, then restore with the separately held recovery identity."
+            },
+            {
+              "dimension": "performance",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "hypothetical",
+              "assessment": "Scheduled full or incremental snapshots add hashing, encryption, serialization, and cross-provider transfer outside request handling.",
+              "validationPlan": "Measure backup duration, CPU, bytes transferred, and public health at current and projected 10x corpus sizes."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "hypothetical",
+              "assessment": "Streaming keeps buffers bounded, while the manifest index grows with object count and must avoid whole-corpus body retention.",
+              "validationPlan": "Record peak RSS and manifest memory at current, 10x, and 100x synthetic inventories."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "A separate provider removes the primary common-mode failure but introduces network, provider, scheduler, alert, and encryption-key dependencies.",
+              "validationPlan": "Inject destination outage, partial upload, key failure, retry exhaustion, missed schedule, and recovery-credential loss scenarios."
+            },
+            {
+              "dimension": "operability",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "RIVT must own a second provider account, least-privilege identities, key escrow, monitoring, retention, legal review, cost review, and recurring drills.",
+              "validationPlan": "Complete a two-person runbook review, account recovery exercise, alert-delivery test, and provider evidence register."
+            },
+            {
+              "dimension": "migration",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "The design requires consistent database snapshots, coordinated manifests, an immutable destination, credential separation, scheduling, and deletion-policy reconciliation.",
+              "validationPlan": "Roll out through local harness, same-provider proving drill, governance-retention trial, then compliance retention after policy approval."
+            }
+          ],
+          "residualRisks": [
+            "Loss or compromise of the client-side encryption key.",
+            "A systematic backup-runner omission that creates apparently successful incomplete snapshots.",
+            "Retention rules that conflict with legal hold, DSAR deletion, or approved purge policy.",
+            "Faithful preservation of malware until separate scanning/quarantine is implemented.",
+            "Provider and network outage during the RPO window.",
+            "Restore tooling drift after schema migrations."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "scripts/logical-backup-utils.js",
+              "scripts/create-logical-backup-artifact.js",
+              "scripts/restore-logical-backup-artifact.js",
+              "scripts/restore-drill.js",
+              "new coordinated object backup and recovery tooling",
+              "recovery policy and readiness checks",
+              "provider compliance and retention registers",
+              "scheduled monitoring and incident routing"
+            ],
+            "workPackages": [
+              "Build and locally validate the bounded verifier.",
+              "Run the owner-approved same-provider proving drill.",
+              "Configure a separate provider/account with client-side encryption, versioning, and short governance retention.",
+              "Add repeatable-read snapshots, shared snapshot IDs, content digests, and complete manifests.",
+              "Split append-only backup and offline recovery credentials.",
+              "Enable approved immutable retention and daily scheduling.",
+              "Run and time a full isolated restore from the immutable destination."
+            ],
+            "acceptanceCriteria": [
+              "Production credentials cannot read, overwrite, shorten retention, or delete accepted backup snapshots.",
+              "A daily complete backup stays inside the 24-hour RPO and alerts fail closed.",
+              "A monthly isolated database-and-object restore stays inside the 4-hour RTO.",
+              "Every referenced object is accounted for, and missing or mismatched bytes fail the snapshot.",
+              "Provider, region, retention, key custody, cost, and legal terms are approved and recorded."
+            ],
+            "migrationNotes": [
+              "Start with reversible governance retention; enable compliance retention only after deletion and legal-hold policy approval.",
+              "Existing retained versions cannot be removed early after compliance retention is enabled."
+            ],
+            "rollback": "Before immutable retention, disable writes and delete the trial destination. After compliance retention, disable future writes and allow retained versions to expire according to the approved policy."
+          }
+        }
+      ],
+      "recommendedOptionId": "cross-provider-immutable-backup",
+      "recommendation": "Use a cross-provider immutable backup as the launch target, with a locally reviewed harness and one capped same-provider full-corpus drill as the proving stage."
+    }
+  ],
+  "openQuestions": [
+    "Does Michael approve cross-provider-immutable-backup as the target design?",
+    "Does Michael authorize up to US$1.00 of incremental Railway usage for one proving drill after the local harness is reviewed?",
+    "Which separately administered provider/account and US region are approved?",
+    "Who owns backup-encryption key escrow and the offline recovery credential?",
+    "Which immutable retention and deletion/legal-hold rules apply to each data class?",
+    "How should legacy objects without trustworthy SHA-256 values be backfilled or classified?"
+  ]
+}

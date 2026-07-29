@@ -2,10 +2,51 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement; public launch approval blocked
-Current phase: Security and infrastructure hardening.
-Active packet: `docs/delivery/packets/88_SECURITY_INFRASTRUCTURE_HARDENING.md`
-Repository branch: `codex/security-infrastructure-hardening`
+Current phase: Recovery closure design and owner approval boundary.
+Active packet: `docs/delivery/packets/89_RECOVERY_CLOSURE_DESIGN.md`
+Repository branch: `codex/recovery-closure-plan`
 Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
+
+## Recovery closure design
+
+- Packet 89 is a design-only continuation of Packet 88 at target revision
+  `5a561a836834bae09d404628e7b0447b216bbfda`.
+- The recovery portfolio compares a restore-only baseline, a same-provider
+  full-corpus one-time proving stage, and a cross-provider client-side
+  encrypted immutable backup. The cross-provider design is recommended for
+  launch; the same-provider stage is recommended only to prove the complete
+  procedure once.
+- The fresh database artifact covers 109 tables and 8,760 rows but remains
+  un-restored. It records object keys and metadata rather than the underlying
+  object bytes.
+- Read-only aggregate inventory found 89 objects totaling 40,385,105 bytes.
+  No object names, contents, or credentials were accessed for this count.
+- No implementation, deployment, provider mutation, production-data
+  mutation, object-content access, or authorized incremental cost occurred in
+  Packet 89.
+- A proposed one-time Railway proving stage is bounded at a tunable US$1.00,
+  one temporary private PostgreSQL service capped at 1 vCPU/1 GB for at most
+  two hours, one temporary private full-corpus bucket, a 15-minute restore
+  timeout, a 10% object-size abort threshold, and verified cleanup. This is a
+  requested approval boundary, not an approval or execution record.
+- Implementation is intentionally withheld until Michael selects the
+  recovery option and explicitly approves any cost-bearing action. Recurring
+  cross-provider storage requires its own cost, retention, privacy,
+  credential, and rollback approval.
+- Exact branch verification passes: build, application lint, security lint,
+  150/150 unit/frontend tests, 23/23 PostgreSQL integration tests, all four
+  E2E paths, production dependency audit with zero reported vulnerabilities,
+  launch readiness, hardening-artifact structure/link validation, and diff
+  integrity. The first aggregate `npm run test` command reached a 20-minute
+  local ceiling while serial integration tests were still progressing; its
+  two component commands then passed independently and are recorded in
+  Packet 89.
+- R-051 remains a public-launch blocker. A one-time successful drill would
+  prove procedure, not durable independent recovery; the blocker closes only
+  after scheduled independent object-byte backup and successful restore
+  evidence exist.
+- Packet status is **Design complete; blocked on owner option selection and
+  explicit cost approval. Not implemented and not deployed**.
 
 ## Security and infrastructure hardening
 

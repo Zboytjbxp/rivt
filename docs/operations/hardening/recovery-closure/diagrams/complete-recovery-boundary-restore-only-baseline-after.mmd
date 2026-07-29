@@ -1,0 +1,8 @@
+flowchart LR
+  Primary["Primary Railway buckets"] --> ReadCheck["Read and hash current objects"]
+  Logical["Named encrypted DB artifact"] --> TempDB["Disposable Railway PostgreSQL"]
+  TempDB --> Verify["Schema, sequence, and row-count verification"]
+  ReadCheck --> Evidence["Availability evidence"]
+  Verify --> Evidence
+  Failure["Primary bucket deletion or account compromise"] --> Primary
+  Failure -. "No independent object copy" .-> Evidence

@@ -1,5 +1,22 @@
 # Gate A Requirements Traceability
 
+## Traceability Addendum - 2026-07-28 Recovery Closure Design
+
+- `GA-OPS-004` remains **Blocker** with no maturity promotion. The fresh
+  encrypted database artifact is inside the approved 24-hour RPO, but it has
+  not been restored and does not contain the referenced object bytes.
+- The recovery-closure portfolio is decision-ready and compares three
+  boundaries: database restore only, one capped same-provider full-corpus
+  proving drill, and an independent cross-provider immutable backup. The
+  recommended target is the cross-provider immutable boundary, with the
+  capped same-provider drill used only as a proving stage if the owner
+  separately approves its cost.
+- This design evidence does not constitute recovery evidence. No option or
+  incremental spend is approved, no provider configuration changed, no
+  restore ran, and no independent immutable object-byte backup or restore
+  proof exists. `R-051` therefore remains Critical/open and public launch
+  remains blocked on its recorded exit criteria.
+
 ## Packet 88 — Security and infrastructure hardening evidence
 
 - `GA-FND-005` gains a local bounded-input layer for JSON, URL-encoded,

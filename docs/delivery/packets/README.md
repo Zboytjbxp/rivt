@@ -20,6 +20,7 @@ Run packets in order. A packet is one AI session or a small number of tightly co
 | 13 | Workflow coherence and subtraction |
 | 14 | Field camera |
 | 88 | Security and infrastructure hardening, recovery, and data-governance launch boundary |
+| 89 | Recovery closure design, option selection, and cost-bounded restore approval |
 
 Before each packet read:
 
