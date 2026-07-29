@@ -12,7 +12,8 @@ Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
 - Packet 94 converts the Packet 93 role separation into an exact no-cost
   activation package. Packet 93's final pushed tip and Packet 94's source base
   are `037c5a0`; implementation commit
-  `e5d952ca454a2857c131e1b860ad9cd07dc6399a` is local on
+  `e5d952ca454a2857c131e1b860ad9cd07dc6399a` and documentation commit
+  `01c898f65de511b1dafc358123ffed9d8d949dd0` are pushed on
   `codex/railway-activation-readiness`; live production remains `92a8451`.
   None of the Packet 93/94 role, drain, ceiling, or push behavior is
   represented as deployed.
@@ -90,10 +91,18 @@ Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
   unit/frontend tests plus 27/27 serial PostgreSQL integration tests; four
   browser E2E paths; zero production dependency vulnerabilities; parsed JSON
   templates; and diff integrity.
+- The first public branch CI run (`30495709509`) passed dependency install,
+  build, and lint, then exposed a pre-existing clean-Linux shutdown defect:
+  the awaited forced-shutdown deadline had been unreferenced, so Node could
+  exit before the deadline resolved. Follow-up commit
+  `3283048b262ed539f4fde925dafafb7689b2a3fc` keeps that contract-relevant
+  deadline active; its focused 47/47 security tests, lint, and diff integrity
+  pass locally. The failed run never reached PostgreSQL integration tests and
+  did not indicate a database or provider failure.
 - Packet status is **Activation package implemented and fully repository-
-  verified locally; provider action and public launch remain unauthorized.
-  No provider change, paid action, production-data operation, merge, push, or
-  deployment**.
+  verified locally and pushed for review; provider action and public launch
+  remain unauthorized. No provider change, paid action, production-data
+  operation, merge, or deployment**.
 
 ## Railway replica-safety source controls
 

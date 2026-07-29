@@ -226,6 +226,14 @@ The final implementation commit passed before documentation:
 - all three JSON evidence templates parse; and
 - diff integrity.
 
+The first public branch CI run (`30495709509`) passed install, build, and
+lint, then cancelled the forced-shutdown unit test before integration began.
+The root cause predated this packet: the timer that resolves an awaited
+forced-shutdown promise was unreferenced, allowing clean Linux Node to end the
+event loop first. Follow-up commit
+`3283048b262ed539f4fde925dafafb7689b2a3fc` keeps that deadline active.
+Focused security coverage passes 47/47 locally after the correction.
+
 Local source evidence is not deployment evidence.
 
 ## Status
@@ -233,4 +241,5 @@ Local source evidence is not deployment evidence.
 **Activation package implemented and fully repository-verified locally.
 Railway status was observed read-only; no provider change,
 variable/credential access, production-data operation, incremental cost,
-merge, push, or deployment occurred. Public launch remains blocked.**
+merge, or deployment occurred. The branch is pushed for review. Public launch
+remains blocked.**

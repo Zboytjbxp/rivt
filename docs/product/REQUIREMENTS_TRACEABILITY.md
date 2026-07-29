@@ -60,6 +60,12 @@
   tests, four browser E2E paths, a zero-vulnerability production dependency
   audit, JSON-template parsing, and diff integrity. These local gates do not
   constitute deployment proof.
+- Public branch CI run `30495709509` passed install, build, and lint before a
+  clean-Linux forced-shutdown test exposed a pre-existing unreferenced
+  contract deadline. Follow-up commit
+  `3283048b262ed539f4fde925dafafb7689b2a3fc` keeps the deadline referenced;
+  focused security coverage passes 47/47 locally. This does not promote
+  `GA-OPS-007`, `GA-OPS-008`, or `GA-OPS-009`.
 
 ## Traceability Addendum - 2026-07-29 Railway Replica-Safety Source Controls
 
