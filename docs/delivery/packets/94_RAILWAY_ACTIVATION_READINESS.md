@@ -241,6 +241,14 @@ usable slots after three reserved connections. Commit
 `96624b099687969b3d6a17a54f861b3c10e7e4c7` explicitly declares that
 observed CI ceiling. The application ceiling check remains unchanged.
 
+Public Gate A run `30497239166` then passed every workflow step on exact
+verification tip `d6806dac2bb7d8504fbe5c10762fdbfe967393be`:
+build, lint, the full unit and serial PostgreSQL integration aggregate,
+launch-readiness enforcement, three browser paths, and the production
+dependency audit. The standard runner was free because the repository is
+public, and the approximately 57 MB Actions cache remained inside GitHub's
+10 GB repository allowance. This $0 repository proof did not change Railway.
+
 Local source evidence is not deployment evidence.
 
 ## Status

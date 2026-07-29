@@ -106,6 +106,12 @@ Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
   reserved slots. Commit `96624b099687969b3d6a17a54f861b3c10e7e4c7`
   records the exact 97-slot CI ceiling without weakening the production
   runtime check or changing PostgreSQL.
+- Public Gate A run `30497239166` passed every step on exact verification tip
+  `d6806dac2bb7d8504fbe5c10762fdbfe967393be`: build, lint, unit and serial
+  PostgreSQL integration tests, launch-readiness enforcement, three browser
+  paths, and the production dependency audit. The public standard runner and
+  approximately 57 MB Actions cache were inside GitHub's free allowances, so
+  this review run cost $0. It did not deploy or change Railway.
 - Packet status is **Activation package implemented and fully repository-
   verified locally and pushed for review; provider action and public launch
   remain unauthorized. No provider change, paid action, production-data

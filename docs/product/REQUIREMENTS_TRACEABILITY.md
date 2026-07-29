@@ -69,8 +69,13 @@
   correctly rejected the workflow's implicit 100-connection declaration
   against the disposable database's observed 97 usable slots. Commit
   `96624b099687969b3d6a17a54f861b3c10e7e4c7` makes the CI ceiling explicit
-  without weakening the runtime check. This does not promote `GA-OPS-007`,
-  `GA-OPS-008`, or `GA-OPS-009`.
+  without weakening the runtime check. Public Gate A run `30497239166`
+  subsequently passed every step on exact verification tip
+  `d6806dac2bb7d8504fbe5c10762fdbfe967393be`, including the full test
+  aggregate, launch-readiness enforcement, browser paths, and dependency
+  audit. This does not promote `GA-OPS-007`, `GA-OPS-008`, or `GA-OPS-009`;
+  repository CI is not deployed topology, capacity, failover, or recovery
+  evidence.
 
 ## Traceability Addendum - 2026-07-29 Railway Replica-Safety Source Controls
 
