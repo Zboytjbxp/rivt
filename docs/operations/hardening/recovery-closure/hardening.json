@@ -477,12 +477,19 @@
       "selectedOptionId": "cross-provider-immutable-backup",
       "selectionRecord": {
         "selectedAt": "2026-07-29",
-        "authorizedScope": "Provider-neutral local foundation only.",
+        "authorizedScope": "Provider-neutral local foundation and no-cost activation decision only.",
         "implementationHandoff": "implementation/cross-provider-immutable-backup.md",
+        "providerRecommendation": "aws-s3-object-lock",
+        "providerDecisionStatus": "recommendation_only_not_approved",
+        "activationDecision": "implementation/independent-backup-activation.md",
+        "adapterConformance": "implementation/provider-adapter-conformance.md",
+        "retentionGovernance": "../../RECOVERY_RETENTION_AND_KEY_CUSTODY_DRAFT.md",
         "notAuthorized": [
-          "Provider or production object access",
+          "Provider account access",
+          "Production database or object access",
           "The proposed US$1 proving drill",
           "Provider resource creation or configuration",
+          "Any synthetic-provider conformance cost",
           "Recurring spend",
           "Deployment"
         ]
@@ -490,10 +497,13 @@
     }
   ],
   "openQuestions": [
-    "Does Michael authorize up to US$1.00 of incremental Railway usage for one proving drill after the local harness is reviewed?",
-    "Which separately administered provider/account and US region are approved?",
-    "Who owns backup-encryption key escrow and the offline recovery credential?",
-    "Which immutable retention and deletion/legal-hold rules apply to each data class?",
-    "How should legacy objects without trustworthy SHA-256 values be backfilled or classified?"
+    "Does Michael approve AWS S3 Object Lock, a named separately administered account, a US region, its DPA/subprocessors, and incident route?",
+    "Which proposed primary-retention, verified-erasure, legal-hold, and at-least-30-day immutable-object-set rules receive owner and counsel approval?",
+    "Which reviewed cryptographic 2-of-3 threshold-key scheme is approved, who are its three custodians, and how is reconstruction tested?",
+    "What maximum incremental cost, source bytes, requests, egress, orphan bytes, and expiration are approved for synthetic provider conformance?",
+    "Does Michael authorize up to US$1.00 of incremental Railway usage and the exact production-read byte boundary for one physical proving drill?",
+    "What recurring monthly ceiling and forecast-alert thresholds are approved?",
+    "How should legacy objects without trustworthy SHA-256 values be backfilled or classified while every canonical stored byte remains recoverable?",
+    "Which private or CA-verified PostgreSQL path is approved for every backup and restore?"
   ]
 }

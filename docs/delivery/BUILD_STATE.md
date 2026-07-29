@@ -2,10 +2,60 @@
 
 Last updated: 2026-07-29 America/New_York
 Current gate: Gate B controlled engagement; public launch approval blocked
-Current phase: Local recovery foundation; independent provider proof remains blocked.
-Active packet: `docs/delivery/packets/90_LOCAL_RECOVERY_HARNESS.md`
-Repository branch: `codex/recovery-harness`
+Current phase: Independent recovery activation decision; live provider proof remains blocked.
+Active packet: `docs/delivery/packets/91_RECOVERY_ACTIVATION_DECISION.md`
+Repository branch: `codex/recovery-activation-decision`
 Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
+
+## Independent recovery activation decision
+
+- Packet 91 converts the owner-selected independent immutable-backup
+  architecture into a bounded activation decision. It recommends AWS S3
+  Versioning plus Object Lock in a separately administered US account.
+  Compliance mode remains prohibited until full-object retention, erasure,
+  legal-hold, and key-custody policy is approved. Google Cloud Storage remains
+  the closest evaluated alternative because its built-in create-only writer
+  role provides particularly clean separation.
+- The recommendation is not provider approval. Packet 91 accessed no
+  provider account or production data, created no resource or credential,
+  changed no configuration, authorized no cost, and deployed nothing.
+- The adapter acceptance contract now requires executable atomicity and
+  effective-permission tests, exact version/checksum/retention receipts,
+  destination binding, deadlines and cancellation, ambiguous-write
+  reconciliation, stable errors, durable run state, cost refusal, encrypted
+  abort/orphan evidence, and verified cleanup.
+- The 2026-07-28 point-in-time 89-object, 40,385,105-byte inventory implies approximately
+  1.212 GB decimal for 30 full daily object copies before database artifacts
+  and completion metadata. Lifecycle deletion lag, immutable orphans, and at
+  least one additional daily copy must be included in a live estimate. This
+  is a planning estimate, not a bill or spend approval.
+- A later synthetic provider trial, the physical production-data proving
+  drill, and recurring scheduling each require separate explicit owner
+  approval with provider/account/region, byte/request limits, expiration, and
+  a maximum incremental cost. The prior US$1 Railway drill ceiling remains
+  unapproved; US$2/month is only a suggested initial recurring ceiling for
+  owner consideration.
+- A draft separates primary retention, account closure, verified erasure,
+  immutable-backup lifecycle, and legal hold. It proposes a separately
+  retained current erasure-suppression ledger and a reviewed cryptographic
+  2-of-3 threshold recovery-key scheme, but all periods, custodians, and legal
+  behavior remain pending owner and counsel approval and implementation.
+- Before provider activation, local code must bind one database-and-object
+  recovery set, authenticate destination and policy, prove provider receipts,
+  add hard timeouts/cancellation and stable errors, enforce a recorded cost
+  authorization, surface cleanup failures, resolve legacy hash gaps, and keep
+  PostgreSQL on private networking or CA-verified TLS.
+- `R-051` and `GA-OPS-004` remain Critical/Blocker. A decision-ready contract
+  is not an independent backup, immutable-provider proof, object-byte restore,
+  or scheduled recurrence.
+- Exact branch gates pass: production build, application/security lint,
+  173/173 unit/frontend tests, 24/24 serial PostgreSQL integration tests with
+  zero skips, all four E2E paths, incident/launch readiness, structured
+  hardening-record/link validation, diff integrity, and the production
+  dependency audit with zero reported vulnerabilities.
+- Packet status is **No-cost activation decision complete; owner,
+  governance, provider, production-read, and cost approvals remain required.
+  Not deployed**.
 
 ## Local recovery foundation
 

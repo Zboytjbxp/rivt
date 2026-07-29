@@ -22,6 +22,7 @@ Run packets in order. A packet is one AI session or a small number of tightly co
 | 88 | Security and infrastructure hardening, recovery, and data-governance launch boundary |
 | 89 | Recovery closure design, option selection, and cost-bounded restore approval |
 | 90 | Local recovery foundation: v2 database integrity and provider-neutral encrypted object harness |
+| 91 | Independent recovery activation decision, adapter contract, retention, and key custody |
 
 Before each packet read:
 

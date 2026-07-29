@@ -2,7 +2,7 @@
 
 Status: **verification required — not approved for a public launch claim**
 Owner: Michael
-Last engineering review: 2026-07-28
+Last engineering review: 2026-07-29
 
 This register records evidence that must be collected from the actual provider
 accounts and contracts. Public documentation alone does not prove RIVT's
@@ -22,6 +22,7 @@ selected region, account configuration, retention, or contractual coverage.
 | Apple OAuth | Optional identity login | Configurable | OAuth scopes, terms, data retention/deletion, region/transfers, incident process | Verification required |
 | Have I Been Pwned | K-anonymous breached-password range check | Configurable | Terms, request logging/retention, availability, privacy description; confirm only five-character hash prefixes leave RIVT | Verification required |
 | GitHub Actions | Source, CI, test artifacts, synthetic schedule | Enabled | Organization access, branch protection, secret scope, log/artifact retention, DPA/subprocessors, incident notice | Verification required |
+| Independent immutable backup | Coordinated encrypted PostgreSQL and object-byte recovery sets | AWS S3 Object Lock recommended in Packet 91; Compliance mode prohibited until policy approval; no account, resource, identity, or spend approved | Named dedicated account and US region, DPA/subprocessors/transfers, Versioning/Object Lock configuration, public-access block, effective role tests, proposed at-least-30-day lock plus lifecycle reconciliation, threshold key custody, incident route, exact cost owner/ceiling, isolated restore proof | Decision required / not enabled |
 | Product analytics | Funnel events with no direct PII | No-op without a key | Vendor decision, region, DPA, retention/deletion, access controls, event schema review | Not enabled / decision required |
 | Twilio | Legacy SMS relay | Retired route; should remain disabled | Do not enable without consent, STOP/HELP, registration, DPA, retention, abuse controls, and cost approval | Disabled |
 

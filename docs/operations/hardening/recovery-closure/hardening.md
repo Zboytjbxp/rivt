@@ -28,8 +28,9 @@ The fresh database artifact alone cannot recover file bytes.
 - Production PII and file bytes must not be copied to a developer workstation,
   repository, or evidence log.
 - Normal database communication must remain on Railway private networking.
-- The existing 24-hour RPO, 4-hour RTO, 30-day retention, and monthly restore
-  cadence remain the minimum accepted targets.
+- The existing 24-hour RPO, 4-hour RTO, 30-day logical-artifact retention,
+  and monthly logical restore cadence remain accepted. Applying an
+  at-least-30-day lock to coordinated object sets remains proposed.
 - Malware scanning, retention/legal approval, HA, and provider compliance are
   adjacent blockers, not silently solved by backup work.
 - Current pricing and the 40.4 MB bucket inventory support estimates, not a
@@ -51,7 +52,8 @@ compromise or deletion of the production Railway account.
 We can get there without making a blind provider change. First we build and
 review the bounded verifier locally. Then, only after an explicit **US$1.00
 maximum incremental Railway-usage authorization**, we restore the exact fresh
-database artifact and copy/restore the complete current 89-object corpus
+database artifact and copy/restore the complete 2026-07-28 point-in-time
+89-object corpus
 through disposable private Railway targets. That produces honest one-time
 proof and validates the harness. It does not become the long-term backup.
 
@@ -64,18 +66,31 @@ invoice promise or spending authorization.
 ## Next Decisions
 
 Option 3 is selected as the target recovery architecture. Packet 90
-implements its provider-neutral local foundation without provider I/O,
-production-data access, deployment, or spend.
+implements its provider-neutral local foundation. Packet 91 recommends AWS
+S3 Versioning plus Object Lock in a separately administered US account and
+defines the provider-adapter, retention, erasure, cost, and key-custody
+acceptance boundaries. Compliance mode remains prohibited until full-object
+policy approval. Neither packet performs provider I/O, production-data
+access, deployment, or spend.
 
-1. Separately approve or reject the US$1 Railway ceiling for the one-time
-   proving drill after the local harness is reviewed.
-2. Select the separately administered immutable destination. AWS S3
-   Compliance Object Lock is the current recommendation, subject to account,
-   region, DPA, retention, and cost approval.
-3. Name the backup-encryption key custodian and offline recovery-credential
-   holder.
-4. Approve retention/deletion treatment for normal files, professional
-   evidence, legal hold, and account deletion.
+Before provider activation:
+
+1. Approve or reject the recommended provider, named account, US region, DPA,
+   subprocessors, and incident route.
+2. Approve the data-class retention/deletion policy, legal-hold model,
+   independently retained suppression-ledger requirement, and a reviewed
+   cryptographic 2-of-3 recovery-key scheme plus custodians.
+3. Close the local adapter gaps in
+   [provider-adapter-conformance.md](implementation/provider-adapter-conformance.md):
+   destination binding, exact version/checksum/retention receipts, executable
+   atomicity/permission tests, cancellation/deadlines, stable errors,
+   ambiguous-write reconciliation, unified recovery-set completion, cost
+   refusal, abort/orphan evidence, and verified cleanup.
+4. Separately approve a maximum cost for synthetic provider conformance.
+5. Separately approve or reject the still-unapproved US$1 Railway ceiling and
+   exact production-read byte boundary for one physical proving drill.
+6. Separately approve a recurring cost ceiling, daily scheduling, alerting,
+   and monthly isolated restores.
 
 Until those decisions and the resulting restore evidence exist, R-051 remains
 open and public launch remains blocked.

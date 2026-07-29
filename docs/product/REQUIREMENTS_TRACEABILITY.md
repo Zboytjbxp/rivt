@@ -1,5 +1,38 @@
 # Gate A Requirements Traceability
 
+## Traceability Addendum - 2026-07-29 Recovery Activation Decision
+
+- `GA-OPS-004` remains **Blocker** with no maturity promotion. Packet 91
+  recommends AWS S3 Versioning plus Object Lock in a separately administered
+  US account; Compliance mode remains prohibited until full-object policy
+  approval. It defines the exact provider-adapter, physical-drill, recurrence,
+  retention, cost, and threshold-key-custody acceptance boundaries. A
+  provider recommendation and test contract are not recovery evidence.
+- The provider-adapter contract adds required destination and policy binding,
+  exact version/SHA-256/retention receipts, executable atomicity and
+  effective-permission tests, bounded retries, hard cancellation/deadlines,
+  ambiguous-write reconciliation, stable errors, durable state, local cost
+  refusal, encrypted abort/orphan evidence, and verified cleanup.
+- `GA-OPS-004` and `R-051` remain blocked on closing the local adapter gaps,
+  explicitly approving provider/account/region/DPA/cost/production-read
+  boundaries, creating one complete independently retained recovery set,
+  restoring database plus object bytes within four hours, and proving daily
+  scheduled recurrence plus monthly restore.
+- `GA-OPS-008` remains **Partial**. Packet 91 accessed no provider account or
+  production data, created no resource/credential, changed no configuration,
+  authorized no spend, and deployed nothing.
+- `GA-OPS-007` gains production build, application/security lint, 173/173
+  unit/frontend tests, 24/24 serial PostgreSQL integration tests with zero
+  skips, four E2E paths, incident/launch readiness, structured
+  hardening-record/link validation, diff integrity, a zero-vulnerability
+  production dependency audit, and no-cost authority evidence recorded in
+  Packet 91.
+- `R-053` remains High. The new retention/key-custody document is explicitly
+  draft: primary retention, closure, verified erasure, backup lock/lifecycle,
+  legal hold, a separately retained current suppression ledger, and a tested
+  cryptographic 2-of-3 threshold-key scheme require owner and counsel approval
+  and implementation.
+
 ## Traceability Addendum - 2026-07-29 Local Recovery Foundation
 
 - `GA-OPS-004` remains **Blocker** with no maturity promotion. Michael
