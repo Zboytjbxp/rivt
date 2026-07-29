@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import pg from "pg";
 import { runLeasedDatabaseMaintenance } from "../server/database-maintenance.js";
+import { assertDatabaseConnectionCeiling } from "../server/process-role.js";
 
 const testDatabaseUrl = process.env.TEST_DATABASE_URL?.trim();
 
@@ -63,6 +64,32 @@ if (!testDatabaseUrl) {
       releaseFirst?.();
       await firstPool.end();
       await secondPool.end();
+    }
+  });
+
+  test("database connection ceiling is read from PostgreSQL before activation", async () => {
+    const pool = new Pool({
+      connectionString: testDatabaseUrl,
+      ssl: false,
+      max: 1,
+    });
+    try {
+      const ceiling = await assertDatabaseConnectionCeiling(pool, {
+        ok: true,
+        databaseMaxConnections: 1,
+      });
+      assert.ok(ceiling.observedMaxConnections >= 1);
+      assert.ok(ceiling.observedUsableConnections >= 1);
+      assert.equal(ceiling.declaredMaxConnections, 1);
+      assert.ok(ceiling.globalUsableConnections >= 1);
+      assert.ok(ceiling.databaseConnectionLimit >= -1);
+      assert.ok(ceiling.roleConnectionLimit >= -1);
+      assert.ok(
+        ceiling.observedUsableConnections
+          <= ceiling.observedMaxConnections,
+      );
+    } finally {
+      await pool.end();
     }
   });
 }

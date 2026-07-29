@@ -8,6 +8,7 @@ const DELIVERY_BATCH_SIZE = 20;
 const MAX_DELIVERY_ATTEMPTS = 5;
 const WORKER_INTERVAL_MS = 5_000;
 const STALE_CLAIM_MINUTES = 5;
+const PUSH_DELIVERY_TIMEOUT_MS = 8_000;
 
 const pushSubscriptionSchema = z.object({
   endpoint: z.string().trim().min(16).max(4096),
@@ -26,7 +27,7 @@ const pushUnsubscribeSchema = z.object({
 let workerController = null;
 
 function envValue(name, environment = process.env) {
-  return String(environment[name] ?? "").trim();
+  return String(environment?.[name] ?? "").trim();
 }
 
 export function vapidGeneration(publicKey) {
@@ -52,6 +53,37 @@ function validVapidBundle(bundle) {
   } catch {
     return false;
   }
+}
+
+function pushDeliveryRequired(environment = process.env) {
+  const configured = String(environment?.RIVT_PUSH_REQUIRED ?? "").trim().toLowerCase();
+  if (!configured || configured === "false") return false;
+  if (configured === "true") return true;
+  throw new Error("RIVT_PUSH_REQUIRED must be true or false.");
+}
+
+export function pushDeliveryTimeoutMs(environment = process.env) {
+  return boundedRuntimeInterval(environment?.PUSH_DELIVERY_TIMEOUT_MS, {
+    name: "PUSH_DELIVERY_TIMEOUT_MS",
+    fallback: PUSH_DELIVERY_TIMEOUT_MS,
+    minimum: 1_000,
+    maximum: 10_000,
+  });
+}
+
+export function assertRequiredPushProvider(
+  environment = process.env,
+  status = pushProviderStatus(environment),
+  { required = false } = {},
+) {
+  const configuredAsRequired = pushDeliveryRequired(environment);
+  if (required && !configuredAsRequired) {
+    throw new Error("RIVT_PUSH_REQUIRED=true is required for a hosted worker.");
+  }
+  if (configuredAsRequired && !status.ok) {
+    throw new Error("Push delivery is required, but the VAPID provider is not configured.");
+  }
+  return status;
 }
 
 export function vapidProviders(environment = process.env) {
@@ -331,7 +363,7 @@ function deliveryFailureOutcome(delivery, error) {
     : "retried";
 }
 
-async function deliverClaimed(database, delivery) {
+async function deliverClaimed(database, delivery, environment = process.env) {
   try {
     const deliveryResult = await sendNotificationWithVapidFallback(webpush.sendNotification.bind(webpush), {
       endpoint: delivery.endpoint,
@@ -340,7 +372,8 @@ async function deliverClaimed(database, delivery) {
     }, pushPayload(delivery), {
       TTL: delivery.priority === "high" ? 60 * 60 : 24 * 60 * 60,
       urgency: delivery.priority === "high" ? "high" : "normal",
-    });
+      timeout: pushDeliveryTimeoutMs(environment),
+    }, environment);
     const updated = await markDeliverySuccess(
       database,
       delivery,
@@ -393,8 +426,8 @@ export async function sendNotificationWithVapidFallback(
   throw firstError ?? new Error("Web Push delivery failed.");
 }
 
-export async function processPushDeliveryBatchMetrics(database) {
-  if (!database || !configureWebPush().ok) {
+export async function processPushDeliveryBatchMetrics(database, environment = process.env) {
+  if (!database || !configureWebPush(environment).ok) {
     return {
       claimed: 0,
       sent: 0,
@@ -405,7 +438,7 @@ export async function processPushDeliveryBatchMetrics(database) {
   }
   const deliveries = await claimDeliveries(database);
   const outcomes = await Promise.all(
-    deliveries.map((delivery) => deliverClaimed(database, delivery)),
+    deliveries.map((delivery) => deliverClaimed(database, delivery, environment)),
   );
   return {
     claimed: deliveries.length,
@@ -416,8 +449,8 @@ export async function processPushDeliveryBatchMetrics(database) {
   };
 }
 
-export async function processPushDeliveryBatch(database) {
-  const result = await processPushDeliveryBatchMetrics(database);
+export async function processPushDeliveryBatch(database, environment = process.env) {
+  const result = await processPushDeliveryBatchMetrics(database, environment);
   return result.claimed;
 }
 
@@ -507,11 +540,17 @@ export function startPushDeliveryWorker(database, {
   onError,
   onResult,
   unref = true,
+  environment = process.env,
+  required = false,
 } = {}) {
-  const status = configureWebPush();
+  const status = assertRequiredPushProvider(
+    environment,
+    configureWebPush(environment),
+    { required },
+  );
   if (!database || !status.ok || workerController) return status;
   workerController = createPushDeliveryWorker({
-    runBatch: () => processPushDeliveryBatchMetrics(database),
+    runBatch: () => processPushDeliveryBatchMetrics(database, environment),
     intervalMs,
     onError,
     onResult,
@@ -661,6 +700,8 @@ export const pushNotificationInternals = {
   deliveryFailureOutcome,
   markDeliveryFailure,
   markDeliverySuccess,
+  pushDeliveryRequired,
+  pushDeliveryTimeoutMs,
   pushSubscriptionSchema,
   recognizedVapidGeneration,
   retryDelaySeconds,
