@@ -476,6 +476,14 @@ test("production entry point self-hosts fonts", () => {
   assert.match(entry, /\/assets\/fonts\/instrument-sans-latin\.woff2/);
 });
 
+test("production update notice is compact, dismissible, and self-clearing", () => {
+  const entry = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(entry, /id="rivt-update-dismiss"/);
+  assert.match(entry, /aria-label="Dismiss update notice"/);
+  assert.match(entry, /window\.setTimeout\(hideUpdateNotice,\s*15000\)/);
+  assert.match(entry, /min-width:\s*44px;\s*min-height:\s*44px/);
+});
+
 test("Home active-work summary hands off to one exact workspace when the project pulse is unavailable", async () => {
   const { TradeFeed } = await loadModule("/src/features/home/TradeFeed.tsx");
   const activeWork = {

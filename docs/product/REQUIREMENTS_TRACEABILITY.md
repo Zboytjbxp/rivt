@@ -1,5 +1,29 @@
 # Gate A Requirements Traceability
 
+## Packet 87 — Customer document and payment acceptance evidence
+
+- `GA-UX-003` gains a signed-in production proof that one canonical Customer
+  Contact is selectable in Estimate, persists in the saved estimate, and
+  carries into the converted Invoice with the scope and total intact.
+- `GA-UX-005` gains live honesty evidence: an Estimate remains explicitly not
+  a payment request; Invoice requires a real offered payment path; an
+  un-onboarded account cannot send an ACH pay button; direct-payment
+  instructions appear exactly in the customer preview; and the Send sheet
+  distinguishes server email from a user-controlled device text draft.
+- `GA-UX-006` gains a live mobile-browser containment check with no horizontal
+  overflow or console errors. The service-worker update notice discovered
+  during that run is now compact, dismissible with a labeled 44px target, and
+  self-clearing after 15 seconds so it cannot indefinitely cover an
+  in-progress document.
+- `GA-OPS-007` gains passing build, lint, 123 unit/frontend checks, three E2E
+  paths, Tools/mobile rendered QA, diff integrity, and zero production
+  dependency vulnerabilities. The static follow-up does not alter Packet
+  86's previously verified 22-suite PostgreSQL path.
+- `GA-UX-006` remains Partial for physical Android/iPhone and assistive
+  technology. Commercial ACH completion also remains human-owned because a
+  real connected merchant and an authorized payer must approve the bank
+  debit; automation must not submit it.
+
 ## Packet 85 — Security, accessibility, and operations closure evidence
 
 - `GA-SEC-001` gains privacy-preserving breached-password screening on signup

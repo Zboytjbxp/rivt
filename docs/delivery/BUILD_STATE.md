@@ -2,10 +2,40 @@
 
 Last updated: 2026-07-28 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Customer documents and contact import production verified.
-Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
-Repository branch: `master` (source: `codex/customer-documents-contact-import`)
+Current phase: Customer document and payment live acceptance follow-up.
+Active packet: `docs/delivery/packets/87_CUSTOMER_PAYMENT_ACCEPTANCE.md`
+Repository branch: `codex/customer-payment-physical-acceptance`
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
+
+## Customer document and payment live acceptance
+
+- Disposable production run `ui-a11y-20260729010727-ca5a44` drove the exact
+  live sequence from a canonical Customer Contact through saved Estimate,
+  Estimate-to-Invoice conversion, saved Invoice, payment-method validation,
+  and the truthful delivery sheet on runtime source `92a8451`.
+- Contact identity, customer fields, scope, and $225.00 total stayed coherent
+  through the conversion. The estimate remained a proposal; the invoice
+  required a usable payment path.
+- An account without completed Stripe onboarding was correctly blocked from
+  sending a bank-payment invoice. No pay link, provider readiness, delivery,
+  or payment success was fabricated.
+- Mobile live-browser inspection found no horizontal overflow and no
+  page/console errors. It did expose the service-worker update notice covering
+  in-progress document content with no dismiss control.
+- The follow-up makes that update notice compact, gives it a labeled 44px
+  dismiss action, and clears it after 15 seconds while leaving refresh
+  user-controlled.
+- Both disposable accounts were closed and their sessions revoked after the
+  run.
+- Local follow-up gates pass: build, lint, 123 unit/frontend checks, all three
+  E2E paths, Tools and mobile rendered QA, diff integrity, and a
+  zero-vulnerability production audit. The full aggregate's database phase
+  timed out because this workstation has no isolated `DATABASE_URL`; Packet
+  86's unchanged server/data path retains its prior 22/22 integration
+  evidence.
+- This does not claim physical Android Contact Picker, iPhone file/text
+  handoff, or an authorized ACH debit. Those remain explicit human hardware
+  and financial-authorization rows in Packet 87.
 
 ## Customer documents and contact import
 
