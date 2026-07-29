@@ -1,5 +1,10 @@
 const BUILD_ID = new URL(self.location.href).searchParams.get('build') || 'development';
 const CACHE = `rivt-assets-${BUILD_ID.replace(/[^a-z0-9_-]+/gi, '-').slice(-72)}`;
+const ROOT_SHELL_ASSETS = new Set([
+  '/rivt-boot.css',
+  '/rivt-boot.js',
+  '/rivt-service-worker.js',
+]);
 const OFFLINE_DOCUMENT = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVT needs a connection</title><style>body{margin:0;display:grid;min-height:100vh;place-items:center;padding:24px;box-sizing:border-box;background:#ff4b00;color:#0b0b0b;font:16px/1.45 Arial,sans-serif}main{width:min(100%,380px)}h1{margin:10px 0;font-size:34px;line-height:1}strong{letter-spacing:.12em}</style></head><body><main><strong>RIVT</strong><h1>Connect to open RIVT.</h1><p>This app update needs a connection before it can open safely. Your server-backed account and records are not affected.</p></main></body></html>`;
 
 async function precacheAppShell() {
@@ -13,6 +18,7 @@ async function precacheAppShell() {
     ...assetPaths,
     '/assets/fonts/instrument-sans-latin.woff2',
     '/assets/fonts/ibm-plex-mono-600-latin.woff2',
+    ...ROOT_SHELL_ASSETS,
   ])];
 
   // Do not activate a partial shell. If any required asset cannot be cached,
@@ -70,7 +76,11 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  if (!url.pathname.startsWith('/assets/') && !url.pathname.startsWith('/brand/')) return;
+  if (
+    !url.pathname.startsWith('/assets/')
+    && !url.pathname.startsWith('/brand/')
+    && !ROOT_SHELL_ASSETS.has(url.pathname)
+  ) return;
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(e.request, { ignoreSearch: true });

@@ -72,6 +72,30 @@ function createMemoryStorage(initial = {}) {
   };
 }
 
+test("boot shell keeps executable scripts and styles external for strict CSP", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
+  const inlineExecutableScripts = [...html.matchAll(/<script(?![^>]*\bsrc=)(?![^>]*type=["']application\/ld\+json["'])[^>]*>[\s\S]*?<\/script>/gi)];
+
+  assert.equal(inlineExecutableScripts.length, 0);
+  assert.match(html, /href="\/rivt-boot\.css"/);
+  assert.match(html, /src="\/rivt-boot\.js"/);
+  assert.match(html, /src="\/rivt-service-worker\.js"/);
+  assert.match(serviceWorker, /ROOT_SHELL_ASSETS\.has\(url\.pathname\)/);
+});
+
+test("unsigned query-string reports cannot render branded RIVT sign-off", () => {
+  const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+  const serverSource = readFileSync(new URL("../server/index.js", import.meta.url), "utf8");
+  const landingHtml = readFileSync(new URL("../public/landing.html", import.meta.url), "utf8");
+
+  assert.doesNotMatch(appSource, /ReportViewer/);
+  assert.doesNotMatch(appSource, /searchParams\.get\(["']report["']\)/i);
+  assert.match(serverSource, /Legacy report links are retired/);
+  assert.doesNotMatch(serverSource, /RIVT field report|Open a field report shared through RIVT/);
+  assert.doesNotMatch(landingHtml, /Client report share link/);
+});
+
 test("offline recovery policy isolates accounts, coalesces drafts, and bounds retries and photos", async () => {
   const {
     OFFLINE_QUEUE_MAX_PHOTOS,
@@ -478,10 +502,13 @@ test("production entry point self-hosts fonts", () => {
 
 test("production update notice is compact, dismissible, and self-clearing", () => {
   const entry = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const updateScript = readFileSync(new URL("../public/rivt-service-worker.js", import.meta.url), "utf8");
+  const bootStyles = readFileSync(new URL("../public/rivt-boot.css", import.meta.url), "utf8");
+
   assert.match(entry, /id="rivt-update-dismiss"/);
   assert.match(entry, /aria-label="Dismiss update notice"/);
-  assert.match(entry, /window\.setTimeout\(hideUpdateNotice,\s*15000\)/);
-  assert.match(entry, /min-width:\s*44px;\s*min-height:\s*44px/);
+  assert.match(updateScript, /window\.setTimeout\(hideUpdateNotice,\s*15_000\)/);
+  assert.match(bootStyles, /min-width:\s*44px;\s*min-height:\s*44px/);
 });
 
 test("Home active-work summary hands off to one exact workspace when the project pulse is unavailable", async () => {

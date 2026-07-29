@@ -1,6 +1,6 @@
 import "dotenv/config";
 
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { GetObjectCommand, HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import compression from "compression";
 import cors from "cors";
@@ -29,6 +29,7 @@ import { createSecurityHeadersMiddleware } from "./security-headers.js";
 import {
   assertPasswordNotBreached,
   assertStrongPassword,
+  authMetadataPepperStatus,
   breachedPasswordScreeningStatus,
   buildAppleAuthorizationUrl,
   buildAppleClientSecret,
@@ -43,6 +44,7 @@ import {
   verifyLoginPassword,
 } from "./auth.js";
 import { loadActorContext, requireOrganizationRole } from "./authorization.js";
+import { startDatabaseMaintenance } from "./database-maintenance.js";
 import { emailProviderStatus, sendTransactionalEmail } from "./email.js";
 import {
   assertPublishableJob,
@@ -86,6 +88,14 @@ import {
   reportConversationSchema,
 } from "./messaging.js";
 import { createRequestLogger, logError, logInfo, logWarn } from "./logger.js";
+import { providerAbortSignal } from "./provider-safety.js";
+import {
+  configureHttpServer,
+  createDependencyHealthProbe,
+  createGracefulShutdown,
+  DEFAULT_HTTP_SERVER_TIMEOUTS,
+  serviceHealthReady,
+} from "./http-server-safety.js";
 import { registerLegacyIntegrationRoutes } from "./legacy-integrations.js";
 import { captureException, errorMonitoringStatus } from "./monitoring.js";
 import { emitProductEvent } from "./product-analytics.js";
@@ -111,6 +121,7 @@ import { registerProfessionalProfileRoutes } from "./professional-profile.js";
 import { registerCustomerRoutes } from "./customers.js";
 import { registerContactRoutes } from "./contacts.js";
 import { registerMessagingContinuityRoutes } from "./messaging-continuity.js";
+import { createMultipartUploadLimits } from "./upload-safety.js";
 import {
   pushProviderStatus,
   queuePushDeliveries,
@@ -163,8 +174,10 @@ import { migrateUp, migrationStatus } from "./migrations.js";
 import {
   createOriginGuard,
   createDurableRateLimiter,
+  createRateLimiter,
   createRequireAuthenticatedUser,
   isAllowedOrigin,
+  loginEmailRateLimitSubject,
   parseCookies,
   readSessionId,
 } from "./security.js";
@@ -189,7 +202,8 @@ const appVersion = envValue("APP_VERSION", "0.1.0");
 const sourceCommit = envValue("SOURCE_COMMIT", envValue("RAILWAY_GIT_COMMIT_SHA", "unknown"));
 let migrationVersion = envValue("MIGRATION_VERSION", "uninitialized");
 let migrationState = "pending"; // "pending" | "running" | "ready" | "failed"
-let migrationErrorDetail = null;
+let httpServer = null;
+let stopDatabaseMaintenance = null;
 const productionOrigin = envValue("APP_ORIGIN", "https://rivt.pro");
 const securityTxt = `Contact: mailto:support@rivt.pro?subject=Security%20report
 Preferred-Languages: en
@@ -323,15 +337,29 @@ const s3Client = s3Configured
       },
     })
   : null;
+const dependencyHealthProbeTimeoutMs = Number(process.env.HEALTH_DEPENDENCY_TIMEOUT_MS ?? 2_500);
+const dependencyHealth = createDependencyHealthProbe({
+  databaseConfigured: Boolean(database),
+  objectStorageConfigured: Boolean(s3Client && s3Bucket),
+  timeoutMs: dependencyHealthProbeTimeoutMs,
+  successCacheTtlMs: Number(process.env.HEALTH_DEPENDENCY_SUCCESS_CACHE_MS ?? 30_000),
+  failureCacheTtlMs: Number(process.env.HEALTH_DEPENDENCY_FAILURE_CACHE_MS ?? 5_000),
+  live: !(process.env.NODE_ENV === "test" && envFlag("HEALTH_DEPENDENCY_PROBES_DISABLED")),
+  probeDatabase: () => database.query({
+    text: "SELECT 1",
+    query_timeout: dependencyHealthProbeTimeoutMs,
+  }),
+  probeObjectStorage: (abortSignal) => s3Client.send(
+    new HeadBucketCommand({ Bucket: s3Bucket }),
+    { abortSignal },
+  ),
+});
 
 const app = express();
 app.use(createSecurityHeadersMiddleware());
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: {
-    fileSize: maxUploadBytes,
-    files: 1,
-  },
+  limits: createMultipartUploadLimits(maxUploadBytes),
   fileFilter: (_request, file, callback) => {
     const allowedTypes = new Set([
       "application/pdf",
@@ -384,6 +412,12 @@ app.use(cors({
   },
 }));
 app.set("trust proxy", 1);
+const apiBurstRateLimit = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: Number(process.env.API_BURST_RATE_LIMIT ?? 600),
+  namespace: "api-burst",
+});
+app.use("/api", apiBurstRateLimit);
 registerStripeWebhookRoute({
   app,
   express,
@@ -488,7 +522,6 @@ async function ensureDatabaseReady() {
       return status;
     } catch (error) {
       migrationState = "failed";
-      migrationErrorDetail = error.message;
       throw error;
     }
   })();
@@ -705,6 +738,15 @@ const authRateLimit = createDurableRateLimiter({
   namespace: "auth",
 });
 
+const loginAccountRateLimit = createDurableRateLimiter({
+  database,
+  databaseAvailable: () => Boolean(database),
+  windowMs: 15 * 60 * 1000,
+  max: Number(process.env.AUTH_ACCOUNT_RATE_LIMIT ?? 10),
+  namespace: "auth-login-account",
+  subject: loginEmailRateLimitSubject,
+});
+
 const baseWriteRateLimit = createDurableRateLimiter({
   database,
   databaseAvailable: () => Boolean(database),
@@ -849,15 +891,7 @@ function buildUserResponse(user) {
 }
 
 function authSecurityStatus() {
-  const configured = process.env.NODE_ENV !== "production"
-    || String(process.env.AUTH_METADATA_PEPPER ?? "").length >= 32;
-  return {
-    ok: configured,
-    provider: "session_security",
-    purpose: "Privacy-safe session metadata",
-    mode: configured ? "configured" : "setup_required",
-    missing: configured ? [] : ["AUTH_METADATA_PEPPER"],
-  };
+  return authMetadataPepperStatus();
 }
 
 function requireAuthSecurity() {
@@ -1050,13 +1084,18 @@ app.post("/api/client-errors", baseClientErrorRateLimit, asyncRoute(async (reque
   response.status(202).json({ ok: true });
 }));
 
-app.get("/api/health", (_request, response) => {
-  const storage = storageConfiguration();
+app.get("/api/health", asyncRoute(async (_request, response) => {
+  const dependencies = await dependencyHealth();
   const monitoring = errorMonitoringStatus();
   const webPush = pushProviderStatus();
   const invoiceBankPayments = stripeConnectProviderStatus(productionOrigin);
   const passwordScreening = breachedPasswordScreeningStatus();
-  const ok = storage.ok && migrationState !== "failed";
+  const sessionSecurity = authSecurityStatus();
+  const ok = serviceHealthReady({
+    dependenciesOk: dependencies.ok,
+    authSecurityOk: sessionSecurity.ok,
+    migrationState,
+  });
 
   response.status(ok ? 200 : 503).json({
     ok,
@@ -1068,12 +1107,8 @@ app.get("/api/health", (_request, response) => {
     migration: {
       state: migrationState,
       version: migrationVersion,
-      error: migrationErrorDetail,
     },
-    dependencies: {
-      database: storage.database,
-      objectStorage: storage.objectStorage,
-    },
+    dependencies,
     observability: {
       errorMonitoring: {
         ok: monitoring.ok,
@@ -1089,6 +1124,11 @@ app.get("/api/health", (_request, response) => {
     },
     security: {
       passwordBreachScreening: passwordScreening,
+      sessionSecurity: {
+        ok: sessionSecurity.ok,
+        provider: sessionSecurity.provider,
+        mode: sessionSecurity.mode,
+      },
     },
     engagement: {
       matchingJobAlerts: {
@@ -1099,16 +1139,11 @@ app.get("/api/health", (_request, response) => {
     },
     timestamp: new Date().toISOString(),
   });
-});
+}));
 
 app.get("/api/storage", requireAuthenticatedUser, async (_request, response, next) => {
   await runWithDatabase(response, next, async () => {
     const storage = storageConfiguration();
-    const [stateCount, eventCount, uploadCount] = await Promise.all([
-      database.query("SELECT count(*)::int AS count FROM app_state"),
-      database.query("SELECT count(*)::int AS count FROM app_events"),
-      database.query("SELECT count(*)::int AS count FROM uploads"),
-    ]);
     const accountStorageUsage = { usedBytes: 0, objectCount: 0 };
     if (storage.ok && database) {
       const accountStorageResult = await database.query(
@@ -1132,11 +1167,6 @@ app.get("/api/storage", requireAuthenticatedUser, async (_request, response, nex
       plan: {
         storageLimitBytes: planStorageLimitBytes,
         storageScope: "account",
-      },
-      records: {
-        appState: stateCount.rows[0].count,
-        events: eventCount.rows[0].count,
-        uploads: uploadCount.rows[0].count,
       },
       accountStorage: {
         usedBytes: accountStorageUsage.usedBytes,
@@ -5746,6 +5776,7 @@ app.get("/api/auth/google/callback", authRateLimit, asyncRoute(async (request, r
   const redirectUri = envValue("GOOGLE_REDIRECT_URI", "https://rivt.pro/api/auth/google/callback");
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
+    signal: providerAbortSignal(),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
@@ -5850,6 +5881,7 @@ async function handleAppleCallback(request, response) {
   });
   const tokenResponse = await fetch("https://appleid.apple.com/auth/token", {
     method: "POST",
+    signal: providerAbortSignal(),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
@@ -6002,8 +6034,9 @@ async function handleLogin(request, response) {
 
 app.post("/api/v1/auth/signup", authRateLimit, asyncRoute(handleSignup));
 app.post("/api/auth/signup", authRateLimit, asyncRoute(handleSignup));
-app.post("/api/v1/auth/login", authRateLimit, asyncRoute(handleLogin));
-app.post("/api/auth/login", authRateLimit, asyncRoute(handleLogin));
+const loginHandlers = [authRateLimit, loginAccountRateLimit, asyncRoute(handleLogin)];
+app.post("/api/v1/auth/login", ...loginHandlers);
+app.post("/api/auth/login", ...loginHandlers);
 
 app.post("/api/v1/referrals/link", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
   if (!referralLinksConfigured()) {
@@ -6296,24 +6329,10 @@ if (existsSync(distDir)) {
 
     response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0");
     if (request.path === "/report") {
-      const appHtml = readFileSync(path.join(distDir, "index.html"), "utf8")
-        .replace(
-          '<meta property="og:title" content="RIVT | Where skilled trades connect" />',
-          '<meta property="og:title" content="RIVT field report" />',
-        )
-        .replace(
-          '<meta property="og:description" content="RIVT is the professional network for skilled trades." />',
-          '<meta property="og:description" content="Open a field report shared through RIVT." />',
-        )
-        .replace(
-          '<meta name="twitter:title" content="RIVT | Where skilled trades connect" />',
-          '<meta name="twitter:title" content="RIVT field report" />',
-        )
-        .replace(
-          '<meta name="twitter:description" content="RIVT is the professional network for skilled trades." />',
-          '<meta name="twitter:description" content="Open a field report shared through RIVT." />',
-        );
-      response.type("html").send(appHtml);
+      response
+        .status(410)
+        .type("text/plain")
+        .send("Legacy report links are retired. Ask the sender to share the current RIVT job record instead.");
       return;
     }
     response.sendFile(path.join(distDir, "index.html"));
@@ -6356,10 +6375,40 @@ app.use((error, request, response, _next) => {
 });
 
 export async function startServer(listenPort = port) {
-  await new Promise((resolve, reject) => {
-    const srv = app.listen(listenPort, resolve);
-    srv.once("error", reject);
-  });
+  if (httpServer?.listening) {
+    return httpServer;
+  }
+
+  const srv = app.listen(listenPort);
+  httpServer = srv;
+  try {
+    configureHttpServer(srv, {
+      requestTimeoutMs: Number(process.env.HTTP_REQUEST_TIMEOUT_MS ?? DEFAULT_HTTP_SERVER_TIMEOUTS.requestTimeoutMs),
+      headersTimeoutMs: Number(process.env.HTTP_HEADERS_TIMEOUT_MS ?? DEFAULT_HTTP_SERVER_TIMEOUTS.headersTimeoutMs),
+      keepAliveTimeoutMs: Number(process.env.HTTP_KEEP_ALIVE_TIMEOUT_MS ?? DEFAULT_HTTP_SERVER_TIMEOUTS.keepAliveTimeoutMs),
+      maxHeadersCount: Number(process.env.HTTP_MAX_HEADERS_COUNT ?? DEFAULT_HTTP_SERVER_TIMEOUTS.maxHeadersCount),
+      maxRequestsPerSocket: Number(process.env.HTTP_MAX_REQUESTS_PER_SOCKET ?? DEFAULT_HTTP_SERVER_TIMEOUTS.maxRequestsPerSocket),
+    });
+    await new Promise((resolve, reject) => {
+      const handleError = (error) => {
+        srv.off("listening", handleListening);
+        reject(error);
+      };
+      const handleListening = () => {
+        srv.off("error", handleError);
+        resolve();
+      };
+      srv.once("error", handleError);
+      srv.once("listening", handleListening);
+    });
+  } catch (error) {
+    httpServer = null;
+    srv.closeAllConnections?.();
+    if (srv.listening) {
+      srv.close();
+    }
+    throw error;
+  }
 
   const storage = storageConfiguration();
   logInfo("server.started", {
@@ -6380,6 +6429,11 @@ export async function startServer(listenPort = port) {
       if (!pushStatus.ok) {
         logWarn("push.setup_required", { missing: pushStatus.missing });
       }
+      stopDatabaseMaintenance ??= startDatabaseMaintenance(database, {
+        intervalMs: Number(process.env.DATABASE_MAINTENANCE_INTERVAL_MS ?? 60 * 60 * 1000),
+        batchSize: Number(process.env.DATABASE_MAINTENANCE_BATCH_SIZE ?? 500),
+        onError: (error) => logWarn("database.maintenance_failed", { error }),
+      });
     }).catch((error) => {
       logError("server.migration_failed", {
         message: error.message,
@@ -6387,9 +6441,13 @@ export async function startServer(listenPort = port) {
       });
     });
   }
+
+  return httpServer;
 }
 
 export async function closeDatabase() {
+  stopDatabaseMaintenance?.();
+  stopDatabaseMaintenance = null;
   stopPushDeliveryWorker();
   if (database) {
     await database.end();
@@ -6399,6 +6457,37 @@ export async function closeDatabase() {
 export { app, ensureDatabaseReady };
 
 if (path.resolve(process.argv[1] ?? "") === __filename) {
+  const shutdown = createGracefulShutdown({
+    getServer: () => httpServer,
+    closeResources: closeDatabase,
+    timeoutMs: Number(process.env.HTTP_SHUTDOWN_TIMEOUT_MS ?? DEFAULT_HTTP_SERVER_TIMEOUTS.shutdownTimeoutMs),
+  });
+  let terminationPromise = null;
+
+  const handleTerminationSignal = (signal) => {
+    if (terminationPromise) return;
+    logInfo("server.shutdown_started", { signal });
+    terminationPromise = shutdown(signal);
+    void terminationPromise
+      .then(({ forced }) => {
+        httpServer = null;
+        if (forced) {
+          logWarn("server.shutdown_forced", { signal });
+          process.exit(1);
+          return;
+        }
+        logInfo("server.shutdown_complete", { signal });
+        process.exitCode = 0;
+      })
+      .catch((error) => {
+        logError("server.shutdown_failed", { signal, error });
+        process.exit(1);
+      });
+  };
+
+  process.once("SIGTERM", () => handleTerminationSignal("SIGTERM"));
+  process.once("SIGINT", () => handleTerminationSignal("SIGINT"));
+
   process.on("unhandledRejection", (reason) => {
     const error = reason instanceof Error ? reason : new Error(String(reason ?? "Unhandled promise rejection"));
     logError("process.unhandled_rejection", { error });

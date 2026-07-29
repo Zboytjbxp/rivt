@@ -1,5 +1,6 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
+import { assertProductionAuthProviders } from "./production-monitor-contract.js";
 
 const baseUrl = (process.env.RIVT_MONITOR_BASE_URL ?? "https://rivt.pro").replace(/\/+$/, "");
 const expectedCommit = process.env.EXPECTED_SOURCE_COMMIT?.trim();
@@ -47,9 +48,10 @@ assert.equal(
   "Production breached-password screening must be configured.",
 );
 assert.ok(dependencies, "Health must expose dependency status.");
-if (dependencies.ok !== undefined) assert.equal(dependencies.ok, true, "Managed storage must report healthy.");
+assert.equal(dependencies.ok, true, "Managed dependencies must report healthy.");
 assert.equal(dependencies.database, "postgres", "Database mode must be postgres.");
 assert.equal(dependencies.objectStorage, "s3-compatible", "Object storage mode must be S3-compatible.");
+assert.equal(dependencies.live, true, "Health must report live dependency probes.");
 assert.ok(health.payload?.build?.commit, "Health must expose the deployed source commit.");
 if (expectedCommit) {
   assert.equal(health.payload.build.commit, expectedCommit, "Production source commit does not match EXPECTED_SOURCE_COMMIT.");
@@ -64,7 +66,7 @@ if (expectedMatchingJobAlerts) {
 
 const providers = await request("/api/auth/providers");
 assert.equal(providers.payload?.inviteRequired, true, "Pilot invitation gating must remain enabled.");
-assert.equal(providers.payload?.providers?.email?.ok, true, "Email/password auth provider must remain configured.");
+assertProductionAuthProviders(providers.payload);
 assert.ok(providers.payload?.controls, "Provider status must expose operational controls.");
 if (!allowOperationalLockout) {
   assert.equal(providers.payload.controls.signupsDisabled, false, "Signups are disabled unexpectedly.");

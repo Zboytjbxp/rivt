@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { logWarn } from "./logger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const defaultDirectory = path.resolve(__dirname, "..", "migrations");
@@ -66,31 +65,6 @@ async function appliedMigrations(client) {
   return result.rows;
 }
 
-// Repair stale checksums caused by migration files being amended after the
-// production deploy. For each applied migration whose name still matches
-// the source file, update the stored checksum to match the current file.
-// Missing-source and name-mismatch cases are left for verifyHistory to catch.
-async function repairKnownChecksums(client, files) {
-  const filesByVersion = new Map(files.map((m) => [m.version, m]));
-  const result = await client.query(
-    "SELECT version, name, checksum FROM schema_migrations ORDER BY version",
-  );
-  for (const row of result.rows) {
-    const migration = filesByVersion.get(row.version);
-    if (!migration || migration.name !== row.name) continue;
-    if (row.checksum !== migration.up.checksum) {
-      logWarn("migration.checksum_repair", {
-        version: row.version,
-        name: row.name,
-      });
-      await client.query(
-        "UPDATE schema_migrations SET checksum = $1 WHERE version = $2 AND checksum = $3",
-        [migration.up.checksum, row.version, row.checksum],
-      );
-    }
-  }
-}
-
 function verifyHistory(files, applied) {
   const filesByVersion = new Map(files.map((migration) => [migration.version, migration]));
   const sourceVersions = [...filesByVersion.keys()].sort((a, b) => a - b).join(", ");
@@ -149,7 +123,6 @@ export async function migrationStatus(pool, options = {}) {
   const files = await migrationFiles(options.directory);
   return withMigrationLock(pool, async (client) => {
     await ensureLedger(client);
-    await repairKnownChecksums(client, files);
     const applied = await appliedMigrations(client);
     verifyHistory(files, applied);
     return statusPayload(files, applied);
@@ -162,7 +135,6 @@ export async function migrateUp(pool, options = {}) {
 
   return withMigrationLock(pool, async (client) => {
     await ensureLedger(client);
-    await repairKnownChecksums(client, files);
     let applied = await appliedMigrations(client);
     verifyHistory(files, applied);
     const appliedVersions = new Set(applied.map((record) => record.version));
@@ -197,7 +169,6 @@ export async function rollbackLatest(pool, options = {}) {
 
   return withMigrationLock(pool, async (client) => {
     await ensureLedger(client);
-    await repairKnownChecksums(client, files);
     const applied = await appliedMigrations(client);
     verifyHistory(files, applied);
     const latest = applied.at(-1);

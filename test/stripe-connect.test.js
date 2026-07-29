@@ -2,6 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { stripeConnectInternals } from "../server/stripe-connect.js";
 
+test("public invoice payment responses are marked non-cacheable", () => {
+  const headers = new Map();
+  let nextCalled = false;
+  stripeConnectInternals.preventPaymentResponseCaching(
+    {},
+    { setHeader: (name, value) => headers.set(name.toLowerCase(), value) },
+    () => { nextCalled = true; },
+  );
+  assert.equal(nextCalled, true);
+  assert.equal(headers.get("cache-control"), "no-store");
+  assert.equal(headers.get("pragma"), "no-cache");
+});
+
 test("Stripe Connect ACH stays fail-closed until explicitly enabled and signed", () => {
   const previous = {
     key: process.env.STRIPE_SECRET_KEY,

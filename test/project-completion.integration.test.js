@@ -610,6 +610,16 @@ if (!testDatabaseUrl) {
     assert.equal("id" in publicPaymentStatus.payload.data.payment, false);
     assert.equal("invoiceId" in publicPaymentStatus.payload.data.payment, false);
     assert.equal("checkoutUrl" in publicPaymentStatus.payload.data.payment, false);
+    assert.equal(publicPaymentStatus.response.headers.get("cache-control"), "no-store");
+    assert.equal(publicPaymentStatus.response.headers.get("pragma"), "no-cache");
+
+    const missingPublicPaymentStatus = await requestJson(
+      baseUrl,
+      `/api/v1/invoice-payments/cs_test_missing_${randomUUID().replaceAll("-", "")}`,
+    );
+    assert.equal(missingPublicPaymentStatus.response.status, 404);
+    assert.equal(missingPublicPaymentStatus.response.headers.get("cache-control"), "no-store");
+    assert.equal(missingPublicPaymentStatus.response.headers.get("pragma"), "no-cache");
 
     const paymentWhileLinkActive = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
       method: "POST",
@@ -634,6 +644,8 @@ if (!testDatabaseUrl) {
       },
     });
     assert.equal(checkoutCompleted.response.status, 200);
+    assert.equal(checkoutCompleted.response.headers.get("cache-control"), "no-store");
+    assert.equal(checkoutCompleted.response.headers.get("pragma"), "no-cache");
     assert.equal((await database.query(
       "SELECT status FROM project_invoice_payment_requests WHERE id = $1",
       [onlinePaymentRequest.id],

@@ -98,6 +98,17 @@ test("public Shop Talk projection only includes explicitly supplied public answe
 });
 
 test("server-rendered pages include canonical, social, structured-data, and indexing controls", () => {
+  assert.throws(
+    () => publicDiscoveryInternals.pageShell({
+      distDir: "missing",
+      title: "Missing nonce",
+      description: "Missing nonce",
+      canonical: "https://rivt.pro/jobs/missing",
+      body: "<h1>Missing nonce</h1>",
+    }),
+    /CSP nonce is required/,
+  );
+
   const html = publicDiscoveryInternals.pageShell({
     distDir: "missing-dist-is-allowed-in-unit-tests",
     title: "Electrical work | RIVT",
@@ -105,10 +116,12 @@ test("server-rendered pages include canonical, social, structured-data, and inde
     canonical: "https://rivt.pro/jobs/b2279c8c-58ee-4cf1-b2fa-20c4db1e6c52",
     body: "<h1>Electrical work</h1>",
     jsonLd: { "@context": "https://schema.org", "@type": "JobPosting" },
+    nonce: "unit-test-nonce",
   });
   assert.match(html, /rel="canonical" href="https:\/\/rivt\.pro\/jobs\//);
   assert.match(html, /property="og:image" content="https:\/\/rivt\.pro\/rivt-social-card\.png"/);
   assert.match(html, /application\/ld\+json/);
+  assert.equal((html.match(/nonce="unit-test-nonce"/g) ?? []).length, 2);
   assert.match(html, /name="robots" content="index,follow"/);
   assert.doesNotMatch(html, /theme-color/);
 
@@ -119,6 +132,7 @@ test("server-rendered pages include canonical, social, structured-data, and inde
     canonical: "https://rivt.pro/jobs/missing",
     body: "<h1>Unavailable</h1>",
     indexable: false,
+    nonce: "unit-test-nonce",
   });
   assert.match(noIndex, /name="robots" content="noindex,nofollow"/);
 });

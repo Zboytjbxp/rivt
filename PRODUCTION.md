@@ -166,6 +166,20 @@ S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
 S3_SIGNED_URL_SECONDS=900
 MAX_UPLOAD_MB=10
+HTTP_REQUEST_TIMEOUT_MS=120000
+HTTP_HEADERS_TIMEOUT_MS=15000
+HTTP_KEEP_ALIVE_TIMEOUT_MS=5000
+HTTP_MAX_HEADERS_COUNT=100
+HTTP_MAX_REQUESTS_PER_SOCKET=1000
+HTTP_SHUTDOWN_TIMEOUT_MS=10000
+PROVIDER_REQUEST_TIMEOUT_MS=10000
+API_BURST_RATE_LIMIT=600
+AUTH_ACCOUNT_RATE_LIMIT=10
+DATABASE_MAINTENANCE_INTERVAL_MS=3600000
+DATABASE_MAINTENANCE_BATCH_SIZE=500
+HEALTH_DEPENDENCY_TIMEOUT_MS=2500
+HEALTH_DEPENDENCY_SUCCESS_CACHE_MS=30000
+HEALTH_DEPENDENCY_FAILURE_CACHE_MS=5000
 ```
 
 For Railway Object Storage, copy the bucket name, endpoint, access key, and secret key from the Railway storage service into the web service variables. Keep `S3_REGION=auto` when Railway reports `auto`, keep `S3_FORCE_PATH_STYLE=false` unless the provider explicitly requires path-style requests, and leave `S3_PUBLIC_BASE_URL` blank for private customer files. The API intentionally fails closed with `503 OBJECT_STORAGE_UNAVAILABLE` / setup-required health output when object storage is missing; there is no local upload fallback.
@@ -174,11 +188,18 @@ For Railway Object Storage, copy the bucket name, endpoint, access key, and secr
 
 The repo includes `railway.json` for a single Railway web service:
 
+- Builder: Railway Railpack, with Node 22 selected by `.nvmrc`
 - Build command: `npm run build`
 - Start command: `npm start`
-- Process healthcheck: `/`
+- Process healthcheck: `/api/health`
 
-The process healthcheck only proves the site is online. Customer readiness is still controlled by `/api/health` and `/api/storage`.
+The process healthcheck returns `200` only after cached bounded PostgreSQL and
+object-storage liveness probes pass, production session metadata security is
+configured, and database migrations reach `ready`. Successful probes are
+cached for 30 seconds, failed probes for 5 seconds, and each attempt is
+bounded to 2.5 seconds by default. Railway keeps the deployment out of service
+while dependencies are unavailable or migrations are pending, running, or
+failed. `/api/storage` remains the authenticated storage-detail endpoint.
 
 1. Create a Railway project for the web app.
 2. Add a Railway PostgreSQL service.
@@ -264,7 +285,7 @@ The Express server serves the built frontend from `dist/` and exposes the `/api/
 - `POST /api/events`
 - `GET /api/payments/export.csv`
 - `GET /api/uploads`
-- `POST /api/uploads`
+- `POST /api/uploads` (retired legacy write route; returns `410 Gone`; use scoped project-media upload endpoints)
 - `GET /api/uploads/:id/url`
 - `POST /api/identity/verify`
 - `POST /api/subscriptions/checkout` (retired legacy compatibility route; must not grant entitlements)

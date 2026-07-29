@@ -26,6 +26,8 @@ test("public health is safe and reports unavailable dependencies", async () => {
     const body = await response.json();
     assert.equal(response.status, 503);
     assert.equal(body.ok, false);
+    assert.equal(body.migration.state, "pending");
+    assert.equal("error" in body.migration, false);
     assert.equal(body.dependencies.database, "missing");
     assert.equal(body.observability.errorMonitoring.mode, "setup_required");
     assert.equal("dsn" in body.observability.errorMonitoring, false);
@@ -34,6 +36,31 @@ test("public health is safe and reports unavailable dependencies", async () => {
     assert.equal("bucket" in body, false);
     assert.equal("endpoint" in body, false);
   });
+});
+
+test("production health exposes invalid session security without secret detail", async () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousPepper = process.env.AUTH_METADATA_PEPPER;
+  process.env.NODE_ENV = "production";
+  process.env.AUTH_METADATA_PEPPER = " ".repeat(64);
+  try {
+    await withServer(async (baseUrl) => {
+      const response = await fetch(`${baseUrl}/api/health`);
+      const body = await response.json();
+      assert.equal(response.status, 503);
+      assert.deepEqual(body.security.sessionSecurity, {
+        ok: false,
+        provider: "session_security",
+        mode: "setup_required",
+      });
+      assert.equal(JSON.stringify(body).includes("AUTH_METADATA_PEPPER"), false);
+    });
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+    if (previousPepper === undefined) delete process.env.AUTH_METADATA_PEPPER;
+    else process.env.AUTH_METADATA_PEPPER = previousPepper;
+  }
 });
 
 test("unsafe cross-origin request is rejected before account work", async () => {

@@ -19,6 +19,7 @@ Run packets in order. A packet is one AI session or a small number of tightly co
 | 12 | Gate B daily use |
 | 13 | Workflow coherence and subtraction |
 | 14 | Field camera |
+| 88 | Security and infrastructure hardening, recovery, and data-governance launch boundary |
 
 Before each packet read:
 

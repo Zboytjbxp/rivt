@@ -1,11 +1,88 @@
 # RIVT Build State
 
 Last updated: 2026-07-28 America/New_York
-Current gate: Gate B controlled engagement
-Current phase: Customer document and payment live acceptance follow-up.
-Active packet: `docs/delivery/packets/87_CUSTOMER_PAYMENT_ACCEPTANCE.md`
-Repository branch: `codex/customer-payment-physical-acceptance`
-Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
+Current gate: Gate B controlled engagement; public launch approval blocked
+Current phase: Security and infrastructure hardening.
+Active packet: `docs/delivery/packets/88_SECURITY_INFRASTRUCTURE_HARDENING.md`
+Repository branch: `codex/security-infrastructure-hardening`
+Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
+
+## Security and infrastructure hardening
+
+- Packet 88 is a local engineering-hardening and evidence packet. Except for
+  the one explicitly authorized backup artifact below, it does not claim a
+  deployment, provider-account/configuration change, canonical application
+  data mutation, penetration test, legal approval, or compliance
+  certification.
+- The local worktree strengthens input/body/header bounds, pre-parse burst
+  control, durable login subjects, HTTP/provider timeouts, graceful shutdown,
+  live dependency/session-security readiness, migration checksum integrity,
+  bounded non-blocking maintenance, security headers, browser-verified CSP,
+  exact configured analytics origins, and sensitive-key/value-pattern log and
+  monitor redaction. Free-text PII detection remains incomplete. It also
+  removes the unsigned query-string Report Viewer whose source and sign-off
+  could not be proven and retires its public route/copy rather than silently
+  opening the ordinary app.
+- `docs/operations/SECURITY_INFRASTRUCTURE_ASSESSMENT.md` records the
+  application, hosting, TLS, container, DDoS, scaling, redundancy, and cost
+  boundary. `docs/operations/PROVIDER_COMPLIANCE_REGISTER.md` and
+  `docs/operations/DATA_RETENTION_MATRIX.md` are explicit drafts requiring
+  account, contract, legal, and operational approval.
+- With Michael's explicit approval, a fresh AES-256-GCM logical artifact was
+  created in private managed object storage at
+  `backups/postgres/2026-07-29T02-56-41.908Z-unknown.json.gz.aes256gcm`. It
+  covers 109 PostgreSQL tables and 8,760 rows and completed in 2,081 ms.
+- The artifact embeds `sourceCommit: unknown`; a separate read-only Railway
+  runtime check confirmed
+  `RAILWAY_GIT_COMMIT_SHA=92a8451b8190f5119384a4970fb1a324503df995`.
+  Packet 88 patches future artifact creation to use the Railway commit as a
+  fallback without altering this evidence.
+- The fresh artifact updates the 24-hour RPO record, but it has not been
+  restored to an isolated target. Recovery remains incomplete because the
+  artifact records object keys and metadata, not the S3-compatible object
+  bytes. A representative photo/attachment/logo/evidence-byte restore is
+  required.
+- `npm run launch:readiness -- --require-ready` passes with the refreshed
+  policy record. This confirms the machine-checked RPO/restore-cadence policy
+  boundary only; it does not establish object-byte recovery, HA, security
+  certification, or full public-launch readiness.
+- Final exact-worktree local verification passes: production build,
+  repository lint, security lint, 150/150 unit/frontend checks, the full
+  PostgreSQL-backed aggregate, all four E2E paths, Tools, mobile-actions,
+  Shop Talk/Trade News, and Work-lifecycle rendered smokes, incident and
+  launch readiness, dependency audit with zero reported production
+  vulnerabilities, diff integrity, and a scoped current-source
+  credential-pattern scan with no reported matches. These results are local
+  branch evidence, not deployment or penetration-test evidence.
+- User uploads remain content-signature checked but explicitly
+  `not_scanned`; malware scanning/quarantine and an operator recovery path are
+  required before public launch.
+- Retention/deletion, server-owned account export, DSAR handling,
+  legal-hold/safety exceptions, orphan-object reconciliation, provider
+  deletion, regions, DPAs, subprocessors, incident notice, and transfer
+  controls remain unapproved or incomplete.
+- Read-only Railway inspection confirms the Hobby plan with one application
+  replica and one PostgreSQL replica in `us-east4`. WAF is available but
+  Under Attack mode is disabled and cannot be blindly enabled because it can
+  block non-browser webhooks/API clients. CDN is available but disabled.
+  Zone/database failover, PostgreSQL HA/PITR, object versioning, autoscaling,
+  connection pooling, and resource budgets remain unverified.
+- Production uses Railway's private internal `DATABASE_URL`; public TLS
+  negotiated TLS 1.3 with a valid certificate and HTTP redirect. Non-local
+  database clients still permit `rejectUnauthorized: false`, so any public
+  TCP-proxy backup/restore path remains a certificate-authentication boundary.
+- The attached production PostgreSQL volume uses 360.448 MB of 500 MB. A
+  separate unattached 5 GB volume exists; it was not attached, resized, or
+  deleted.
+- Other than the one explicitly authorized fresh logical artifact above, no
+  WAF/CDN, replica, autoscale, PITR, restore infrastructure, recurring backup,
+  scanner, logging, APM, paging, legal, certification, or penetration-test
+  purchase/configuration is authorized by this packet. Michael's explicit
+  approval is required immediately before any additional cost-bearing
+  provider action.
+- Packet status is **Blocked for public launch; local hardening and assessment
+  verified, not deployed**. Review, merge, exact-source deployment,
+  post-deploy health/monitoring, and the launch blockers above remain open.
 
 ## Customer document and payment live acceptance
 

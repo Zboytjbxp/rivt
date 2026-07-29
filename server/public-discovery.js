@@ -340,10 +340,13 @@ function pageShell({
   image = "/rivt-social-card.png",
   type = "website",
   indexable = true,
+  nonce,
 }) {
+  if (!nonce) throw new TypeError("A CSP nonce is required for public HTML.");
   const safeTitle = cleanText(title, 120);
   const safeDescription = cleanText(description, 240);
   const socialImage = new URL(image, canonical).toString();
+  const nonceAttribute = ` nonce="${escapeHtml(nonce)}"`;
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -364,8 +367,8 @@ function pageShell({
   <link rel="icon" type="image/png" sizes="32x32" href="/rivt-favicon-32.png" />
   ${stylesheetLinks(distDir)}
   <title>${escapeHtml(safeTitle)}</title>
-  ${jsonLd ? `<script type="application/ld+json">${safeJson(jsonLd)}</script>` : ""}
-  <script>document.documentElement.dataset.theme=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";</script>
+  ${jsonLd ? `<script${nonceAttribute} type="application/ld+json">${safeJson(jsonLd)}</script>` : ""}
+  <script${nonceAttribute}>document.documentElement.dataset.theme=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";</script>
 </head>
 <body>
   <main class="rivt-v2 public-discovery-page">${body}</main>
@@ -617,6 +620,7 @@ export function registerPublicDiscoveryRoutes({
     const canonical = `${appOrigin}/jobs`;
     response.type("html").send(pageShell({
       distDir,
+      nonce: response.locals.cspNonce,
       title: "Skilled trade jobs | RIVT",
       description: "Discover intentionally public skilled-trade jobs on RIVT. Exact jobsite addresses and contact details remain private.",
       canonical,
@@ -632,6 +636,7 @@ export function registerPublicDiscoveryRoutes({
     if (!id) {
       response.status(404).type("html").send(pageShell({
         distDir,
+        nonce: response.locals.cspNonce,
         title: "Job unavailable | RIVT",
         description: "This RIVT job is not available on the public web.",
         canonical,
@@ -644,6 +649,7 @@ export function registerPublicDiscoveryRoutes({
     if (!job) {
       response.status(404).type("html").send(pageShell({
         distDir,
+        nonce: response.locals.cspNonce,
         title: "Job unavailable | RIVT",
         description: "This RIVT job is no longer available on the public web.",
         canonical,
@@ -654,6 +660,7 @@ export function registerPublicDiscoveryRoutes({
     }
     response.type("html").send(pageShell({
       distDir,
+      nonce: response.locals.cspNonce,
       title: `${job.title} | RIVT`,
       description: `${job.trade.name} work in ${job.location.city}, ${job.location.region}. ${job.summary}`,
       canonical,
@@ -668,6 +675,7 @@ export function registerPublicDiscoveryRoutes({
     const canonical = `${appOrigin}/shop-talk`;
     response.type("html").send(pageShell({
       distDir,
+      nonce: response.locals.cspNonce,
       title: "Shop Talk | RIVT",
       description: "Public skilled-trade questions, field techniques, safety discussions, and verified fixes shared intentionally by RIVT members.",
       canonical,
@@ -683,6 +691,7 @@ export function registerPublicDiscoveryRoutes({
     if (!id) {
       response.status(404).type("html").send(pageShell({
         distDir,
+        nonce: response.locals.cspNonce,
         title: "Discussion unavailable | RIVT",
         description: "This Shop Talk discussion is not available on the public web.",
         canonical,
@@ -695,6 +704,7 @@ export function registerPublicDiscoveryRoutes({
     if (!post) {
       response.status(404).type("html").send(pageShell({
         distDir,
+        nonce: response.locals.cspNonce,
         title: "Discussion unavailable | RIVT",
         description: "This Shop Talk discussion is no longer available on the public web.",
         canonical,
@@ -705,6 +715,7 @@ export function registerPublicDiscoveryRoutes({
     }
     response.type("html").send(pageShell({
       distDir,
+      nonce: response.locals.cspNonce,
       title: `${post.title} | RIVT Shop Talk`,
       description: post.body || `${post.trade} discussion in ${post.community.name}.`,
       canonical,

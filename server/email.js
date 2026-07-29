@@ -1,4 +1,5 @@
 import { ApiError } from "./api.js";
+import { providerAbortSignal } from "./provider-safety.js";
 
 const capturedEmails = [];
 
@@ -42,6 +43,7 @@ export async function sendTransactionalEmail({ to, subject, text, html, attachme
 
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
+    signal: providerAbortSignal(),
     headers,
     body: JSON.stringify({
       from: process.env.EMAIL_FROM,

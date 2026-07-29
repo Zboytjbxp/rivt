@@ -1,6 +1,7 @@
 import { ApiError, asyncRoute, validate, z } from "./api.js";
 import { verifyStripeSignature } from "./billing.js";
 import { logInfo } from "./logger.js";
+import { providerAbortSignal } from "./provider-safety.js";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
 const STRIPE_ACCOUNTS_V2_API_VERSION = "2026-06-24.preview";
@@ -20,6 +21,12 @@ const toolInvoiceLocalIdSchema = z.string().trim().min(1).max(120).regex(/^[A-Za
 const onboardingInputSchema = z.object({
   activeWorkId: z.uuid().optional(),
 });
+
+function preventPaymentResponseCaching(_request, response, next) {
+  response.setHeader("Cache-Control", "no-store");
+  response.setHeader("Pragma", "no-cache");
+  next();
+}
 
 function envValue(name, fallback = undefined) {
   const value = process.env[name]?.trim();
@@ -75,6 +82,7 @@ async function stripeConnectRequest(config, path, params = {}, options = {}) {
   const body = method === "GET" ? undefined : encodeForm(params);
   const response = await fetch(`https://api.stripe.com/v1${path}`, {
     method,
+    signal: providerAbortSignal(),
     headers: {
       Authorization: `Bearer ${config.secretKey}`,
       "Stripe-Version": STRIPE_API_VERSION,
@@ -122,6 +130,7 @@ async function stripeConnectV2Request(config, path, params = {}, options = {}) {
   const body = method === "GET" ? undefined : JSON.stringify(params);
   const response = await fetch(url, {
     method,
+    signal: providerAbortSignal(),
     headers: {
       Authorization: `Bearer ${config.secretKey}`,
       "Stripe-Version": STRIPE_ACCOUNTS_V2_API_VERSION,
@@ -765,6 +774,7 @@ export function registerStripeConnectWebhookRoute({
 }) {
   app.post(
     "/api/stripe/connect/webhook",
+    preventPaymentResponseCaching,
     createRequestContext,
     createRequestLogger(),
     express.raw({ type: "application/json", limit: "2mb" }),
@@ -1431,7 +1441,7 @@ export function registerStripeConnectRoutes({
     sendIdempotentResult(response, result);
   }));
 
-  app.get("/pay/:requestId", publicPaymentRateLimit, asyncRoute(async (request, response) => {
+  app.get("/pay/:requestId", preventPaymentResponseCaching, publicPaymentRateLimit, asyncRoute(async (request, response) => {
     const requestId = validate(z.uuid(), request.params.requestId);
     const result = await database.query(
       `SELECT status, checkout_url, stripe_checkout_session_id
@@ -1449,7 +1459,6 @@ export function registerStripeConnectRoutes({
     if (["created", "open"].includes(payment.status)
       && typeof payment.checkout_url === "string"
       && payment.checkout_url.startsWith("https://checkout.stripe.com/")) {
-      response.setHeader("Cache-Control", "no-store");
       response.redirect(303, payment.checkout_url);
       return;
     }
@@ -1462,13 +1471,17 @@ export function registerStripeConnectRoutes({
     response.redirect(303, completion.toString());
   }));
 
-  app.get("/api/v1/invoice-payments/:sessionId", publicPaymentRateLimit, asyncRoute(async (request, response) => {
-    const sessionId = String(request.params.sessionId ?? "").trim();
-    if (!/^cs_(?:test_|live_)?[A-Za-z0-9_]{12,200}$/.test(sessionId)) {
-      throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
-    }
-    const result = await database.query(
-      `SELECT pir.amount_cents, pir.refunded_cents, pir.currency, pir.status,
+  app.get(
+    "/api/v1/invoice-payments/:sessionId",
+    preventPaymentResponseCaching,
+    publicPaymentRateLimit,
+    asyncRoute(async (request, response) => {
+      const sessionId = String(request.params.sessionId ?? "").trim();
+      if (!/^cs_(?:test_|live_)?[A-Za-z0-9_]{12,200}$/.test(sessionId)) {
+        throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
+      }
+      const result = await database.query(
+        `SELECT pir.amount_cents, pir.refunded_cents, pir.currency, pir.status,
               pir.paid_at, pir.failed_at, pir.disputed_at, pir.refunded_at,
               pir.updated_at, pi.invoice_number, pi.pay_to
        FROM project_invoice_payment_requests pir
@@ -1484,29 +1497,30 @@ export function registerStripeConnectRoutes({
        INNER JOIN tool_records tr ON tr.id = tipr.tool_record_id
        WHERE tipr.stripe_checkout_session_id = $1
        LIMIT 1`,
-      [sessionId],
-    );
-    const row = result.rows[0];
-    if (!row) throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
-    response.json({
-      data: {
-        payment: {
-          invoiceNumber: row.invoice_number,
-          payTo: row.pay_to || "Invoice issuer",
-          amountCents: Number(row.amount_cents),
-          refundedCents: Number(row.refunded_cents),
-          currency: row.currency,
-          status: row.status,
-          paidAt: toIso(row.paid_at),
-          failedAt: toIso(row.failed_at),
-          disputedAt: toIso(row.disputed_at),
-          refundedAt: toIso(row.refunded_at),
-          updatedAt: toIso(row.updated_at),
+        [sessionId],
+      );
+      const row = result.rows[0];
+      if (!row) throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
+      response.json({
+        data: {
+          payment: {
+            invoiceNumber: row.invoice_number,
+            payTo: row.pay_to || "Invoice issuer",
+            amountCents: Number(row.amount_cents),
+            refundedCents: Number(row.refunded_cents),
+            currency: row.currency,
+            status: row.status,
+            paidAt: toIso(row.paid_at),
+            failedAt: toIso(row.failed_at),
+            disputedAt: toIso(row.disputed_at),
+            refundedAt: toIso(row.refunded_at),
+            updatedAt: toIso(row.updated_at),
+          },
         },
-      },
-      meta: { requestId: request.requestId },
-    });
-  }));
+        meta: { requestId: request.requestId },
+      });
+    }),
+  );
 }
 
 export const stripeConnectInternals = {
@@ -1525,5 +1539,6 @@ export const stripeConnectInternals = {
   createV2ConnectedAccountPayload,
   normalizeConnectAccount,
   providerContributionCents,
+  preventPaymentResponseCaching,
   v2DetailsSubmitted,
 };

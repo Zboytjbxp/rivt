@@ -17,7 +17,9 @@ import {
 const sourceUrl = process.env.BACKUP_DATABASE_URL?.trim() || process.env.DATABASE_URL?.trim();
 const bucket = requiredEnv("S3_BUCKET");
 const prefix = (process.env.BACKUP_S3_PREFIX?.trim() || "backups/postgres").replace(/\/+$/, "");
-const sourceCommit = process.env.SOURCE_COMMIT?.trim() || "unknown";
+const sourceCommit = process.env.SOURCE_COMMIT?.trim()
+  || process.env.RAILWAY_GIT_COMMIT_SHA?.trim()
+  || "unknown";
 const createdAt = new Date().toISOString();
 const objectTimestamp = createdAt.replaceAll(":", "-");
 const objectKey = process.env.BACKUP_S3_KEY?.trim()

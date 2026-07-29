@@ -1,4 +1,5 @@
 import { logWarn } from "./logger.js";
+import { providerAbortSignal } from "./provider-safety.js";
 
 const forbiddenProperty = /(?:^|_)(?:email|phone|address|name)(?:_|$)/i;
 
@@ -29,6 +30,7 @@ export async function emitProductEvent(event, { accountId, role, properties = {}
   try {
     const response = await fetch(current.endpoint, {
       method: "POST",
+      signal: providerAbortSignal(),
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${current.writeKey}`,

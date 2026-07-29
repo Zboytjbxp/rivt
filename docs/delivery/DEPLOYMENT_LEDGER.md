@@ -1,5 +1,36 @@
 # Deployment Ledger
 
+## 2026-07-28 - Packet 88 Fresh Encrypted Backup Artifact
+
+- Michael explicitly authorized one fresh production backup in this task.
+- `npm run backup:logical-artifact`, executed inside the Railway production
+  application service, created the private encrypted artifact
+  `backups/postgres/2026-07-29T02-56-41.908Z-unknown.json.gz.aes256gcm` at
+  `2026-07-29T02:56:41.908Z`.
+- The artifact contains the logical backup manifest and data for 109
+  PostgreSQL tables and 8,760 rows. Creation completed in 2,081 ms. The
+  artifact is encrypted with AES-256-GCM in RIVT's private managed
+  S3-compatible object storage.
+- The artifact's embedded `sourceCommit` is honestly recorded as `unknown`.
+  An independent read-only runtime check confirmed Railway
+  `RAILWAY_GIT_COMMIT_SHA` was
+  `92a8451b8190f5119384a4970fb1a324503df995`. The backup script is patched on
+  the Packet 88 review branch to use Railway's immutable commit value as a
+  future fallback, but the existing artifact and its manifest were not
+  rewritten.
+- This action refreshed the recorded 24-hour logical-backup evidence. It did
+  **not** restore this exact artifact, create a restore target, or prove
+  recovery of photos, attachments, logos, or other object bytes.
+- After the recovery-policy record was updated,
+  `npm run launch:readiness -- --require-ready` passed. That machine gate
+  checks the approved policy/evidence freshness boundary; it does not close
+  Packet 88's broader launch blockers.
+- No application deployment, PITR, replica, WAF/CDN, DNS, volume, autoscale,
+  plan, or other production-resource change was performed. No recurring
+  backup schedule was enabled.
+- This evidence does not establish high availability, complete disaster
+  recovery, compliance certification, or public-launch readiness.
+
 ## 2026-07-28 - Customer Documents and Contact Import
 
 - Production feature source commit:
