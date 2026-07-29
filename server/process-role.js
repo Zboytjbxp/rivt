@@ -1,5 +1,5 @@
 const PROCESS_ROLES = Object.freeze(["web", "worker", "migrate", "combined"]);
-const HOSTED_PROCESS_ROLES = Object.freeze(["web", "worker", "migrate"]);
+const HOSTED_PROCESS_ROLES = Object.freeze(["web", "worker"]);
 const MINIMUM_CONNECTION_HEADROOM_PERCENT = 30;
 
 const ROLE_POOL_CONFIGURATION = Object.freeze({
@@ -30,23 +30,39 @@ export function resolveProcessRole(
   { allowLocalCombinedDefault = false, requestedRole = null } = {},
 ) {
   const hosted = isHostedRuntime(environment);
-  const rawRole = String(requestedRole ?? value(environment, "RIVT_PROCESS_ROLE") ?? "")
+  const configuredRole = String(value(environment, "RIVT_PROCESS_ROLE") ?? "")
     .trim()
     .toLowerCase();
+  const boundRole = String(requestedRole ?? "").trim().toLowerCase();
+  const rawRole = boundRole || configuredRole;
 
   if (!rawRole) {
     if (!hosted && allowLocalCombinedDefault) return "combined";
     throw new Error(
-      `RIVT_PROCESS_ROLE is required. Choose ${hosted ? "web, worker, or migrate" : "web, worker, migrate, or combined"}.`,
+      `RIVT_PROCESS_ROLE is required. Choose ${hosted ? "web or worker" : "web, worker, migrate, or combined"}.`,
     );
   }
   if (!PROCESS_ROLES.includes(rawRole)) {
     throw new Error(
-      `RIVT_PROCESS_ROLE must be ${hosted ? "web, worker, or migrate" : "web, worker, migrate, or combined"}.`,
+      `RIVT_PROCESS_ROLE must be ${hosted ? "web or worker" : "web, worker, migrate, or combined"}.`,
     );
   }
   if (hosted && rawRole === "combined") {
     throw new Error("The combined process role is only allowed for local development and tests.");
+  }
+  if (hosted && boundRole === "migrate") {
+    if (configuredRole !== "web") {
+      throw new Error("Hosted migrations must run only as the web service pre-deploy command.");
+    }
+  } else if (hosted && rawRole === "migrate") {
+    throw new Error("Hosted migrations must run only as the web service pre-deploy command.");
+  } else if (hosted && boundRole) {
+    if (!configuredRole) {
+      throw new Error("RIVT_PROCESS_ROLE must be set and match the bound hosted process role.");
+    }
+    if (configuredRole !== boundRole) {
+      throw new Error("RIVT_PROCESS_ROLE conflicts with the bound hosted process role.");
+    }
   }
   return rawRole;
 }
@@ -236,7 +252,103 @@ export function assertConnectionBudget(environment = process.env) {
   return status;
 }
 
+function databaseLimitInteger(valueToParse, name) {
+  const parsed = Number(valueToParse);
+  if (!Number.isSafeInteger(parsed) || parsed < 0) {
+    throw new Error(`PostgreSQL returned an invalid ${name} value.`);
+  }
+  return parsed;
+}
+
+function databaseConnectionLimit(valueToParse, name) {
+  const parsed = Number(valueToParse);
+  if (!Number.isSafeInteger(parsed) || parsed < -1) {
+    throw new Error(`PostgreSQL returned an invalid ${name} value.`);
+  }
+  return parsed;
+}
+
+export async function assertDatabaseConnectionCeiling(database, budget) {
+  if (!database || typeof database.query !== "function") {
+    throw new Error("A PostgreSQL connection is required to verify the connection ceiling.");
+  }
+  if (!budget?.ok || !Number.isSafeInteger(budget.databaseMaxConnections)) {
+    throw new Error("A valid declared connection budget is required before PostgreSQL verification.");
+  }
+
+  const result = await database.query(
+    `SELECT
+       current_setting('max_connections')::integer AS max_connections,
+       current_setting('superuser_reserved_connections')::integer
+         AS superuser_reserved_connections,
+       COALESCE(NULLIF(current_setting('reserved_connections', true), ''), '0')::integer
+         AS reserved_connections,
+       (SELECT datconnlimit
+        FROM pg_database
+        WHERE datname = current_database())::integer AS database_connection_limit,
+       (SELECT rolconnlimit
+        FROM pg_roles
+        WHERE rolname = current_user)::integer AS role_connection_limit`,
+  );
+  if (result.rows.length !== 1) {
+    throw new Error("PostgreSQL did not return one connection-ceiling record.");
+  }
+
+  const row = result.rows[0];
+  const observedMaxConnections = databaseLimitInteger(
+    row.max_connections,
+    "max_connections",
+  );
+  const superuserReservedConnections = databaseLimitInteger(
+    row.superuser_reserved_connections,
+    "superuser_reserved_connections",
+  );
+  const reservedConnections = databaseLimitInteger(
+    row.reserved_connections,
+    "reserved_connections",
+  );
+  const globalUsableConnections = (
+    observedMaxConnections
+    - superuserReservedConnections
+    - reservedConnections
+  );
+  const databaseConnectionLimitValue = databaseConnectionLimit(
+    row.database_connection_limit,
+    "database connection limit",
+  );
+  const roleConnectionLimit = databaseConnectionLimit(
+    row.role_connection_limit,
+    "role connection limit",
+  );
+  const observedUsableConnections = Math.min(
+    globalUsableConnections,
+    ...[databaseConnectionLimitValue, roleConnectionLimit]
+      .filter((limit) => limit >= 0),
+  );
+  if (observedUsableConnections < 1) {
+    throw new Error("PostgreSQL reported no usable application connections.");
+  }
+  if (budget.databaseMaxConnections > observedUsableConnections) {
+    throw new Error(
+      "RIVT_DB_MAX_CONNECTIONS exceeds PostgreSQL's observed usable connection ceiling.",
+    );
+  }
+
+  return {
+    declaredMaxConnections: budget.databaseMaxConnections,
+    observedMaxConnections,
+    observedUsableConnections,
+    globalUsableConnections,
+    databaseConnectionLimit: databaseConnectionLimitValue,
+    roleConnectionLimit,
+    superuserReservedConnections,
+    reservedConnections,
+  };
+}
+
 export const processRoleInternals = {
+  databaseConnectionLimit,
+  databaseLimitInteger,
   HOSTED_PROCESS_ROLES,
   MINIMUM_CONNECTION_HEADROOM_PERCENT,
   PROCESS_ROLES,
