@@ -64,8 +64,13 @@
   clean-Linux forced-shutdown test exposed a pre-existing unreferenced
   contract deadline. Follow-up commit
   `3283048b262ed539f4fde925dafafb7689b2a3fc` keeps the deadline referenced;
-  focused security coverage passes 47/47 locally. This does not promote
-  `GA-OPS-007`, `GA-OPS-008`, or `GA-OPS-009`.
+  focused security coverage passes 47/47 locally. The next public CI run
+  `30496419975` passed all 222 unit tests and reached healthy PostgreSQL, then
+  correctly rejected the workflow's implicit 100-connection declaration
+  against the disposable database's observed 97 usable slots. Commit
+  `96624b099687969b3d6a17a54f861b3c10e7e4c7` makes the CI ceiling explicit
+  without weakening the runtime check. This does not promote `GA-OPS-007`,
+  `GA-OPS-008`, or `GA-OPS-009`.
 
 ## Traceability Addendum - 2026-07-29 Railway Replica-Safety Source Controls
 

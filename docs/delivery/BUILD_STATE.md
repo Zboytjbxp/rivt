@@ -99,6 +99,13 @@ Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
   deadline active; its focused 47/47 security tests, lint, and diff integrity
   pass locally. The failed run never reached PostgreSQL integration tests and
   did not indicate a database or provider failure.
+- The second public CI run (`30496419975`) passed all 222 unit tests and
+  reached a healthy PostgreSQL service. Its integration processes then failed
+  closed because the workflow implicitly declared 100 application
+  connections while the disposable PostgreSQL service exposes 97 after three
+  reserved slots. Commit `96624b099687969b3d6a17a54f861b3c10e7e4c7`
+  records the exact 97-slot CI ceiling without weakening the production
+  runtime check or changing PostgreSQL.
 - Packet status is **Activation package implemented and fully repository-
   verified locally and pushed for review; provider action and public launch
   remain unauthorized. No provider change, paid action, production-data

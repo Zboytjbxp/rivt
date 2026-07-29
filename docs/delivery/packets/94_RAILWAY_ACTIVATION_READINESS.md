@@ -234,6 +234,13 @@ event loop first. Follow-up commit
 `3283048b262ed539f4fde925dafafb7689b2a3fc` keeps that deadline active.
 Focused security coverage passes 47/47 locally after the correction.
 
+The second public CI run (`30496419975`) passed all 222 unit tests and reached
+healthy PostgreSQL, then failed closed in integration because the workflow's
+implicit 100-connection declaration exceeded the disposable database's 97
+usable slots after three reserved connections. Commit
+`96624b099687969b3d6a17a54f861b3c10e7e4c7` explicitly declares that
+observed CI ceiling. The application ceiling check remains unchanged.
+
 Local source evidence is not deployment evidence.
 
 ## Status
