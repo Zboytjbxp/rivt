@@ -73,7 +73,7 @@ export async function publicTables(client) {
 
 export async function tableColumns(client, tableName) {
   const result = await client.query(`
-    SELECT column_name, is_generated, identity_generation
+    SELECT column_name, data_type, is_generated, identity_generation
     FROM information_schema.columns
     WHERE table_schema = 'public'
       AND table_name = $1
@@ -83,6 +83,7 @@ export async function tableColumns(client, tableName) {
     .filter((row) => row.is_generated !== "ALWAYS")
     .map((row) => ({
       name: row.column_name,
+      dataType: row.data_type,
       identityGeneration: row.identity_generation,
     }));
 }
@@ -193,8 +194,13 @@ export async function insertBatch(client, tableName, columns, rows) {
   const hasSystemIdentity = columns.some((column) => column.identityGeneration === "ALWAYS");
   const values = [];
   const tuples = rows.map((row, rowIndex) => {
-    const placeholders = columnNames.map((columnName, columnIndex) => {
-      values.push(row[columnName]);
+    const placeholders = columns.map((column, columnIndex) => {
+      const value = row[column.name];
+      values.push(
+        (column.dataType === "json" || column.dataType === "jsonb") && value !== null && value !== undefined
+          ? JSON.stringify(value)
+          : value,
+      );
       return `$${rowIndex * columnNames.length + columnIndex + 1}`;
     });
     return `(${placeholders.join(", ")})`;

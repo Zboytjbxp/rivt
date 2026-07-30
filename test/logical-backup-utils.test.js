@@ -10,8 +10,10 @@ import {
   encryptionKeyFromSecret,
   encryptionKeyIdFromSecret,
   encryptSnapshot,
+  insertBatch,
   orderedTables,
   previousBackupEncryptionSecret,
+  tableColumns,
 } from "../scripts/logical-backup-utils.js";
 
 const snapshot = {
@@ -215,4 +217,80 @@ test("logical backup restore refuses matching database identities", () => {
     ),
     /identities match/,
   );
+});
+
+test("logical backup column metadata retains target data types for restore binding", async () => {
+  const client = {
+    async query() {
+      return {
+        rows: [
+          {
+            column_name: "id",
+            data_type: "bigint",
+            is_generated: "NEVER",
+            identity_generation: "ALWAYS",
+          },
+          {
+            column_name: "thread_messages",
+            data_type: "jsonb",
+            is_generated: "NEVER",
+            identity_generation: null,
+          },
+          {
+            column_name: "generated_label",
+            data_type: "text",
+            is_generated: "ALWAYS",
+            identity_generation: null,
+          },
+        ],
+      };
+    },
+  };
+
+  assert.deepEqual(await tableColumns(client, "customers"), [
+    { name: "id", dataType: "bigint", identityGeneration: "ALWAYS" },
+    { name: "thread_messages", dataType: "jsonb", identityGeneration: null },
+  ]);
+});
+
+test("logical restore binds JSON arrays and values as JSON without changing ordinary or identity values", async () => {
+  let captured;
+  const client = {
+    async query(sql, values) {
+      captured = { sql, values };
+    },
+  };
+  const columns = [
+    { name: "id", dataType: "bigint", identityGeneration: "ALWAYS" },
+    { name: "thread_messages", dataType: "jsonb", identityGeneration: null },
+    { name: "metadata", dataType: "json", identityGeneration: null },
+    { name: "label", dataType: "text", identityGeneration: null },
+  ];
+
+  await insertBatch(client, "customers", columns, [
+    {
+      id: 41,
+      thread_messages: [],
+      metadata: { source: "restore" },
+      label: "empty",
+    },
+    {
+      id: 42,
+      thread_messages: [{ body: "Measured twice" }, "plain", 3, true],
+      metadata: "customer note",
+      label: "nonempty",
+    },
+  ]);
+
+  assert.match(captured.sql, /OVERRIDING SYSTEM VALUE/);
+  assert.deepEqual(captured.values, [
+    41,
+    "[]",
+    '{"source":"restore"}',
+    "empty",
+    42,
+    '[{"body":"Measured twice"},"plain",3,true]',
+    '"customer note"',
+    "nonempty",
+  ]);
 });
