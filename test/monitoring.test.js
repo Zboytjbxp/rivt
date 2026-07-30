@@ -69,3 +69,63 @@ test("captureException sends a sanitized Sentry-compatible event", async () => {
   assert.equal("password" in requestBody.extra, false);
   assert.equal("token" in requestBody.extra.nested, false);
 });
+
+test("captureException redacts sensitive strings at the Sentry payload boundary", async () => {
+  let requestBody = null;
+  const error = new Error(
+    "Provider rejected owner@example.com with Bearer secret-bearer-token "
+      + "at postgres://dbuser:dbpass@db.example/rivt using "
+      + "https://sentry-public-key@errors.example/12345",
+  );
+  error.stack = [
+    error.message,
+    "at callback (/app/server.js?access_token=query-secret&x-amz-signature=signed-secret:1:1)",
+  ].join("\n");
+
+  const result = await captureException(error, {
+    requestId: "req-safe",
+    path: "/api/customer/owner@example.com?token=path-secret",
+    statusCode: 500,
+    nested: {
+      customerEmail: "customer@example.com",
+      safe: "visible",
+      providerMessage:
+        "Stripe returned sk_live_1234567890; Resend returned re_secret123456; "
+        + "Google returned GOCSPX-secret1234567890; sentry_key=ingestion-secret",
+    },
+  }, {
+    env: {
+      NODE_ENV: "production",
+      SOURCE_COMMIT: "abc123",
+      SENTRY_DSN: "https://public-key:secret@sentry.example/12345",
+    },
+    fetchImpl: async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return { ok: true, status: 200 };
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(requestBody.extra.requestId, "req-safe");
+  assert.equal(requestBody.extra.nested.safe, "visible");
+  assert.equal("customerEmail" in requestBody.extra.nested, false);
+
+  const serialized = JSON.stringify(requestBody);
+  for (const unsafeValue of [
+    "owner@example.com",
+    "customer@example.com",
+    "secret-bearer-token",
+    "dbuser",
+    "dbpass",
+    "sentry-public-key",
+    "query-secret",
+    "signed-secret",
+    "path-secret",
+    "sk_live_1234567890",
+    "re_secret123456",
+    "GOCSPX-secret1234567890",
+    "ingestion-secret",
+  ]) {
+    assert.equal(serialized.includes(unsafeValue), false, `Sentry payload contained ${unsafeValue}`);
+  }
+});

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isSensitiveFieldName, redactSensitiveString } from "./logger.js";
 
 const defaultTimeoutMs = 2500;
 
@@ -64,30 +65,41 @@ export function errorMonitoringStatus({ env = process.env } = {}) {
 function errorPayload(error) {
   if (error instanceof Error) {
     return {
-      type: error.name || "Error",
-      value: error.message || "Unknown error",
+      type: redactSensitiveString(error.name || "Error"),
+      value: redactSensitiveString(error.message || "Unknown error"),
       stacktrace: error.stack
-        ? { frames: error.stack.split("\n").slice(0, 40).map((line) => ({ filename: line.trim() })) }
+        ? {
+            frames: error.stack
+              .split("\n")
+              .slice(0, 40)
+              .map((line) => ({ filename: redactSensitiveString(line.trim()) })),
+          }
         : undefined,
     };
   }
   return {
     type: "NonError",
-    value: String(error ?? "Unknown error"),
+    value: redactSensitiveString(String(error ?? "Unknown error")),
   };
 }
 
 function sanitizeContext(value, depth = 0) {
   if (depth > 4) return "[MaxDepth]";
   if (value === null || value === undefined) return value;
+  if (typeof value === "string") return redactSensitiveString(value);
   if (typeof value !== "object") return value;
   if (Array.isArray(value)) return value.slice(0, 25).map((item) => sanitizeContext(item, depth + 1));
 
   return Object.fromEntries(
     Object.entries(value)
-      .filter(([key]) => !/password|secret|token|authorization|cookie|dsn/i.test(key))
+      .filter(([key]) => !isSensitiveFieldName(key))
       .map(([key, fieldValue]) => [key, sanitizeContext(fieldValue, depth + 1)]),
   );
+}
+
+function sanitizeTag(value) {
+  if (value === null || value === undefined) return undefined;
+  return redactSensitiveString(String(value)).slice(0, 500);
 }
 
 export async function captureException(error, context = {}, {
@@ -114,9 +126,9 @@ export async function captureException(error, context = {}, {
     extra: sanitizeContext(context),
     tags: {
       service: "rivt-api",
-      requestId: context.requestId ?? undefined,
-      path: context.path ?? undefined,
-      statusCode: context.statusCode ?? undefined,
+      requestId: sanitizeTag(context.requestId),
+      path: sanitizeTag(context.path),
+      statusCode: sanitizeTag(context.statusCode),
     },
   };
 

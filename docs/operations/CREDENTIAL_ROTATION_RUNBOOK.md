@@ -78,8 +78,11 @@ For each provider:
      owner-controlled device.
    - backup encryption: decrypt the retained named artifact through the
      previous-key path in an isolated target only when separately approved.
-   - Sentry: health/configuration and a provider test event when no paid quota
-     change is required.
+   - Sentry: require the primary `SENTRY_DSN` variable, confirm the legacy
+     `ERROR_MONITORING_DSN` alias is absent, run health/configuration checks,
+     and send one uniquely named scrubbed provider test event when no paid
+     quota change is required. Confirm that exact event and alert in Sentry;
+     configuration status alone is not ingestion proof.
 7. Revoke or disable the old credential.
 8. Verify the old credential no longer works using the provider's status or
    revocation evidence without retrieving or printing its value.

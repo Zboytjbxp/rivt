@@ -97,6 +97,15 @@
   `ACTIVE_LAUNCH_HOLD` makes the automated launch gate fail closed until every
   incident exit criterion is verified. Railway Stage 1 remains paused and its
   earlier approval cannot be reused.
+- `GA-SEC-001` gains current-head Sentry-boundary containment: the monitoring
+  payload reuses the structured logger's sensitive-field and string scrubbers
+  for exception messages, stack frames, nested context, and tags. A focused
+  regression proves known provider credentials, authorization material,
+  credential-bearing URLs, query secrets, and email addresses do not reach the
+  serialized Sentry event while safe request/operational fields remain.
+  Production currently has the primary Sentry variable present and the legacy
+  alias absent, verified by a value-free in-container check; this does not
+  satisfy the still-open replacement-key and provider-ingestion proof.
 
 ## Packet 85 — Security, accessibility, and operations closure evidence
 

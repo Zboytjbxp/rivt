@@ -79,7 +79,7 @@ function normalizedKey(key) {
   return String(key).replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 
-function isSensitiveKey(key) {
+export function isSensitiveFieldName(key) {
   const normalized = normalizedKey(key);
   return sensitiveKeyNames.has(normalized)
     || sensitiveKeySuffix.test(String(key))
@@ -87,7 +87,7 @@ function isSensitiveKey(key) {
     || contextualNameOrAddress.test(normalized);
 }
 
-function sanitizeString(value) {
+export function redactSensitiveString(value) {
   return value
     .replace(
       /-----BEGIN(?: [A-Z0-9]+)* PRIVATE KEY-----[\s\S]*?-----END(?: [A-Z0-9]+)* PRIVATE KEY-----/g,
@@ -96,6 +96,8 @@ function sanitizeString(value) {
     .replace(/\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, redacted)
     .replace(/\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{8,}\b/g, redacted)
     .replace(/\bwhsec_[A-Za-z0-9]{8,}\b/g, redacted)
+    .replace(/\bre_[A-Za-z0-9_-]{8,}\b/g, redacted)
+    .replace(/\bGOCSPX-[A-Za-z0-9_-]{16,}\b/g, redacted)
     .replace(/\bAIza[A-Za-z0-9_-]{30,}\b/g, redacted)
     .replace(/\bAKIA[A-Z0-9]{16}\b/g, redacted)
     .replace(
@@ -103,22 +105,22 @@ function sanitizeString(value) {
       redacted,
     )
     .replace(
-      /\b([a-z][a-z0-9+.-]*:\/\/)([^/\s:@]+):([^@\s/]+)@/gi,
+      /\b([a-z][a-z0-9+.-]*:\/\/)([^/\s:@]+)(?::[^@\s/]+)?@/gi,
       `$1${redacted}@`,
     )
     .replace(
-      /(\b(?:password|passwd|passphrase|secret|token|access[_-]?token|refresh[_-]?token|id[_-]?token|session[_-]?id|session[_-]?token|client[_-]?secret|webhook[_-]?secret|signing[_-]?secret|api[_-]?key|private[_-]?key|authorization|cookie|dsn|signature|x-amz-signature)\b\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;&]+)/gi,
+      /(\b(?:password|passwd|passphrase|secret|token|access[_-]?token|refresh[_-]?token|id[_-]?token|session[_-]?id|session[_-]?token|client[_-]?secret|webhook[_-]?secret|signing[_-]?secret|api[_-]?key|private[_-]?key|sentry[_-]?key|authorization|cookie|dsn|signature|x-amz-signature)\b\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;&]+)/gi,
       `$1${redacted}`,
     )
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, redacted);
 }
 
 function safeField(value, seen = new WeakSet()) {
-  if (typeof value === "string") return sanitizeString(value);
+  if (typeof value === "string") return redactSensitiveString(value);
   if (value instanceof Error) {
     return {
-      name: sanitizeString(value.name),
-      message: sanitizeString(value.message),
+      name: redactSensitiveString(value.name),
+      message: redactSensitiveString(value.message),
       code: safeField(value.code, seen),
       status: safeField(value.status, seen),
       stack: process.env.NODE_ENV === "production" ? undefined : safeField(value.stack, seen),
@@ -135,7 +137,7 @@ function safeField(value, seen = new WeakSet()) {
         .filter(([, fieldValue]) => fieldValue !== undefined)
         .map(([key, fieldValue]) => [
           key,
-          isSensitiveKey(key) ? redacted : safeField(fieldValue, seen),
+          isSensitiveFieldName(key) ? redacted : safeField(fieldValue, seen),
         ]),
     );
   } finally {
@@ -148,7 +150,7 @@ function write(level, event, fields = {}) {
   const record = {
     ...(safeFields && typeof safeFields === "object" && !Array.isArray(safeFields) ? safeFields : {}),
     level,
-    event: sanitizeString(String(event)),
+    event: redactSensitiveString(String(event)),
     service,
     timestamp: new Date().toISOString(),
   };

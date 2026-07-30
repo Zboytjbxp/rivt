@@ -205,6 +205,17 @@ credential-exposure containment is in progress.
   configured. The enhanced monitor passed against exact production source
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9` in 562 ms. This establishes the
   Sentry rotation verification guard but does not rotate or prove a new DSN.
+- Current-head Sentry capture now applies the shared final-boundary redaction
+  to exception messages, stack frames, nested context, and tags instead of
+  forwarding raw strings. The regression first reproduced leakage of provider
+  keys, authorization data, credential-bearing URLs, query secrets, and email
+  addresses, then proved those values absent while safe operational context
+  remained. Build, application/security lint, 141 unit/frontend tests, the
+  complete three-journey browser E2E suite, diff integrity, and the production
+  dependency audit pass. A secret-safe production-container check found
+  `SENTRY_DSN` present and the legacy `ERROR_MONITORING_DSN` alias absent, but
+  replacement-key creation, ingestion/alert proof, and old-key retirement
+  remain provider-side launch blockers.
 - Incident timing is now recorded without false precision: repository evidence
   bounds detection between 19:01 and 21:42:25 America/New_York on July 29, and
   the first formal critical declaration occurred at 21:42:25. Containment work

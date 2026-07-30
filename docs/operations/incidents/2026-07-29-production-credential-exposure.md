@@ -401,6 +401,20 @@ moment.
 - Focused regression coverage proves protected values are absent from the
   serialized line and legitimate operational fields remain intact. The
   logger tests, security lint, and all 140 unit/frontend checks pass.
+- The Sentry event constructor now reuses those same field-name and string
+  redaction boundaries before serializing exception messages, stack frames,
+  nested context, and tags. A regression reproduces the former leak with a
+  browser-report-shaped error containing provider keys, authorization data,
+  credential-bearing URLs, query secrets, and email addresses; none survive
+  in the captured Sentry request while request IDs and safe operational context
+  remain available. Current-head verification passes 141 unit/frontend tests,
+  build, application/security lint, the complete browser E2E chain, and the
+  production dependency audit with zero known vulnerabilities.
+- A secret-safe read-only check inside the running production container found
+  the intended `SENTRY_DSN` variable configured and the legacy
+  `ERROR_MONITORING_DSN` alias absent. This is configuration-shape evidence
+  only; it does not rotate the pending Sentry key or prove replacement-event
+  ingestion.
 - This is defense in depth. Call sites must still avoid arbitrary user text,
   and this change cannot retroactively remove values from historical provider
   logs or prove that every future unidentified PII shape will be recognized.
