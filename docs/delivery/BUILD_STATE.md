@@ -46,10 +46,11 @@ credential-exposure containment is in progress.
   `{"received":true,"duplicate":false}`. The checks left two clearly named
   idempotency-ledger records.
 - The prior Connect signing secret was scheduled for expiry after a one-hour
-  overlap. Stripe live API key rotation remains blocked at Stripe's
-  human-verification/CAPTCHA spinner and was not completed; billing webhook
-  rotation remains pending. The incident remains open and Railway Stage 1
-  remains paused.
+  overlap. Stripe live API key rotation is complete: Railway deployment
+  `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded, a read-only Stripe account
+  request authenticated with HTTP 200, and the superseded key was expired only
+  after that proof. Stripe billing webhook rotation remains pending. The
+  incident remains open and Railway Stage 1 remains paused.
 - The incident remains open until the hotfix is exact-source verified, every
   exposed credential is replaced, each old credential is revoked, all affected
   paths pass owner-controlled verification, and recovery remains proven.

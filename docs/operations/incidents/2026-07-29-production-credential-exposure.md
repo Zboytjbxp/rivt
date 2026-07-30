@@ -41,7 +41,7 @@ as a security boundary, every exposed credential is treated as compromised.
 | Credential class | Status | Nonsecret evidence |
 |---|---|---|
 | PostgreSQL | Pending | None yet |
-| Stripe API | Blocked | Live API key rotation was not completed; Stripe remained at the human-verification/CAPTCHA spinner |
+| Stripe API | Rotated; prior key expired | Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded; replacement authenticated to Stripe with a read-only HTTP 200 account response before the superseded key was expired |
 | Stripe billing webhook | Pending | Rotation not yet completed |
 | Stripe Connect webhook | Rotated; prior secret retirement scheduled | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted |
 | Google OAuth | Pending | None yet |
@@ -74,6 +74,18 @@ as a security boundary, every exposed credential is treated as compromised.
   has no test database, so this record does not claim fresh DB-backed
   integration evidence.
 
+## Stripe API key rotation evidence
+
+- Human verification completed and a replacement production server key was
+  created without exposing its value in this record.
+- Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded on
+  commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`.
+- Public health remained green with invoice bank payments configured.
+- A read-only Stripe account request authenticated with HTTP 200 using the
+  replacement key.
+- The superseded production key was expired only after the replacement passed
+  both deployment health and direct provider authentication.
+
 ## Stripe Connect webhook rotation evidence
 
 - Stripe Connect webhook signing-secret rotation completed after a
@@ -90,9 +102,8 @@ as a security boundary, every exposed credential is treated as compromised.
 - The prior Connect signing secret was scheduled for expiry after a one-hour
   overlap. Its scheduled retirement does not close the incident before expiry
   is confirmed.
-- Stripe live API key rotation remains blocked at Stripe's
-  human-verification/CAPTCHA spinner and was not completed. Stripe billing
-  webhook rotation remains pending.
+- Stripe live API key rotation is complete. Stripe billing webhook rotation
+  remains pending.
 - The incident remains open and Railway Stage 1 remains paused.
 
 ## Recovery plan
