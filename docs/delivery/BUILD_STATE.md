@@ -19,20 +19,34 @@ credential-exposure containment is in progress.
 - Packet 86 remains the active product packet. The separately approved Railway
   Stage 1 activation is paused and its approval cannot be reused after this
   incident hotfix or any credential change.
-- A narrow compatibility hotfix is being prepared from exact production source
-  `92a8451b8190f5119384a4970fb1a324503df995`. It preserves old encrypted-backup
-  recovery through an active/previous key ring and provides active/previous Web
-  Push fallback plus best-effort resubscription for existing opted-in clients.
-  Launch-grade per-subscription key-retirement tracking remains open.
-- Existing backup evidence is retained. No backup object, production data,
-  provider credential, paid resource, or real payment has been changed while
-  preparing the hotfix.
+- A narrow compatibility hotfix was prepared from exact production source
+  `92a8451b8190f5119384a4970fb1a324503df995` and deployed by Railway as
+  deployment `8a30f00c-1562-4d5f-85a6-df822534e306` on commit
+  `ae6cc63321df70d322a63d4c821e721a2ddedf52`. It preserves old
+  encrypted-backup recovery through an active/previous key ring and provides
+  active/previous Web Push fallback plus best-effort resubscription for
+  existing opted-in clients. Launch-grade per-subscription key-retirement
+  tracking remains open.
+- Existing backup evidence is retained. Before deployment and credential
+  rotation, no backup object, production data, provider credential, paid
+  resource, or real payment was changed during local hotfix preparation.
 - Local hotfix evidence passes production build, application and security lint,
   133 unit/frontend tests, all three browser E2E journeys, diff integrity, and
   rendered mobile-action QA, plus a zero-vulnerability production dependency
   audit. The aggregate test command exits successfully, but 19 PostgreSQL
   suites are explicitly skipped because this isolated worktree has no
   `TEST_DATABASE_URL`; no new DB-backed integration pass is claimed.
+- Stripe Connect webhook signing-secret rotation is complete. Public health was
+  green with migration ready, PostgreSQL, S3-compatible storage, Web Push
+  configured, and the invoice bank webhook configured. A deliberately unknown,
+  locally signed no-charge/no-payment probe returned HTTP 200 with
+  `{"received":true,"duplicate":false}` and left one clearly named
+  idempotency-ledger record.
+- The prior Connect signing secret was scheduled for expiry after a one-hour
+  overlap. Stripe live API key rotation remains blocked at Stripe's
+  human-verification/CAPTCHA spinner and was not completed; billing webhook
+  rotation remains pending. The incident remains open and Railway Stage 1
+  remains paused.
 - The incident remains open until the hotfix is exact-source verified, every
   exposed credential is replaced, each old credential is revoked, all affected
   paths pass owner-controlled verification, and recovery remains proven.

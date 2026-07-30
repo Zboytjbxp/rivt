@@ -41,9 +41,9 @@ as a security boundary, every exposed credential is treated as compromised.
 | Credential class | Status | Nonsecret evidence |
 |---|---|---|
 | PostgreSQL | Pending | None yet |
-| Stripe API | Pending | None yet |
-| Stripe billing webhook | Pending | None yet |
-| Stripe Connect webhook | Pending | None yet |
+| Stripe API | Blocked | Live API key rotation was not completed; Stripe remained at the human-verification/CAPTCHA spinner |
+| Stripe billing webhook | Pending | Rotation not yet completed |
+| Stripe Connect webhook | Rotated; prior secret retirement scheduled | Railway deployment `8a30f00c-1562-4d5f-85a6-df822534e306` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; no-charge/no-payment probe accepted |
 | Google OAuth | Pending | None yet |
 | Resend | Pending | None yet |
 | Object storage | Pending | None yet |
@@ -64,15 +64,33 @@ as a security boundary, every exposed credential is treated as compromised.
   - active/previous backup-key restore compatibility while keeping new writes on
     the active key;
   - an active/previous VAPID delivery bridge and opted-in subscription migration.
-- Made no production provider changes, customer-data changes, real payment
-  attempts, paid resource changes, or destructive operations while preparing
-  the hotfix.
+- Before deployment and credential rotation, made no production provider
+  changes, customer-data changes, real payment attempts, paid resource changes,
+  or destructive operations while preparing the hotfix.
 - Verified the local hotfix with production build, application and security
   lint, 133 unit/frontend checks, three browser E2E journeys, diff integrity,
   rendered mobile-action QA, and a zero-vulnerability production dependency
   audit. Nineteen PostgreSQL suites were skipped because the isolated worktree
   has no test database, so this record does not claim fresh DB-backed
   integration evidence.
+
+## Stripe Connect webhook rotation evidence
+
+- Stripe Connect webhook signing-secret rotation completed.
+- Railway deployment `8a30f00c-1562-4d5f-85a6-df822534e306` succeeded on
+  commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`.
+- Public health was green: migration ready, PostgreSQL, S3-compatible storage,
+  Web Push configured, and invoice bank webhook configured.
+- A deliberately unknown, locally signed no-charge/no-payment probe returned
+  HTTP 200 with `{"received":true,"duplicate":false}` and left one clearly
+  named idempotency-ledger record.
+- The prior Connect signing secret was scheduled for expiry after a one-hour
+  overlap. Its scheduled retirement does not close the incident before expiry
+  is confirmed.
+- Stripe live API key rotation remains blocked at Stripe's
+  human-verification/CAPTCHA spinner and was not completed. Stripe billing
+  webhook rotation remains pending.
+- The incident remains open and Railway Stage 1 remains paused.
 
 ## Recovery plan
 
