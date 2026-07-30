@@ -269,7 +269,9 @@ if (!testDatabaseUrl) {
                 pg_get_expr(index.indpred, index.indrelid) AS predicate
          FROM pg_index index
          INNER JOIN pg_class relation ON relation.oid = index.indexrelid
-         WHERE relation.relname = 'push_subscriptions_vapid_generation_idx'`,
+         INNER JOIN pg_namespace namespace ON namespace.oid = relation.relnamespace
+         WHERE relation.relname = 'push_subscriptions_vapid_generation_idx'
+           AND namespace.nspname = current_schema()`,
       );
       assert.equal(generationIndex.rowCount, 1);
       assert.match(generationIndex.rows[0].predicate, /vapid_generation IS NOT NULL/);
