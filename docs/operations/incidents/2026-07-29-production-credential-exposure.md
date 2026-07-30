@@ -9,7 +9,10 @@
 - Declared at: not yet recorded
 - Last updated: 2026-07-29 America/New_York
 - Approved interruption window: up to 30 minutes
-- Approved incremental cost: $0; stop before any quoted or usage-based charge
+- Approved incremental cost: up to $0.10 for the two object-storage
+  deployments and read-only validation authorized on 2026-07-29; completed
+  work remained within this ceiling, no exact measured cost is claimed, and
+  this approval does not extend to other incident actions
 
 ## Summary
 
@@ -46,7 +49,7 @@ as a security boundary, every exposed credential is treated as compromised.
 | Stripe Connect webhook | Rotated; prior secret retirement scheduled | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted |
 | Google OAuth | Pending | None yet |
 | Resend | Pending | None yet |
-| Object storage | Pending | None yet |
+| Object storage | Rotated; prior copied pair invalidated | Railway bucket `rivt-private` (`83403a81-f912-431e-b0fc-40a238f347e8`) retained identical object count and bytes across the one-time reset; both managed references persisted; deployment `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` and an existing-object read passed |
 | Web Push VAPID | Pending | Local compatibility hotfix verified; production deploy pending |
 | Backup encryption | Pending | Retained artifact created `2026-07-29T02:56:41Z`; hotfix deploy pending |
 | Authentication metadata pepper | Pending | None yet |
@@ -99,6 +102,40 @@ as a security boundary, every exposed credential is treated as compromised.
   secret-bearing output was created.
 - PostgreSQL is rotated and the prior credential is superseded. The incident
   remains open and Railway Stage 1 remains paused.
+
+## Object-storage credential rotation evidence
+
+- The exact production target was Railway bucket `rivt-private`, bucket ID
+  `83403a81-f912-431e-b0fc-40a238f347e8`.
+- RIVT variables `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` were converted
+  from copied values to the nonsecret managed references
+  `${{rivt-private.ACCESS_KEY_ID}}` and
+  `${{rivt-private.SECRET_ACCESS_KEY}}`. RIVT deployment
+  `ab392f35-04b0-464f-87cc-6146ebaf71fc` succeeded on exact source
+  `ae6cc63321df70d322a63d4c821e721a2ddedf52`.
+- Before reset, a read-only check authenticated successfully, reported 88
+  objects totaling 40,385,070 bytes, and downloaded one existing 35-byte
+  object whose received size matched its recorded size. It created, overwrote,
+  and deleted nothing.
+- Railway bucket credentials were reset exactly once. The reset immediately
+  invalidated the prior copied access pair. RIVT deployment
+  `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` then succeeded on the same exact
+  source.
+- Public post-reset health returned `ok: true`, migration ready, database
+  `postgres`, and object storage `s3-compatible`. A second read-only check
+  authenticated with the replacement credentials, again reported 88 objects
+  totaling 40,385,070 bytes, and downloaded an existing 35-byte object with a
+  matching received size. The Railway UI confirmed both managed references
+  persisted after deployment.
+- No new service, bucket, or object was created, and no object was overwritten
+  or deleted. Write capability was intentionally not exercised because the
+  approval was explicitly read-only. The work remained within the approved
+  $0.10 operational ceiling; no exact measured cost is claimed.
+- Runtime maintenance remains a fast-follow rather than an incident blocker:
+  the repository pins Node 20, while the AWS SDK will require Node 22 after
+  January 2027. Upgrade and reverify Node 22 before that support boundary.
+- Object-storage credentials are rotated. The incident remains open and
+  Railway Stage 1 remains paused.
 
 ## Stripe API key rotation evidence
 

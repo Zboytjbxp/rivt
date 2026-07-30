@@ -49,6 +49,28 @@ credential-exposure containment is in progress.
   insert/read/rollback passed. These checks created no permanent data, payment,
   paid resource, or secret-bearing output. The incident remains open and
   Railway Stage 1 remains paused.
+- Object-storage credential rotation is complete for Railway bucket
+  `rivt-private`, bucket ID `83403a81-f912-431e-b0fc-40a238f347e8`.
+  RIVT variables `S3_ACCESS_KEY_ID` and `S3_SECRET_ACCESS_KEY` now use the
+  managed references `${{rivt-private.ACCESS_KEY_ID}}` and
+  `${{rivt-private.SECRET_ACCESS_KEY}}`. Deployment
+  `ab392f35-04b0-464f-87cc-6146ebaf71fc` succeeded on commit
+  `ae6cc63321df70d322a63d4c821e721a2ddedf52` before the reset.
+- A pre-reset read-only check authenticated successfully, reported 88 objects
+  totaling 40,385,070 bytes, and downloaded one existing 35-byte object with
+  matching size. Railway credentials were then reset exactly once, immediately
+  invalidating the prior copied pair. RIVT deployment
+  `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` succeeded on the same commit.
+  Post-reset health returned `ok: true`, migration ready, database `postgres`,
+  and object storage `s3-compatible`; a second read-only check returned the
+  identical 88 objects and 40,385,070 bytes and read the same-size 35-byte
+  existing object. The Railway UI confirmed both managed references persisted.
+- The storage cutover created no service, bucket, or object and performed no
+  create, overwrite, or delete. Write capability was not exercised under the
+  explicit read-only approval. The work remained within the approved $0.10
+  operational ceiling; no exact measured cost is claimed. A fast-follow must
+  move the pinned Node 20 runtime to Node 22 before the AWS SDK's
+  post-January-2027 Node 22 support requirement becomes applicable.
 - Local hotfix evidence passes production build, application and security lint,
   133 unit/frontend tests, all three browser E2E journeys, diff integrity, and
   rendered mobile-action QA, plus a zero-vulnerability production dependency
