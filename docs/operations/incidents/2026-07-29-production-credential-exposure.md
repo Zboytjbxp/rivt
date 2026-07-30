@@ -7,12 +7,12 @@
 - Source at detection: `92a8451b8190f5119384a4970fb1a324503df995`
 - Detected at: not yet recorded
 - Declared at: not yet recorded
-- Last updated: 2026-07-29 America/New_York
+- Last updated: 2026-07-30 America/New_York
 - Approved interruption window: up to 30 minutes
-- Approved incremental cost: up to $0.10 for the two object-storage
-  deployments and read-only validation authorized on 2026-07-29; completed
-  work remained within this ceiling, no exact measured cost is claimed, and
-  this approval does not extend to other incident actions
+- Approved incremental cost: the initial $0.10 object-storage allowance was
+  followed by authorization to continue the remaining incident work unless
+  incremental cost would exceed $2 total. Completed actions remained below
+  that ceiling; no exact measured provider cost is claimed.
 
 ## Summary
 
@@ -45,14 +45,14 @@ as a security boundary, every exposed credential is treated as compromised.
 |---|---|---|
 | PostgreSQL | Rotated; prior credential superseded | RIVT now uses the managed `${{Postgres.DATABASE_URL}}` reference; in-place PostgreSQL password regeneration and final RIVT redeployment succeeded; pre-change, reference-cutover, and post-rotation rolled-back temporary-table transactions passed |
 | Stripe API | Rotated; prior key expired | Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded; replacement authenticated to Stripe with a read-only HTTP 200 account response before the superseded key was expired |
-| Stripe billing webhook | Rotated; prior secret retirement scheduled | Destination `we_1TnpZWIz6JDg8LdahYHPwX0o` at `https://rivt.pro/api/stripe/webhook`; Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded; harmless probe accepted |
-| Stripe Connect webhook | Rotated; prior secret retirement scheduled | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted |
-| Google OAuth | Pending | None yet |
-| Resend | Pending | None yet |
+| Stripe billing webhook | Rotated; prior secret retired | Destination `we_1TnpZWIz6JDg8LdahYHPwX0o` at `https://rivt.pro/api/stripe/webhook`; Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded; harmless probe accepted; provider inventory confirms the prior secret expired |
+| Stripe Connect webhook | Rotated; prior secret retired | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted; provider inventory confirms the prior secret expired |
+| Google OAuth | Pending; owner access required | The currently authenticated Google account does not control the production OAuth project; no production client credential has been changed |
+| Resend | Rotated; prior key deleted | Replacement sending-only key is restricted to `rivt.pro`; a proof email was delivered; the provider dashboard confirmed deletion of the prior key and shows one replacement key remaining |
 | Object storage | Rotated; prior copied pair invalidated | Railway bucket `rivt-private` (`83403a81-f912-431e-b0fc-40a238f347e8`) retained identical object count and bytes across the one-time reset; both managed references persisted; deployment `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` and an existing-object read passed |
-| Web Push VAPID | Pending | Local compatibility hotfix verified; production deploy pending |
-| Backup encryption | Pending | Retained artifact created `2026-07-29T02:56:41Z`; hotfix deploy pending |
-| Authentication metadata pepper | Pending | None yet |
+| Web Push VAPID | Rotated with transitional previous pair; physical proof pending | Active/previous delivery bridge is deployed; an already opted-in owner-controlled physical device must migrate and receive a test alert before the previous pair can be retired |
+| Backup encryption | Rotated; previous key retired | Fresh active-key artifact `2026-07-30T03-58-45.931Z`, the 2026-07-29 legacy artifact, and the retained 2026-07-25 artifact all restored without count differences; deployment prefix `638e213e` is healthy on commit `854eef63b4d169746faf87157aaa9f3c1345329d`, and runtime checks report the restore URL and both previous-key aliases absent |
+| Authentication metadata pepper | Rotated | Replacement is deployed; the old value has no compatibility fallback and is no longer configured for active use |
 | Sentry DSN | Pending | None yet |
 
 ## Immediate containment
@@ -70,12 +70,30 @@ as a security boundary, every exposed credential is treated as compromised.
 - Before deployment and credential rotation, made no production provider
   changes, customer-data changes, real payment attempts, paid resource changes,
   or destructive operations while preparing the hotfix.
-- Verified the local hotfix with production build, application and security
-  lint, 133 unit/frontend checks, three browser E2E journeys, diff integrity,
-  rendered mobile-action QA, and a zero-vulnerability production dependency
-  audit. Nineteen PostgreSQL suites were skipped because the isolated worktree
-  has no test database, so this record does not claim fresh DB-backed
-  integration evidence.
+- A follow-up database integration run used a newly created, guarded
+  `rivt_it_*` database on the existing PostgreSQL server and a clean child
+  environment containing no production provider credentials. All 22 tests
+  across the 20 integration files passed with zero failures or skips. The
+  temporary database was dropped in a `finally` cleanup, and an independent
+  post-run query confirmed zero `rivt_it_%` databases remain. Production schema
+  and records were not altered. Final local build, lint, unit, and browser-gate
+  totals are recorded after the launch-hold and E2E isolation follow-up.
+- Follow-up commit `854eef63b4d169746faf87157aaa9f3c1345329d`
+  corrected JSON value replay in logical restores. Railway deployment
+  prefix `0b020e13` served that exact source and public `/api/health` returned
+  `ok: true`.
+- The operational launch checker now fails closed while this incident remains
+  open. `incident:readiness` still passes the standing routing configuration,
+  while `launch:readiness --require-ready` exits nonzero with
+  `ACTIVE_LAUNCH_HOLD`. The hold is recorded in
+  `docs/operations/incident-routing.json` and may be cleared only after every
+  exit criterion in this incident record is verified.
+- Final local verification passes production build, application and security
+  lint, 136 unit/frontend tests, and the complete three-journey browser E2E
+  chain twice consecutively. The E2E harness now uses strict ports and waits
+  for each local server to exit, preventing one journey from leaking into the
+  next. `npm audit --omit=dev` reports zero vulnerabilities, and diff integrity
+  passes.
 
 ## PostgreSQL credential rotation evidence
 
@@ -162,11 +180,79 @@ as a security boundary, every exposed credential is treated as compromised.
   no-charge/no-payment probes. The final probe returned HTTP 200 with
   `{"received":true,"duplicate":false}`. The checks left two clearly named
   idempotency-ledger records.
-- The prior Connect signing secret was scheduled for expiry after a one-hour
-  overlap. Its scheduled retirement does not close the incident before expiry
-  is confirmed.
+- Stripe provider inventory now confirms the prior Connect signing secret is
+  expired; only the active replacement remains usable.
 - Stripe live API key rotation is complete.
 - The incident remains open and Railway Stage 1 remains paused.
+
+## Resend credential rotation evidence
+
+- A replacement least-privilege sending credential was configured for the
+  verified `rivt.pro` sending domain and deployed without recording its value.
+- A proof email sent with the replacement credential reached an
+  owner-controlled inbox.
+- The superseded Resend key was deleted after delivery proof. The provider
+  dashboard confirmed deletion with its success toast, and key inventory then
+  showed one replacement key remaining.
+- Email credential rotation is complete. The broader incident remains open and
+  Railway Stage 1 remains paused.
+
+## Authentication metadata pepper evidence
+
+- The authentication metadata pepper was replaced in production. It protects
+  privacy-preserving request metadata and rate-limit subject hashes; it is not
+  a password or session-encryption key.
+- The application has no previous-pepper fallback, so replacing the production
+  value removed the exposed value from active use. Exact-source production
+  health remained green.
+- The broader incident remains open and Railway Stage 1 remains paused.
+
+## Backup-encryption rotation and restore evidence
+
+- Active/previous key-ring compatibility was deployed before rotating the
+  backup-encryption key. New backup writes use only the active key; the previous
+  key is decrypt-only during the transition.
+- Follow-up commit `854eef63b4d169746faf87157aaa9f3c1345329d`
+  fixed JSON value replay in logical restores. Railway deployment
+  prefix `0b020e13` served that source and public `/api/health` returned
+  `ok: true`.
+- A fresh active-key backup identified by timestamp
+  `2026-07-30T03-58-45.931Z` restored into an isolated temporary database with
+  109 tables and 8,768 rows. Manifest comparison returned zero differences,
+  and an independent critical-table source/target comparison also returned
+  zero differences.
+- The 2026-07-29 legacy backup was restored into an isolated temporary database
+  while the active-key input was deliberately nonmatching and the previous key
+  was supplied. It restored 109 tables and 8,760 rows with zero manifest
+  differences, proving the intended previous-key recovery path rather than an
+  accidental active-key success.
+- The retained 2026-07-25 legacy artifact, whose source commit was
+  `3b827444137356f367a97cc941d7a25f6d7f51d5`, also restored through the
+  previous-key path. The isolated target reported migration
+  `0028_compensation_workflow`, 82 tables, 7,028 rows, and zero manifest
+  differences. The independent critical-table drill passed, and the temporary
+  restore bundle was removed afterward.
+- `BACKUP_ENCRYPTION_KEY_PREVIOUS` was deleted from Railway configuration.
+  Railway deployment prefix `b9920864` then served commit
+  `854eef63b4d169746faf87157aaa9f3c1345329d`; public health returned `ok: true`.
+  Post-deployment runtime checks reported `primaryPreviousPresent=false` and
+  `aliasPreviousPresent=false`, proving that the running process no longer
+  carries either supported previous-key alias. The previous backup key is
+  retired.
+- `RESTORE_DATABASE_URL` was also deleted from Railway configuration.
+  Follow-up Railway deployment prefix `638e213e` succeeded on the same exact
+  commit, public health returned `ok: true`, and runtime checks confirmed the
+  restore URL and both previous-key aliases absent.
+- Temporary restore service `Postgres-rq6Q`, service-ID prefix `84b`, was
+  deleted and is absent from the project service inventory. Its attached
+  volume, ID prefix `d3c`, was explicitly deleted and reports
+  `isPendingDeletion=true` with `deletedAt`
+  `2026-08-01T04:21:26.274Z`. Railway keeps that volume recoverable during its
+  deletion window, so physical removal is not yet claimed.
+- Backup restore coverage now proves fresh active-key writes and the named
+  2026-07-29 and 2026-07-25 previous-key artifacts, and the previous backup key
+  is retired. The broader incident remains open and Railway Stage 1 remains
+  paused until the remaining credential blockers are verified.
 
 ## Stripe billing webhook rotation evidence
 
@@ -174,8 +260,8 @@ as a security boundary, every exposed credential is treated as compromised.
   `https://rivt.pro/api/stripe/webhook`, using Railway variable
   `STRIPE_WEBHOOK_SECRET`, and destination ID
   `we_1TnpZWIz6JDg8LdahYHPwX0o`.
-- The replacement was created with a one-hour overlap, and the prior signing
-  secret was scheduled for expiry. Its expiry has not yet been confirmed.
+- The replacement was created with a one-hour overlap. Stripe provider
+  inventory now confirms the prior signing secret is expired.
 - Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded on
   commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`.
 - Public `/api/health` returned `ok: true`, reported the expected `ae6cc63`

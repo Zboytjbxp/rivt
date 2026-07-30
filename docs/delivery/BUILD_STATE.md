@@ -1,11 +1,13 @@
 # RIVT Build State
 
-Last updated: 2026-07-29 America/New_York
+Last updated: 2026-07-30 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Emergency production credential containment; feature activation paused.
 Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
+Production incident hotfix commit:
+`854eef63b4d169746faf87157aaa9f3c1345329d`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
@@ -28,6 +30,10 @@ credential-exposure containment is in progress.
   active/previous Web Push fallback plus best-effort resubscription for
   existing opted-in clients. Launch-grade per-subscription key-retirement
   tracking remains open.
+- Follow-up commit `854eef63b4d169746faf87157aaa9f3c1345329d`
+  corrected JSON value replay in logical backup restores. Railway deployment
+  prefix `0b020e13` served that exact source and public `/api/health` returned
+  `ok: true`.
 - Existing backup evidence is retained. Before deployment and credential
   rotation, no backup object, production data, provider credential, paid
   resource, or real payment was changed during local hotfix preparation.
@@ -71,12 +77,67 @@ credential-exposure containment is in progress.
   operational ceiling; no exact measured cost is claimed. A fast-follow must
   move the pinned Node 20 runtime to Node 22 before the AWS SDK's
   post-January-2027 Node 22 support requirement becomes applicable.
-- Local hotfix evidence passes production build, application and security lint,
-  133 unit/frontend tests, all three browser E2E journeys, diff integrity, and
-  rendered mobile-action QA, plus a zero-vulnerability production dependency
-  audit. The aggregate test command exits successfully, but 19 PostgreSQL
-  suites are explicitly skipped because this isolated worktree has no
-  `TEST_DATABASE_URL`; no new DB-backed integration pass is claimed.
+- Backup-encryption rotation now has two isolated restore proofs. A fresh
+  active-key artifact identified by timestamp `2026-07-30T03-58-45.931Z`
+  restored 109 tables and 8,768 rows with zero manifest differences; an
+  independent critical-table source/target comparison also returned zero
+  differences. The 2026-07-29 legacy artifact was then restored with a
+  deliberately nonmatching active-key input and the configured previous key:
+  109 tables, 8,760 rows, and zero manifest differences. This proves active-key
+  writes and the intended previous-key recovery path.
+- The retained 2026-07-25 legacy artifact also restored through the previous-key
+  path. Its source commit was
+  `3b827444137356f367a97cc941d7a25f6d7f51d5`; the isolated target reported
+  migration `0028_compensation_workflow`, 82 tables, 7,028 rows, and zero
+  manifest differences. The independent critical-table drill passed, and the
+  temporary restore bundle was removed afterward.
+- `BACKUP_ENCRYPTION_KEY_PREVIOUS` was deleted from Railway configuration.
+  Railway deployment prefix `b9920864` serves commit
+  `854eef63b4d169746faf87157aaa9f3c1345329d`; public health returned `ok: true`.
+  Runtime checks returned `primaryPreviousPresent=false` and
+  `aliasPreviousPresent=false`, proving the running process carries neither
+  previous-key alias. The previous backup key is retired.
+- `RESTORE_DATABASE_URL` is deleted from Railway configuration. Follow-up
+  Railway deployment prefix `638e213e` succeeded on commit
+  `854eef63b4d169746faf87157aaa9f3c1345329d`; public health returned `ok: true`,
+  and runtime checks confirmed the restore URL and both previous-key names
+  absent.
+- Temporary restore service `Postgres-rq6Q`, service-ID prefix `84b`, was
+  deleted and is absent from the project service inventory. Its attached
+  volume, ID prefix `d3c`, was explicitly deleted and reports
+  `isPendingDeletion=true` with `deletedAt`
+  `2026-08-01T04:21:26.274Z`. Railway's recoverable deletion window remains in
+  effect, so physical volume removal is not yet claimed.
+- Resend rotation is complete. A least-privilege replacement sending key
+  restricted to `rivt.pro` delivered a proof email to an owner-controlled
+  inbox. The superseded key was deleted only after that proof, and provider
+  dashboard confirmation and inventory showed the deletion succeeded with one
+  replacement key remaining.
+- The authentication metadata pepper is rotated and has no previous-value
+  compatibility fallback. The replacement exact-source deployment is healthy;
+  the exposed value is no longer configured for active use.
+- Web Push is running with the active/previous VAPID transition bridge, but the
+  previous pair remains configured until an already opted-in owner-controlled
+  physical device migrates and receives a test alert. Google OAuth remains
+  blocked on production-project owner access, and the Sentry DSN remains
+  pending rotation and provider event proof.
+- Local hotfix database evidence now includes a clean, isolated run of all 20
+  integration files: 22 tests passed with zero failures or skips. The test
+  process received no production provider credentials, the guarded
+  `rivt_it_*` database was dropped in `finally`, and an independent post-run
+  query confirmed no test databases remain. Production schema and records were
+  not altered.
+- Final local gates pass: production build, application and security lint, 136
+  unit/frontend tests, the complete three-journey browser E2E chain twice
+  consecutively, diff integrity, and a production dependency audit with zero
+  vulnerabilities. The E2E harness now uses strict ports, waits for each local
+  server to exit, and separates profile-list and profile-detail mocks so one
+  journey cannot leak into or ambiguously satisfy the next.
+- The operational launch gate now has an explicit active hold for this
+  emergency. `npm run incident:readiness` passes the standing incident-routing
+  configuration, but `npm run launch:readiness -- --require-ready` correctly
+  exits nonzero with `ACTIVE_LAUNCH_HOLD`. Clear the hold only after every exit
+  criterion in the incident record is verified.
 - Stripe Connect webhook signing-secret rotation is complete after a
   defense-in-depth final re-roll. Public health was
   green with migration ready, PostgreSQL, S3-compatible storage, Web Push
@@ -85,16 +146,17 @@ credential-exposure containment is in progress.
   probes; the final probe returned HTTP 200 with
   `{"received":true,"duplicate":false}`. The checks left two clearly named
   idempotency-ledger records.
-- The prior Connect signing secret was scheduled for expiry after a one-hour
-  overlap. Stripe live API key rotation is complete: Railway deployment
+- Stripe provider inventory confirms the prior Connect signing secret expired
+  after the one-hour overlap. Stripe live API key rotation is complete:
+  Railway deployment
   `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded, a read-only Stripe account
   request authenticated with HTTP 200, and the superseded key was expired only
   after that proof.
 - Stripe billing webhook signing-secret rotation is complete for endpoint
   `https://rivt.pro/api/stripe/webhook`, Railway variable
   `STRIPE_WEBHOOK_SECRET`, and destination `we_1TnpZWIz6JDg8LdahYHPwX0o`.
-  The replacement was created with a one-hour overlap; the prior secret is
-  scheduled for expiry but is not yet confirmed expired. Railway deployment
+  The replacement was created with a one-hour overlap; Stripe provider
+  inventory confirms the prior secret is expired. Railway deployment
   `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded on commit
   `ae6cc63321df70d322a63d4c821e721a2ddedf52`. Public `/api/health` returned
   `ok: true`, the expected `ae6cc63` commit prefix, migration ready, database
