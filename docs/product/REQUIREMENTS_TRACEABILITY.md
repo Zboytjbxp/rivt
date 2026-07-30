@@ -26,6 +26,10 @@
   20 PostgreSQL integration files in a clean isolated database, and the full
   three-journey browser E2E chain twice consecutively. Diff integrity and the
   production dependency audit pass with zero known vulnerabilities.
+- `GA-OPS-007` also makes the external production monitor and live Gate A
+  hardening check fail closed unless Google OAuth, server-side session
+  security, and Sentry error monitoring report configured. The enhanced
+  expected-source monitor passed in 562 ms.
 - `GA-OPS-008` gains exact-source production evidence for deployment
   `4af32f02-fd17-4899-9b62-74ac4c565590` serving
   `a3be803cc5ad2563d100870663dbf6dc51307126`. The 730 ms monitor passed with

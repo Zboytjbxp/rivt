@@ -151,6 +151,22 @@ credential-exposure containment is in progress.
   the prohibited whole-environment command. Focused security verification
   passes 27/27. This closes one incident exit criterion without clearing the
   launch hold.
+- The production monitor and live Gate A hardening check now fail closed when
+  Google OAuth, server-side session security, or Sentry error monitoring is not
+  configured. The enhanced monitor passed against exact production source
+  `04f13e006cae545a33002d2225f90ab0d8b7e9c9` in 562 ms. This establishes the
+  Sentry rotation verification guard but does not rotate or prove a new DSN.
+- Incident timing is now recorded without false precision: repository evidence
+  bounds detection between 19:01 and 21:42:25 America/New_York on July 29, and
+  the first formal critical declaration occurred at 21:42:25. Containment work
+  was already underway by the 21:19:41 hotfix-worktree creation.
+- A first bounded, read-only access review found no identified misuse signal in
+  the current RIVT HTTP window, current application audit ledger, or
+  post-rotation PostgreSQL authentication logs. It also documented the honest
+  forensic boundary: historical successful PostgreSQL reads/writes were not
+  audited, and Railway Buckets provide no per-object access history. Earlier
+  deployment/provider review and classification of remaining PostgreSQL error
+  records stay open; no claim of “no access” or “no exfiltration” is made.
 - The operational launch gate now has an explicit active hold for this
   emergency. `npm run incident:readiness` passes the standing incident-routing
   configuration, but `npm run launch:readiness -- --require-ready` correctly

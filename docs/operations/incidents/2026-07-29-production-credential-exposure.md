@@ -5,8 +5,11 @@
 - Environment: Railway production
 - Incident owner: Michael
 - Source at detection: `92a8451b8190f5119384a4970fb1a324503df995`
-- Detected at: not yet recorded
-- Declared at: not yet recorded
+- Detected at: between `2026-07-29T19:01:00-04:00` and
+  `2026-07-29T21:42:25-04:00` (repository-bounded; exact operator-observed time
+  was not recorded)
+- Declared at: `2026-07-29T21:42:25-04:00` (first formal repository
+  declaration; any earlier verbal declaration is unverified)
 - Last updated: 2026-07-30 America/New_York
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
@@ -25,6 +28,13 @@ No unauthorized use is currently known; provider and audit-log review remains
 open. Data-access and exfiltration impact is under investigation, and no
 conclusion has been reached. Because transcript confidentiality cannot be used
 as a security boundary, every exposed credential is treated as compromised.
+
+The detection window is bounded by a documented 19:01 Railway observation that
+explicitly read no credentials or variables and the first formal critical
+incident commit at 21:42:25. The credential-containment worktree was created at
+21:19:41, confirming containment was underway before the formal declaration,
+but that repository event is not represented as the exact human detection
+moment.
 
 ## Potentially exposed credential classes
 
@@ -233,6 +243,10 @@ as a security boundary, every exposed credential is treated as compromised.
 - Configuration and deployment checks do not exercise Google's authorization
   code exchange. A completed owner-controlled Google sign-in and callback is
   still required before the prior secret can be retired.
+- The production monitor now fails closed unless Google OAuth, server-side
+  session security, and Sentry error monitoring all report configured. The
+  enhanced expected-source monitor passed against the current production
+  deployment in 562 ms.
 - The prior secret remains enabled only as a rollback-safe authentication
   fallback until that callback proof passes. Google OAuth rotation is therefore
   not yet complete, and the incident and `ACTIVE_LAUNCH_HOLD` remain open.
@@ -343,8 +357,40 @@ as a security boundary, every exposed credential is treated as compromised.
   The focused security suite passes 27/27.
 - This satisfies the technical-prevention follow-up for operator workflows.
   It does not clear the incident or launch hold; provider rotations, bounded
-  access-log review, missing incident timestamps, and final Stage 1 re-review
-  remain open.
+  access-log review, and final Stage 1 re-review remain open.
+
+## Bounded access-log review evidence
+
+- A secret-safe Railway review of the current RIVT deployment covered 101 HTTP
+  requests from 11:16 through 13:33 UTC on 2026-07-30: 55 successful
+  responses, 15 redirects, 31 expected client-denial responses, zero server
+  errors, zero upstream failures, and no response larger than 5 MB. Raw source
+  addresses and request details remain inside Railway and are not recorded
+  here.
+- The production application audit ledger since July 29 contains two account
+  signups and two onboarding completions across two authenticated actors, with
+  no system-generated audit action. This is a bounded application-ledger
+  observation, not proof about activity that the application did not log.
+- PostgreSQL logs after credential rotation, covering 03:23 through 13:04 UTC
+  on July 30, contain no authentication failure, `FATAL`, or `PANIC` event.
+  Twelve unexpected-EOF messages and 37 errors with 24 associated statement
+  records still require contextual classification. The prior PostgreSQL
+  deployment's logs remain available and have not yet received the same
+  bounded classification.
+- PostgreSQL historical forensic coverage is limited: connection,
+  disconnection, statement-duration, and statement auditing were not enabled,
+  and `pgaudit` was not installed. Successful historical connections, reads,
+  and writes therefore cannot be reconstructed reliably.
+- Railway Buckets do not provide the project with historical per-object access
+  logs, versioning, or object locks, and RIVT does not yet emit its own
+  object-operation audit events. Stable object count/bytes and successful
+  continuity reads do not prove that an exposed credential was never used for
+  a direct read.
+- No misuse indicator has been identified in the evidence reviewed so far.
+  The review remains open because earlier deployment/provider logs, the
+  PostgreSQL error records, and the unavoidable database/object-storage
+  forensic limitations must be explicitly resolved or accepted. The incident
+  is not represented as proof of no access or no exfiltration.
 
 ## Recovery plan
 

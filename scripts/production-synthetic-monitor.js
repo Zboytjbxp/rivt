@@ -42,6 +42,16 @@ assert.equal(health.payload?.ok, true, "Health endpoint must report ok=true.");
 const dependencies = health.payload?.dependencies ?? health.payload?.storage;
 const observability = health.payload?.observability ?? {};
 assert.equal(
+  observability?.errorMonitoring?.ok,
+  true,
+  "Production error monitoring must remain configured.",
+);
+assert.equal(
+  observability?.errorMonitoring?.mode,
+  "configured",
+  "Production error monitoring must report configured mode.",
+);
+assert.equal(
   health.payload?.security?.passwordBreachScreening?.mode,
   "configured",
   "Production breached-password screening must be configured.",

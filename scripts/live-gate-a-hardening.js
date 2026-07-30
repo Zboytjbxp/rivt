@@ -116,6 +116,16 @@ try {
   const health = await request("/api/health", { expected: 200 });
   assert.equal(health.payload.ok, true);
   if (expectedCommit) assert.equal(health.payload.build.commit, expectedCommit);
+  assert.equal(
+    health.payload?.observability?.errorMonitoring?.ok,
+    true,
+    "Production error monitoring must be configured for Gate A.",
+  );
+  assert.equal(
+    health.payload?.observability?.errorMonitoring?.mode,
+    "configured",
+    "Production error monitoring must report configured mode for Gate A.",
+  );
 
   const providers = await request("/api/auth/providers", { expected: 200 });
   assert.equal(providers.payload.inviteRequired, true, "Pilot invitations must remain required for Gate A.");
@@ -174,6 +184,9 @@ try {
         email: providers.payload.providers.email.mode,
         google: providers.payload.providers.google.mode,
         sessionSecurity: providers.payload.providers.sessionSecurity.mode,
+      },
+      observability: {
+        errorMonitoring: health.payload.observability.errorMonitoring.mode,
       },
       controls: providers.payload.controls,
       anonymousPrivateChecks: anonymousPrivateChecks.length,
