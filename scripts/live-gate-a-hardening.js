@@ -120,6 +120,12 @@ try {
   const providers = await request("/api/auth/providers", { expected: 200 });
   assert.equal(providers.payload.inviteRequired, true, "Pilot invitations must remain required for Gate A.");
   assert.equal(providers.payload.providers.email.ok, true, "Email provider must be configured for Gate A.");
+  assert.equal(providers.payload.providers.google.ok, true, "Google OAuth provider must be configured for Gate A.");
+  assert.equal(
+    providers.payload.providers.sessionSecurity.ok,
+    true,
+    "Server-side session security must be configured for Gate A.",
+  );
   assert.ok(providers.payload.controls, "Operational controls must be exposed to providers status.");
 
   const anonymousPrivateChecks = [
@@ -163,6 +169,11 @@ try {
         activeRestrictions: await count(client, "SELECT count(*) FROM account_restrictions WHERE status = 'active' AND (ends_at IS NULL OR ends_at > now())"),
         legacyAppStateRows: legacyAppStateExists ? await count(client, "SELECT count(*) FROM app_state") : 0,
         rateLimitWindows: await count(client, "SELECT count(*) FROM rate_limit_windows"),
+      },
+      authentication: {
+        email: providers.payload.providers.email.mode,
+        google: providers.payload.providers.google.mode,
+        sessionSecurity: providers.payload.providers.sessionSecurity.mode,
       },
       controls: providers.payload.controls,
       anonymousPrivateChecks: anonymousPrivateChecks.length,

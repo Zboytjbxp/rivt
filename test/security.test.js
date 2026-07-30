@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { extname, join, relative } from "node:path";
 import test from "node:test";
 import { newsInternals } from "../server/news.js";
 import { newsContinuityInternals } from "../server/news-continuity.js";
@@ -22,6 +24,35 @@ function responseDouble() {
     setHeader(name, value) { this.headers[name] = value; },
   };
 }
+
+function executableOperationsFiles(directory) {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const fullPath = join(directory, entry.name);
+    if (entry.isDirectory()) return executableOperationsFiles(fullPath);
+    return [fullPath];
+  });
+}
+
+test("operator tooling cannot enumerate an entire Railway service environment", () => {
+  const repositoryRoot = process.cwd();
+  const roots = [
+    join(repositoryRoot, "scripts"),
+    join(repositoryRoot, ".github", "workflows"),
+  ];
+  const executableExtensions = new Set([".js", ".mjs", ".cjs", ".yml", ".yaml"]);
+  const forbiddenEnumeration = /\brailway(?:\.exe)?\s+(?:variable|variables|var)\s+(?:list|ls)\b/i;
+  const offenders = roots
+    .flatMap((root) => executableOperationsFiles(root))
+    .filter((file) => executableExtensions.has(extname(file)))
+    .filter((file) => forbiddenEnumeration.test(readFileSync(file, "utf8")))
+    .map((file) => relative(repositoryRoot, file));
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `Executable tooling must request named Railway values instead of enumerating a full environment: ${offenders.join(", ")}`,
+  );
+});
 
 test("cookie parsing and session validation fail closed", () => {
   const request = { headers: { cookie: "rivt_session=2d89c725-9409-4493-96ea-b369c0b28425; theme=dark" } };

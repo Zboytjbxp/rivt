@@ -47,7 +47,7 @@ as a security boundary, every exposed credential is treated as compromised.
 | Stripe API | Rotated; prior key expired | Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded; replacement authenticated to Stripe with a read-only HTTP 200 account response before the superseded key was expired |
 | Stripe billing webhook | Rotated; prior secret retired | Destination `we_1TnpZWIz6JDg8LdahYHPwX0o` at `https://rivt.pro/api/stripe/webhook`; Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded; harmless probe accepted; provider inventory confirms the prior secret expired |
 | Stripe Connect webhook | Rotated; prior secret retired | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted; provider inventory confirms the prior secret expired |
-| Google OAuth | Pending; owner access required | The currently authenticated Google account does not control the production OAuth project; no production client credential has been changed |
+| Google OAuth | Replacement deployed; callback proof and prior-secret retirement pending | Provider UI verifies `support@rivt.pro` owns the production project; Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; health, provider-configuration, and production-monitor checks pass |
 | Resend | Rotated; prior key deleted | Replacement sending-only key is restricted to `rivt.pro`; a proof email was delivered; the provider dashboard confirmed deletion of the prior key and shows one replacement key remaining |
 | Object storage | Rotated; prior copied pair invalidated | Railway bucket `rivt-private` (`83403a81-f912-431e-b0fc-40a238f347e8`) retained identical object count and bytes across the one-time reset; both managed references persisted; deployment `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` and an existing-object read passed |
 | Web Push VAPID | Rotated; previous pair retired | An already opted-in owner-controlled physical device received a real alert through the transition bridge; both previous-key variables were then removed, Railway deployment `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded, and the running service reports the active pair present and previous pair absent |
@@ -89,12 +89,12 @@ as a security boundary, every exposed credential is treated as compromised.
   `docs/operations/incident-routing.json` and may be cleared only after every
   exit criterion in this incident record is verified.
 - Final local verification passes production build, application and security
-  lint, 136 unit/frontend tests, and the complete three-journey browser E2E
+  lint, 137 unit/frontend tests, and the complete three-journey browser E2E
   chain twice consecutively. The E2E harness now uses strict ports and waits
   for each local server to exit, preventing one journey from leaking into the
   next. `npm audit --omit=dev` reports zero vulnerabilities, and diff integrity
   passes.
-- Final production deployment `4af32f02-fd17-4899-9b62-74ac4c565590`
+- Earlier containment deployment `4af32f02-fd17-4899-9b62-74ac4c565590`
   succeeded from a clean archive of commit
   `a3be803cc5ad2563d100870663dbf6dc51307126`. The expected-source production
   monitor passed in 730 ms with that exact commit, PostgreSQL and S3-compatible
@@ -215,6 +215,28 @@ as a security boundary, every exposed credential is treated as compromised.
   health remained green.
 - The broader incident remains open and Railway Stage 1 remains paused.
 
+## Google OAuth credential rotation evidence
+
+- The Google provider UI verifies that `support@rivt.pro` owns the production
+  OAuth project. Production-project owner access is no longer a blocker.
+- Two unused replacement-secret candidates were deleted in the provider before
+  either was installed. No value from those candidates or the final replacement
+  is recorded in repository evidence.
+- The final replacement is installed in Railway deployment
+  `0898208b-707f-49c3-b9b9-d0938e157542`, which succeeded on exact source
+  `04f13e006cae545a33002d2225f90ab0d8b7e9c9`.
+- Public `/api/health` returned `ok: true` with the expected source,
+  PostgreSQL, and S3-compatible storage. The secret-safe
+  `/api/auth/providers` probe reported Google configured with no missing
+  fields and session security healthy. The expected-source production monitor
+  passed.
+- Configuration and deployment checks do not exercise Google's authorization
+  code exchange. A completed owner-controlled Google sign-in and callback is
+  still required before the prior secret can be retired.
+- The prior secret remains enabled only as a rollback-safe authentication
+  fallback until that callback proof passes. Google OAuth rotation is therefore
+  not yet complete, and the incident and `ACTIVE_LAUNCH_HOLD` remain open.
+
 ## Web Push VAPID rotation evidence
 
 - The active/previous delivery bridge was deployed before the VAPID rotation so
@@ -234,8 +256,9 @@ as a security boundary, every exposed credential is treated as compromised.
   v2 configured, matching-job alerts enabled, operational controls open, and
   seven anonymous private-route checks closed.
 - VAPID rotation and previous-key retirement are complete. The broader
-  incident remains open for Google OAuth, Sentry, and the remaining bounded
-  provider/data-access review; Railway Stage 1 remains paused.
+  incident remains open for Google OAuth callback proof and prior-secret
+  retirement, Sentry, and the remaining bounded provider/data-access review;
+  Railway Stage 1 remains paused.
 
 ## Backup-encryption rotation and restore evidence
 
@@ -304,6 +327,24 @@ as a security boundary, every exposed credential is treated as compromised.
   caused no charge, refund, customer, subscription, invoice, analytics, or
   business-state change. No paid resource was created.
 - The incident remains open and Railway Stage 1 remains paused.
+
+## Operator-tooling containment evidence
+
+- The local production-smoke wrapper no longer calls Railway's whole-service
+  variable-list operation. It now accepts only a temporarily supplied,
+  explicitly named public database URL and, when separately enabled, the named
+  storage values required for cleanup.
+- The wrapper removes the public database aliases from the child environment
+  and excludes storage credentials unless storage cleanup is explicitly
+  requested. Operator guidance requires clearing every temporary value after
+  the command, including after failure.
+- A security unit test recursively scans executable scripts and CI workflows
+  and fails if a Railway whole-environment enumeration command is introduced.
+  The focused security suite passes 27/27.
+- This satisfies the technical-prevention follow-up for operator workflows.
+  It does not clear the incident or launch hold; provider rotations, bounded
+  access-log review, missing incident timestamps, and final Stage 1 re-review
+  remain open.
 
 ## Recovery plan
 

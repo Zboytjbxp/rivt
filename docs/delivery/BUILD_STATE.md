@@ -7,7 +7,7 @@ Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.m
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`599c352b3c69592a8afcf1182e73e8ebbce5dfdb`
+`04f13e006cae545a33002d2225f90ab0d8b7e9c9`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
@@ -122,27 +122,41 @@ credential-exposure containment is in progress.
   Railway deployment `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded on
   exact source `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`. Secret-safe runtime
   checks report the active pair present and previous pair absent, and the
-  expected-source production monitor passed in 592 ms. Google OAuth remains
-  blocked on production-project owner access, and the Sentry DSN remains
-  pending rotation and provider event proof.
+  expected-source production monitor passed in 592 ms.
+- Google OAuth production-project ownership is verified in the provider UI as
+  `support@rivt.pro`. A final replacement secret is installed in Railway
+  deployment `0898208b-707f-49c3-b9b9-d0938e157542` on exact source
+  `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Public health, the
+  secret-safe provider-configuration probe, and the expected-source production
+  monitor pass. Two unused replacement candidates were deleted before
+  installation. Rotation is not yet complete: a real Google callback must
+  prove the installed replacement before the prior secret is retired. The
+  Sentry DSN also remains pending rotation and provider event proof.
 - Local hotfix database evidence now includes a clean, isolated run of all 20
   integration files: 22 tests passed with zero failures or skips. The test
   process received no production provider credentials, the guarded
   `rivt_it_*` database was dropped in `finally`, and an independent post-run
   query confirmed no test databases remain. Production schema and records were
   not altered.
-- Final local gates pass: production build, application and security lint, 136
+- Final local gates pass: production build, application and security lint, 137
   unit/frontend tests, the complete three-journey browser E2E chain twice
   consecutively, diff integrity, and a production dependency audit with zero
   vulnerabilities. The E2E harness now uses strict ports, waits for each local
   server to exit, and separates profile-list and profile-detail mocks so one
   journey cannot leak into or ambiguously satisfy the next.
+- Operator tooling no longer enumerates a Railway service's full environment.
+  The production-smoke wrapper accepts only explicitly named, temporary
+  database/storage values, strips unused credentials from its child process,
+  and a security test fails if executable scripts or CI workflows reintroduce
+  the prohibited whole-environment command. Focused security verification
+  passes 27/27. This closes one incident exit criterion without clearing the
+  launch hold.
 - The operational launch gate now has an explicit active hold for this
   emergency. `npm run incident:readiness` passes the standing incident-routing
   configuration, but `npm run launch:readiness -- --require-ready` correctly
   exits nonzero with `ACTIVE_LAUNCH_HOLD`. Clear the hold only after every exit
   criterion in the incident record is verified.
-- Final production deployment `4af32f02-fd17-4899-9b62-74ac4c565590`
+- Earlier containment deployment `4af32f02-fd17-4899-9b62-74ac4c565590`
   succeeded from a clean archive of commit
   `a3be803cc5ad2563d100870663dbf6dc51307126`. The expected-source production
   monitor passed in 730 ms with that exact commit, PostgreSQL and S3-compatible

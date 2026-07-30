@@ -14,9 +14,15 @@
   covering exact environment confirmation, approval and cost stops,
   one-provider-at-a-time verification, old-credential revocation, and a rule
   that source rollback never restores compromised credentials.
+- `GA-OPS-005` also gains enforceable operator-tooling containment: the local
+  production-smoke wrapper no longer retrieves a whole Railway service
+  environment, accepts only explicitly named temporary values, limits
+  credential inheritance by smoke type, and is protected by a recursive
+  executable-script/CI scan that fails on reintroduced environment-list
+  commands.
 - `GA-OPS-007` gains focused automated coverage for backup key rotation and
   transitional Web Push fallback behavior plus passing production build,
-  application/security lint, 136 unit/frontend checks, all 22 tests across the
+  application/security lint, 137 unit/frontend checks, all 22 tests across the
   20 PostgreSQL integration files in a clean isolated database, and the full
   three-journey browser E2E chain twice consecutively. Diff integrity and the
   production dependency audit pass with zero known vulnerabilities.
@@ -36,8 +42,14 @@
   `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded on exact source
   `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`; secret-safe runtime checks
   found only the active pair; and the expected-source monitor passed in 592 ms.
-- Requirement maturity remains Partial because Google OAuth owner
-  access/rotation, Sentry DSN rotation/event proof, and the bounded
+- `GA-OPS-008` gains Google OAuth replacement-deployment evidence: provider UI
+  verifies `support@rivt.pro` owns the production project; two unused
+  replacement candidates were deleted before installation; Railway deployment
+  `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source
+  `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; and public health,
+  provider-configuration, and expected-source production-monitor checks pass.
+- Requirement maturity remains Partial because Google OAuth callback proof and
+  prior-secret retirement, Sentry DSN rotation/event proof, and the bounded
   provider/data-access log review remain open. An explicit
   `ACTIVE_LAUNCH_HOLD` makes the automated launch gate fail closed until every
   incident exit criterion is verified. Railway Stage 1 remains paused and its
