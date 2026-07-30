@@ -410,6 +410,13 @@ moment.
   remain available. Current-head verification passes 141 unit/frontend tests,
   build, application/security lint, the complete browser E2E chain, and the
   production dependency audit with zero known vulnerabilities.
+- The redaction fix is live at source
+  `ecd6af85d94f3f907ccdecf07c600356f34613fc` through Railway deployment
+  `fbcd0e9c-aead-4c91-926b-0be7d27161d1`. Exact-source public health passed,
+  and the production monitor passed in 645 ms. Railway incident `OA5Z6SQY`
+  delayed the build queue without interrupting the prior healthy release. No
+  live secret or customer data was injected to prove redaction; the
+  deterministic regression is the proof.
 - A secret-safe read-only check inside the running production container found
   the intended `SENTRY_DSN` variable configured and the legacy
   `ERROR_MONITORING_DSN` alias absent. This is configuration-shape evidence

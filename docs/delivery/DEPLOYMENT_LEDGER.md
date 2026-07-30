@@ -1,5 +1,52 @@
 # Deployment Ledger
 
+## 2026-07-30 - Sentry Final-Boundary Redaction
+
+- Production source commit:
+  `ecd6af85d94f3f907ccdecf07c600356f34613fc`
+- Branch: `master` (fast-forwarded from `codex/credential-rotation-hotfix`)
+- Railway application deployment:
+  `fbcd0e9c-aead-4c91-926b-0be7d27161d1`
+- Production: `https://rivt.pro`
+- Scope: apply the shared credential and direct-PII scrubber at the final
+  Sentry serialization boundary for exception messages, stack frames, nested
+  context, and tags. The structured logger also recognizes username-only
+  credential URLs plus known Resend, Google OAuth, and Sentry key shapes.
+- Vulnerable-path proof: the focused regression first reproduced raw provider
+  credentials, authorization material, credential-bearing URLs, query
+  secrets, and email addresses reaching the serialized Sentry request through
+  a browser-report-shaped error. The fixed path removes every protected value
+  while retaining the safe request ID and operational context.
+- Pre-deploy verification: production build, application and security lint,
+  141 unit/frontend tests, the complete three-journey browser E2E suite, diff
+  integrity, and the production dependency audit passed. The aggregate test
+  run skipped 19 database-backed cases because `TEST_DATABASE_URL` is absent;
+  the separately isolated incident run remains 22/22 across all 20 PostgreSQL
+  integration files.
+- Post-deploy proof: public `/api/health` returned `ok: true` with exact source
+  `ecd6af85d94f3f907ccdecf07c600356f34613fc`, ready migration
+  `0041_shop_talk_news_continuity`, healthy PostgreSQL/S3-compatible storage,
+  and configured Sentry, Web Push, and Stripe Connect. The exact-source
+  production monitor passed in 645 ms with Google/session checks healthy,
+  seven anonymous private routes closed, and operational controls open.
+- Safety boundary: deterministic local fixtures proved redaction. No real
+  secret, customer data, provider credential, payment, object, migration, or
+  production-data mutation was sent or created for this proof. The deployment
+  was delayed by Railway incident `OA5Z6SQY`; the prior healthy release stayed
+  online until the queued Pro build completed successfully.
+- Cost boundary: no new service, bucket, volume, or provider resource was
+  created. Two brief application builds were authorized under the standing
+  sub-$2 instruction; no exact provider cost is claimed.
+- Rollback target:
+  `13b66add472e8f3df92c06ef7d8bc244d9e6af94`. A rollback would remove the
+  final Sentry scrubber and therefore requires security review; it must not
+  restore any retired credential.
+- Launch boundary: the monitoring-payload leak is fixed, but the incident is
+  not closed. Provider-side Sentry replacement-key creation, exact
+  ingestion/alert proof, prior-key retirement, remaining provider-activity
+  review/blind-spot acceptance, per-subscription VAPID generation tracking,
+  incident closure, and a fresh exact-source Stage 1 approval remain open.
+
 ## 2026-07-30 - Incident Logger and Monitor Hardening
 
 - Production source commit:

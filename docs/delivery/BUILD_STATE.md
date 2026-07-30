@@ -7,7 +7,7 @@ Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.m
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`5d14ba9cf6efce81b1f503fe64ecfd6837261e43`
+`ecd6af85d94f3f907ccdecf07c600356f34613fc`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
@@ -205,17 +205,22 @@ credential-exposure containment is in progress.
   configured. The enhanced monitor passed against exact production source
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9` in 562 ms. This establishes the
   Sentry rotation verification guard but does not rotate or prove a new DSN.
-- Current-head Sentry capture now applies the shared final-boundary redaction
+- Production Sentry capture at source
+  `ecd6af85d94f3f907ccdecf07c600356f34613fc` now applies the shared
+  final-boundary redaction
   to exception messages, stack frames, nested context, and tags instead of
   forwarding raw strings. The regression first reproduced leakage of provider
   keys, authorization data, credential-bearing URLs, query secrets, and email
   addresses, then proved those values absent while safe operational context
   remained. Build, application/security lint, 141 unit/frontend tests, the
   complete three-journey browser E2E suite, diff integrity, and the production
-  dependency audit pass. A secret-safe production-container check found
-  `SENTRY_DSN` present and the legacy `ERROR_MONITORING_DSN` alias absent, but
-  replacement-key creation, ingestion/alert proof, and old-key retirement
-  remain provider-side launch blockers.
+  dependency audit pass. Railway deployment
+  `fbcd0e9c-aead-4c91-926b-0be7d27161d1` succeeded after provider incident
+  `OA5Z6SQY` delayed its queue. Exact-source public health passed and the
+  production monitor passed in 645 ms. A secret-safe production-container
+  check found `SENTRY_DSN` present and the legacy `ERROR_MONITORING_DSN` alias
+  absent, but replacement-key creation, ingestion/alert proof, and old-key
+  retirement remain provider-side launch blockers.
 - Incident timing is now recorded without false precision: repository evidence
   bounds detection between 19:01 and 21:42:25 America/New_York on July 29, and
   the first formal critical declaration occurred at 21:42:25. Containment work
