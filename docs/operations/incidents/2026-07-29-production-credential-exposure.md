@@ -50,7 +50,7 @@ as a security boundary, every exposed credential is treated as compromised.
 | Google OAuth | Pending; owner access required | The currently authenticated Google account does not control the production OAuth project; no production client credential has been changed |
 | Resend | Rotated; prior key deleted | Replacement sending-only key is restricted to `rivt.pro`; a proof email was delivered; the provider dashboard confirmed deletion of the prior key and shows one replacement key remaining |
 | Object storage | Rotated; prior copied pair invalidated | Railway bucket `rivt-private` (`83403a81-f912-431e-b0fc-40a238f347e8`) retained identical object count and bytes across the one-time reset; both managed references persisted; deployment `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` and an existing-object read passed |
-| Web Push VAPID | Rotated with transitional previous pair; physical proof pending | Active/previous delivery bridge is deployed; an already opted-in owner-controlled physical device must migrate and receive a test alert before the previous pair can be retired |
+| Web Push VAPID | Rotated; previous pair retired | An already opted-in owner-controlled physical device received a real alert through the transition bridge; both previous-key variables were then removed, Railway deployment `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded, and the running service reports the active pair present and previous pair absent |
 | Backup encryption | Rotated; previous key retired | Fresh active-key artifact `2026-07-30T03-58-45.931Z`, the 2026-07-29 legacy artifact, and the retained 2026-07-25 artifact all restored without count differences; deployment prefix `638e213e` is healthy on commit `854eef63b4d169746faf87157aaa9f3c1345329d`, and runtime checks report the restore URL and both previous-key aliases absent |
 | Authentication metadata pepper | Rotated | Replacement is deployed; the old value has no compatibility fallback and is no longer configured for active use |
 | Sentry DSN | Pending | None yet |
@@ -214,6 +214,28 @@ as a security boundary, every exposed credential is treated as compromised.
   value removed the exposed value from active use. Exact-source production
   health remained green.
 - The broader incident remains open and Railway Stage 1 remains paused.
+
+## Web Push VAPID rotation evidence
+
+- The active/previous delivery bridge was deployed before the VAPID rotation so
+  already opted-in subscriptions could move without pretending delivery had
+  been proven.
+- The incident owner confirmed that a real alert reached an already opted-in
+  owner-controlled physical device. This is the measured migration boundary
+  required before retiring the previous pair.
+- `VAPID_PREVIOUS_PUBLIC_KEY` and `VAPID_PREVIOUS_PRIVATE_KEY` were deleted
+  from Railway configuration. Railway deployment
+  `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded on exact source
+  `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`.
+- Secret-safe runtime checks report the active public/private pair present and
+  both previous-key variables absent. No key value was printed or recorded.
+- The expected-source production monitor passed in 592 ms with PostgreSQL and
+  S3-compatible storage healthy, Sentry, Web Push, and Stripe Connect Accounts
+  v2 configured, matching-job alerts enabled, operational controls open, and
+  seven anonymous private-route checks closed.
+- VAPID rotation and previous-key retirement are complete. The broader
+  incident remains open for Google OAuth, Sentry, and the remaining bounded
+  provider/data-access review; Railway Stage 1 remains paused.
 
 ## Backup-encryption rotation and restore evidence
 

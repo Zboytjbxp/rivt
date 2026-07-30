@@ -1,5 +1,34 @@
 # Deployment Ledger
 
+## 2026-07-30 - Web Push Previous-Key Retirement
+
+- Production source commit:
+  `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`
+- Branch: `codex/credential-rotation-hotfix`
+- Railway application deployment:
+  `a29ff982-c10c-4ec3-b8e6-9fd323e65837`
+- Production: `https://rivt.pro`
+- Scope: configuration-only removal of the transitional previous VAPID pair
+  after owner-confirmed delivery to an already opted-in physical device.
+- Migration before/after: unchanged at
+  `0041_shop_talk_news_continuity`.
+- Provider/config evidence: `VAPID_PREVIOUS_PUBLIC_KEY` and
+  `VAPID_PREVIOUS_PRIVATE_KEY` were deleted. Secret-safe runtime checks found
+  the active public/private pair present and both previous variables absent;
+  no key value was printed or committed.
+- Post-deploy proof: the expected-source production monitor passed in 592 ms
+  with exact source `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`,
+  PostgreSQL/S3-compatible storage healthy, Sentry/Web Push/Stripe Connect
+  Accounts v2 configured, matching-job alerts enabled, operational controls
+  open, and seven anonymous private-route checks closed.
+- Cost/data boundary: no new service, bucket, volume, payment, object, or
+  production-data mutation was created. The action remained below the approved
+  $2 incremental ceiling.
+- Launch boundary: VAPID rotation is complete. The incident and
+  `ACTIVE_LAUNCH_HOLD` remain open for Google OAuth owner access/rotation,
+  Sentry DSN rotation/event proof, and the remaining bounded
+  provider/data-access log review. Railway Stage 1 stays paused.
+
 ## 2026-07-30 - Emergency Credential Containment
 
 - Production incident source commit:
@@ -43,10 +72,10 @@
   `854eef63b4d169746faf87157aaa9f3c1345329d`; source rollback must never restore
   a compromised credential.
 - Launch boundary: the incident remains open and `ACTIVE_LAUNCH_HOLD` blocks
-  release until physical VAPID migration and old-pair retirement, Google OAuth
-  owner access/rotation, Sentry DSN rotation/event proof, and the remaining
-  bounded provider/data-access log review are complete. Railway Stage 1 stays
-  paused.
+  release until Google OAuth owner access/rotation, Sentry DSN rotation/event
+  proof, and the remaining bounded provider/data-access log review are
+  complete. VAPID migration and previous-pair retirement are recorded in the
+  follow-up entry above. Railway Stage 1 stays paused.
 
 ## 2026-07-28 - Customer Documents and Contact Import
 

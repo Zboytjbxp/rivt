@@ -7,7 +7,7 @@ Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.m
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`a3be803cc5ad2563d100870663dbf6dc51307126`
+`599c352b3c69592a8afcf1182e73e8ebbce5dfdb`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
@@ -116,9 +116,13 @@ credential-exposure containment is in progress.
 - The authentication metadata pepper is rotated and has no previous-value
   compatibility fallback. The replacement exact-source deployment is healthy;
   the exposed value is no longer configured for active use.
-- Web Push is running with the active/previous VAPID transition bridge, but the
-  previous pair remains configured until an already opted-in owner-controlled
-  physical device migrates and receives a test alert. Google OAuth remains
+- Web Push VAPID rotation is complete. The incident owner confirmed a real
+  alert reached an already opted-in owner-controlled physical device through
+  the transition bridge. Both previous-key variables were then removed;
+  Railway deployment `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded on
+  exact source `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`. Secret-safe runtime
+  checks report the active pair present and previous pair absent, and the
+  expected-source production monitor passed in 592 ms. Google OAuth remains
   blocked on production-project owner access, and the Sentry DSN remains
   pending rotation and provider event proof.
 - Local hotfix database evidence now includes a clean, isolated run of all 20

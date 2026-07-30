@@ -30,12 +30,18 @@
 - Transitional Web Push continuity tries the active VAPID pair first, retries
   the previous pair only after a definitive authentication rejection, and
   migrates only existing opted-in clients.
-- Requirement maturity remains Partial because physical VAPID migration and
-  previous-key retirement, Google OAuth owner access/rotation, Sentry DSN
-  rotation/event proof, and the bounded provider/data-access log review remain
-  open. An explicit `ACTIVE_LAUNCH_HOLD` now makes the automated launch gate
-  fail closed until every incident exit criterion is verified. Railway Stage 1
-  remains paused and its earlier approval cannot be reused.
+- `GA-OPS-008` also gains physical Web Push migration and retirement evidence:
+  the incident owner confirmed a real alert on an already opted-in controlled
+  device; both previous VAPID variables were removed; deployment
+  `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded on exact source
+  `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`; secret-safe runtime checks
+  found only the active pair; and the expected-source monitor passed in 592 ms.
+- Requirement maturity remains Partial because Google OAuth owner
+  access/rotation, Sentry DSN rotation/event proof, and the bounded
+  provider/data-access log review remain open. An explicit
+  `ACTIVE_LAUNCH_HOLD` makes the automated launch gate fail closed until every
+  incident exit criterion is verified. Railway Stage 1 remains paused and its
+  earlier approval cannot be reused.
 
 ## Packet 85 — Security, accessibility, and operations closure evidence
 
