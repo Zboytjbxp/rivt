@@ -42,7 +42,7 @@ as a security boundary, every exposed credential is treated as compromised.
 |---|---|---|
 | PostgreSQL | Pending | None yet |
 | Stripe API | Rotated; prior key expired | Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded; replacement authenticated to Stripe with a read-only HTTP 200 account response before the superseded key was expired |
-| Stripe billing webhook | Pending | Rotation not yet completed |
+| Stripe billing webhook | Rotated; prior secret retirement scheduled | Destination `we_1TnpZWIz6JDg8LdahYHPwX0o` at `https://rivt.pro/api/stripe/webhook`; Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded; harmless probe accepted |
 | Stripe Connect webhook | Rotated; prior secret retirement scheduled | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted |
 | Google OAuth | Pending | None yet |
 | Resend | Pending | None yet |
@@ -102,8 +102,28 @@ as a security boundary, every exposed credential is treated as compromised.
 - The prior Connect signing secret was scheduled for expiry after a one-hour
   overlap. Its scheduled retirement does not close the incident before expiry
   is confirmed.
-- Stripe live API key rotation is complete. Stripe billing webhook rotation
-  remains pending.
+- Stripe live API key rotation is complete.
+- The incident remains open and Railway Stage 1 remains paused.
+
+## Stripe billing webhook rotation evidence
+
+- Stripe billing webhook signing-secret rotation completed for endpoint
+  `https://rivt.pro/api/stripe/webhook`, using Railway variable
+  `STRIPE_WEBHOOK_SECRET`, and destination ID
+  `we_1TnpZWIz6JDg8LdahYHPwX0o`.
+- The replacement was created with a one-hour overlap, and the prior signing
+  secret was scheduled for expiry. Its expiry has not yet been confirmed.
+- Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded on
+  commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`.
+- Public `/api/health` returned `ok: true`, reported the expected `ae6cc63`
+  commit prefix, and showed migration ready, database `postgres`, and object
+  storage `s3-compatible`.
+- Harmless locally signed unknown event probe
+  `evt_rivt_webhook_rotation_probe_1785380796626` returned HTTP 200 with
+  `{"received":true,"duplicate":false}`. It created one permanent
+  `billing_events` idempotency/evidence row but made no Stripe API call and
+  caused no charge, refund, customer, subscription, invoice, analytics, or
+  business-state change. No paid resource was created.
 - The incident remains open and Railway Stage 1 remains paused.
 
 ## Recovery plan

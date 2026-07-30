@@ -49,8 +49,23 @@ credential-exposure containment is in progress.
   overlap. Stripe live API key rotation is complete: Railway deployment
   `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded, a read-only Stripe account
   request authenticated with HTTP 200, and the superseded key was expired only
-  after that proof. Stripe billing webhook rotation remains pending. The
-  incident remains open and Railway Stage 1 remains paused.
+  after that proof.
+- Stripe billing webhook signing-secret rotation is complete for endpoint
+  `https://rivt.pro/api/stripe/webhook`, Railway variable
+  `STRIPE_WEBHOOK_SECRET`, and destination `we_1TnpZWIz6JDg8LdahYHPwX0o`.
+  The replacement was created with a one-hour overlap; the prior secret is
+  scheduled for expiry but is not yet confirmed expired. Railway deployment
+  `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded on commit
+  `ae6cc63321df70d322a63d4c821e721a2ddedf52`. Public `/api/health` returned
+  `ok: true`, the expected `ae6cc63` commit prefix, migration ready, database
+  `postgres`, and object storage `s3-compatible`.
+- Harmless locally signed unknown event probe
+  `evt_rivt_webhook_rotation_probe_1785380796626` returned HTTP 200 with
+  `{"received":true,"duplicate":false}` and created one permanent
+  `billing_events` idempotency/evidence row. It made no Stripe API call and
+  caused no charge, refund, customer, subscription, invoice, analytics,
+  or business-state change. No paid resource was created. The incident remains
+  open and Railway Stage 1 remains paused.
 - The incident remains open until the hotfix is exact-source verified, every
   exposed credential is replaced, each old credential is revoked, all affected
   paths pass owner-controlled verification, and recovery remains proven.
