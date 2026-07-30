@@ -7,7 +7,7 @@ Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.m
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`854eef63b4d169746faf87157aaa9f3c1345329d`
+`a3be803cc5ad2563d100870663dbf6dc51307126`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
@@ -138,6 +138,14 @@ credential-exposure containment is in progress.
   configuration, but `npm run launch:readiness -- --require-ready` correctly
   exits nonzero with `ACTIVE_LAUNCH_HOLD`. Clear the hold only after every exit
   criterion in the incident record is verified.
+- Final production deployment `4af32f02-fd17-4899-9b62-74ac4c565590`
+  succeeded from a clean archive of commit
+  `a3be803cc5ad2563d100870663dbf6dc51307126`. The expected-source production
+  monitor passed in 730 ms with that exact commit, PostgreSQL and S3-compatible
+  storage healthy, Sentry, Web Push, and Stripe Connect Accounts v2 configured,
+  matching-job alerts enabled, operational controls open, and all seven
+  anonymous private-route checks closed. No new service, bucket, volume,
+  payment, or production-data mutation was created by this deployment.
 - Stripe Connect webhook signing-secret rotation is complete after a
   defense-in-depth final re-roll. Public health was
   green with migration ready, PostgreSQL, S3-compatible storage, Web Push

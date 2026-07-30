@@ -94,6 +94,14 @@ as a security boundary, every exposed credential is treated as compromised.
   for each local server to exit, preventing one journey from leaking into the
   next. `npm audit --omit=dev` reports zero vulnerabilities, and diff integrity
   passes.
+- Final production deployment `4af32f02-fd17-4899-9b62-74ac4c565590`
+  succeeded from a clean archive of commit
+  `a3be803cc5ad2563d100870663dbf6dc51307126`. The expected-source production
+  monitor passed in 730 ms with that exact commit, PostgreSQL and S3-compatible
+  storage healthy, Sentry, Web Push, and Stripe Connect Accounts v2 configured,
+  matching-job alerts enabled, operational controls open, and seven anonymous
+  private-route checks closed. This deployment created no new service, bucket,
+  volume, payment, or production-data mutation.
 
 ## PostgreSQL credential rotation evidence
 
