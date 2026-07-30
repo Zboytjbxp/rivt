@@ -1,5 +1,53 @@
 # Deployment Ledger
 
+## 2026-07-30 - Emergency Credential Containment
+
+- Production incident source commit:
+  `a3be803cc5ad2563d100870663dbf6dc51307126`
+- Branch: `codex/credential-rotation-hotfix`
+- Railway application deployment:
+  `4af32f02-fd17-4899-9b62-74ac4c565590`
+- Production: `https://rivt.pro`
+- Scope: exact-source credential containment; active/previous backup and Web
+  Push transition support; corrected JSON replay in logical restores;
+  fail-closed active launch hold; deterministic browser-gate isolation; and
+  nonsecret incident evidence.
+- Migration before/after: unchanged at
+  `0041_shop_talk_news_continuity`.
+- Automated gates: production build, application/security lint, 136
+  unit/frontend tests, all 22 tests across the 20 PostgreSQL integration files
+  in a clean isolated database, the full three-journey E2E chain twice
+  consecutively, diff integrity, and zero known production dependency
+  vulnerabilities passed.
+- Recovery proof: the fresh active-key artifact restored 109 tables/8,768 rows;
+  the 2026-07-29 previous-key artifact restored 109 tables/8,760 rows; and the
+  2026-07-25 source-schema artifact restored 82 tables/7,028 rows. Manifest
+  differences were zero, independent critical-table checks passed, the
+  temporary test/restore databases were removed, and the previous backup key
+  and restore URL are absent from the running service.
+- Post-deploy proof: the expected-source production monitor returned exact
+  source `a3be803cc5ad2563d100870663dbf6dc51307126` in 730 ms with PostgreSQL and
+  S3-compatible storage healthy; Sentry, Web Push, and Stripe Connect Accounts
+  v2 configured; matching-job alerts enabled; operational controls open; and
+  seven anonymous private-route checks closed.
+- Provider/config evidence: PostgreSQL and object-storage credentials, Stripe
+  API and both webhook secrets, Resend, backup encryption, and the
+  authentication metadata pepper are rotated. Superseded Stripe webhook and
+  Resend credentials are provider-confirmed retired. The temporary restore
+  service is absent; its volume remains honestly marked pending deletion during
+  Railway's recovery window.
+- Cost/data boundary: no new service, bucket, production volume, payment, or
+  production-data mutation was created by the final deployment. All completed
+  actions stayed below the approved $2 incremental ceiling.
+- Rollback target:
+  `854eef63b4d169746faf87157aaa9f3c1345329d`; source rollback must never restore
+  a compromised credential.
+- Launch boundary: the incident remains open and `ACTIVE_LAUNCH_HOLD` blocks
+  release until physical VAPID migration and old-pair retirement, Google OAuth
+  owner access/rotation, Sentry DSN rotation/event proof, and the remaining
+  bounded provider/data-access log review are complete. Railway Stage 1 stays
+  paused.
+
 ## 2026-07-28 - Customer Documents and Contact Import
 
 - Production feature source commit:

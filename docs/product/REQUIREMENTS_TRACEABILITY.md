@@ -2,30 +2,40 @@
 
 ## Operational Incident Addendum - 2026-07-29 Credential Containment
 
-- `GA-OPS-004` gains backup-key transition compatibility: new writes use the
-  active key, restore accepts active plus previous, keyed artifacts select a
-  matching key, and legacy unkeyed artifacts try active then previous without
-  masking authenticated payload corruption. The existing encrypted artifact is
-  retained; no fresh restore is claimed.
+- `GA-OPS-004` gains verified backup-key rotation and historical recovery:
+  new writes use the active key; restore accepted active plus previous without
+  masking authenticated payload corruption; a fresh active-key artifact
+  restored 109 tables/8,768 rows; the 2026-07-29 legacy artifact restored 109
+  tables/8,760 rows; and the 2026-07-25 source-schema artifact restored 82
+  tables/7,028 rows. Every manifest comparison returned zero differences, the
+  independent critical-table checks passed, and the previous key and temporary
+  restore URL are now absent from the running service.
 - `GA-OPS-005` gains a dated incident record and credential-rotation runbook
   covering exact environment confirmation, approval and cost stops,
   one-provider-at-a-time verification, old-credential revocation, and a rule
   that source rollback never restores compromised credentials.
 - `GA-OPS-007` gains focused automated coverage for backup key rotation and
   transitional Web Push fallback behavior plus passing production build,
-  application/security lint, 133 unit/frontend checks, all three browser E2E
-  journeys, rendered mobile-action QA, diff integrity, and a zero-vulnerability
-  dependency audit.
-  Nineteen PostgreSQL suites are explicitly skipped without
-  `TEST_DATABASE_URL`, so no fresh DB-backed integration pass is claimed.
-- `GA-OPS-008` remains open for exact-source production evidence and
-  provider-by-provider rotation/revocation status. This addendum does not claim
-  that a provider credential changed or that containment is complete.
+  application/security lint, 136 unit/frontend checks, all 22 tests across the
+  20 PostgreSQL integration files in a clean isolated database, and the full
+  three-journey browser E2E chain twice consecutively. Diff integrity and the
+  production dependency audit pass with zero known vulnerabilities.
+- `GA-OPS-008` gains exact-source production evidence for deployment
+  `4af32f02-fd17-4899-9b62-74ac4c565590` serving
+  `a3be803cc5ad2563d100870663dbf6dc51307126`. The 730 ms monitor passed with
+  PostgreSQL/S3-compatible storage healthy, Sentry/Web Push/Stripe Connect
+  configured, and seven anonymous private-route checks closed. PostgreSQL,
+  object storage, Stripe API/webhooks, Resend, backup encryption, and the
+  authentication metadata pepper have completed rotation evidence.
 - Transitional Web Push continuity tries the active VAPID pair first, retries
   the previous pair only after a definitive authentication rejection, and
   migrates only existing opted-in clients.
-- Requirement maturity does not change. Railway Stage 1 remains paused and
-  requires a fresh exact-source review after containment.
+- Requirement maturity remains Partial because physical VAPID migration and
+  previous-key retirement, Google OAuth owner access/rotation, Sentry DSN
+  rotation/event proof, and the bounded provider/data-access log review remain
+  open. An explicit `ACTIVE_LAUNCH_HOLD` now makes the automated launch gate
+  fail closed until every incident exit criterion is verified. Railway Stage 1
+  remains paused and its earlier approval cannot be reused.
 
 ## Packet 85 — Security, accessibility, and operations closure evidence
 
