@@ -31,6 +31,24 @@ credential-exposure containment is in progress.
 - Existing backup evidence is retained. Before deployment and credential
   rotation, no backup object, production data, provider credential, paid
   resource, or real payment was changed during local hotfix preparation.
+- PostgreSQL credential rotation is complete and the prior database credential
+  is superseded. The RIVT app had a hardcoded private Railway `DATABASE_URL`,
+  rather than a managed reference. A production-container transaction proved
+  the existing connection with a temporary-table insert/read and rollback.
+  The app variable was then changed to the nonsecret Railway reference
+  `${{Postgres.DATABASE_URL}}`; deployment
+  `57200994-0a49-4561-a4cd-44b101bddc0f` succeeded on commit
+  `ae6cc63321df70d322a63d4c821e721a2ddedf52`, health remained green, and a
+  second rolled-back temporary-table transaction passed.
+- Railway's built-in Database Config password regeneration completed in place.
+  PostgreSQL deployment `f3e84068-3973-4d16-9614-dad4c8a74792` succeeded with
+  the same database data and volume and no new resource. Final RIVT redeployment
+  `cc76aae6-9098-4901-a939-438309efd776` succeeded on the same commit; public
+  health returned `ok: true`, migration ready, database `postgres`, and object
+  storage `s3-compatible`. A final production-container temporary-table
+  insert/read/rollback passed. These checks created no permanent data, payment,
+  paid resource, or secret-bearing output. The incident remains open and
+  Railway Stage 1 remains paused.
 - Local hotfix evidence passes production build, application and security lint,
   133 unit/frontend tests, all three browser E2E journeys, diff integrity, and
   rendered mobile-action QA, plus a zero-vulnerability production dependency

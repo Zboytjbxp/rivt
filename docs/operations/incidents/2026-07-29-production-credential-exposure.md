@@ -40,7 +40,7 @@ as a security boundary, every exposed credential is treated as compromised.
 
 | Credential class | Status | Nonsecret evidence |
 |---|---|---|
-| PostgreSQL | Pending | None yet |
+| PostgreSQL | Rotated; prior credential superseded | RIVT now uses the managed `${{Postgres.DATABASE_URL}}` reference; in-place PostgreSQL password regeneration and final RIVT redeployment succeeded; pre-change, reference-cutover, and post-rotation rolled-back temporary-table transactions passed |
 | Stripe API | Rotated; prior key expired | Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded; replacement authenticated to Stripe with a read-only HTTP 200 account response before the superseded key was expired |
 | Stripe billing webhook | Rotated; prior secret retirement scheduled | Destination `we_1TnpZWIz6JDg8LdahYHPwX0o` at `https://rivt.pro/api/stripe/webhook`; Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded; harmless probe accepted |
 | Stripe Connect webhook | Rotated; prior secret retirement scheduled | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted |
@@ -73,6 +73,32 @@ as a security boundary, every exposed credential is treated as compromised.
   audit. Nineteen PostgreSQL suites were skipped because the isolated worktree
   has no test database, so this record does not claim fresh DB-backed
   integration evidence.
+
+## PostgreSQL credential rotation evidence
+
+- The RIVT app's `DATABASE_URL` was a hardcoded private Railway internal URL,
+  not a managed service reference. No URL or credential value was recorded.
+- Before any database credential change, a transaction executed from the
+  production container, created a temporary table, inserted and read a test
+  value, and rolled back successfully.
+- The app's `DATABASE_URL` was changed to the nonsecret Railway reference
+  `${{Postgres.DATABASE_URL}}`. RIVT deployment
+  `57200994-0a49-4561-a4cd-44b101bddc0f` succeeded on commit
+  `ae6cc63321df70d322a63d4c821e721a2ddedf52`; health remained green and a
+  second production-container temporary-table insert/read/rollback passed.
+- Railway Database Config's built-in **Regenerate Password** action superseded
+  the prior PostgreSQL credential. PostgreSQL deployment
+  `f3e84068-3973-4d16-9614-dad4c8a74792` succeeded in place with the same data
+  and attached volume. It created no replacement database or paid resource.
+- RIVT deployment `cc76aae6-9098-4901-a939-438309efd776` then succeeded on the
+  same commit. Public health returned `ok: true`, migration ready, database
+  `postgres`, and object storage `s3-compatible`.
+- A final production-container transaction created a temporary table, inserted
+  and read a test value, and rolled back successfully after rotation. Across
+  all three database checks, no permanent data, payment, paid resource, or
+  secret-bearing output was created.
+- PostgreSQL is rotated and the prior credential is superseded. The incident
+  remains open and Railway Stage 1 remains paused.
 
 ## Stripe API key rotation evidence
 
