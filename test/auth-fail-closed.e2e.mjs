@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { once } from "node:events";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -8,7 +9,7 @@ const port = 5187;
 const baseUrl = `http://127.0.0.1:${port}`;
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
-const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
+const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
   cwd: process.cwd(),
   env: { ...process.env, VITE_ENABLE_GUEST_DEMO: "false" },
   stdio: ["ignore", "pipe", "pipe"],
@@ -146,5 +147,15 @@ try {
   if (browser) {
     await browser.close();
   }
-  vite.kill();
+  if (vite.exitCode === null) {
+    const exited = once(vite, "exit");
+    vite.kill();
+    await Promise.race([
+      exited,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out stopping the authentication E2E Vite server.")),
+        5_000,
+      )),
+    ]);
+  }
 }

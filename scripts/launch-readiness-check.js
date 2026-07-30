@@ -116,6 +116,15 @@ export function evaluateLaunchReadiness({ incidentConfig, recoveryPolicy }, { no
   const incident = evaluateIncidentReadiness(incidentConfig, { now });
   const recovery = evaluateRecoveryPolicy(recoveryPolicy, { now });
   const findings = [
+    ...(incidentConfig.launchHold?.active
+      ? [{
+          code: "ACTIVE_LAUNCH_HOLD",
+          message:
+            incidentConfig.launchHold.reason ||
+            "An explicit operational launch hold must be cleared before launch.",
+          source: "incident",
+        }]
+      : []),
     ...incident.findings.map((finding) => ({ ...finding, source: "incident" })),
     ...recovery.findings.map((finding) => ({ ...finding, source: "recovery" })),
   ];
@@ -127,6 +136,7 @@ export function evaluateLaunchReadiness({ incidentConfig, recoveryPolicy }, { no
     summary: {
       incident: incident.summary,
       recovery: recovery.summary,
+      activeLaunchHold: Boolean(incidentConfig.launchHold?.active),
     },
   };
 }

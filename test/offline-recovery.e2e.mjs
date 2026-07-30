@@ -15,7 +15,7 @@ if (!existsSync(path.join(projectRoot, "dist", "index.html"))) {
   throw new Error("Offline recovery E2E requires a production build. Run npm run build first.");
 }
 
-const vite = spawn(process.execPath, [viteBin, "preview", "--host", "127.0.0.1", "--port", String(port)], {
+const vite = spawn(process.execPath, [viteBin, "preview", "--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
   cwd: projectRoot,
   env: { ...process.env, VITE_ENABLE_GUEST_DEMO: "false" },
   stdio: ["ignore", "ignore", "inherit"],
@@ -238,10 +238,14 @@ try {
 } finally {
   await browser?.close();
   if (vite.exitCode === null) {
+    const exited = once(vite, "exit");
     vite.kill();
     await Promise.race([
-      once(vite, "exit"),
-      new Promise((resolve) => setTimeout(resolve, 5_000)),
+      exited,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out stopping the offline-recovery E2E Vite server.")),
+        5_000,
+      )),
     ]);
   }
 }

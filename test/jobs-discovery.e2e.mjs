@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { once } from "node:events";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
@@ -8,7 +9,7 @@ const port = 5188;
 const baseUrl = `http://127.0.0.1:${port}`;
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
-const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
+const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port), "--strictPort"], {
   cwd: projectRoot,
   env: { ...process.env, VITE_ENABLE_GUEST_DEMO: "false" },
   stdio: ["ignore", "pipe", "pipe"],
@@ -268,7 +269,7 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
     body: JSON.stringify({ usedBytes: 0, objectCount: 0, objectStorage: "s3-compatible", plan: { storageLimitBytes: null, storageScope: "account" } }),
   }));
   await page.route("**/api/v1/sessions", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] }, meta: { requestId: "e2e-sessions" } }) }));
-  await page.route("**/api/v1/profiles**", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { profiles: [profileResult] }, meta: { requestId: "e2e-profiles", count: 1 } }) }));
+  await page.route(/\/api\/v1\/profiles(?:\?.*)?$/, (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { profiles: [profileResult] }, meta: { requestId: "e2e-profiles", count: 1 } }) }));
   await page.route(`**/api/v1/profiles/${profileResult.accountId}`, (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
@@ -508,10 +509,22 @@ async function assertTopBarActions(page) {
   await page.getByPlaceholder("Search work").waitFor();
 
   await page.keyboard.press("Control+K");
-  await page.getByRole("dialog", { name: "Search RIVT" }).waitFor();
-  await page.getByPlaceholder("Search jobs, questions, trades, or tools").fill("riley");
-  await page.getByRole("button", { name: /Riley Harper/i }).click();
+  const searchDialog = page.getByRole("dialog", { name: "Search RIVT" });
+  await searchDialog.waitFor();
+  await searchDialog.getByPlaceholder("Search jobs, questions, trades, or tools").fill("riley");
+  const profileResultButton = searchDialog.getByRole("button", { name: /Riley Harper/i });
+  await profileResultButton.waitFor();
+  const profileResponsePromise = page.waitForResponse((response) => {
+    const url = new URL(response.url());
+    return url.pathname === `/api/v1/profiles/${profileResult.accountId}`;
+  });
+  await profileResultButton.click();
+  const profileResponse = await profileResponsePromise;
+  assert.equal(profileResponse.status(), 200, "Professional profile request should use the exact mocked detail route");
+  const profileResponseBody = await profileResponse.json();
+  assert.equal(profileResponseBody.data?.profile?.accountId, profileResult.accountId, "Professional profile detail response should not be shadowed by the profile-search route");
   const professionalProfile = page.getByRole("dialog", { name: "Professional profile" });
+  await professionalProfile.waitFor();
   await professionalProfile.getByRole("heading", { name: "Riley Harper", exact: true }).waitFor();
   await professionalProfile.getByText("Commercial electrical rough-in and service work.", { exact: true }).waitFor();
   await professionalProfile.getByRole("button", { name: "Close professional profile" }).click();
@@ -573,7 +586,17 @@ try {
   console.log("Jobs and discovery E2E passed at desktop and mobile viewports.");
 } finally {
   await browser?.close();
-  vite.kill();
+  if (vite.exitCode === null) {
+    const exited = once(vite, "exit");
+    vite.kill();
+    await Promise.race([
+      exited,
+      new Promise((_, reject) => setTimeout(
+        () => reject(new Error("Timed out stopping the jobs/discovery E2E Vite server.")),
+        5_000,
+      )),
+    ]);
+  }
 }
 
 

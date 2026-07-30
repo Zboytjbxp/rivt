@@ -125,3 +125,25 @@ test("launch readiness rejects future-dated restore evidence", () => {
   assert.equal(result.ok, false);
   assert.deepEqual(result.findings.map((finding) => finding.code), ["RECENT_BACKUP_ARTIFACT_RESTORE_MISSING"]);
 });
+
+test("launch readiness fails closed while an explicit incident hold is active", () => {
+  const result = evaluateLaunchReadiness({
+    incidentConfig: {
+      ...readyIncidentConfig,
+      launchHold: {
+        active: true,
+        reason: "Emergency credential containment remains open.",
+      },
+    },
+    recoveryPolicy: readyRecoveryPolicy,
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.equal(result.ok, false);
+  assert.equal(result.status, "blocked");
+  assert.equal(result.summary.activeLaunchHold, true);
+  assert.deepEqual(result.findings, [{
+    code: "ACTIVE_LAUNCH_HOLD",
+    message: "Emergency credential containment remains open.",
+    source: "incident",
+  }]);
+});

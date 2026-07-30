@@ -7,6 +7,12 @@
     "approvedAt": "2026-06-22T03:09:36.0366141Z",
     "scope": "Gate A pilot incident-routing plan: primary owner, backup owner, support hours, synthetic monitor, Sentry error monitoring, and first pilot escalation route."
   },
+  "launchHold": {
+    "active": true,
+    "reason": "Emergency production credential containment remains open. Clear only after every exit criterion in the 2026-07-29 incident record is verified.",
+    "incident": "docs/operations/incidents/2026-07-29-production-credential-exposure.md",
+    "setAt": "2026-07-30T04:39:06.4424071Z"
+  },
   "primaryOwner": {
     "name": "Michael",
     "role": "Founder / incident commander",
