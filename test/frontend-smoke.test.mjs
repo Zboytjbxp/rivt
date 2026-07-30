@@ -471,7 +471,11 @@ test("browser analytics strips direct PII and stays disabled without launch conf
 });
 
 test("push registration claims a VAPID generation only after the browser key matches", async () => {
-  const { verifiedSubscriptionGeneration } = await loadModule(
+  const {
+    deviceAlertStatus,
+    unsupportedDeviceAlertMessage,
+    verifiedSubscriptionGeneration,
+  } = await loadModule(
     "/src/features/notifications/usePushNotifications.ts",
   );
   const expectedKey = Uint8Array.from([4, 18, 52, 86, 120, 154, 188, 222, 240]);
@@ -501,6 +505,46 @@ test("push registration claims a VAPID generation only after the browser key mat
     verifiedSubscriptionGeneration(exactSubscription, publicKey, null),
     null,
   );
+  assert.equal(
+    unsupportedDeviceAlertMessage({ isAppleMobile: true, installedAsApp: true }),
+    "Device alerts require iOS or iPadOS 16.4 or later. Update this device if possible. In-app alerts still work.",
+  );
+  assert.equal(
+    unsupportedDeviceAlertMessage({ isAppleMobile: true, installedAsApp: false }),
+    "On iPhone or iPad, add RIVT to your Home Screen before enabling device alerts.",
+  );
+  assert.equal(
+    unsupportedDeviceAlertMessage({ isAppleMobile: false, installedAsApp: true }),
+    "This browser does not support device alerts. In-app alerts still work.",
+  );
+  assert.equal(deviceAlertStatus({
+    loading: false,
+    subscribed: false,
+    providerConfigured: true,
+    browserSupported: false,
+    requiresHomeScreenInstall: false,
+  }), "Unavailable");
+  assert.equal(deviceAlertStatus({
+    loading: false,
+    subscribed: false,
+    providerConfigured: true,
+    browserSupported: true,
+    requiresHomeScreenInstall: false,
+  }), "Off");
+  assert.equal(deviceAlertStatus({
+    loading: false,
+    subscribed: true,
+    providerConfigured: true,
+    browserSupported: true,
+    requiresHomeScreenInstall: false,
+  }), "On");
+  assert.equal(deviceAlertStatus({
+    loading: true,
+    subscribed: false,
+    providerConfigured: true,
+    browserSupported: true,
+    requiresHomeScreenInstall: false,
+  }), "Checking");
 });
 
 test("production entry point self-hosts fonts", () => {

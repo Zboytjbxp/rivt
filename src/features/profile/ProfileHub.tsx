@@ -31,7 +31,11 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { usePro } from "../pro/usePro";
-import { usePushNotifications } from "../notifications/usePushNotifications";
+import {
+  deviceAlertStatus,
+  unsupportedDeviceAlertMessage,
+  usePushNotifications,
+} from "../notifications/usePushNotifications";
 import { UpgradeModal } from "../pro/UpgradeModal";
 import { RIVT_PRO_OFFER } from "../pro/proOffer";
 import { BillingApiError, cancelSubscription, reconcileStripeCheckout, resumeSubscription, startBillingPortal } from "../../lib/billing";
@@ -986,6 +990,7 @@ function DocumentStyleChooser({
 
 function PushNotificationsCard() {
   const {
+    isAppleMobile,
     permission,
     providerConfigured,
     supported,
@@ -1001,7 +1006,13 @@ function PushNotificationsCard() {
     unsubscribe,
   } = usePushNotifications({ restoreOnMount: false });
 
-  const status = loading ? "Checking" : subscribed ? "On" : providerConfigured ? "Off" : "Unavailable";
+  const status = deviceAlertStatus({
+    loading,
+    subscribed,
+    providerConfigured,
+    browserSupported: supported,
+    requiresHomeScreenInstall,
+  });
 
   return (
     <div className="v2-push-card">
@@ -1021,9 +1032,7 @@ function PushNotificationsCard() {
       ) : null}
       {providerConfigured && !supported && !requiresHomeScreenInstall ? (
         <p className="v2-push-note">
-          {installedAsApp
-            ? "This browser does not support device alerts."
-            : "On iPhone or iPad, add RIVT to your Home Screen before enabling device alerts."}
+          {unsupportedDeviceAlertMessage({ isAppleMobile, installedAsApp })}
         </p>
       ) : null}
       {permission === "denied" ? (

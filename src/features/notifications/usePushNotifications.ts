@@ -30,6 +30,41 @@ function appleMobileDevice() {
     || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
+export function unsupportedDeviceAlertMessage({
+  isAppleMobile,
+  installedAsApp,
+}: {
+  isAppleMobile: boolean;
+  installedAsApp: boolean;
+}) {
+  if (isAppleMobile && installedAsApp) {
+    return "Device alerts require iOS or iPadOS 16.4 or later. Update this device if possible. In-app alerts still work.";
+  }
+  if (isAppleMobile) {
+    return "On iPhone or iPad, add RIVT to your Home Screen before enabling device alerts.";
+  }
+  return "This browser does not support device alerts. In-app alerts still work.";
+}
+
+export function deviceAlertStatus({
+  loading,
+  subscribed,
+  providerConfigured,
+  browserSupported,
+  requiresHomeScreenInstall,
+}: {
+  loading: boolean;
+  subscribed: boolean;
+  providerConfigured: boolean;
+  browserSupported: boolean;
+  requiresHomeScreenInstall: boolean;
+}) {
+  if (loading) return "Checking";
+  if (subscribed) return "On";
+  if (!providerConfigured || !browserSupported || requiresHomeScreenInstall) return "Unavailable";
+  return "Off";
+}
+
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -269,6 +304,7 @@ export function usePushNotifications({
   }
 
   return {
+    isAppleMobile,
     permission,
     providerConfigured,
     supported: supported(),
