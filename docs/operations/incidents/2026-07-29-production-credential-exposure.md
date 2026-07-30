@@ -57,7 +57,7 @@ moment.
 | Stripe API | Rotated; prior key expired | Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded; replacement authenticated to Stripe with a read-only HTTP 200 account response before the superseded key was expired |
 | Stripe billing webhook | Rotated; prior secret retired | Destination `we_1TnpZWIz6JDg8LdahYHPwX0o` at `https://rivt.pro/api/stripe/webhook`; Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded; harmless probe accepted; provider inventory confirms the prior secret expired |
 | Stripe Connect webhook | Rotated; prior secret retired | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted; provider inventory confirms the prior secret expired |
-| Google OAuth | Replacement deployed; callback proof and prior-secret retirement pending | Provider UI verifies `support@rivt.pro` owns the production project; Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; health, provider-configuration, and production-monitor checks pass |
+| Google OAuth | Rotated; prior secret deleted | Provider UI verifies `support@rivt.pro` owns project `rivt-499402`; the June 13 secret was disabled and then deleted on July 30; final provider inventory contains exactly one enabled July 30 replacement; Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; health, provider-configuration, callback, and production-monitor checks pass |
 | Resend | Rotated; prior key deleted | Replacement sending-only key is restricted to `rivt.pro`; a proof email was delivered; the provider dashboard confirmed deletion of the prior key and shows one replacement key remaining |
 | Object storage | Rotated; prior copied pair invalidated | Railway bucket `rivt-private` (`83403a81-f912-431e-b0fc-40a238f347e8`) retained identical object count and bytes across the one-time reset; both managed references persisted; deployment `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` and an existing-object read passed |
 | Web Push VAPID | Rotated; previous pair retired | An already opted-in owner-controlled physical device received a real alert through the transition bridge; both previous-key variables were then removed, Railway deployment `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded, and the running service reports the active pair present and previous pair absent |
@@ -227,8 +227,9 @@ moment.
 
 ## Google OAuth credential rotation evidence
 
-- The Google provider UI verifies that `support@rivt.pro` owns the production
-  OAuth project. Production-project owner access is no longer a blocker.
+- The Google provider UI verifies that `support@rivt.pro` owns production
+  project `rivt-499402`. Production-project owner access is no longer a
+  blocker.
 - Two unused replacement-secret candidates were deleted in the provider before
   either was installed. No value from those candidates or the final replacement
   is recorded in repository evidence.
@@ -240,16 +241,17 @@ moment.
   `/api/auth/providers` probe reported Google configured with no missing
   fields and session security healthy. The expected-source production monitor
   passed.
-- Configuration and deployment checks do not exercise Google's authorization
-  code exchange. A completed owner-controlled Google sign-in and callback is
-  still required before the prior secret can be retired.
+- The owner-controlled authorization-code callback proof is recorded in the
+  callback section below.
 - The production monitor now fails closed unless Google OAuth, server-side
   session security, and Sentry error monitoring all report configured. The
   enhanced expected-source monitor passed against the current production
   deployment in 562 ms.
-- The prior secret remains enabled only as a rollback-safe authentication
-  fallback until that callback proof passes. Google OAuth rotation is therefore
-  not yet complete, and the incident and `ACTIVE_LAUNCH_HOLD` remain open.
+- After callback proof, the prior secret created June 13 was disabled and then
+  deleted in the provider on July 30. Final provider inventory contains exactly
+  one enabled secret: the July 30 replacement. Google OAuth secret rotation is
+  complete. The broader incident and `ACTIVE_LAUNCH_HOLD` remain open for
+  unrelated remaining evidence.
 
 ## Web Push VAPID rotation evidence
 
@@ -270,9 +272,8 @@ moment.
   v2 configured, matching-job alerts enabled, operational controls open, and
   seven anonymous private-route checks closed.
 - VAPID rotation and previous-key retirement are complete. The broader
-  incident remains open for Google OAuth callback proof and prior-secret
-  retirement, Sentry, and the remaining bounded provider/data-access review;
-  Railway Stage 1 remains paused.
+  incident remains open for Sentry and the remaining bounded
+  provider/data-access review; Railway Stage 1 remains paused.
 
 ## Google OAuth callback evidence
 
@@ -287,10 +288,19 @@ moment.
   14:18:31 UTC. The callback returned its redirect in 131 ms, established the
   server session, and the controlled browser rendered the authenticated RIVT
   Home workspace. No password, token, code, cookie, or secret was recorded.
-- The replacement credential is proven. The prior Google secret remains active
-  solely as the rollback credential and must now be deleted in the provider UI
-  with action-time owner confirmation. Rotation is not closed until provider
-  inventory and the running application prove only the replacement remains.
+- The replacement credential is proven. The prior secret created June 13 was
+  disabled and then deleted in the provider on July 30. Final provider
+  inventory contains exactly one enabled secret: the July 30 replacement.
+- A second fresh owner-controlled Google sign-in completed after retirement
+  and rendered the authenticated RIVT Home workspace. This proves the remaining
+  replacement still serves production authorization-code callbacks after the
+  prior secret's deletion.
+- At approximately 14:33 UTC on July 30, production `/api/health` returned
+  `ok: true`, `/api/auth/providers` reported Google configured, and
+  `npm run monitor:production` passed against build
+  `04f13e006cae545a33002d2225f90ab0d8b7e9c9`.
+- Google OAuth secret rotation is complete. The overall incident and
+  `ACTIVE_LAUNCH_HOLD` remain open for unrelated remaining evidence.
 
 ## Backup-encryption rotation and restore evidence
 

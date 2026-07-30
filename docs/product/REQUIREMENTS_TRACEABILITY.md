@@ -59,17 +59,25 @@
   `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded on exact source
   `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`; secret-safe runtime checks
   found only the active pair; and the expected-source monitor passed in 592 ms.
-- `GA-OPS-008` gains Google OAuth replacement-deployment evidence: provider UI
-  verifies `support@rivt.pro` owns the production project; two unused
+- `GA-OPS-008` gains complete Google OAuth secret-rotation evidence: provider UI
+  verifies `support@rivt.pro` owns production project `rivt-499402`; two unused
   replacement candidates were deleted before installation; Railway deployment
   `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; and public health,
   provider-configuration, and expected-source production-monitor checks pass.
   A fresh `zboytjbxp@gmail.com` OAuth journey completed a real 131 ms callback,
   established a server session, and rendered the authenticated RIVT Home
-  workspace; an earlier expired transaction failed closed before exchange.
-- Requirement maturity remains Partial because prior Google-secret retirement,
-  Sentry DSN rotation/event proof, remaining provider review, and the accepted
+  workspace; an earlier expired transaction failed closed before exchange. The
+  secret created June 13 was then disabled and deleted on July 30; final
+  provider inventory contains exactly one enabled July 30 replacement. A
+  second fresh owner-controlled Google sign-in completed after retirement and
+  rendered authenticated RIVT Home, proving the remaining replacement serves
+  production callbacks after the prior secret's deletion. At
+  approximately 14:33 UTC, production health returned `ok: true`, the provider
+  probe reported Google configured, and the expected-source monitor passed
+  against build `04f13e006cae545a33002d2225f90ab0d8b7e9c9`.
+- Requirement maturity remains Partial because Sentry DSN rotation/event
+  proof, remaining provider review, and the accepted
   historical database/object-storage forensic limits remain open. The bounded
   PostgreSQL error classification found no authentication failure, `FATAL`, or
   `PANIC` event. An explicit

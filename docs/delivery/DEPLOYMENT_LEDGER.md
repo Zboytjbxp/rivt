@@ -1,6 +1,6 @@
 # Deployment Ledger
 
-## 2026-07-30 - Google OAuth Replacement Deployment
+## 2026-07-30 - Google OAuth Replacement and Prior-Secret Retirement
 
 - Production source commit:
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`
@@ -8,23 +8,29 @@
 - Railway application deployment:
   `0898208b-707f-49c3-b9b9-d0938e157542`
 - Production: `https://rivt.pro`
-- Scope: configuration-only installation of the final Google OAuth replacement
-  while retaining the prior secret until a real callback proves the
-  replacement.
+- Scope: configuration-only installation and proof of the final Google OAuth
+  replacement, followed by retirement of the prior secret.
 - Provider/config evidence: the Google provider UI verifies
-  `support@rivt.pro` owns the production project. Two unused replacement
-  candidates were deleted before installation. No secret or client identifier
-  is recorded in this ledger.
+  `support@rivt.pro` owns production project `rivt-499402`. Two unused
+  replacement candidates were deleted before installation. After a real
+  owner-controlled callback passed, the secret created June 13 was disabled
+  and then deleted on July 30. Final inventory contains exactly one enabled
+  secret: the July 30 replacement. No secret value or suffix is recorded in
+  this ledger.
 - Post-deploy proof: public `/api/health` returned `ok: true` with exact source
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`, PostgreSQL, and S3-compatible
   storage. The secret-safe provider probe reported Google configured with no
   missing fields and session security healthy. The expected-source production
-  monitor passed.
-- Verification boundary: health and configuration probes do not exercise the
-  Google authorization-code exchange. An owner-controlled sign-in and callback
-  remain required before the prior secret is retired.
-- Launch boundary: Google OAuth rotation remains incomplete, the incident and
-  `ACTIVE_LAUNCH_HOLD` remain open, and Railway Stage 1 stays paused.
+  monitor passed at approximately 14:33 UTC on July 30.
+- Callback/retirement proof: a fresh owner-controlled Google sign-in completed
+  the authorization-code callback and rendered authenticated RIVT Home before
+  the June 13 secret was disabled and deleted. Provider inventory then showed
+  only the enabled July 30 replacement. A second fresh owner-controlled Google
+  sign-in completed after retirement and again rendered authenticated RIVT
+  Home, proving the remaining replacement still serves production callbacks.
+- Launch boundary: Google OAuth secret rotation is complete. The incident and
+  `ACTIVE_LAUNCH_HOLD` remain open for unrelated remaining evidence, and
+  Railway Stage 1 stays paused.
 
 ## 2026-07-30 - Web Push Previous-Key Retirement
 
@@ -50,10 +56,10 @@
 - Cost/data boundary: no new service, bucket, volume, payment, object, or
   production-data mutation was created. The action remained below the approved
   $2 incremental ceiling.
-- Launch boundary: VAPID rotation is complete. The incident and
-  `ACTIVE_LAUNCH_HOLD` remain open for Google OAuth callback proof and
-  prior-secret retirement, Sentry DSN rotation/event proof, and the remaining
-  bounded provider/data-access log review. Railway Stage 1 stays paused.
+- Launch boundary: VAPID and Google OAuth secret rotations are complete. The
+  incident and `ACTIVE_LAUNCH_HOLD` remain open for Sentry DSN
+  rotation/event proof and the remaining bounded provider/data-access log
+  review. Railway Stage 1 stays paused.
 
 ## 2026-07-30 - Emergency Credential Containment
 
@@ -98,10 +104,9 @@
   `854eef63b4d169746faf87157aaa9f3c1345329d`; source rollback must never restore
   a compromised credential.
 - Launch boundary: the incident remains open and `ACTIVE_LAUNCH_HOLD` blocks
-  release until Google OAuth callback proof and prior-secret retirement,
-  Sentry DSN rotation/event proof, and the remaining bounded
-  provider/data-access log review are complete. VAPID migration and
-  previous-pair retirement are recorded in the follow-up entry above. Railway
+  release until Sentry DSN rotation/event proof and the remaining bounded
+  provider/data-access log review are complete. Google OAuth and VAPID
+  rotations are complete and recorded in the follow-up entries above. Railway
   Stage 1 stays paused.
 
 ## 2026-07-28 - Customer Documents and Contact Import

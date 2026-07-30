@@ -123,9 +123,9 @@ credential-exposure containment is in progress.
   exact source `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`. Secret-safe runtime
   checks report the active pair present and previous pair absent, and the
   expected-source production monitor passed in 592 ms.
-- Google OAuth production-project ownership is verified in the provider UI as
-  `support@rivt.pro`. A final replacement secret is installed in Railway
-  deployment `0898208b-707f-49c3-b9b9-d0938e157542` on exact source
+- Google OAuth production-project ownership is verified in the provider UI:
+  `support@rivt.pro` owns project `rivt-499402`. A final replacement secret is
+  installed in Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` on exact source
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Public health, the
   secret-safe provider-configuration probe, and the expected-source production
   monitor pass. Two unused replacement candidates were deleted before
@@ -134,10 +134,18 @@ credential-exposure containment is in progress.
   returned its redirect in 131 ms and the browser rendered the authenticated
   RIVT Home workspace. An earlier callback from a transaction held open longer
   than the 10-minute ticket lifetime failed closed before token exchange and
-  was not treated as replacement proof. The installed replacement is proven;
-  rotation remains open only until the prior Google secret is explicitly
-  deleted and its absence is verified. The Sentry DSN also remains pending
-  rotation and provider event proof.
+  was not treated as replacement proof. The installed replacement is proven.
+  The prior secret created June 13 was disabled and then deleted in the
+  provider on July 30; final inventory contains exactly one enabled secret,
+  the July 30 replacement. A fresh post-retirement Google journey then
+  completed and rendered the authenticated RIVT Home workspace, proving that
+  production still exchanges authorization codes with the remaining
+  replacement. At approximately 14:33 UTC, production
+  `/api/health` returned `ok: true`, `/api/auth/providers` reported Google
+  configured, and `npm run monitor:production` passed against build
+  `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Google OAuth secret rotation is
+  complete. The Sentry DSN and unrelated remaining incident evidence remain
+  open, so the overall incident and launch hold are not cleared.
 - Local hotfix database evidence now includes a clean, isolated run of all 20
   integration files: 22 tests passed with zero failures or skips. The test
   process received no production provider credentials, the guarded
