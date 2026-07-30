@@ -129,9 +129,15 @@ credential-exposure containment is in progress.
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Public health, the
   secret-safe provider-configuration probe, and the expected-source production
   monitor pass. Two unused replacement candidates were deleted before
-  installation. Rotation is not yet complete: a real Google callback must
-  prove the installed replacement before the prior secret is retired. The
-  Sentry DSN also remains pending rotation and provider event proof.
+  installation. A fresh production OAuth journey for
+  `zboytjbxp@gmail.com` completed at 14:18:31 UTC on July 30: the callback
+  returned its redirect in 131 ms and the browser rendered the authenticated
+  RIVT Home workspace. An earlier callback from a transaction held open longer
+  than the 10-minute ticket lifetime failed closed before token exchange and
+  was not treated as replacement proof. The installed replacement is proven;
+  rotation remains open only until the prior Google secret is explicitly
+  deleted and its absence is verified. The Sentry DSN also remains pending
+  rotation and provider event proof.
 - Local hotfix database evidence now includes a clean, isolated run of all 20
   integration files: 22 tests passed with zero failures or skips. The test
   process received no production provider credentials, the guarded
@@ -182,11 +188,15 @@ credential-exposure containment is in progress.
   expected append-only/read-only/constraint guard verification, SSL
   unexpected-EOF closure, or one Railway collation-refresh permission error;
   there are zero authentication failures and zero `FATAL`/`PANIC` events.
-- A source-backed object-storage audit design is being recorded separately;
-  it deliberately does not add a migration, provider feature, paid resource,
-  or production mutation during this incident pass. Current stable
-  object-count evidence still cannot prove that an exposed credential was
-  never used for a direct read.
+- A source-backed
+  [object-storage audit hardening portfolio](../operations/hardening/object-storage-audit/hardening.md)
+  now compares local per-route events, a centralized application gateway, and
+  provider/external immutable logging. It recommends centralizing RIVT's
+  object operations behind the existing append-only `audit_events` ledger,
+  which needs no new table or paid service. This is a proposed design only:
+  no gateway, migration, provider feature, paid resource, or production
+  mutation was added. Current stable object-count evidence still cannot prove
+  that an exposed credential was never used for a direct read.
 - The operational launch gate now has an explicit active hold for this
   emergency. `npm run incident:readiness` passes the standing incident-routing
   configuration, but `npm run launch:readiness -- --require-ready` correctly

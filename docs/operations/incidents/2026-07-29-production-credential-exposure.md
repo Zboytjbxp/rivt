@@ -274,6 +274,24 @@ moment.
   retirement, Sentry, and the remaining bounded provider/data-access review;
   Railway Stage 1 remains paused.
 
+## Google OAuth callback evidence
+
+- Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` continues to
+  serve exact source `04f13e006cae545a33002d2225f90ab0d8b7e9c9` with the
+  final replacement Google client secret installed.
+- A first owner-controlled callback at 14:16:37 UTC on July 30 used an OAuth
+  transaction that had remained open beyond RIVT's 10-minute lifetime. It
+  redirected to the honest authentication error in 10 ms, before a provider
+  token exchange, and is not counted as credential proof.
+- A completely fresh journey for `zboytjbxp@gmail.com` then completed at
+  14:18:31 UTC. The callback returned its redirect in 131 ms, established the
+  server session, and the controlled browser rendered the authenticated RIVT
+  Home workspace. No password, token, code, cookie, or secret was recorded.
+- The replacement credential is proven. The prior Google secret remains active
+  solely as the rollback credential and must now be deleted in the provider UI
+  with action-time owner confirmation. Rotation is not closed until provider
+  inventory and the running application prove only the replacement remains.
+
 ## Backup-encryption rotation and restore evidence
 
 - Active/previous key-ring compatibility was deployed before rotating the
@@ -411,6 +429,13 @@ moment.
   object-operation audit events. Stable object count/bytes and successful
   continuity reads do not prove that an exposed credential was never used for
   a direct read.
+- A design-only
+  [object-storage audit hardening portfolio](../hardening/object-storage-audit/hardening.md)
+  recommends routing application object operations through one gateway backed
+  by the existing append-only `audit_events` ledger. It explicitly separates
+  that no-new-service application control from later provider/external
+  immutable logging whose cost, privacy, residency, and retention have not
+  been approved. No part of that proposed design is represented as implemented.
 - No misuse indicator has been identified in the evidence reviewed so far.
   The bounded PostgreSQL error review is complete for the repository-backed
   incident window, subject to the historical auditing limitation above. The

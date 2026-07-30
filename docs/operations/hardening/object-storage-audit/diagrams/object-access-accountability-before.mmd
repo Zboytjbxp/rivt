@@ -1,0 +1,23 @@
+flowchart LR
+  actor["Authenticated user or anonymous reader"]
+  routes["RIVT route modules"]
+  helper["Shared signed-link helper"]
+  sdk["Direct S3 SDK calls in multiple modules"]
+  ledger["PostgreSQL audit_events<br/>(no object-operation coverage)"]
+  store[("S3-compatible object storage")]
+  browser["Browser follows signed URL"]
+  operator["Provider console, credentials,<br/>or maintenance scripts"]
+
+  actor --> routes
+  routes --> helper
+  routes --> sdk
+  helper --> store
+  sdk --> store
+  helper --> actor
+  actor --> browser
+  browser --> store
+  routes -. unrelated domain events .-> ledger
+  operator --> store
+
+  classDef gap stroke:#b45309,stroke-width:2px,stroke-dasharray:5 5;
+  class sdk,helper,operator gap;

@@ -1,0 +1,21 @@
+flowchart LR
+  actor["Authenticated user or anonymous reader"]
+  routes["RIVT route modules"]
+  gateway["Object-storage gateway<br/>only app-owned S3 boundary"]
+  ledger[("PostgreSQL audit_events<br/>(append-only trigger)")]
+  store[("S3-compatible object storage")]
+  browser["Browser follows signed URL"]
+  operator["Provider console, credentials,<br/>or maintenance scripts"]
+
+  actor --> routes
+  routes -->|"actor, request, stored-object ID"| gateway
+  gateway -->|"PUT / GET / DELETE / sign"| store
+  gateway -->|"bounded object event"| ledger
+  gateway -->|"release only after required audit"| routes
+  routes --> actor
+  actor --> browser
+  browser --> store
+  operator --> store
+
+  classDef boundary stroke:#0f766e,stroke-width:3px;
+  class gateway,ledger boundary;

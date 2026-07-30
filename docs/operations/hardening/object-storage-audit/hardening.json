@@ -1,0 +1,700 @@
+{
+  "documentType": "codex-security.hardening-analysis",
+  "schemaVersion": "1.0",
+  "analysisId": "hardening_20260730_object_storage_audit",
+  "sourceEvidence": {
+    "kind": "mixed_incident_and_source_collection",
+    "label": "RIVT object-storage incident and source evidence",
+    "collectionSha256": "c3842eeb2a8212fe99cfaa3b4a1813b4e2fcbfaf6569cc85c82d516b444a5da1",
+    "artifactCount": 13,
+    "targetRevision": "04360c6dd469908ec0c1e8245d9910163630e72f",
+    "sourceDrift": "present",
+    "driftNote": "The incident document and unrelated structured-logger files moved in the working tree while source architecture was inspected at the target revision."
+  },
+  "assessment": {
+    "outcome": "opportunities_identified",
+    "summary": "RIVT can centralize application-owned object authority behind one gateway and reuse its existing append-only audit ledger; this is proposed, not implemented, and provider-level access evidence remains a separate higher-cost option."
+  },
+  "constraints": {
+    "profile": "balanced",
+    "changeHorizons": [
+      "incremental",
+      "medium_term",
+      "foundational"
+    ],
+    "nonNegotiables": [
+      "Do not claim a signed-link issuance proves a download.",
+      "Do not store object keys, signed URLs, filenames, content, credentials, authorization headers, provider errors, or raw IP addresses in application audit events.",
+      "Do not add a new audit table for the recommended option.",
+      "Do not create a service, bucket, migration, provider setting, or paid resource without separate review and owner approval.",
+      "Preserve existing authorization and the append-only audit_events trigger."
+    ],
+    "assumptions": [
+      "No measured storage-route latency or database-write budget was supplied.",
+      "No provider-level immutable logging capability, retention design, or price has been verified.",
+      "Application-level actor and issuance evidence is the immediate control objective.",
+      "Historical access that was never recorded cannot be reconstructed by the proposed design."
+    ]
+  },
+  "opportunities": [
+    {
+      "opportunityId": "object-access-accountability",
+      "title": "Establish accountable object-storage access",
+      "summary": "Make application object operations auditable through one owned boundary while preserving a separate decision for provider-level forensic evidence.",
+      "diagnosis": "RIVT has an append-only audit ledger, but direct S3 commands and signed-link issuance are distributed across feature modules, so object-audit coverage is convention-based and out-of-band access remains invisible.",
+      "evidence": [
+        {
+          "claimType": "observed",
+          "sourceKind": "document",
+          "evidenceId": "E01",
+          "path": "docs/operations/incidents/2026-07-29-production-credential-exposure.md",
+          "claim": "The incident records no identified misuse but cannot establish historical per-object access or prove no exfiltration."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E02",
+          "path": "migrations/0001_legacy_baseline.up.sql",
+          "claim": "The legacy upload schema provides stored-object records and provider object keys."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E03",
+          "path": "migrations/0002_domain_foundation.up.sql",
+          "claim": "audit_events already records request, actor, organization, action, subject, timestamp, and metadata, and rejects update and delete through a trigger."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E04",
+          "path": "test/migrations.integration.test.js",
+          "claim": "Integration coverage exercises the append-only audit_events trigger."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E05",
+          "path": "server/index.js",
+          "claim": "The shared client and signing helper coexist with direct project-media writes, and a legacy mapper can return the raw object key and optional public URL."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E06",
+          "path": "server/albums.js",
+          "claim": "Album photo upload and signed-link paths exercise object authority outside a dedicated gateway."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E07",
+          "path": "server/shop-talk.js",
+          "claim": "Shop Talk media upload and link paths exercise object authority outside a dedicated gateway."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E08",
+          "path": "server/public-discovery.js",
+          "claim": "Anonymous public discovery receives signed links; the subsequent browser fetch does not traverse the RIVT server."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E09",
+          "path": "server/professional-profile.js",
+          "claim": "Credential evidence, portfolio media, and avatars include independent write, link, replacement, and deletion paths."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E10",
+          "path": "server/document-brand.js",
+          "claim": "Document logos include the normal server-side object read plus write and delete paths."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E11",
+          "path": "server/tool-records.js",
+          "claim": "Invoice and estimate delivery calls the document-brand read path."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E12",
+          "path": "server/messaging-continuity.js",
+          "claim": "Message and contact-note attachments include user-initiated writes/deletes and system cleanup."
+        },
+        {
+          "claimType": "observed",
+          "sourceKind": "source",
+          "evidenceId": "E13",
+          "path": "server/legacy-integrations.js",
+          "claim": "Legacy upload routes retain list, link, and write storage behavior."
+        },
+        {
+          "claimType": "inferred",
+          "sourceKind": "source",
+          "path": "server",
+          "claim": "Because direct SDK and signing authority is available to several modules, object-audit completeness is controlled by caller convention rather than a single enforceable boundary."
+        }
+      ],
+      "desiredInvariants": [
+        "Every application-originated object PUT, server-side GET, DELETE, and signed-link issuance reaches one auditable control before success is released.",
+        "Every event uses a canonical stored-object UUID and bounded metadata that excludes provider identifiers and customer content.",
+        "Anonymous and system operations have explicit initiators.",
+        "Audit failure prevents returning a signed URL or releasing server-read bytes.",
+        "Post-mutation audit failures use deterministic safe failure and compensation or reconciliation behavior.",
+        "New server code cannot call object SDK commands or signing functions outside the selected boundary.",
+        "Application events are represented as app operation or authorization issuance evidence, never proof of a subsequent provider download."
+      ],
+      "proposalPath": "proposals/object-access-accountability.md",
+      "options": [
+        {
+          "optionId": "local-route-audits",
+          "title": "Local per-route audit inserts",
+          "kind": "baseline",
+          "summary": "Keep direct storage calls and add bounded audit_events inserts independently to every current route.",
+          "diagramPaths": {
+            "before": "diagrams/object-access-accountability-before.mmd",
+            "after": "diagrams/object-access-accountability-local-route-audits-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E01",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Adds future app-originated evidence but cannot reconstruct history or observe provider access."
+            },
+            {
+              "evidenceId": "E03",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Reuses the existing append-only ledger at each route."
+            },
+            {
+              "evidenceId": "E04",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Extends existing immutability tests with route-specific object events."
+            },
+            {
+              "evidenceId": "E05",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Known project and helper paths can emit events, but direct authority remains."
+            },
+            {
+              "evidenceId": "E06",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Album routes gain local events."
+            },
+            {
+              "evidenceId": "E07",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Shop Talk routes gain local events."
+            },
+            {
+              "evidenceId": "E08",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Can record anonymous link issuance but not the browser fetch."
+            },
+            {
+              "evidenceId": "E09",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Profile object paths gain local events."
+            },
+            {
+              "evidenceId": "E10",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Document-brand paths gain local events."
+            },
+            {
+              "evidenceId": "E11",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Delivery context must be passed into the local read audit."
+            },
+            {
+              "evidenceId": "E12",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Messaging and cleanup paths gain local actor/system events."
+            },
+            {
+              "evidenceId": "E13",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Legacy routes must be locally audited or retired."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Known callers gain actor-aware events, but future and missed callers can still bypass audit.",
+              "validationPlan": "Exercise every inventoried path and recursively search for direct SDK and signing calls."
+            },
+            {
+              "dimension": "performance",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Each event adds a database insert; list routes risk N+1 writes unless independently batched.",
+              "validationPlan": "Compare p50 and p95 route latency and database statement count on representative media lists."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Events require bounded values already available to each route.",
+              "validationPlan": "Compare process RSS for large list responses before and after batched event construction."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "unknown",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Fail-closed and compensation behavior is repeated and may diverge by route.",
+              "validationPlan": "Inject S3 and audit database failures into each path and compare response and compensation behavior."
+            },
+            {
+              "dimension": "operability",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Incident reviewers must still inspect many audit owners and distinguish migrated from forgotten paths.",
+              "validationPlan": "Run an audit-coverage inventory and verify action taxonomy consistency across modules."
+            },
+            {
+              "dimension": "migration",
+              "direction": "improves",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "Focused route changes are easy to stage and revert without a schema or provider change.",
+              "validationPlan": "Migrate one route family, run compatibility tests, and rehearse code rollback while preserving rows."
+            }
+          ],
+          "residualRisks": [
+            "Audit ownership can drift between current and future call sites.",
+            "Signed-link issuance does not prove provider access.",
+            "Provider-console, direct-credential, and maintenance access remain invisible.",
+            "Audit and S3 mutations remain non-atomic."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "server/index.js",
+              "server/albums.js",
+              "server/shop-talk.js",
+              "server/public-discovery.js",
+              "server/professional-profile.js",
+              "server/document-brand.js",
+              "server/tool-records.js",
+              "server/messaging-continuity.js",
+              "server/legacy-integrations.js",
+              "test"
+            ],
+            "workPackages": [
+              "Define one shared object action and metadata contract.",
+              "Add local batched inserts and fail-closed behavior to each current route.",
+              "Add route-specific privacy and failure tests."
+            ],
+            "acceptanceCriteria": [
+              "Every inventoried app operation produces one bounded audit row.",
+              "No signed URL or server-read bytes are returned after required audit failure.",
+              "No disallowed identifier or content reaches audit metadata."
+            ],
+            "migrationNotes": [
+              "Use only as a temporary baseline if Option 2 cannot be delivered immediately."
+            ],
+            "rollback": "Revert local inserts and route error behavior; retain immutable audit rows already written."
+          }
+        },
+        {
+          "optionId": "central-storage-gateway",
+          "title": "Centralized object-storage gateway using the existing ledger",
+          "kind": "structural",
+          "summary": "Make one server module the only application-owned S3 and signing boundary and write bounded rows to existing audit_events without a new table.",
+          "diagramPaths": {
+            "before": "diagrams/object-access-accountability-before.mmd",
+            "after": "diagrams/object-access-accountability-central-gateway-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E01",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Provides future application operation and issuance evidence but cannot recover history or provider access."
+            },
+            {
+              "evidenceId": "E02",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Uses canonical database UUIDs rather than provider keys as audit subjects; non-upload object record mapping still needs design."
+            },
+            {
+              "evidenceId": "E03",
+              "effect": "addresses",
+              "tacticalFixRequired": false,
+              "rationale": "Reuses the existing append-only table as the central application ledger."
+            },
+            {
+              "evidenceId": "E04",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Extends the existing immutability contract with gateway object-event coverage."
+            },
+            {
+              "evidenceId": "E05",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Moves shared signing and project-media authority into one gateway and separately removes legacy raw-key/public-URL fields."
+            },
+            {
+              "evidenceId": "E06",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Routes album writes and links through the gateway."
+            },
+            {
+              "evidenceId": "E07",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Routes Shop Talk writes and links through the gateway."
+            },
+            {
+              "evidenceId": "E08",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Records anonymous issuance centrally but still cannot observe the browser fetch."
+            },
+            {
+              "evidenceId": "E09",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Routes profile object lifecycles through the gateway without copying labels or filenames."
+            },
+            {
+              "evidenceId": "E10",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Routes document-logo reads, writes, and deletes through central fail-closed behavior."
+            },
+            {
+              "evidenceId": "E11",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Carries delivery request and actor context into the gateway read."
+            },
+            {
+              "evidenceId": "E12",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Routes actor and system attachment lifecycles through explicit initiator context."
+            },
+            {
+              "evidenceId": "E13",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Legacy routes are migrated through the gateway or retired."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "high",
+              "basis": "source-derived",
+              "assessment": "One owned application capability boundary makes audit omission mechanically detectable and centralizes metadata privacy and failure rules.",
+              "validationPlan": "Add a recursive security test that permits SDK commands and signing only in the gateway, then exercise all migrated paths."
+            },
+            {
+              "dimension": "performance",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Each operation adds an audit database write; central batching avoids N+1 link-list inserts but measured latency is unknown.",
+              "validationPlan": "Compare p50/p95 latency and statement count for links, lists, uploads, deletes, and document reads against an agreed threshold."
+            },
+            {
+              "dimension": "memory",
+              "direction": "neutral",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "The gateway retains bounded operation context and one batch of row values already represented in the response.",
+              "validationPlan": "Compare peak RSS and batch size for representative maximum media lists."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "unknown",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Central behavior is easier to test, but PostgreSQL audit availability becomes part of returning storage links and server-read bytes.",
+              "validationPlan": "Inject database and provider failures, verify fail-closed reads/links, deterministic compensation, alerts, and rehearsed route rollback."
+            },
+            {
+              "dimension": "operability",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "One action taxonomy, boundary, metrics surface, and static enforcement rule simplify review; alerting for audit failures is still required.",
+              "validationPlan": "Run an incident drill that traces an object UUID across request, audit event, and safe monitoring fields."
+            },
+            {
+              "dimension": "migration",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Multiple feature modules need adapters and compensation tests, although no table or service migration is required.",
+              "validationPlan": "Migrate one route family at a time, prohibit dual audit ownership, and rehearse per-family rollback."
+            }
+          ],
+          "residualRisks": [
+            "Signed-link issuance does not prove a browser fetch.",
+            "Provider console, direct credentials, backups, and maintenance scripts remain outside the gateway.",
+            "A database owner can disable the append-only trigger.",
+            "S3 mutation and PostgreSQL audit insert cannot be one atomic transaction.",
+            "Historical unlogged access remains unrecoverable."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "server/object-storage.js",
+              "server/index.js",
+              "server/albums.js",
+              "server/shop-talk.js",
+              "server/public-discovery.js",
+              "server/professional-profile.js",
+              "server/document-brand.js",
+              "server/tool-records.js",
+              "server/messaging-continuity.js",
+              "server/legacy-integrations.js",
+              "test/object-storage.test.js",
+              "test/security.test.js",
+              "test/migrations.integration.test.js"
+            ],
+            "workPackages": [
+              "Define the gateway context, four action names, initiators, scopes, and metadata allowlist.",
+              "Implement put, server-get, delete, single-link, and batched-link behavior with fail-closed release and compensation.",
+              "Migrate read and link callers, followed by writes and deletes, preserving route authorization.",
+              "Add the server-wide direct-SDK boundary test.",
+              "Retire or migrate legacy routes and remove raw object-key/public-URL response fields.",
+              "Optionally review a separate audit_events CHECK constraint migration after the gateway is stable."
+            ],
+            "acceptanceCriteria": [
+              "Only the gateway owns application SDK commands and signing.",
+              "Every app-owned operation produces one bounded event using a canonical UUID.",
+              "Link and server-read responses fail closed on required audit failure.",
+              "List responses batch audit rows without N+1 writes.",
+              "All existing authorization and functional tests pass.",
+              "No new table, service, bucket, provider setting, or paid resource is introduced by the gateway."
+            ],
+            "migrationNotes": [
+              "Use adapters or per-route rollout so one audit owner is active for each operation.",
+              "A later constraint is defense in depth and requires a reviewed up/down migration; it is not required for the initial gateway."
+            ],
+            "rollback": "Switch a migrated route family back to the prior adapter while preserving immutable rows and recording the temporary invariant loss."
+          }
+        },
+        {
+          "optionId": "provider-immutable-logging",
+          "title": "Provider or external immutable access logging",
+          "kind": "foundational",
+          "summary": "Retain the application gateway and add provider-native or external immutable evidence for actual storage access, subject to separate privacy, retention, cost, and provider approval.",
+          "diagramPaths": {
+            "before": "diagrams/object-access-accountability-before.mmd",
+            "after": "diagrams/object-access-accountability-provider-immutable-after.mmd"
+          },
+          "evidenceCoverage": [
+            {
+              "evidenceId": "E01",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Can improve future evidence for actual provider access, subject to verified provider coverage; cannot reconstruct the incident's missing history."
+            },
+            {
+              "evidenceId": "E02",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Future provider object keys should become opaque before exporting access logs; existing objects need a compatibility plan."
+            },
+            {
+              "evidenceId": "E03",
+              "effect": "mitigates",
+              "tacticalFixRequired": false,
+              "rationale": "The application ledger remains necessary for actor and authorization context."
+            },
+            {
+              "evidenceId": "E04",
+              "effect": "mitigates",
+              "tacticalFixRequired": true,
+              "rationale": "Application immutability tests remain necessary alongside external evidence."
+            },
+            {
+              "evidenceId": "E05",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "The gateway covers application intent and provider logs cover actual storage access; raw legacy fields still need removal."
+            },
+            {
+              "evidenceId": "E06",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Album app intent and actual provider access can both be evidenced."
+            },
+            {
+              "evidenceId": "E07",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Shop Talk app intent and actual provider access can both be evidenced."
+            },
+            {
+              "evidenceId": "E08",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Anonymous issuance stays in the app ledger and the subsequent provider fetch can be separately recorded."
+            },
+            {
+              "evidenceId": "E09",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Profile app intent and actual provider access can both be evidenced without exporting customer labels."
+            },
+            {
+              "evidenceId": "E10",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Document-logo app intent and actual provider access can both be evidenced."
+            },
+            {
+              "evidenceId": "E11",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Delivery request context remains in the app ledger while provider records the read."
+            },
+            {
+              "evidenceId": "E12",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Messaging actor/system intent and actual provider access can both be evidenced."
+            },
+            {
+              "evidenceId": "E13",
+              "effect": "addresses",
+              "tacticalFixRequired": true,
+              "rationale": "Legacy paths still need gateway migration or retirement even when provider access is logged."
+            }
+          ],
+          "tradeoffs": [
+            {
+              "dimension": "security",
+              "direction": "improves",
+              "confidence": "medium",
+              "basis": "hypothetical",
+              "assessment": "Verified provider logging can cover browser and out-of-band storage access, but the external log becomes a sensitive high-value system.",
+              "validationPlan": "Verify provider guarantees, then test signed-link, administrative, and controlled credential-based access in non-production."
+            },
+            {
+              "dimension": "performance",
+              "direction": "unknown",
+              "confidence": "low",
+              "basis": "hypothetical",
+              "assessment": "Asynchronous provider export should avoid an application hop, but provider buffering, retries, and query performance are unverified.",
+              "validationPlan": "Measure object-request latency, export delay, and query latency during bounded non-production use."
+            },
+            {
+              "dimension": "memory",
+              "direction": "regresses",
+              "confidence": "low",
+              "basis": "hypothetical",
+              "assessment": "Provider or external systems retain buffers, indexes, and log objects outside the application process.",
+              "validationPlan": "Obtain provider resource accounting for peak event volume and retained data."
+            },
+            {
+              "dimension": "reliability",
+              "direction": "unknown",
+              "confidence": "low",
+              "basis": "hypothetical",
+              "assessment": "Buffered export may preserve storage availability but creates delivery lag, retry, and loss-detection concerns.",
+              "validationPlan": "Interrupt the sink in non-production and verify buffering, retry, alerting, reconciliation, and documented loss boundaries."
+            },
+            {
+              "dimension": "operability",
+              "direction": "regresses",
+              "confidence": "high",
+              "basis": "analogous",
+              "assessment": "A new sensitive log system requires least privilege, retention, cost alerts, delivery monitoring, incident queries, and access reviews.",
+              "validationPlan": "Complete an operational readiness review and incident retrieval drill before production enablement."
+            },
+            {
+              "dimension": "migration",
+              "direction": "regresses",
+              "confidence": "medium",
+              "basis": "source-derived",
+              "assessment": "Future object keys should become opaque and provider/privacy/retention settings require separate staged changes.",
+              "validationPlan": "Test opaque-key compatibility, protected correlation, provider enablement, and rollback without locking production data."
+            }
+          ],
+          "residualRisks": [
+            "Provider logging may omit or delay some access classes depending on verified guarantees.",
+            "Logs can expose identifying object-key material unless keys become opaque.",
+            "Immutable retention can conflict with deletion and privacy obligations.",
+            "External credentials and log-reader roles create a new attack surface.",
+            "The design cannot reconstruct access that predates enablement.",
+            "Recurring cost is unknown and unapproved."
+          ],
+          "implementationReadiness": {
+            "affectedComponents": [
+              "Selected object-storage provider configuration",
+              "Selected immutable log sink",
+              "Object key generation and compatibility paths",
+              "Security operations, retention, access control, and cost monitoring",
+              "Application object-storage gateway"
+            ],
+            "workPackages": [
+              "Verify provider capability, event coverage, residency, immutability, retention, deletion, and export behavior.",
+              "Obtain an exact monthly cost model and owner approval.",
+              "Move future object keys to opaque identifiers and design protected correlation.",
+              "Configure a bounded non-production delivery test and least-privilege reader access.",
+              "Add delivery-lag, loss, access-review, and spending alerts.",
+              "Perform separate production change review before enablement."
+            ],
+            "acceptanceCriteria": [
+              "Provider and application events have documented, non-overclaimed meanings.",
+              "Controlled signed-link and administrative access appears within an approved delay.",
+              "No signed URL, credential, customer content, or identifying filename is exported.",
+              "Retention, deletion, residency, access, and incident procedures are approved.",
+              "The owner approves the full recurring cost ceiling before production enablement."
+            ],
+            "migrationNotes": [
+              "Do not enable irreversible retention or object lock during an exploratory rollout.",
+              "Complete Option 2 first so provider evidence can be correlated with application intent."
+            ],
+            "rollback": "Disable future export only after an approved change; preserve or dispose of already retained evidence according to the approved retention policy, recognizing that locked data may be intentionally irreversible."
+          }
+        }
+      ],
+      "recommendedOptionId": "central-storage-gateway",
+      "recommendation": "Select the centralized gateway under current constraints because it makes application audit ownership enforceable, reuses the existing append-only ledger, and adds no table or paid service. Revisit provider immutable logging only when actual provider-access proof is required and its privacy, retention, operational, and exact cost constraints are approved."
+    }
+  ],
+  "openQuestions": [
+    "Is provider-level proof of actual object access a launch requirement or a later assurance goal?",
+    "What latency and availability thresholds apply to audit-dependent links, lists, and server reads?",
+    "Should legacy upload routes be migrated or retired?",
+    "Is S3_PUBLIC_BASE_URL absent and is the production bucket private?",
+    "Which canonical UUID should represent document logos, avatars, and other objects that may not use uploads.id directly?",
+    "How long should application object-audit rows be retained and who may query them?",
+    "If external logging is selected, which provider and sink meet required coverage, privacy, residency, deletion, immutability, and cost constraints?",
+    "How should backup and maintenance scripts be attributed without granting them ambient unaudited authority?"
+  ]
+}

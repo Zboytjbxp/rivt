@@ -37,6 +37,12 @@
   hardening check fail closed unless Google OAuth, server-side session
   security, and Sentry error monitoring report configured. The enhanced
   expected-source monitor passed in 562 ms.
+- `GA-OPS-005` gains a design-only object-storage audit portfolio that traces
+  every direct application S3 authority path, compares three materially
+  different control models, and recommends a centralized gateway backed by
+  the existing append-only `audit_events` table. It adds no migration,
+  provider setting, service, or cost and does not claim historical object
+  access can be reconstructed.
 - `GA-OPS-008` gains exact-source production evidence for deployment
   `4af32f02-fd17-4899-9b62-74ac4c565590` serving
   `a3be803cc5ad2563d100870663dbf6dc51307126`. The 730 ms monitor passed with
@@ -59,11 +65,14 @@
   `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; and public health,
   provider-configuration, and expected-source production-monitor checks pass.
-- Requirement maturity remains Partial because Google OAuth callback proof and
-  prior-secret retirement, Sentry DSN rotation/event proof, remaining provider
-  review, and the accepted historical database/object-storage forensic limits
-  remain open. The bounded PostgreSQL error classification found no
-  authentication failure, `FATAL`, or `PANIC` event. An explicit
+  A fresh `zboytjbxp@gmail.com` OAuth journey completed a real 131 ms callback,
+  established a server session, and rendered the authenticated RIVT Home
+  workspace; an earlier expired transaction failed closed before exchange.
+- Requirement maturity remains Partial because prior Google-secret retirement,
+  Sentry DSN rotation/event proof, remaining provider review, and the accepted
+  historical database/object-storage forensic limits remain open. The bounded
+  PostgreSQL error classification found no authentication failure, `FATAL`, or
+  `PANIC` event. An explicit
   `ACTIVE_LAUNCH_HOLD` makes the automated launch gate fail closed until every
   incident exit criterion is verified. Railway Stage 1 remains paused and its
   earlier approval cannot be reused.

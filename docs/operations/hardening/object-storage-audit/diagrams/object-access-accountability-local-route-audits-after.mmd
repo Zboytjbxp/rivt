@@ -1,0 +1,23 @@
+flowchart LR
+  actor["Authenticated user or anonymous reader"]
+  routes["RIVT route modules<br/>(local audit logic per route)"]
+  helper["Shared signed-link helper"]
+  sdk["Direct S3 SDK calls in multiple modules"]
+  ledger[("PostgreSQL audit_events<br/>(append-only trigger)")]
+  store[("S3-compatible object storage")]
+  browser["Browser follows signed URL"]
+  operator["Provider console, credentials,<br/>or maintenance scripts"]
+
+  actor --> routes
+  routes --> helper
+  routes --> sdk
+  helper --> store
+  sdk --> store
+  routes -->|"route-owned object event"| ledger
+  helper --> actor
+  actor --> browser
+  browser --> store
+  operator --> store
+
+  classDef local stroke:#0f766e,stroke-width:2px;
+  class routes,ledger local;
