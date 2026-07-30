@@ -7,27 +7,38 @@ Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.m
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`ecd6af85d94f3f907ccdecf07c600356f34613fc`
+`21e534feef86958f58fda108f26c6184174d346d`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
 
-Current incident packet: Web Push generation tracking is prepared on
-`codex/vapid-generation-tracking` from exact `origin/master`
-`fc1f80c1d3dc53b3914ba6d9fb763ba4de833ad1`. Migration
-`0042_push_vapid_generation` keeps every legacy subscription as unknown,
-accepts cached clients without making a false key claim, records the key that
-actually delivers, and adds a secret-safe read-only `push:readiness` gate.
-Production build, application/security lint, 152 unit/frontend tests, all three
-browser E2E journeys, diff integrity, and the production dependency audit pass.
-The first parallel E2E run produced one offline-test timeout under contention;
-the isolated offline journey and the complete sequential E2E chain both
-passed. Database-backed migration, outbox-preservation, route, and read-only
-readiness cases are present but skipped on
-this workstation because `TEST_DATABASE_URL` is absent; PostgreSQL 16 CI is the
-next acceptance boundary. Nothing in this packet has been deployed or applied
-to production yet, no provider key or subscription was changed, and no cost
-was incurred.
+Current incident packet: Web Push generation tracking is deployed from
+`codex/vapid-generation-tracking` through `master` at exact source
+`21e534feef86958f58fda108f26c6184174d346d`. Railway deployment
+`9a7d4657-5c2d-4b11-8333-2b210601227c` succeeded with migration
+`0042_push_vapid_generation` ready. Public health returned `ok: true` with
+PostgreSQL and S3-compatible storage healthy and Web Push configured; the
+exact-source production monitor passed in 543 ms. Migration `0042` preserves
+every legacy subscription as unknown, accepts cached clients without a false
+key claim, records the key that actually delivers, and adds a secret-safe
+read-only `push:readiness` gate.
+
+Local production build, application/security lint, 152 unit/frontend tests,
+all three sequential browser E2E journeys, diff integrity, and the production
+dependency audit pass. GitHub Actions run `30577678020` passed build, lint, all
+152 unit/frontend tests, and all 22 database integration tests against
+PostgreSQL 16. The workflow then stopped only at the intentional
+`ACTIVE_LAUNCH_HOLD`; the complete workflow is therefore not labeled green.
+The first production readiness inventory is also correctly blocked: two
+eligible legacy devices remain unknown, no active current-generation delivery
+has yet been proved, and the queue has no due, stale, or recently terminal
+work. An owner-controlled desktop session was refreshed on the deployed
+source, but device alerts are off on that desktop, so no new permission or
+subscription was silently created. The remaining acceptance boundary is to
+open each opted-in physical device, send and explicitly receive/tap a real
+test alert, and rerun `push:readiness` until every eligible device has
+current-generation success proof. No provider key, payment, object, service,
+bucket, or paid resource was changed by this packet.
 
 ## Active operational incident - Production credential exposure
 
@@ -45,8 +56,9 @@ was incurred.
   `ae6cc63321df70d322a63d4c821e721a2ddedf52`. It preserves old
   encrypted-backup recovery through an active/previous key ring and provides
   active/previous Web Push fallback plus best-effort resubscription for
-  existing opted-in clients. Launch-grade per-subscription key-retirement
-  tracking remains open.
+  existing opted-in clients. That deployment did not yet carry launch-grade
+  per-subscription key-retirement tracking; exact-source generation tracking
+  is now deployed as recorded above, while physical-device proof remains open.
 - Follow-up commit `854eef63b4d169746faf87157aaa9f3c1345329d`
   corrected JSON value replay in logical backup restores. Railway deployment
   prefix `0b020e13` served that exact source and public `/api/health` returned
@@ -181,14 +193,13 @@ was incurred.
   bucket, volume, or production-data mutation was created by this source
   deployment.
 - Current-head verification passes production build, application and security
-  lint, all 140 unit/frontend tests, the full three-journey browser E2E suite,
+  lint, all 152 unit/frontend tests, the full three-journey browser E2E suite,
   diff integrity, and the production dependency audit with zero known
-  vulnerabilities. The local aggregate correctly skipped 19 database-backed
-  cases because this workstation has no `TEST_DATABASE_URL`; the separately
-  isolated 22/22 PostgreSQL evidence above remains the database proof.
+  vulnerabilities. GitHub Actions run `30577678020` passed the real
+  PostgreSQL 16 test step with 22 database integration tests; the workflow
+  then failed closed only at the intentional `ACTIVE_LAUNCH_HOLD`.
   `npm run incident:readiness -- --require-ready` passes.
-  `npm run launch:readiness -- --require-ready` still fails only with the
-  intentional `ACTIVE_LAUNCH_HOLD`.
+  `npm run launch:readiness -- --require-ready` remains intentionally blocked.
 - Local hotfix database evidence now includes a clean, isolated run of all 20
   integration files: 22 tests passed with zero failures or skips. The test
   process received no production provider credentials, the guarded

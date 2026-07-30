@@ -1,5 +1,64 @@
 # Deployment Ledger
 
+## 2026-07-30 - Web Push VAPID Generation Tracking
+
+- Production source commit:
+  `21e534feef86958f58fda108f26c6184174d346d`
+- Branch: `master` (fast-forwarded from
+  `codex/vapid-generation-tracking`)
+- Railway application deployment:
+  `9a7d4657-5c2d-4b11-8333-2b210601227c`
+- Production: `https://rivt.pro`
+- Migration before/after:
+  `0041_shop_talk_news_continuity` ->
+  `0042_push_vapid_generation`
+- Scope: add a nonsecret SHA-256 generation fingerprint to each Web Push
+  subscription, preserve legacy subscriptions as unknown, validate current
+  browser generation claims, record the generation that actually delivers,
+  and add a bounded counts-only production readiness check.
+- Security invariant: delivery always tries the active VAPID key first and may
+  use a previous key only after a definitive authentication rejection.
+  Timeouts, expiration, rate limits, and provider/server failures do not
+  trigger ambiguous fallback. A changed browser key clears prior success
+  proof, and cached clients may remain unknown rather than making a false key
+  claim.
+- Automated evidence: local production build, application/security lint, 152
+  unit/frontend tests, the complete sequential three-journey browser E2E
+  suite, diff integrity, and the zero-vulnerability production dependency
+  audit passed. GitHub Actions run `30577678020` passed build, lint, all 152
+  unit/frontend tests, and all 22 PostgreSQL 16 database integration tests.
+  The workflow then stopped only at the intentional `ACTIVE_LAUNCH_HOLD`; it
+  is not represented as a fully green workflow.
+- Post-deploy proof: public `/api/health` returned `ok: true` on exact source
+  `21e534feef86958f58fda108f26c6184174d346d` with migration
+  `0042_push_vapid_generation` ready, PostgreSQL/S3-compatible storage
+  healthy, and Web Push configured. The exact-source production monitor passed
+  in 543 ms with seven anonymous private routes closed and operational
+  controls open.
+- Readiness evidence: the first production read-only inventory failed closed
+  as designed: two eligible subscriptions remain unknown, zero devices have
+  current-generation success proof, and the queue has zero due, stale, stale
+  worker-claim, or recently terminal items. An owner-controlled desktop
+  session loaded the exact deployment, but device alerts were off there; no
+  notification permission or new desktop subscription was silently enabled.
+- Data/provider boundary: migration `0042` changed schema while preserving
+  legacy subscription and queued-outbox rows. Existing legacy rows remain
+  `NULL` generation rather than being guessed. No VAPID key, other provider
+  credential, payment, object, service, bucket, volume, or paid resource was
+  changed.
+- Cost boundary: the application build/deployment used the existing Railway
+  service and remained within the standing sub-$2 instruction. No exact
+  provider cost is claimed.
+- Rollback target:
+  `fc1f80c1d3dc53b3914ba6d9fb763ba4de833ad1`. Migration rollback preserves
+  subscriptions but removes generation evidence; no rollback may restore a
+  retired previous VAPID key.
+- Launch boundary: physical-device re-registration, explicit real alert
+  receipt/tap, and a post-test inventory showing current-generation success
+  for every eligible device remain open. The incident and
+  `ACTIVE_LAUNCH_HOLD` are not cleared, and Railway Stage 1 must be rebased and
+  re-reviewed before a fresh approval.
+
 ## 2026-07-30 - Sentry Final-Boundary Redaction
 
 - Production source commit:
