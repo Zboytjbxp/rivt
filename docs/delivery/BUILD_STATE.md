@@ -7,7 +7,7 @@ Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.m
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`04f13e006cae545a33002d2225f90ab0d8b7e9c9`
+`5d14ba9cf6efce81b1f503fe64ecfd6837261e43`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
@@ -146,6 +146,32 @@ credential-exposure containment is in progress.
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Google OAuth secret rotation is
   complete. The Sentry DSN and unrelated remaining incident evidence remain
   open, so the overall incident and launch hold are not cleared.
+- The incident-remediation source was fast-forwarded to `master` and Railway
+  deployment `e12e66b2-9701-44d6-b57f-8e12fe436738` succeeded on exact commit
+  `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`. This activates the final-boundary
+  structured-log redaction and fail-closed Google/session/Sentry monitor checks
+  in production. Public health returned `ok: true`, migration
+  `0041_shop_talk_news_continuity` ready, PostgreSQL and S3-compatible storage
+  healthy, and Google, Sentry, Web Push, and Stripe Connect configured. The
+  exact-source production monitor passed in 583 ms with all seven anonymous
+  private-route checks closed and operational controls open.
+- An owner-controlled authenticated browser session reloaded the deployed
+  build and rendered RIVT Home with canonical account/work/community content
+  and no horizontal overflow. The bounded post-deploy Railway error-level
+  output contained no application failure; the entries were the known Node 20
+  AWS SDK future-support warning already tracked for the Node 22 upgrade before
+  January 2027. No migration, provider credential, payment, object, service,
+  bucket, volume, or production-data mutation was created by this source
+  deployment.
+- Current-head verification passes production build, application and security
+  lint, all 140 unit/frontend tests, the full three-journey browser E2E suite,
+  diff integrity, and the production dependency audit with zero known
+  vulnerabilities. The local aggregate correctly skipped 19 database-backed
+  cases because this workstation has no `TEST_DATABASE_URL`; the separately
+  isolated 22/22 PostgreSQL evidence above remains the database proof.
+  `npm run incident:readiness -- --require-ready` passes.
+  `npm run launch:readiness -- --require-ready` still fails only with the
+  intentional `ACTIVE_LAUNCH_HOLD`.
 - Local hotfix database evidence now includes a clean, isolated run of all 20
   integration files: 22 tests passed with zero failures or skips. The test
   process received no production provider credentials, the guarded

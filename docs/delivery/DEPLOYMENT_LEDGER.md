@@ -1,5 +1,49 @@
 # Deployment Ledger
 
+## 2026-07-30 - Incident Logger and Monitor Hardening
+
+- Production source commit:
+  `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`
+- Branch: `master` (fast-forwarded from `codex/credential-rotation-hotfix`)
+- Railway application deployment:
+  `e12e66b2-9701-44d6-b57f-8e12fe436738`
+- Production: `https://rivt.pro`
+- Scope: activate final-boundary recursive credential/PII redaction in the
+  shared structured logger, protect reserved log metadata, and make production
+  monitoring fail closed when Google OAuth, server-side session security, or
+  Sentry is not configured. The deployment also carries the completed,
+  nonsecret Google OAuth retirement evidence and operator-tooling safeguards.
+- Pre-deploy verification: production build, application and security lint,
+  140 unit/frontend tests, the complete three-journey browser E2E suite, diff
+  integrity, and the production dependency audit passed. The local aggregate
+  skipped 19 database-backed cases because `TEST_DATABASE_URL` is absent; the
+  separately isolated hotfix run remains 22/22 across all 20 PostgreSQL
+  integration files.
+- Post-deploy proof: public `/api/health` returned `ok: true` with exact source
+  `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`, ready migration
+  `0041_shop_talk_news_continuity`, healthy PostgreSQL/S3-compatible storage,
+  and configured Sentry, Web Push, and Stripe Connect. The exact-source
+  production monitor passed in 583 ms with Google/session checks healthy,
+  seven anonymous private routes closed, and operational controls open.
+- Authenticated proof: an owner-controlled signed-in browser session reloaded
+  production and rendered RIVT Home with account/work/community content and no
+  horizontal overflow. No customer record or business state was changed.
+- Runtime-log proof: the bounded post-deploy review contained no application
+  failure. Railway's error-level entries were the already tracked Node 20 AWS
+  SDK future-support warning; Node 22 remains due before January 2027.
+- Cost/data boundary: no migration, provider credential, payment, object,
+  service, bucket, volume, or production-data mutation was created. The release
+  stayed within the previously approved deployment allowance; no exact
+  provider cost is claimed.
+- Rollback target:
+  `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Any rollback must preserve the
+  retired Google OAuth secret and must not restore an exposed credential.
+- Launch boundary: this is an incident-remediation deployment, not public
+  launch approval. Incident readiness passes, while strict launch readiness
+  correctly remains blocked by `ACTIVE_LAUNCH_HOLD`. Sentry DSN rotation/event
+  proof, the remaining bounded provider/data-access review, incident closure,
+  and a new exact Railway Stage 1 approval remain open.
+
 ## 2026-07-30 - Google OAuth Replacement and Prior-Secret Retirement
 
 - Production source commit:
