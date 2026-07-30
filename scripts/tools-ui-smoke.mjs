@@ -452,7 +452,14 @@ async function configurePage(page) {
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ providers: {} }) }),
   );
   await page.route("**/api/v1/push/config", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { enabled: false } }) }),
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: { configured: false, publicKey: null, vapidGeneration: null, subscriptionCount: 0 },
+        meta: { requestId: "tools-push-config" },
+      }),
+    }),
   );
   await page.route("**/api/v1/sessions", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { sessions: [] } }) }),

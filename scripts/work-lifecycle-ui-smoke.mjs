@@ -444,7 +444,10 @@ async function configurePage(page, account, state) {
 
   await page.route("**/api/v1/me", (route) => route.fulfill(json({ data: account })));
   await page.route("**/api/auth/providers", (route) => route.fulfill(json({ providers: {} })));
-  await page.route("**/api/v1/push/config", (route) => route.fulfill(json({ data: { enabled: false, publicKey: null } })));
+  await page.route("**/api/v1/push/config", (route) => route.fulfill(json({
+    data: { configured: false, publicKey: null, vapidGeneration: null, subscriptionCount: 0 },
+    meta: { requestId: "work-lifecycle-push-config" },
+  })));
   await page.route("**/api/v1/sessions", (route) => route.fulfill(json({ data: { sessions: [] } })));
   await page.route("**/api/v1/profiles**", (route) => route.fulfill(json({ data: { profiles: [] } })));
   await page.route("**/api/v1/conversations", (route) => route.fulfill(json({ data: { conversations: state.conversations } })));

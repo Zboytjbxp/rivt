@@ -6,6 +6,7 @@ export type PushPermission = "default" | "granted" | "denied";
 type PushConfig = {
   configured: boolean;
   publicKey: string | null;
+  vapidGeneration?: string | null;
   subscriptionCount: number;
 };
 
@@ -45,6 +46,16 @@ function subscriptionUsesPublicKey(subscription: PushSubscription, publicKey: st
     && actual.every((value, index) => value === expected[index]);
 }
 
+export function verifiedSubscriptionGeneration(
+  subscription: PushSubscription,
+  publicKey: string,
+  vapidGeneration: string | null,
+) {
+  const applicationServerKey = subscription.options?.applicationServerKey;
+  if (!applicationServerKey || !vapidGeneration) return null;
+  return subscriptionUsesPublicKey(subscription, publicKey) ? vapidGeneration : null;
+}
+
 async function responseError(response: Response, fallback: string) {
   const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
   return new Error(body.error?.message || fallback);
@@ -57,12 +68,12 @@ async function fetchPushConfig(): Promise<PushConfig> {
   return body.data;
 }
 
-async function registerSubscription(subscription: PushSubscription) {
+async function registerSubscription(subscription: PushSubscription, vapidGeneration: string | null) {
   const response = await fetchWithTimeout(apiPath("/api/v1/push-subscriptions"), {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(subscription.toJSON()),
+    body: JSON.stringify({ ...subscription.toJSON(), vapidGeneration }),
   });
   if (!response.ok) throw await responseError(response, "This device could not be registered for alerts.");
 }
@@ -123,6 +134,7 @@ export function usePushNotifications({
   ));
   const [providerConfigured, setProviderConfigured] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [vapidGeneration, setVapidGeneration] = useState<string | null>(null);
   const [subscribed, setSubscribed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -141,6 +153,7 @@ export function usePushNotifications({
         if (cancelled) return;
         setProviderConfigured(config.configured);
         setPublicKey(config.publicKey);
+        setVapidGeneration(config.vapidGeneration ?? null);
         if (!supported() || requiresHomeScreenInstall || !config.configured) return;
         const registration = await navigator.serviceWorker.ready;
         let current = await registration.pushManager.getSubscription();
@@ -149,7 +162,12 @@ export function usePushNotifications({
           current = await replaceMismatchedSubscription(registration, current, config.publicKey);
         }
         setSubscribed(Boolean(current));
-        if (restoreOnMount && current) await registerSubscription(current);
+        if (restoreOnMount && current && config.publicKey) {
+          await registerSubscription(
+            current,
+            verifiedSubscriptionGeneration(current, config.publicKey, config.vapidGeneration ?? null),
+          );
+        }
       } catch (caught) {
         if (!cancelled) setError(caught instanceof Error ? caught.message : "Device alerts could not be checked.");
       } finally {
@@ -194,7 +212,10 @@ export function usePushNotifications({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
       });
-      await registerSubscription(subscription);
+      await registerSubscription(
+        subscription,
+        verifiedSubscriptionGeneration(subscription, publicKey, vapidGeneration),
+      );
       setSubscribed(true);
       setNotice("Device alerts are on for this browser.");
     } catch (caught) {

@@ -2,6 +2,33 @@
 
 ## Operational Incident Addendum - 2026-07-29 Credential Containment
 
+- `GA-OPS-007` gains local Web Push retirement instrumentation: migration
+  `0042_push_vapid_generation` preserves legacy subscriptions as unknown,
+  constrains non-null values to nonsecret 64-character SHA-256 fingerprints,
+  and rolls back without deleting subscription rows. Registration accepts
+  cached clients without guessing their key, rejects unrecognized generation
+  claims, and clears inherited success proof when a binding changes. Delivery
+  records the generation that actually succeeds while preserving the
+  authentication-only fallback rule. A bounded read-only
+  `npm run push:readiness` command reports counts and fails closed on previous,
+  unknown, unrecognized, unproven, stale-claim, stale-backlog, or recent
+  terminal-failure state without printing endpoints, account IDs, keys, or
+  database credentials.
+- Current local evidence includes production build, application/security lint,
+  152 unit/frontend tests, all three browser E2E journeys, diff integrity, and
+  a zero-vulnerability production dependency audit. The database-backed cases
+  are intentionally not claimed locally because this workstation has no
+  `TEST_DATABASE_URL`; isolated CI with PostgreSQL 16 is the next acceptance
+  boundary.
+- `GA-OPS-008` does not yet gain production evidence from this packet. It
+  requires isolated migration/integration CI, exact-source deployment with
+  migration `0042` ready, owner-device re-registration, an explicitly sent and
+  received/tapped physical test alert, and a post-test read-only inventory
+  showing at least one active current-generation success and zero eligible
+  previous/unknown/unrecognized devices. The older Railway Stage 1 worker
+  branch must be rebased and re-reviewed so its success path preserves this
+  generation evidence before any new Stage 1 approval.
+
 - `GA-OPS-004` gains verified backup-key rotation and historical recovery:
   new writes use the active key; restore accepted active plus previous without
   masking authenticated payload corruption; a fresh active-key artifact

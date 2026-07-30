@@ -470,6 +470,39 @@ test("browser analytics strips direct PII and stays disabled without launch conf
   });
 });
 
+test("push registration claims a VAPID generation only after the browser key matches", async () => {
+  const { verifiedSubscriptionGeneration } = await loadModule(
+    "/src/features/notifications/usePushNotifications.ts",
+  );
+  const expectedKey = Uint8Array.from([4, 18, 52, 86, 120, 154, 188, 222, 240]);
+  const publicKey = Buffer.from(expectedKey).toString("base64url");
+  const generation = "a".repeat(64);
+  const exactSubscription = {
+    options: { applicationServerKey: expectedKey.buffer },
+  };
+  const mismatchedSubscription = {
+    options: { applicationServerKey: Uint8Array.from([4, 18, 52, 86, 120, 154, 188, 222, 241]).buffer },
+  };
+  const opaqueSubscription = { options: { applicationServerKey: null } };
+
+  assert.equal(
+    verifiedSubscriptionGeneration(exactSubscription, publicKey, generation),
+    generation,
+  );
+  assert.equal(
+    verifiedSubscriptionGeneration(mismatchedSubscription, publicKey, generation),
+    null,
+  );
+  assert.equal(
+    verifiedSubscriptionGeneration(opaqueSubscription, publicKey, generation),
+    null,
+  );
+  assert.equal(
+    verifiedSubscriptionGeneration(exactSubscription, publicKey, null),
+    null,
+  );
+});
+
 test("production entry point self-hosts fonts", () => {
   const entry = readFileSync(new URL("../index.html", import.meta.url), "utf8");
   assert.doesNotMatch(entry, /fonts\.googleapis\.com|fonts\.gstatic\.com/);

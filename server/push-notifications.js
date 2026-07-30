@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import webpush from "web-push";
 import { ApiError, asyncRoute, validate, z } from "./api.js";
 import { logError, logInfo, logWarn } from "./logger.js";
@@ -14,6 +15,7 @@ const pushSubscriptionSchema = z.object({
     p256dh: z.string().trim().min(16).max(512),
     auth: z.string().trim().min(8).max(256),
   }),
+  vapidGeneration: z.string().trim().regex(/^[0-9a-f]{64}$/).nullable().optional().default(null),
 });
 
 const pushUnsubscribeSchema = z.object({
@@ -25,6 +27,13 @@ let workerRunning = false;
 
 function envValue(name, environment = process.env) {
   return String(environment[name] ?? "").trim();
+}
+
+export function vapidGeneration(publicKey) {
+  const normalized = String(publicKey ?? "").trim();
+  if (!normalized) return null;
+  const publicKeyBytes = Buffer.from(normalized, "base64url");
+  return createHash("sha256").update(publicKeyBytes).digest("hex");
 }
 
 function validVapidBundle(bundle) {
@@ -51,6 +60,7 @@ export function vapidProviders(environment = process.env) {
     privateKey: envValue("VAPID_PRIVATE_KEY", environment),
     subject: envValue("VAPID_SUBJECT", environment),
   };
+  active.generation = vapidGeneration(active.publicKey);
   const previousPublicKey = envValue("VAPID_PREVIOUS_PUBLIC_KEY", environment);
   const previousPrivateKey = envValue("VAPID_PREVIOUS_PRIVATE_KEY", environment);
   const previous = previousPublicKey || previousPrivateKey
@@ -58,9 +68,18 @@ export function vapidProviders(environment = process.env) {
         publicKey: previousPublicKey,
         privateKey: previousPrivateKey,
         subject: active.subject,
+        generation: vapidGeneration(previousPublicKey),
       }
     : null;
   return { active, previous };
+}
+
+export function recognizedVapidGeneration(generation, environment = process.env) {
+  if (generation === null || generation === undefined || generation === "") return "unknown";
+  const { active, previous } = vapidProviders(environment);
+  if (generation === active.generation) return "active";
+  if (previous && generation === previous.generation) return "previous";
+  return null;
 }
 
 export function pushProviderStatus(environment = process.env) {
@@ -83,6 +102,7 @@ export function pushProviderStatus(environment = process.env) {
     provider: "web_push",
     mode: invalid ? "invalid_config" : missing.length === 0 ? "configured" : "setup_required",
     publicKey: missing.length === 0 && !invalid ? active.publicKey : null,
+    vapidGeneration: missing.length === 0 && !invalid ? active.generation : null,
     previousConfigured: previous !== null && !invalid,
     missing,
   };
@@ -252,9 +272,27 @@ async function markDeliveryFailure(database, delivery, error) {
   });
 }
 
+async function markPushDeliverySuccess(database, deliveryId, generation) {
+  await database.query(
+    `WITH delivered AS (
+       UPDATE push_delivery_outbox
+       SET status = 'sent', sent_at = now(), claimed_at = NULL, last_error = '', updated_at = now()
+       WHERE id = $1
+       RETURNING subscription_id
+     )
+     UPDATE push_subscriptions subscription
+     SET vapid_generation = $2,
+         last_success_at = now(),
+         updated_at = now()
+     FROM delivered
+     WHERE subscription.id = delivered.subscription_id`,
+    [deliveryId, generation],
+  );
+}
+
 async function deliverClaimed(database, delivery) {
   try {
-    await sendNotificationWithVapidFallback(webpush.sendNotification.bind(webpush), {
+    const deliveryResult = await sendNotificationWithVapidFallback(webpush.sendNotification.bind(webpush), {
       endpoint: delivery.endpoint,
       expirationTime: delivery.expiration_time ? new Date(delivery.expiration_time).getTime() : null,
       keys: { p256dh: delivery.p256dh, auth: delivery.auth },
@@ -262,19 +300,7 @@ async function deliverClaimed(database, delivery) {
       TTL: delivery.priority === "high" ? 60 * 60 : 24 * 60 * 60,
       urgency: delivery.priority === "high" ? "high" : "normal",
     });
-    await database.query(
-      `WITH delivered AS (
-         UPDATE push_delivery_outbox
-         SET status = 'sent', sent_at = now(), claimed_at = NULL, last_error = '', updated_at = now()
-         WHERE id = $1
-         RETURNING subscription_id
-       )
-       UPDATE push_subscriptions subscription
-       SET last_success_at = now(), updated_at = now()
-       FROM delivered
-       WHERE subscription.id = delivered.subscription_id`,
-      [delivery.id],
-    );
+    await markPushDeliverySuccess(database, delivery.id, deliveryResult.vapidGeneration);
     logInfo("push.delivery_sent", {
       accountId: delivery.account_id,
       notificationId: delivery.notification_id,
@@ -298,7 +324,7 @@ export async function sendNotificationWithVapidFallback(
   for (let index = 0; index < providers.length; index += 1) {
     const provider = providers[index];
     try {
-      return await sendNotification(subscription, payload, {
+      const response = await sendNotification(subscription, payload, {
         ...options,
         vapidDetails: {
           subject: provider.subject,
@@ -306,13 +332,14 @@ export async function sendNotificationWithVapidFallback(
           privateKey: provider.privateKey,
         },
       });
+      return { response, vapidGeneration: provider.generation };
     } catch (error) {
       if (index === 0) firstError = error;
       const statusCode = Number(error?.statusCode ?? 0);
-      const canTryPrevious = index === 0
-        && previous
+      const canTryOtherConfiguredGeneration = index === 0
+        && providers.length > 1
         && (statusCode === 401 || statusCode === 403);
-      if (!canTryPrevious) throw error;
+      if (!canTryOtherConfiguredGeneration) throw error;
     }
   }
   throw firstError ?? new Error("Web Push delivery failed.");
@@ -375,6 +402,7 @@ export function registerPushNotificationRoutes({
       data: {
         configured: status.ok,
         publicKey: status.publicKey,
+        vapidGeneration: status.vapidGeneration,
         subscriptionCount: count.rows[0].count,
       },
       meta: { requestId: request.requestId },
@@ -386,19 +414,44 @@ export function registerPushNotificationRoutes({
     if (!status.ok) throw new ApiError(503, "PUSH_PROVIDER_UNAVAILABLE", "Background device alerts are temporarily unavailable.");
     const input = validate(pushSubscriptionSchema, request.body);
     assertPushEndpoint(input.endpoint);
+    if (recognizedVapidGeneration(input.vapidGeneration) === null) {
+      throw new ApiError(
+        422,
+        "PUSH_VAPID_GENERATION_UNRECOGNIZED",
+        "This device alert registration uses an unrecognized key generation.",
+      );
+    }
     const result = await database.query(
       `INSERT INTO push_subscriptions (
-         account_id, auth_session_id, endpoint, expiration_time, p256dh, auth, user_agent
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+         account_id, auth_session_id, endpoint, expiration_time, p256dh, auth, user_agent,
+         vapid_generation
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (endpoint)
        DO UPDATE SET account_id = EXCLUDED.account_id,
                      auth_session_id = EXCLUDED.auth_session_id,
                      expiration_time = EXCLUDED.expiration_time,
                      p256dh = EXCLUDED.p256dh,
                      auth = EXCLUDED.auth,
-                     user_agent = EXCLUDED.user_agent,
+                      user_agent = EXCLUDED.user_agent,
+                      last_success_at = CASE
+                       WHEN push_subscriptions.p256dh = EXCLUDED.p256dh
+                         AND push_subscriptions.auth = EXCLUDED.auth
+                         AND (
+                           EXCLUDED.vapid_generation IS NULL
+                           OR push_subscriptions.vapid_generation IS NOT DISTINCT FROM EXCLUDED.vapid_generation
+                         )
+                         THEN push_subscriptions.last_success_at
+                       ELSE NULL
+                      END,
+                     vapid_generation = CASE
+                       WHEN EXCLUDED.vapid_generation IS NULL
+                         AND push_subscriptions.p256dh = EXCLUDED.p256dh
+                         AND push_subscriptions.auth = EXCLUDED.auth
+                         THEN push_subscriptions.vapid_generation
+                       ELSE EXCLUDED.vapid_generation
+                     END,
                      updated_at = now()
-       RETURNING id, created_at, updated_at`,
+       RETURNING id, vapid_generation, created_at, updated_at`,
       [
         request.actor.account.id,
         request.authSessionId,
@@ -407,12 +460,14 @@ export function registerPushNotificationRoutes({
         input.keys.p256dh,
         input.keys.auth,
         String(request.headers["user-agent"] ?? "").slice(0, 500),
+        input.vapidGeneration,
       ],
     );
     response.status(201).json({
       data: {
         subscription: {
           id: result.rows[0].id,
+          vapidGeneration: result.rows[0].vapid_generation,
           createdAt: new Date(result.rows[0].created_at).toISOString(),
           updatedAt: new Date(result.rows[0].updated_at).toISOString(),
         },
@@ -451,8 +506,11 @@ export function registerPushNotificationRoutes({
 
 export const pushNotificationInternals = {
   MAX_DELIVERY_ATTEMPTS,
+  markPushDeliverySuccess,
   pushSubscriptionSchema,
+  recognizedVapidGeneration,
   retryDelaySeconds,
   sendNotificationWithVapidFallback,
+  vapidGeneration,
   vapidProviders,
 };

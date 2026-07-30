@@ -124,7 +124,12 @@ try {
     if (url.pathname === "/api/v1/communities") return json(route, { data: { communities: [] } });
     if (url.pathname === "/api/v1/shop-talk/reactions/batch") return json(route, { data: { reactions: [] } });
     if (url.pathname === "/api/news") return json(route, { items: [], resources: [], fallback: false, cached: false });
-    if (url.pathname === "/api/v1/push/config") return json(route, { enabled: false });
+    if (url.pathname === "/api/v1/push/config") {
+      return json(route, {
+        data: { configured: false, publicKey: null, vapidGeneration: null, subscriptionCount: 0 },
+        meta: { requestId: "offline-push-config" },
+      });
+    }
     if (url.pathname === "/api/v1/notification-preferences") return json(route, { data: { preferences: [] } });
     if (url.pathname === "/api/v1/billing/status") return json(route, { data: { status: "inactive" } });
     return json(route, { data: {} });

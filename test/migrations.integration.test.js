@@ -154,6 +154,43 @@ if (!testDatabaseUrl) {
       assert.notEqual((await database.query("SELECT to_regclass('shop_talk_reactions') AS table_name")).rows[0].table_name, null);
       assert.notEqual((await database.query("SELECT to_regclass('shop_talk_reaction_events') AS table_name")).rows[0].table_name, null);
 
+      const beforeVapidGeneration = await migrateUp(database, { targetVersion: 41 });
+      assert.equal(beforeVapidGeneration.latestVersion, 41);
+      assert.equal(beforeVapidGeneration.pending.length, expectedPendingAfter(41));
+      const legacyPushSessionId = randomUUID();
+      const legacyPushSubscriptionId = randomUUID();
+      const legacyPushNotificationId = randomUUID();
+      const legacyPushDeliveryId = randomUUID();
+      await database.query(
+        `INSERT INTO auth_sessions (id, session_id, user_id, expires_at)
+         VALUES ($1, $2, $3, now() + interval '1 day')`,
+        [randomUUID(), legacyPushSessionId, newUserId],
+      );
+      await database.query(
+        `INSERT INTO push_subscriptions (
+           id, account_id, auth_session_id, endpoint, p256dh, auth, user_agent
+         ) VALUES ($1, $2, $3, $4, $5, $6, 'migration-test')`,
+        [
+          legacyPushSubscriptionId,
+          newUserId,
+          legacyPushSessionId,
+          `https://push.example.test/${legacyPushSubscriptionId}`,
+          "migration-test-p256dh",
+          "migration-test-auth",
+        ],
+      );
+      await database.query(
+        `INSERT INTO in_app_notifications (id, account_id, type, title)
+         VALUES ($1, $2, 'system', 'Migration preservation check')`,
+        [legacyPushNotificationId, newUserId],
+      );
+      await database.query(
+        `INSERT INTO push_delivery_outbox (
+           id, notification_id, subscription_id, account_id
+         ) VALUES ($1, $2, $3, $4)`,
+        [legacyPushDeliveryId, legacyPushNotificationId, legacyPushSubscriptionId, newUserId],
+      );
+
       const shopTalkModeration = await migrateUp(database);
       assert.equal(shopTalkModeration.latestVersion, latestMigrationVersion);
       assert.equal(shopTalkModeration.pending.length, 0);
@@ -194,6 +231,48 @@ if (!testDatabaseUrl) {
       assert.equal((await database.query(
         "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'push_subscriptions' AND column_name = 'auth_session_id'",
       )).rows[0].count, 1);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'push_subscriptions' AND column_name = 'vapid_generation'",
+      )).rows[0].count, 1);
+      assert.equal((await database.query(
+        "SELECT vapid_generation FROM push_subscriptions WHERE id = $1",
+        [legacyPushSubscriptionId],
+      )).rows[0].vapid_generation, null);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM push_delivery_outbox WHERE id = $1",
+        [legacyPushDeliveryId],
+      )).rows[0].count, 1);
+      const validVapidGeneration = "a".repeat(64);
+      await database.query(
+        "UPDATE push_subscriptions SET vapid_generation = $2 WHERE id = $1",
+        [legacyPushSubscriptionId, validVapidGeneration],
+      );
+      assert.equal((await database.query(
+        "SELECT vapid_generation FROM push_subscriptions WHERE id = $1",
+        [legacyPushSubscriptionId],
+      )).rows[0].vapid_generation, validVapidGeneration);
+      for (const invalidGeneration of ["a".repeat(63), "a".repeat(65), "A".repeat(64), `${"a".repeat(63)}g`]) {
+        await assert.rejects(
+          database.query(
+            "UPDATE push_subscriptions SET vapid_generation = $2 WHERE id = $1",
+            [legacyPushSubscriptionId, invalidGeneration],
+          ),
+          /push_subscriptions_vapid_generation_check/,
+        );
+      }
+      await database.query(
+        "UPDATE push_subscriptions SET vapid_generation = NULL WHERE id = $1",
+        [legacyPushSubscriptionId],
+      );
+      const generationIndex = await database.query(
+        `SELECT pg_get_expr(index.indexprs, index.indrelid) AS expression,
+                pg_get_expr(index.indpred, index.indrelid) AS predicate
+         FROM pg_index index
+         INNER JOIN pg_class relation ON relation.oid = index.indexrelid
+         WHERE relation.relname = 'push_subscriptions_vapid_generation_idx'`,
+      );
+      assert.equal(generationIndex.rowCount, 1);
+      assert.match(generationIndex.rows[0].predicate, /vapid_generation IS NOT NULL/);
 
       const smokeReaction = await database.query(
         `INSERT INTO shop_talk_reactions (actor_account_id, target_type, target_key, reaction)
@@ -327,6 +406,20 @@ if (!testDatabaseUrl) {
       assert.equal((await database.query(
         "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'shop_talk_posts' AND column_name IN ('article_url', 'article_canonical_url', 'article_source', 'article_published_at')",
       )).rows[0].count, 4);
+
+      const rolledBackVapidGeneration = await rollbackLatest(database);
+      assert.equal(rolledBackVapidGeneration.latestVersion, 41);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'push_subscriptions' AND column_name = 'vapid_generation'",
+      )).rows[0].count, 0);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM push_subscriptions WHERE id = $1",
+        [legacyPushSubscriptionId],
+      )).rows[0].count, 1);
+      assert.equal((await database.query(
+        "SELECT count(*)::int AS count FROM push_delivery_outbox WHERE id = $1",
+        [legacyPushDeliveryId],
+      )).rows[0].count, 1);
 
       const rolledBackShopTalkNewsContinuity = await rollbackLatest(database);
       assert.equal(rolledBackShopTalkNewsContinuity.latestVersion, 40);

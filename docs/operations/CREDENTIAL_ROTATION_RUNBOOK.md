@@ -127,9 +127,40 @@ separate old-credential revocation step.
   the first request may have succeeded and fallback could duplicate an alert.
 - Existing opted-in clients migrate on app open when their subscription key
   differs. The migration must never opt in a user who did not grant permission.
+- Each configured public key has a nonsecret SHA-256 generation fingerprint.
+  `push_subscriptions.vapid_generation` stores only that fingerprint, never a
+  VAPID key. Existing rows remain `NULL` until RIVT has evidence; do not
+  backfill or bulk-label them.
+- A current client claims the active generation only when the browser exposes
+  an application-server key that byte-matches the active public key. Cached
+  clients and browsers that cannot expose that key remain honestly unknown.
+- A successful delivery records the generation that actually worked and the
+  success time. Re-registration clears inherited delivery proof whenever the
+  generation or either browser encryption-key field changes. A cached client
+  that omits generation may preserve proof only when both encryption-key
+  fields are byte-for-byte unchanged.
+- The delivery worker always tries the active pair first, then tries the
+  previous pair only after a definitive `401` or `403`. This heals unknown or
+  stale labels without retrying ambiguous outcomes.
+- Run `npm run push:readiness -- --json` for a read-only counts-only inventory.
+  The command opens a bounded `READ ONLY` transaction and must never send an
+  alert, remove a subscription, print an endpoint/account/key, or repair a
+  migration. `npm run push:readiness -- --require-ready` fails closed.
+- Before removing a previous pair, run
+  `npm run push:readiness -- --retirement-check --require-ready`. This mode
+  allows the still-configured previous pair but requires zero
+  delivery-eligible previous, unknown, or unrecognized generations and
+  successful current-key delivery proof for every eligible device. Then:
+  1. open every controlled opted-in PWA so it can re-register;
+  2. send a test alert through the authenticated product control;
+  3. receive and tap it on a physical device;
+  4. remove the previous pair without printing it;
+  5. redeploy and run the default post-retirement
+     `npm run push:readiness -- --require-ready`, which additionally requires
+     the previous pair to be absent.
 - The previous pair is a temporary continuity bridge, not final revocation.
-  Before launch completion, add per-subscription key-generation tracking so
-  retirement is measurable.
+  A physical alert alone is continuity evidence, not proof that every stored
+  subscription migrated.
 
 ## Completion and follow-up
 

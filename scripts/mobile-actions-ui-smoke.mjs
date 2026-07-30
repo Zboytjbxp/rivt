@@ -375,7 +375,10 @@ async function configurePage(page) {
   });
   routeResponse("**/api/v1/notifications", { data: { notifications: [], unreadCount: 0 } });
     routeResponse("**/api/v1/notifications/read", { data: { unreadCount: 0 } });
-    routeResponse("**/api/v1/push/config", { data: { configured: false, publicKey: null, subscriptionCount: 0 } });
+    routeResponse("**/api/v1/push/config", {
+      data: { configured: false, publicKey: null, vapidGeneration: null, subscriptionCount: 0 },
+      meta: { requestId: "mobile-actions-push-config" },
+    });
   routeResponse("**/api/v1/profiles?**", { data: { profiles: [] } });
   routeResponse("**/api/v1/profile/professional", { data: { professionalProfile: ownProfessionalProfile } });
   routeResponse(`**/api/v1/profiles/${professionalProfile.accountId}`, { data: { profile: professionalProfile } });

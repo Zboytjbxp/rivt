@@ -12,6 +12,23 @@ Production incident hotfix commit:
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
 
+Current incident packet: Web Push generation tracking is prepared on
+`codex/vapid-generation-tracking` from exact `origin/master`
+`fc1f80c1d3dc53b3914ba6d9fb763ba4de833ad1`. Migration
+`0042_push_vapid_generation` keeps every legacy subscription as unknown,
+accepts cached clients without making a false key claim, records the key that
+actually delivers, and adds a secret-safe read-only `push:readiness` gate.
+Production build, application/security lint, 152 unit/frontend tests, all three
+browser E2E journeys, diff integrity, and the production dependency audit pass.
+The first parallel E2E run produced one offline-test timeout under contention;
+the isolated offline journey and the complete sequential E2E chain both
+passed. Database-backed migration, outbox-preservation, route, and read-only
+readiness cases are present but skipped on
+this workstation because `TEST_DATABASE_URL` is absent; PostgreSQL 16 CI is the
+next acceptance boundary. Nothing in this packet has been deployed or applied
+to production yet, no provider key or subscription was changed, and no cost
+was incurred.
+
 ## Active operational incident - Production credential exposure
 
 - A production-configuration inspection returned secret-bearing environment
