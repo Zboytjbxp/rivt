@@ -36,6 +36,15 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return Uint8Array.from([...rawData].map((character) => character.charCodeAt(0)));
 }
 
+function subscriptionUsesPublicKey(subscription: PushSubscription, publicKey: string) {
+  const applicationServerKey = subscription.options?.applicationServerKey;
+  if (!applicationServerKey) return true;
+  const actual = new Uint8Array(applicationServerKey);
+  const expected = urlBase64ToUint8Array(publicKey);
+  return actual.length === expected.length
+    && actual.every((value, index) => value === expected[index]);
+}
+
 async function responseError(response: Response, fallback: string) {
   const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
   return new Error(body.error?.message || fallback);
@@ -66,6 +75,37 @@ async function removeSubscription(endpoint: string) {
     body: JSON.stringify({ endpoint }),
   });
   if (!response.ok) throw await responseError(response, "This device could not be removed from alerts.");
+}
+
+async function replaceMismatchedSubscription(
+  registration: ServiceWorkerRegistration,
+  subscription: PushSubscription,
+  publicKey: string,
+) {
+  if (subscriptionUsesPublicKey(subscription, publicKey)) return subscription;
+  const previousEndpoint = subscription.endpoint;
+  const previousApplicationServerKey = subscription.options?.applicationServerKey?.slice(0) ?? null;
+  const unsubscribed = await subscription.unsubscribe();
+  if (!unsubscribed) return subscription;
+  await removeSubscription(previousEndpoint).catch(() => {});
+  try {
+    return await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
+    });
+  } catch (error) {
+    if (previousApplicationServerKey) {
+      try {
+        return await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: previousApplicationServerKey,
+        });
+      } catch {
+        // Surface the active-key replacement failure after the continuity attempt also fails.
+      }
+    }
+    throw error;
+  }
 }
 
 export function usePushNotifications({
@@ -103,8 +143,11 @@ export function usePushNotifications({
         setPublicKey(config.publicKey);
         if (!supported() || requiresHomeScreenInstall || !config.configured) return;
         const registration = await navigator.serviceWorker.ready;
-        const current = await registration.pushManager.getSubscription();
+        let current = await registration.pushManager.getSubscription();
         if (cancelled) return;
+        if (restoreOnMount && current && config.publicKey) {
+          current = await replaceMismatchedSubscription(registration, current, config.publicKey);
+        }
         setSubscribed(Boolean(current));
         if (restoreOnMount && current) await registerSubscription(current);
       } catch (caught) {
@@ -143,7 +186,10 @@ export function usePushNotifications({
         return;
       }
       const registration = await navigator.serviceWorker.ready;
-      const existing = await registration.pushManager.getSubscription();
+      let existing = await registration.pushManager.getSubscription();
+      if (existing) {
+        existing = await replaceMismatchedSubscription(registration, existing, publicKey);
+      }
       const subscription = existing ?? await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,

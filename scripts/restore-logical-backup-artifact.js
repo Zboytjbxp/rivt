@@ -11,6 +11,7 @@ import {
   insertBatch,
   orderedTables,
   poolFor,
+  previousBackupEncryptionSecret,
   publicTables,
   requiredEnv,
   restoreSequences,
@@ -31,6 +32,7 @@ const batchSize = Number.parseInt(process.env.RESTORE_COPY_BATCH_SIZE ?? "200", 
 const strictCounts = process.env.RESTORE_SNAPSHOT_STRICT_COUNTS !== "false";
 const startedAt = Date.now();
 const encryptionSecret = backupEncryptionSecret();
+const previousEncryptionSecret = previousBackupEncryptionSecret();
 
 if (!confirmedIsolated) {
   console.error("CONFIRM_RESTORE_TARGET_ISOLATED=true is required. Never run a restore drill against production.");
@@ -67,7 +69,10 @@ const targetPool = poolFor(targetUrl);
 
 try {
   const encrypted = await getJsonObject(s3ClientFromEnv(), bucket, objectKey);
-  const snapshot = decryptSnapshot(encrypted, encryptionSecret);
+  const snapshot = decryptSnapshot(encrypted, {
+    active: encryptionSecret,
+    previous: previousEncryptionSecret,
+  });
   assert.equal(snapshot.format, "rivt-logical-backup-v1", "Unsupported logical backup format.");
   assert.ok(Array.isArray(snapshot.tables), "Backup artifact is missing table data.");
   assert.ok(Array.isArray(snapshot.sequences), "Backup artifact is missing sequence data.");

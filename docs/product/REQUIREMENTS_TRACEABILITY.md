@@ -1,5 +1,32 @@
 # Gate A Requirements Traceability
 
+## Operational Incident Addendum - 2026-07-29 Credential Containment
+
+- `GA-OPS-004` gains backup-key transition compatibility: new writes use the
+  active key, restore accepts active plus previous, keyed artifacts select a
+  matching key, and legacy unkeyed artifacts try active then previous without
+  masking authenticated payload corruption. The existing encrypted artifact is
+  retained; no fresh restore is claimed.
+- `GA-OPS-005` gains a dated incident record and credential-rotation runbook
+  covering exact environment confirmation, approval and cost stops,
+  one-provider-at-a-time verification, old-credential revocation, and a rule
+  that source rollback never restores compromised credentials.
+- `GA-OPS-007` gains focused automated coverage for backup key rotation and
+  transitional Web Push fallback behavior plus passing production build,
+  application/security lint, 133 unit/frontend checks, all three browser E2E
+  journeys, rendered mobile-action QA, diff integrity, and a zero-vulnerability
+  dependency audit.
+  Nineteen PostgreSQL suites are explicitly skipped without
+  `TEST_DATABASE_URL`, so no fresh DB-backed integration pass is claimed.
+- `GA-OPS-008` remains open for exact-source production evidence and
+  provider-by-provider rotation/revocation status. This addendum does not claim
+  that a provider credential changed or that containment is complete.
+- Transitional Web Push continuity tries the active VAPID pair first, retries
+  the previous pair only after a definitive authentication rejection, and
+  migrates only existing opted-in clients.
+- Requirement maturity does not change. Railway Stage 1 remains paused and
+  requires a fresh exact-source review after containment.
+
 ## Packet 85 — Security, accessibility, and operations closure evidence
 
 - `GA-SEC-001` gains privacy-preserving breached-password screening on signup

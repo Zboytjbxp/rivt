@@ -229,10 +229,18 @@ export function s3ClientFromEnv() {
 }
 
 export function backupEncryptionSecret() {
-  return process.env.BACKUP_ENCRYPTION_KEY?.trim()
-    ?? process.env.RIVT_BACKUP_ENCRYPTION_KEY?.trim()
-    ?? process.env.BACKUP_SECRET?.trim()
-    ?? "";
+  return [
+    process.env.BACKUP_ENCRYPTION_KEY,
+    process.env.RIVT_BACKUP_ENCRYPTION_KEY,
+    process.env.BACKUP_SECRET,
+  ].map((value) => value?.trim()).find(Boolean) ?? "";
+}
+
+export function previousBackupEncryptionSecret() {
+  return [
+    process.env.BACKUP_ENCRYPTION_KEY_PREVIOUS,
+    process.env.RIVT_BACKUP_ENCRYPTION_KEY_PREVIOUS,
+  ].map((value) => value?.trim()).find(Boolean) ?? "";
 }
 
 export function encryptionKeyFromSecret(secret) {
@@ -253,8 +261,17 @@ export function encryptionKeyFromSecret(secret) {
   return crypto.createHash("sha256").update(secret).digest();
 }
 
+export function encryptionKeyIdFromSecret(secret) {
+  return crypto
+    .createHmac("sha256", encryptionKeyFromSecret(secret))
+    .update("rivt-backup-key-id-v1")
+    .digest("hex")
+    .slice(0, 32);
+}
+
 export function encryptSnapshot(snapshot, secret) {
   const key = encryptionKeyFromSecret(secret);
+  const keyId = encryptionKeyIdFromSecret(secret);
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
   const payload = gzipSync(Buffer.from(JSON.stringify(snapshot)));
@@ -263,6 +280,7 @@ export function encryptSnapshot(snapshot, secret) {
     format: "rivt-encrypted-logical-backup-v1",
     algorithm: "aes-256-gcm",
     compression: "gzip",
+    keyId,
     createdAt: snapshot.createdAt,
     sourceCommit: snapshot.sourceCommit,
     manifest: snapshot.manifest,
@@ -272,21 +290,81 @@ export function encryptSnapshot(snapshot, secret) {
   };
 }
 
-export function decryptSnapshot(envelope, secret) {
+function decryptionCandidates(secretOrSecrets) {
+  const configured = typeof secretOrSecrets === "string"
+    ? [secretOrSecrets]
+    : [secretOrSecrets?.active, secretOrSecrets?.previous];
+  const candidates = [];
+  const seenKeyIds = new Set();
+  for (const secret of configured) {
+    if (typeof secret !== "string" || !secret) continue;
+    const keyId = encryptionKeyIdFromSecret(secret);
+    if (seenKeyIds.has(keyId)) continue;
+    seenKeyIds.add(keyId);
+    candidates.push({ keyId, secret });
+  }
+  if (candidates.length === 0) {
+    throw new Error("BACKUP_ENCRYPTION_KEY or RIVT_BACKUP_ENCRYPTION_KEY is required.");
+  }
+  return candidates;
+}
+
+function keyIdsEqual(left, right) {
+  if (!/^[a-f0-9]{32}$/i.test(left) || !/^[a-f0-9]{32}$/i.test(right)) return false;
+  return crypto.timingSafeEqual(Buffer.from(left, "hex"), Buffer.from(right, "hex"));
+}
+
+class BackupAuthenticationError extends Error {}
+
+function decryptWithSecret(envelope, secret) {
+  const key = encryptionKeyFromSecret(secret);
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(envelope.iv, "base64"));
+  decipher.setAuthTag(Buffer.from(envelope.tag, "base64"));
+  let compressed;
+  try {
+    compressed = Buffer.concat([
+      decipher.update(Buffer.from(envelope.ciphertext, "base64")),
+      decipher.final(),
+    ]);
+  } catch {
+    throw new BackupAuthenticationError("Backup authentication failed.");
+  }
+  return JSON.parse(gunzipSync(compressed).toString("utf8"));
+}
+
+export function decryptSnapshot(envelope, secretOrSecrets) {
   if (envelope?.format !== "rivt-encrypted-logical-backup-v1") {
     throw new Error("Unsupported encrypted backup format.");
   }
   if (envelope.algorithm !== "aes-256-gcm" || envelope.compression !== "gzip") {
     throw new Error("Unsupported encrypted backup algorithm or compression.");
   }
-  const key = encryptionKeyFromSecret(secret);
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(envelope.iv, "base64"));
-  decipher.setAuthTag(Buffer.from(envelope.tag, "base64"));
-  const compressed = Buffer.concat([
-    decipher.update(Buffer.from(envelope.ciphertext, "base64")),
-    decipher.final(),
-  ]);
-  return JSON.parse(gunzipSync(compressed).toString("utf8"));
+  const candidates = decryptionCandidates(secretOrSecrets);
+  if (envelope.keyId !== undefined) {
+    if (typeof envelope.keyId !== "string" || !/^[a-f0-9]{32}$/i.test(envelope.keyId)) {
+      throw new Error("Encrypted backup key identifier is invalid.");
+    }
+    const matchingCandidate = candidates.find((candidate) => keyIdsEqual(candidate.keyId, envelope.keyId));
+    if (!matchingCandidate) {
+      throw new Error("Unable to decrypt backup with the configured encryption keys.");
+    }
+    try {
+      return decryptWithSecret(envelope, matchingCandidate.secret);
+    } catch (error) {
+      if (!(error instanceof BackupAuthenticationError)) throw error;
+      throw new Error("Unable to decrypt backup with the configured encryption keys.");
+    }
+  }
+
+  for (const candidate of candidates) {
+    try {
+      return decryptWithSecret(envelope, candidate.secret);
+    } catch (error) {
+      if (!(error instanceof BackupAuthenticationError)) throw error;
+      // Older envelopes have no key identifier, so try active then previous.
+    }
+  }
+  throw new Error("Unable to decrypt backup with the configured encryption keys.");
 }
 
 export async function putJsonObject(client, bucket, key, value) {

@@ -4,6 +4,12 @@ These are minimum pilot procedures. Add provider-specific commands and owners be
 
 For controlled Gate B engagement operations, including community moderation, device alerts, matching-job privacy, and exact active-work record recovery, use [GATE_B_CONTROLLED_ENGAGEMENT.md](GATE_B_CONTROLLED_ENGAGEMENT.md).
 
+For suspected production-secret exposure, stop secret-enumerating commands and
+use [CREDENTIAL_ROTATION_RUNBOOK.md](CREDENTIAL_ROTATION_RUNBOOK.md). The
+credential runbook requires exact environment confirmation, recovery
+preservation, one-provider-at-a-time verification, and old-credential
+revocation without recording secret values.
+
 ## Deployment Verification
 
 1. Record branch, commit, artifact/build ID, migration version, and environment.

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import webpush from "web-push";
 import { pushNotificationInternals, pushProviderStatus } from "../server/push-notifications.js";
+
+const validActiveKeys = webpush.generateVAPIDKeys();
 
 test("web push provider fails closed until every VAPID value exists", () => {
   const previous = {
@@ -53,5 +56,112 @@ test("web push rejects malformed configured keys without exposing them", () => {
     else process.env.VAPID_PRIVATE_KEY = previous.privateKey;
     if (previous.subject === undefined) delete process.env.VAPID_SUBJECT;
     else process.env.VAPID_SUBJECT = previous.subject;
+  }
+});
+
+test("web push fails closed when a previous VAPID pair is incomplete", () => {
+  const status = pushProviderStatus({
+    VAPID_PUBLIC_KEY: validActiveKeys.publicKey,
+    VAPID_PRIVATE_KEY: validActiveKeys.privateKey,
+    VAPID_SUBJECT: "mailto:alerts@example.test",
+    VAPID_PREVIOUS_PUBLIC_KEY: "C".repeat(60),
+  });
+  assert.equal(status.ok, false);
+  assert.equal(status.mode, "invalid_config");
+  assert.equal(status.publicKey, null);
+});
+
+test("web push rejects regex-shaped but cryptographically invalid VAPID keys", () => {
+  const status = pushProviderStatus({
+    VAPID_PUBLIC_KEY: "A".repeat(60),
+    VAPID_PRIVATE_KEY: "B".repeat(60),
+    VAPID_SUBJECT: "mailto:alerts@example.test",
+  });
+  assert.equal(status.ok, false);
+  assert.equal(status.mode, "invalid_config");
+  assert.equal(status.publicKey, null);
+});
+
+test("web push retries an authentication rejection once with the previous VAPID pair", async () => {
+  const attempts = [];
+  const sendNotification = async (_subscription, _payload, options) => {
+    attempts.push(options.vapidDetails.publicKey);
+    if (attempts.length === 1) {
+      const error = new Error("VAPID credentials rejected");
+      error.statusCode = 403;
+      throw error;
+    }
+    return { statusCode: 201 };
+  };
+  const environment = {
+    VAPID_PUBLIC_KEY: "A".repeat(60),
+    VAPID_PRIVATE_KEY: "B".repeat(60),
+    VAPID_SUBJECT: "mailto:alerts@example.test",
+    VAPID_PREVIOUS_PUBLIC_KEY: "C".repeat(60),
+    VAPID_PREVIOUS_PRIVATE_KEY: "D".repeat(60),
+  };
+
+  const result = await pushNotificationInternals.sendNotificationWithVapidFallback(
+    sendNotification,
+    { endpoint: "https://push.example.test/device", keys: { p256dh: "p", auth: "a" } },
+    "{}",
+    { TTL: 60 },
+    environment,
+  );
+
+  assert.equal(result.statusCode, 201);
+  assert.deepEqual(attempts, [environment.VAPID_PUBLIC_KEY, environment.VAPID_PREVIOUS_PUBLIC_KEY]);
+});
+
+test("web push active-key success does not use the previous VAPID pair", async () => {
+  const attempts = [];
+  const environment = {
+    VAPID_PUBLIC_KEY: "A".repeat(60),
+    VAPID_PRIVATE_KEY: "B".repeat(60),
+    VAPID_SUBJECT: "mailto:alerts@example.test",
+    VAPID_PREVIOUS_PUBLIC_KEY: "C".repeat(60),
+    VAPID_PREVIOUS_PRIVATE_KEY: "D".repeat(60),
+  };
+  const result = await pushNotificationInternals.sendNotificationWithVapidFallback(
+    async (_subscription, _payload, options) => {
+      attempts.push(options.vapidDetails.publicKey);
+      return { statusCode: 201 };
+    },
+    { endpoint: "https://push.example.test/device", keys: { p256dh: "p", auth: "a" } },
+    "{}",
+    { TTL: 60 },
+    environment,
+  );
+  assert.equal(result.statusCode, 201);
+  assert.deepEqual(attempts, [environment.VAPID_PUBLIC_KEY]);
+});
+
+test("web push does not retry ambiguous or terminal failures with the previous key", async () => {
+  const environment = {
+    VAPID_PUBLIC_KEY: "A".repeat(60),
+    VAPID_PRIVATE_KEY: "B".repeat(60),
+    VAPID_SUBJECT: "mailto:alerts@example.test",
+    VAPID_PREVIOUS_PUBLIC_KEY: "C".repeat(60),
+    VAPID_PREVIOUS_PRIVATE_KEY: "D".repeat(60),
+  };
+  for (const statusCode of [0, 404, 410, 429, 500, 503]) {
+    let attempts = 0;
+    const sendNotification = async () => {
+      attempts += 1;
+      const error = new Error("Push delivery failed");
+      if (statusCode) error.statusCode = statusCode;
+      throw error;
+    };
+    await assert.rejects(
+      pushNotificationInternals.sendNotificationWithVapidFallback(
+        sendNotification,
+        { endpoint: "https://push.example.test/device", keys: { p256dh: "p", auth: "a" } },
+        "{}",
+        { TTL: 60 },
+        environment,
+      ),
+      /failed/,
+    );
+    assert.equal(attempts, 1, `status ${statusCode || "timeout"} should not fallback`);
   }
 });

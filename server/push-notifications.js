@@ -23,43 +23,74 @@ const pushUnsubscribeSchema = z.object({
 let workerTimer = null;
 let workerRunning = false;
 
-function envValue(name) {
-  return String(process.env[name] ?? "").trim();
+function envValue(name, environment = process.env) {
+  return String(environment[name] ?? "").trim();
 }
 
-export function pushProviderStatus() {
-  const publicKey = envValue("VAPID_PUBLIC_KEY");
-  const privateKey = envValue("VAPID_PRIVATE_KEY");
-  const subject = envValue("VAPID_SUBJECT");
-  const missing = [];
-  if (!publicKey) missing.push("VAPID_PUBLIC_KEY");
-  if (!privateKey) missing.push("VAPID_PRIVATE_KEY");
-  if (!subject) missing.push("VAPID_SUBJECT");
+function validVapidBundle(bundle) {
   const validKeys = /^[A-Za-z0-9_-]{40,120}$/;
   const validSubject = /^(mailto:|https:\/\/)/i;
-  const invalid = missing.length === 0 && (
-    !validKeys.test(publicKey)
-    || !validKeys.test(privateKey)
-    || !validSubject.test(subject)
-  );
+  if (
+    !validKeys.test(bundle.publicKey)
+    || !validKeys.test(bundle.privateKey)
+    || !validSubject.test(bundle.subject)
+  ) {
+    return false;
+  }
+  try {
+    webpush.setVapidDetails(bundle.subject, bundle.publicKey, bundle.privateKey);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function vapidProviders(environment = process.env) {
+  const active = {
+    publicKey: envValue("VAPID_PUBLIC_KEY", environment),
+    privateKey: envValue("VAPID_PRIVATE_KEY", environment),
+    subject: envValue("VAPID_SUBJECT", environment),
+  };
+  const previousPublicKey = envValue("VAPID_PREVIOUS_PUBLIC_KEY", environment);
+  const previousPrivateKey = envValue("VAPID_PREVIOUS_PRIVATE_KEY", environment);
+  const previous = previousPublicKey || previousPrivateKey
+    ? {
+        publicKey: previousPublicKey,
+        privateKey: previousPrivateKey,
+        subject: active.subject,
+      }
+    : null;
+  return { active, previous };
+}
+
+export function pushProviderStatus(environment = process.env) {
+  const { active, previous } = vapidProviders(environment);
+  const missing = [];
+  if (!active.publicKey) missing.push("VAPID_PUBLIC_KEY");
+  if (!active.privateKey) missing.push("VAPID_PRIVATE_KEY");
+  if (!active.subject) missing.push("VAPID_SUBJECT");
+  let invalid = false;
+  if (missing.length === 0) {
+    // Validate the previous pair first, then leave the active pair configured
+    // globally for compatibility with any caller that does not pass per-request
+    // VAPID details.
+    const previousValid = previous === null || validVapidBundle(previous);
+    const activeValid = validVapidBundle(active);
+    invalid = !previousValid || !activeValid;
+  }
   return {
     ok: missing.length === 0 && !invalid,
     provider: "web_push",
     mode: invalid ? "invalid_config" : missing.length === 0 ? "configured" : "setup_required",
-    publicKey: missing.length === 0 && !invalid ? publicKey : null,
+    publicKey: missing.length === 0 && !invalid ? active.publicKey : null,
+    previousConfigured: previous !== null && !invalid,
     missing,
   };
 }
 
-function configureWebPush() {
-  const status = pushProviderStatus();
-  if (!status.ok) return status;
-  try {
-    webpush.setVapidDetails(envValue("VAPID_SUBJECT"), status.publicKey, envValue("VAPID_PRIVATE_KEY"));
-    return status;
-  } catch {
-    return { ...status, ok: false, mode: "invalid_config", publicKey: null };
-  }
+function configureWebPush(environment = process.env) {
+  const status = pushProviderStatus(environment);
+  return status.ok ? status : { ...status, publicKey: null };
 }
 
 function assertPushEndpoint(endpoint) {
@@ -223,7 +254,7 @@ async function markDeliveryFailure(database, delivery, error) {
 
 async function deliverClaimed(database, delivery) {
   try {
-    await webpush.sendNotification({
+    await sendNotificationWithVapidFallback(webpush.sendNotification.bind(webpush), {
       endpoint: delivery.endpoint,
       expirationTime: delivery.expiration_time ? new Date(delivery.expiration_time).getTime() : null,
       keys: { p256dh: delivery.p256dh, auth: delivery.auth },
@@ -252,6 +283,39 @@ async function deliverClaimed(database, delivery) {
   } catch (error) {
     await markDeliveryFailure(database, delivery, error);
   }
+}
+
+export async function sendNotificationWithVapidFallback(
+  sendNotification,
+  subscription,
+  payload,
+  options,
+  environment = process.env,
+) {
+  const { active, previous } = vapidProviders(environment);
+  const providers = previous ? [active, previous] : [active];
+  let firstError = null;
+  for (let index = 0; index < providers.length; index += 1) {
+    const provider = providers[index];
+    try {
+      return await sendNotification(subscription, payload, {
+        ...options,
+        vapidDetails: {
+          subject: provider.subject,
+          publicKey: provider.publicKey,
+          privateKey: provider.privateKey,
+        },
+      });
+    } catch (error) {
+      if (index === 0) firstError = error;
+      const statusCode = Number(error?.statusCode ?? 0);
+      const canTryPrevious = index === 0
+        && previous
+        && (statusCode === 401 || statusCode === 403);
+      if (!canTryPrevious) throw error;
+    }
+  }
+  throw firstError ?? new Error("Web Push delivery failed.");
 }
 
 export async function processPushDeliveryBatch(database) {
@@ -389,4 +453,6 @@ export const pushNotificationInternals = {
   MAX_DELIVERY_ATTEMPTS,
   pushSubscriptionSchema,
   retryDelaySeconds,
+  sendNotificationWithVapidFallback,
+  vapidProviders,
 };

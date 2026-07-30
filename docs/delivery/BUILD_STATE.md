@@ -1,11 +1,44 @@
 # RIVT Build State
 
-Last updated: 2026-07-28 America/New_York
+Last updated: 2026-07-29 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Customer documents and contact import production verified.
+Current phase: Emergency production credential containment; feature activation paused.
 Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
+
+Operational status: launch and Railway Stage 1 are paused while production
+credential-exposure containment is in progress.
+
+## Active operational incident - Production credential exposure
+
+- A production-configuration inspection returned secret-bearing environment
+  values into a restricted automation transcript on 2026-07-29. No secret is
+  recorded in repository evidence, and no unauthorized use is currently known.
+  All exposed credential classes are nevertheless treated as compromised.
+- Packet 86 remains the active product packet. The separately approved Railway
+  Stage 1 activation is paused and its approval cannot be reused after this
+  incident hotfix or any credential change.
+- A narrow compatibility hotfix is being prepared from exact production source
+  `92a8451b8190f5119384a4970fb1a324503df995`. It preserves old encrypted-backup
+  recovery through an active/previous key ring and provides active/previous Web
+  Push fallback plus best-effort resubscription for existing opted-in clients.
+  Launch-grade per-subscription key-retirement tracking remains open.
+- Existing backup evidence is retained. No backup object, production data,
+  provider credential, paid resource, or real payment has been changed while
+  preparing the hotfix.
+- Local hotfix evidence passes production build, application and security lint,
+  133 unit/frontend tests, all three browser E2E journeys, diff integrity, and
+  rendered mobile-action QA, plus a zero-vulnerability production dependency
+  audit. The aggregate test command exits successfully, but 19 PostgreSQL
+  suites are explicitly skipped because this isolated worktree has no
+  `TEST_DATABASE_URL`; no new DB-backed integration pass is claimed.
+- The incident remains open until the hotfix is exact-source verified, every
+  exposed credential is replaced, each old credential is revoked, all affected
+  paths pass owner-controlled verification, and recovery remains proven.
+- Incident record:
+  `docs/operations/incidents/2026-07-29-production-credential-exposure.md`.
+  Rotation procedure: `docs/operations/CREDENTIAL_ROTATION_RUNBOOK.md`.
 
 ## Customer documents and contact import
 
