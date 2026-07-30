@@ -20,8 +20,9 @@ credential-exposure containment is in progress.
   Stage 1 activation is paused and its approval cannot be reused after this
   incident hotfix or any credential change.
 - A narrow compatibility hotfix was prepared from exact production source
-  `92a8451b8190f5119384a4970fb1a324503df995` and deployed by Railway as
-  deployment `8a30f00c-1562-4d5f-85a6-df822534e306` on commit
+  `92a8451b8190f5119384a4970fb1a324503df995` and deployed by Railway. The final
+  Stripe Connect credential cutover deployment was
+  `6eded406-8c0e-4abc-adf4-cbe61408025d` on commit
   `ae6cc63321df70d322a63d4c821e721a2ddedf52`. It preserves old
   encrypted-backup recovery through an active/previous key ring and provides
   active/previous Web Push fallback plus best-effort resubscription for
@@ -36,12 +37,14 @@ credential-exposure containment is in progress.
   audit. The aggregate test command exits successfully, but 19 PostgreSQL
   suites are explicitly skipped because this isolated worktree has no
   `TEST_DATABASE_URL`; no new DB-backed integration pass is claimed.
-- Stripe Connect webhook signing-secret rotation is complete. Public health was
+- Stripe Connect webhook signing-secret rotation is complete after a
+  defense-in-depth final re-roll. Public health was
   green with migration ready, PostgreSQL, S3-compatible storage, Web Push
-  configured, and the invoice bank webhook configured. A deliberately unknown,
-  locally signed no-charge/no-payment probe returned HTTP 200 with
-  `{"received":true,"duplicate":false}` and left one clearly named
-  idempotency-ledger record.
+  configured, and the invoice bank webhook configured. Both cutover attempts
+  were checked with deliberately unknown, locally signed no-charge/no-payment
+  probes; the final probe returned HTTP 200 with
+  `{"received":true,"duplicate":false}`. The checks left two clearly named
+  idempotency-ledger records.
 - The prior Connect signing secret was scheduled for expiry after a one-hour
   overlap. Stripe live API key rotation remains blocked at Stripe's
   human-verification/CAPTCHA spinner and was not completed; billing webhook

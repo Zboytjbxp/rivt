@@ -43,7 +43,7 @@ as a security boundary, every exposed credential is treated as compromised.
 | PostgreSQL | Pending | None yet |
 | Stripe API | Blocked | Live API key rotation was not completed; Stripe remained at the human-verification/CAPTCHA spinner |
 | Stripe billing webhook | Pending | Rotation not yet completed |
-| Stripe Connect webhook | Rotated; prior secret retirement scheduled | Railway deployment `8a30f00c-1562-4d5f-85a6-df822534e306` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; no-charge/no-payment probe accepted |
+| Stripe Connect webhook | Rotated; prior secret retirement scheduled | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted |
 | Google OAuth | Pending | None yet |
 | Resend | Pending | None yet |
 | Object storage | Pending | None yet |
@@ -76,14 +76,17 @@ as a security boundary, every exposed credential is treated as compromised.
 
 ## Stripe Connect webhook rotation evidence
 
-- Stripe Connect webhook signing-secret rotation completed.
-- Railway deployment `8a30f00c-1562-4d5f-85a6-df822534e306` succeeded on
-  commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`.
+- Stripe Connect webhook signing-secret rotation completed after a
+  defense-in-depth final re-roll.
+- Final Railway cutover deployment
+  `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit
+  `ae6cc63321df70d322a63d4c821e721a2ddedf52`.
 - Public health was green: migration ready, PostgreSQL, S3-compatible storage,
   Web Push configured, and invoice bank webhook configured.
-- A deliberately unknown, locally signed no-charge/no-payment probe returned
-  HTTP 200 with `{"received":true,"duplicate":false}` and left one clearly
-  named idempotency-ledger record.
+- Both cutover attempts were checked with deliberately unknown, locally signed
+  no-charge/no-payment probes. The final probe returned HTTP 200 with
+  `{"received":true,"duplicate":false}`. The checks left two clearly named
+  idempotency-ledger records.
 - The prior Connect signing secret was scheduled for expiry after a one-hour
   overlap. Its scheduled retirement does not close the incident before expiry
   is confirmed.
