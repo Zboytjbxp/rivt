@@ -1,32 +1,156 @@
 const service = "rivt-api";
+const redacted = "[REDACTED]";
+const circular = "[Circular]";
 
-function safeField(value) {
+const sensitiveKeyNames = new Set([
+  "authorization",
+  "proxyauthorization",
+  "cookie",
+  "setcookie",
+  "credentials",
+  "password",
+  "passwordhash",
+  "passwd",
+  "passphrase",
+  "token",
+  "accesstoken",
+  "refreshtoken",
+  "idtoken",
+  "verificationtoken",
+  "resettoken",
+  "sessionid",
+  "sessiontoken",
+  "csrftoken",
+  "secret",
+  "clientsecret",
+  "webhooksecret",
+  "signingsecret",
+  "apikey",
+  "privatekey",
+  "databaseurl",
+  "postgresurl",
+  "redisurl",
+  "connectionstring",
+  "dsn",
+  "sentrydsn",
+  "email",
+  "emailaddress",
+  "phone",
+  "phonenumber",
+  "telephone",
+  "mobile",
+  "mobilenumber",
+  "address",
+  "addressline1",
+  "addressline2",
+  "street",
+  "streetaddress",
+  "postalcode",
+  "zipcode",
+  "firstname",
+  "lastname",
+  "fullname",
+  "displayname",
+  "legalname",
+  "username",
+  "dateofbirth",
+  "dob",
+  "ssn",
+  "socialsecuritynumber",
+  "taxid",
+  "cardnumber",
+  "accountnumber",
+  "bankaccountnumber",
+  "routingnumber",
+  "iban",
+  "ip",
+  "ipaddress",
+  "remoteaddress",
+]);
+
+const sensitiveKeySuffix =
+  /(?:password|passphrase|secret|access[_-]?token|refresh[_-]?token|id[_-]?token|auth[_-]?token|api[_-]?key|private[_-]?key|authorization|cookie|credentials|connection[_-]?string|database[_-]?url|postgres[_-]?url|redis[_-]?url|sentry[_-]?dsn)$/i;
+const personalKeySuffix =
+  /(?:email|emailaddress|phone|phonenumber|telephone|mobilenumber|streetaddress|postalcode|zipcode|firstname|lastname|fullname|displayname|legalname|username|dateofbirth|ssn|socialsecuritynumber|taxid|cardnumber|accountnumber|bankaccountnumber|routingnumber|iban|ipaddress|remoteaddress)$/i;
+const contextualNameOrAddress =
+  /^(?:customer|contact|recipient|user|owner|person|profile|billing|shipping)(?:(?:first|last|full|display|legal)?name|address)$/i;
+
+function normalizedKey(key) {
+  return String(key).replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+
+function isSensitiveKey(key) {
+  const normalized = normalizedKey(key);
+  return sensitiveKeyNames.has(normalized)
+    || sensitiveKeySuffix.test(String(key))
+    || personalKeySuffix.test(String(key))
+    || contextualNameOrAddress.test(normalized);
+}
+
+function sanitizeString(value) {
+  return value
+    .replace(
+      /-----BEGIN(?: [A-Z0-9]+)* PRIVATE KEY-----[\s\S]*?-----END(?: [A-Z0-9]+)* PRIVATE KEY-----/g,
+      redacted,
+    )
+    .replace(/\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/gi, redacted)
+    .replace(/\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{8,}\b/g, redacted)
+    .replace(/\bwhsec_[A-Za-z0-9]{8,}\b/g, redacted)
+    .replace(/\bAIza[A-Za-z0-9_-]{30,}\b/g, redacted)
+    .replace(/\bAKIA[A-Z0-9]{16}\b/g, redacted)
+    .replace(
+      /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\b/g,
+      redacted,
+    )
+    .replace(
+      /\b([a-z][a-z0-9+.-]*:\/\/)([^/\s:@]+):([^@\s/]+)@/gi,
+      `$1${redacted}@`,
+    )
+    .replace(
+      /(\b(?:password|passwd|passphrase|secret|token|access[_-]?token|refresh[_-]?token|id[_-]?token|session[_-]?id|session[_-]?token|client[_-]?secret|webhook[_-]?secret|signing[_-]?secret|api[_-]?key|private[_-]?key|authorization|cookie|dsn|signature|x-amz-signature)\b\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;&]+)/gi,
+      `$1${redacted}`,
+    )
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, redacted);
+}
+
+function safeField(value, seen = new WeakSet()) {
+  if (typeof value === "string") return sanitizeString(value);
   if (value instanceof Error) {
     return {
-      name: value.name,
-      message: value.message,
-      code: value.code,
-      status: value.status,
-      stack: process.env.NODE_ENV === "production" ? undefined : value.stack,
+      name: sanitizeString(value.name),
+      message: sanitizeString(value.message),
+      code: safeField(value.code, seen),
+      status: safeField(value.status, seen),
+      stack: process.env.NODE_ENV === "production" ? undefined : safeField(value.stack, seen),
     };
   }
   if (value === undefined) return undefined;
   if (value === null || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(safeField);
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([, fieldValue]) => fieldValue !== undefined)
-      .map(([key, fieldValue]) => [key, safeField(fieldValue)]),
-  );
+  if (seen.has(value)) return circular;
+  seen.add(value);
+  try {
+    if (Array.isArray(value)) return value.map((fieldValue) => safeField(fieldValue, seen));
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, fieldValue]) => fieldValue !== undefined)
+        .map(([key, fieldValue]) => [
+          key,
+          isSensitiveKey(key) ? redacted : safeField(fieldValue, seen),
+        ]),
+    );
+  } finally {
+    seen.delete(value);
+  }
 }
 
 function write(level, event, fields = {}) {
+  const safeFields = safeField(fields);
   const record = {
+    ...(safeFields && typeof safeFields === "object" && !Array.isArray(safeFields) ? safeFields : {}),
     level,
-    event,
+    event: sanitizeString(String(event)),
     service,
     timestamp: new Date().toISOString(),
-    ...safeField(fields),
   };
   const line = JSON.stringify(record);
   if (level === "error") {

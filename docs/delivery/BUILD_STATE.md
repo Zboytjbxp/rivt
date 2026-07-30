@@ -151,6 +151,15 @@ credential-exposure containment is in progress.
   the prohibited whole-environment command. Focused security verification
   passes 27/27. This closes one incident exit criterion without clearing the
   launch hold.
+- The shared structured logger now removes sensitive values at the final
+  serialization boundary. It recursively redacts credential keys and direct
+  customer PII, scrubs embedded provider/database secrets and email addresses
+  from error text, handles circular objects, and prevents a caller from
+  overwriting the real severity, event, service, or timestamp. Regression
+  coverage keeps request/account/provider IDs and operational statuses usable;
+  the focused tests, security lint, and all 140 unit/frontend checks pass.
+  This is defense in depth, not a claim that arbitrary future free-form text
+  can never contain unidentified personal data.
 - The production monitor and live Gate A hardening check now fail closed when
   Google OAuth, server-side session security, or Sentry error monitoring is not
   configured. The enhanced monitor passed against exact production source
@@ -165,8 +174,19 @@ credential-exposure containment is in progress.
   post-rotation PostgreSQL authentication logs. It also documented the honest
   forensic boundary: historical successful PostgreSQL reads/writes were not
   audited, and Railway Buckets provide no per-object access history. Earlier
-  deployment/provider review and classification of remaining PostgreSQL error
-  records stay open; no claim of “no access” or “no exfiltration” is made.
+  provider review stays open; no claim of “no access” or “no exfiltration” is
+  made.
+- PostgreSQL error classification is now complete across the immediately
+  preceding deployment from 23:00 UTC through credential cutover and the
+  replacement deployment through 13:04 UTC. Every error-shaped record maps to
+  expected append-only/read-only/constraint guard verification, SSL
+  unexpected-EOF closure, or one Railway collation-refresh permission error;
+  there are zero authentication failures and zero `FATAL`/`PANIC` events.
+- A source-backed object-storage audit design is being recorded separately;
+  it deliberately does not add a migration, provider feature, paid resource,
+  or production mutation during this incident pass. Current stable
+  object-count evidence still cannot prove that an exposed credential was
+  never used for a direct read.
 - The operational launch gate now has an explicit active hold for this
   emergency. `npm run incident:readiness` passes the standing incident-routing
   configuration, but `npm run launch:readiness -- --require-ready` correctly

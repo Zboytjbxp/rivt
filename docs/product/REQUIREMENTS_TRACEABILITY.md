@@ -20,6 +20,13 @@
   credential inheritance by smoke type, and is protected by a recursive
   executable-script/CI scan that fails on reintroduced environment-list
   commands.
+- `GA-SEC-001` and `GA-OPS-005` gain a shared structured-logging boundary
+  that recursively removes credential material and direct customer PII,
+  scrubs secret-bearing provider/database error text, handles circular
+  values, and prevents callers from forging reserved log metadata. Focused
+  regression coverage preserves operational request/account/provider IDs and
+  status fields while proving the protected values do not reach serialized
+  output.
 - `GA-OPS-007` gains focused automated coverage for backup key rotation and
   transitional Web Push fallback behavior plus passing production build,
   application/security lint, 137 unit/frontend checks, all 22 tests across the
@@ -53,8 +60,10 @@
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; and public health,
   provider-configuration, and expected-source production-monitor checks pass.
 - Requirement maturity remains Partial because Google OAuth callback proof and
-  prior-secret retirement, Sentry DSN rotation/event proof, and the bounded
-  provider/data-access log review remain open. An explicit
+  prior-secret retirement, Sentry DSN rotation/event proof, remaining provider
+  review, and the accepted historical database/object-storage forensic limits
+  remain open. The bounded PostgreSQL error classification found no
+  authentication failure, `FATAL`, or `PANIC` event. An explicit
   `ACTIVE_LAUNCH_HOLD` makes the automated launch gate fail closed until every
   incident exit criterion is verified. Railway Stage 1 remains paused and its
   earlier approval cannot be reused.

@@ -359,6 +359,24 @@ moment.
   It does not clear the incident or launch hold; provider rotations, bounded
   access-log review, and final Stage 1 re-review remain open.
 
+## Structured-log containment evidence
+
+- The central application logger now applies recursive redaction immediately
+  before structured records are serialized. Sensitive key names, direct
+  customer PII, credential-bearing URLs, authorization values, private-key
+  blocks, common provider-key shapes, and email addresses embedded in
+  provider/database error text are removed.
+- Circular values no longer make defensive logging fail, and caller-supplied
+  fields cannot overwrite the logger's real severity, event, service, or
+  timestamp. Request IDs, account IDs, provider object IDs, statuses, counts,
+  and migration names remain available for operations.
+- Focused regression coverage proves protected values are absent from the
+  serialized line and legitimate operational fields remain intact. The
+  logger tests, security lint, and all 140 unit/frontend checks pass.
+- This is defense in depth. Call sites must still avoid arbitrary user text,
+  and this change cannot retroactively remove values from historical provider
+  logs or prove that every future unidentified PII shape will be recognized.
+
 ## Bounded access-log review evidence
 
 - A secret-safe Railway review of the current RIVT deployment covered 101 HTTP
@@ -373,10 +391,17 @@ moment.
   observation, not proof about activity that the application did not log.
 - PostgreSQL logs after credential rotation, covering 03:23 through 13:04 UTC
   on July 30, contain no authentication failure, `FATAL`, or `PANIC` event.
-  Twelve unexpected-EOF messages and 37 errors with 24 associated statement
-  records still require contextual classification. The prior PostgreSQL
-  deployment's logs remain available and have not yet received the same
-  bounded classification.
+  Secret-safe template classification accounts for the full error-shaped set:
+  20 expected append-only audit-trigger rejections, four expected check-
+  constraint validation failures with their 24 statement-context records,
+  12 SSL unexpected-EOF connection closures, and one Railway collation-refresh
+  temporary-file permission error.
+- The immediately preceding PostgreSQL deployment was separately reviewed from
+  23:00 UTC on July 29 through the 03:23 UTC credential cutover. Its 66 log
+  records contain no authentication failure, `FATAL`, or `PANIC` event:
+  five expected append-only audit-trigger rejections, one expected read-only
+  transaction rejection, one expected check-constraint validation failure,
+  seven statement-context records, and 10 SSL unexpected-EOF closures.
 - PostgreSQL historical forensic coverage is limited: connection,
   disconnection, statement-duration, and statement auditing were not enabled,
   and `pgaudit` was not installed. Successful historical connections, reads,
@@ -387,10 +412,11 @@ moment.
   continuity reads do not prove that an exposed credential was never used for
   a direct read.
 - No misuse indicator has been identified in the evidence reviewed so far.
-  The review remains open because earlier deployment/provider logs, the
-  PostgreSQL error records, and the unavoidable database/object-storage
-  forensic limitations must be explicitly resolved or accepted. The incident
-  is not represented as proof of no access or no exfiltration.
+  The bounded PostgreSQL error review is complete for the repository-backed
+  incident window, subject to the historical auditing limitation above. The
+  review remains open for provider logs and the unavoidable database/object-
+  storage forensic limitations. The incident is not represented as proof of
+  no access or no exfiltration.
 
 ## Recovery plan
 
