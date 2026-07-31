@@ -36,10 +36,11 @@
   in 543 ms with seven anonymous private routes closed and operational
   controls open.
 - Current exact-source follow-up: Railway deployment
-  `a10eb556-f9ae-4148-83e9-5de1164202a7` serves
-  `df0bda2e592fd4c86c4ad6f30b1d0e191782506b`. A final public health check
+  `e4dbe7fb-5290-4732-b377-b164002217a7` serves
+  `922e94415ffd3bea3e2e6ac633705b91c283bb8b`. A final public health check
   returned `ok: true`, migration `0042` ready, PostgreSQL and S3-compatible
-  storage healthy, and Web Push configured.
+  storage healthy, and Web Push configured. The exact-source production
+  monitor passed in 605 ms.
 - Readiness evidence: the first production read-only inventory failed closed
   as designed: two eligible subscriptions remain unknown, zero devices have
   current-generation success proof, and the queue has zero due, stale, stale

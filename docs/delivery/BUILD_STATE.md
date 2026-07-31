@@ -7,18 +7,18 @@ Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.m
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`df0bda2e592fd4c86c4ad6f30b1d0e191782506b`
+`922e94415ffd3bea3e2e6ac633705b91c283bb8b`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
 
 Current incident packet: Web Push generation tracking is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
-`df0bda2e592fd4c86c4ad6f30b1d0e191782506b`. Railway deployment
-`a10eb556-f9ae-4148-83e9-5de1164202a7` succeeded with migration
+`922e94415ffd3bea3e2e6ac633705b91c283bb8b`. Railway deployment
+`e4dbe7fb-5290-4732-b377-b164002217a7` succeeded with migration
 `0042_push_vapid_generation` ready. Public health returned `ok: true` with
 PostgreSQL and S3-compatible storage healthy and Web Push configured; the
-exact-source production monitor passed in 543 ms. Migration `0042` preserves
+exact-source production monitor passed in 605 ms. Migration `0042` preserves
 every legacy subscription as unknown, accepts cached clients without a false
 key claim, records the key that actually delivers, and adds a secret-safe
 read-only `push:readiness` gate.
