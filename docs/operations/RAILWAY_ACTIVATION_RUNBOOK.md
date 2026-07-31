@@ -80,6 +80,16 @@ worker. Keep the private key secret and server-side. Preserve any other
 service credentials through provider references; this runbook never authorizes
 reading or exporting their values.
 
+If invoice bank payments are enabled on the web service, it must also have:
+
+- `STRIPE_CONNECT_ACH_ENABLED=true`;
+- a dedicated `STRIPE_CONNECT_WEBHOOK_SECRET`; and
+- `STRIPE_CONNECT_WEBHOOK_SCOPE=connected_accounts`, set only after the live
+  Connected-accounts destination and signed state-transition proof pass.
+
+If that provider proof is incomplete, keep `STRIPE_CONNECT_ACH_ENABLED=false`
+and do not set the scope attestation merely to make health look configured.
+
 ## Artifact handling
 
 The activation plan, provider snapshot, and operator-control review must be:
@@ -97,6 +107,20 @@ file.
 
 Environment enumeration is prohibited. Do not run or record a broad variable
 or secret inventory. Use only the allowlisted status capture below.
+
+## Step 0 - Freeze deployment before merging
+
+1. Read-only inspect the production branch and autodeploy control.
+2. If autodeploy is already off, record that fact in the fresh operator review.
+3. If autodeploy is on or cannot be proved off, stop. Obtain separate owner
+   authorization to disable it, perform only that control change, and verify it
+   is off. Source approval does not authorize this provider mutation.
+4. Only after the freeze is proven may the reviewed candidate be merged to
+   `master`. The merge itself does not authorize a deployment.
+5. Verify that no deployment started from the merge. If one did, stop the
+   process and follow the incident/rollback boundary before continuing.
+6. Fetch again and prove the clean candidate equals `origin/master`; only then
+   may Step 1 and strict preflight run.
 
 ## Step 1 - Freeze and identify source
 
@@ -131,6 +155,10 @@ or secret inventory. Use only the allowlisted status capture below.
 4. Record a compatible recovery checkpoint no more than 24 hours old.
 5. Confirm the restore procedure was reviewed and the rollback source can use
    the current schema.
+6. Require either demonstrable bank-payment disablement or a live Stripe
+   `Connected accounts` destination with its dedicated signing secret, the
+   required event selection, and signed-delivery/state-transition proof. The
+   current `Your account` destination is not payment-activation evidence.
 
 Do not create a backup, restore target, subscription, push delivery, or
 production row unless separately authorized.

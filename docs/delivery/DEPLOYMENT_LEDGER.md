@@ -1,5 +1,42 @@
 # Deployment Ledger
 
+## 2026-07-31 - Packet 87 + Railway Stage 1 Combined Candidate (No Deployment)
+
+- Branch: `codex/railway-stage1-packet87-integration`; Packet 87 history
+  through `070243f` is combined with the Stage 1 sequence through the
+  integration base `9490c86`. The provider-safety follow-up is committed and
+  independently reviewed locally at `0b78de2`; it is not pushed or deployed.
+- Source result: Packet 87 files remained intact during replay. Local build,
+  application/security lint, 252/252 unit/frontend checks, all three browser
+  E2E journeys, Tools/Shop Talk/Trade News/mobile-actions/Work-lifecycle UI
+  smoke, dependency audit,
+  and diff integrity passed. A disposable loopback-only PostgreSQL 18 cluster
+  with `RIVT_DB_MAX_CONNECTIONS=97` passed 25/25 integration tests; production
+  and Railway were not used. Gate A now reads Node 20 from `.nvmrc` and runs
+  PostgreSQL 16, but exact-source CI parity remains open until a reviewed
+  candidate is pushed.
+- Payment-safety correction: the recorded production Stripe destination is
+  scoped to `Your account`, while RIVT creates invoice direct charges on
+  connected contractor accounts. The candidate now remains setup-required and
+  refuses new onboarding/payment links unless
+  `STRIPE_CONNECT_WEBHOOK_SCOPE=connected_accounts` explicitly attests a live
+  Connected-accounts destination and signed-delivery proof. Existing signed
+  webhook processing remains available for delayed events.
+- Resilience correction: Stripe and Resend connection plus response-body waits
+  are bounded to eight seconds. This contains an unlimited database-lock/pool
+  wait but does not replace the planned durable provider outbox and
+  reconciliation model.
+- Machine gate correction: `launch:readiness` now reads the checked-in
+  payment-provider readiness record. It fails closed unless bank payments are
+  either proved disabled or approved with fresh signed `Connected accounts`
+  delivery evidence. Approval must be current, occur after verification, and
+  match the SHA-256 digest of the exact reviewed mode and evidence.
+- Boundary: no merge, deployment, provider setting, production row, backup,
+  paid resource, or cost changed. The old Stage 1 approval is expired and was
+  not reused. `ACTIVE_LAUNCH_HOLD`, the formal exact-source security scan, exact-runtime CI,
+  Stripe provider proof, fresh Stage 1 evidence/approval/preflight, incident
+  exit, deployment, and activation remain open.
+
 ## 2026-07-31 - Credential-Incident Provider Review Correction (No Deployment)
 
 - Branch/source: `codex/money-integrity-canonical-invoices` at source
@@ -123,7 +160,9 @@
 - Launch boundary: Sentry credential rotation is closed. The broader incident
   and `ACTIVE_LAUNCH_HOLD` remain open. PostgreSQL/direct-bucket historical
   limits and the three unobservable-secret decisions are valid owner-accepted
-  closure evidence; a fresh Railway Stage 1 re-review/approval remains open.
+  closure evidence. Combined local source review is complete; formal security
+  scan, exact-runtime CI, Stripe delivery remediation, and fresh Stage 1
+  approval/preflight remain open.
 
 ## 2026-07-30 - Web Push VAPID Generation Tracking
 

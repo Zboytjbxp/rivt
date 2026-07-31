@@ -4,14 +4,20 @@ Prepared: 2026-06-22
 
 This packet is the final signoff aid for the first named Gate A customer cohort. It does not approve launch by itself. Approval is recorded only in `docs/operations/incident-routing.json` after the founder explicitly approves each required signoff.
 
-## Current Gate Status
+## Historical Gate Status (2026-06-22; superseded)
+
+This section records the June 22 checkpoint and is not current launch
+authority. The 2026-07-31 machine gate now fails closed on
+`ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`; use
+`docs/delivery/BUILD_STATE.md` and `npm run launch:readiness -- --require-ready`
+for current status.
 
 - Incident ownership: ready for approval.
 - Support coverage: ready for approval for the named-cohort pilot only.
 - Legal/safety posture: ready for founder review with known limits.
 - Recovery policy: approved for Gate A.
 - Incident rehearsal: passed on 2026-06-22.
-- Launch readiness command: blocked only by founder/support/legal-safety approvals.
+- Launch readiness command at this historical checkpoint: blocked only by founder/support/legal-safety approvals.
 - Physical/deeper manual accessibility evidence: still required before broad launch and should be reviewed before inviting a named cohort.
 
 ## Evidence Already Recorded

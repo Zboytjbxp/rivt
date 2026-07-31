@@ -2,21 +2,28 @@
 
 Last updated: 2026-07-31 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Production credential containment and bounded provider review
-complete; local money-integrity containment open; feature activation paused.
+Current phase: Packet 87 money-integrity containment and Railway Stage 1
+source-safety are integrated and locally verified on one candidate. Merge,
+deployment, provider mutation, spend, incident exit, and feature activation
+remain paused.
 Active packet: `docs/delivery/packets/87_MONEY_INTEGRITY_CONTAINMENT.md`
-Repository branch: `codex/money-integrity-canonical-invoices` from current
-`origin/master`
+Repository branch: `codex/railway-stage1-packet87-integration`
+Integration base before the provider-safety follow-up:
+`9490c860736fbbf3ab916e488bfc994cca60753e`
+Provider-safety implementation commit:
+`0b78de26aa7c7ee60e8cc5b3cdb608be6c7c2c3f`
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
-Operational status: launch and Railway Stage 1 are paused while the final fresh
-exact-source Railway Stage 1 re-review and approval remain open.
+Operational status: launch remains held. The former Stage 1 approval is
+expired and unusable. Fresh exact-source evidence, plan digest, cost approval,
+strict preflight, and separate activation authority are required.
 
-Current product packet: Packet 87 is implemented locally from exact current
-`origin/master` source
-`29e3c613f2eb95a6583b52c671275e5046dde0d3`. It fails closed when an invoice,
+Current product packet: Packet 87 implementation commit `4e95c71` and its
+incident-evidence follow-ups through `070243f` are combined with the Railway
+Stage 1 sequence through `9490c86`. Packet 87 files remained intact during the
+replay. It fails closed when an invoice,
 project balance, or bank-payment request disagrees; invalidates payer
 redirects for deleted, void, or mismatched invoices; locks processing,
 settled, refunded, and disputed payment history; retires new manual
@@ -28,28 +35,32 @@ draft label without sending again. Browser writes cannot forge paid/sent
 state, delivery evidence, or bank-payment metadata; provider email requires
 an active verified account; void, external-payment, processing, settlement,
 refund, and dispute truth cannot be manually erased; and consequential
-out-of-order Stripe events remain monotonic. Production build, full/security
-lint, 164 unit/frontend tests, three browser E2E journeys, Tools/Invoice,
-mobile-actions, Work-lifecycle, dependency audit, and diff integrity pass.
-A freshly reset, disposable, loopback-only PostgreSQL 16.14 cluster passed all
-22 integration tests, including all 19 database-backed suites, with zero
-failures or skips; it was stopped and removed after the run, and neither
-production nor the older Railway test URL was used. Independent final review
-found no remaining Packet 87 code blocker. Commit, merge, deployment, and
-exact-source acceptance remain mandatory. The packet adds no migration and
-has not changed production data, provider configuration, paid resources, or
-the live application. The broader incident and `ACTIVE_LAUNCH_HOLD` remain in
-force.
+out-of-order Stripe events remain monotonic. The combined candidate passes the
+production build, application/security lint, 252/252 unit/frontend checks, all
+three browser E2E journeys, Tools, Shop Talk/Trade News, mobile-actions, and
+Work-lifecycle UI smoke,
+dependency audit with zero vulnerabilities, and diff integrity. A disposable
+loopback-only PostgreSQL 18 cluster with `RIVT_DB_MAX_CONNECTIONS=97` passed
+25/25 integration tests with zero failures or skips; production and Railway
+were not used. Local runtime was Node 24 and PostgreSQL 18. Gate A is now
+configured to read Node 20 from `.nvmrc` and use PostgreSQL 16, but an
+exact-source CI run remains open until a reviewed candidate is pushed. The
+provider-safety follow-up is committed and independently reviewed locally;
+formal exact-source security scan, push/merge, exact-runtime CI, deployment, and exact-source
+acceptance remain mandatory. No production data, provider configuration, paid resource, or live
+application changed. The missing Stripe `Connected accounts` event destination
+is a launch blocker independent of these passing source gates. The broader
+incident and `ACTIVE_LAUNCH_HOLD` remain in force.
 
-## Railway Stage 1 source-safety re-review - local preparation only
+## Railway Stage 1 source-safety re-review - combined local candidate only
 
-- A fresh worktree and `codex/railway-stage1-rereview` branch were created
-  from `origin/master`
-  `29e3c613f2eb95a6583b52c671275e5046dde0d3`. The committed source-safety
-  sequence currently ends at
-  `b6b83f89cc11c95e551fd9b16902cb634f1642b0` and includes explicit hosted process
-  roles, one migration owner, bounded shutdown/drain behavior, role-specific
-  database budgets, required Web Push startup, and strict activation review.
+- The committed Stage 1 sequence has been replayed onto the Packet 87 line in
+  `codex/railway-stage1-packet87-integration`. The committed integration base
+  is `9490c860736fbbf3ab916e488bfc994cca60753e`; the provider-safety follow-up
+  is committed locally as `0b78de26aa7c7ee60e8cc5b3cdb608be6c7c2c3f`.
+  The sequence includes explicit hosted process roles, one migration owner,
+  bounded shutdown/drain behavior, role-specific database budgets, required
+  Web Push startup, and strict activation review.
 - The activation preflight now requires three fresh external/ignored
   artifacts: an allowlisted Railway status snapshot, a named operator review
   of provider controls, and the exact plan. Snapshot and review hashes, source
@@ -73,26 +84,25 @@ force.
   templates, and evidence-boundary README document the future manual process.
   They contain no live inventory, credentials, completed approval, provider
   receipt, or activation evidence.
-- Focused Railway/runtime/push/security coverage passes 92/92, including
-  22/22 strict activation-preflight checks. `npm run build`, `npm run lint`,
-  `npm run lint:security`, and 229/229 unit/frontend checks pass. The aggregate
-  `npm run test` command passes its available suites; 3 no-database integration
-  contracts pass and 21 PostgreSQL suites explicitly skip because this
-  isolated worktree has no `TEST_DATABASE_URL`. The only existing `.env`
-  available outside the worktree points to a nonlocal database and was not
-  used. All three browser E2E journeys pass after installing the worktree's
-  locked dependencies. The production dependency audit reports zero
-  vulnerabilities and diff integrity passes.
-- `npm run launch:readiness -- --require-ready` fails closed only on
-  `ACTIVE_LAUNCH_HOLD`, as intended. This branch does not claim a complete
-  database-integration or launch-readiness gate; the disposable PostgreSQL CI
-  run remains required after push.
+- Focused Railway/runtime/push/security coverage and all 22 strict
+  activation-preflight checks pass. The complete combined evidence is the
+  build, application/security lint, 252/252 unit/frontend checks, all three
+  browser E2E journeys, Tools/Shop Talk/Trade News/mobile-actions/Work-lifecycle
+  UI smoke, zero-
+  vulnerability dependency audit, diff integrity, and 25/25 disposable-
+  database integration tests described above.
+- `npm run launch:readiness -- --require-ready` fails closed on the intentional
+  `ACTIVE_LAUNCH_HOLD` and the unapproved payment-provider readiness record.
+  Local database integration is complete; exact Node 20/PostgreSQL 16 CI and
+  launch readiness still remain required after the final candidate is pushed
+  and reviewed.
 - No Railway setting, service, database, bucket, variable, deployment,
   billing limit, production row, or backup was changed. No cost was incurred,
-  no earlier approval was reused, no Stage 1 activation was performed, and no
-  redundancy/high-availability or launch-ready claim is made. Packet 86,
-  credential-incident exit, `ACTIVE_LAUNCH_HOLD`, and owner activation remain
-  separate open boundaries.
+  the expired earlier approval was not reused, no Stage 1 activation was
+  performed, and no redundancy/high-availability or launch-ready claim is
+  made. Packet 87, credential-incident exit, `ACTIVE_LAUNCH_HOLD`, Stripe
+  connected-account event delivery, formal exact-source security scan, and
+  owner activation remain separate open boundaries.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
@@ -139,8 +149,10 @@ misuse indicator in the queried retained entries. Direct VAPID misuse, offline
 backup-key use, and offline authentication-pepper use remain unobservable; at
 `2026-07-31T19:39:34.5524830Z`, Michael explicitly accepted those three
 forensic limits without claiming no misuse and without authorizing deployment
-or cost. The remaining exit work is a fresh Railway Stage 1 re-review and
-approval.
+or cost. The bounded provider review and combined local source review are
+complete. Remaining exit work includes exact-runtime CI, Stripe connected-
+account delivery proof or verified feature disablement, fresh Stage 1 evidence
+and approval, and final incident closure.
 
 ## Active operational incident - Production credential exposure
 
@@ -303,8 +315,9 @@ approval.
   proving that no OAuth token exchange or unlogged action occurred. Michael's
   later exact statement accepts the three named unobservable-secret forensic
   limits without claiming no misuse or authorizing deployment/cost. The fresh
-  Railway Stage 1 review remains open, so the overall incident and launch hold
-  are not cleared.
+  local Railway Stage 1 review is complete. The formal exact-source Codex
+  Security scan, exact-runtime CI, fresh provider/cost evidence, and approval
+  remain open, so the overall incident and launch hold are not cleared.
 - The incident-remediation source was fast-forwarded to `master` and Railway
   deployment `e12e66b2-9701-44d6-b57f-8e12fe436738` succeeded on exact commit
   `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`. This activates the final-boundary
@@ -411,7 +424,9 @@ approval.
   logged event types. VAPID, backup-key, and authentication-pepper offline
   misuse remain unobservable; Michael explicitly accepted those three forensic
   limits at `2026-07-31T19:39:34.5524830Z` without claiming no misuse or
-  authorizing deployment/cost. Railway Stage 1 re-review remains open.
+  authorizing deployment/cost. Local Railway Stage 1 re-review is complete;
+  the formal exact-source Codex Security scan, exact-runtime CI, fresh
+  provider/cost evidence, and approval remain open.
 - Aggregate read-only production money reconciliation from the conservative
   exposure start through the owner-acceptance timestamp found three matching
   controlled rotation-probe rows, no additional application-recorded webhook
@@ -8175,7 +8190,7 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
   behavior remain covered by the isolated integration suite; no production
   provider outage was induced for testing.
 
-## Next Exact Task
+## Historical retained task note — Packet 43 (superseded; not current)
 
 ## Packet 43 - Camera Before / After Proof Images
 
@@ -8204,7 +8219,7 @@ capabilities have an explicit destination. In parallel, complete the physical
 accessibility checklist on iOS, Android, desktop keyboard-only, and a screen
 reader before nationwide launch.
 
-## Blocking Founder Decisions
+## Historical founder-decision list (superseded; revalidate before use)
 
 Needed before Gate A recruitment, not before finishing Packet 00:
 
@@ -8230,7 +8245,7 @@ At the end of each packet record:
 7. New risks or decisions.
 8. Exact next packet/task.
 
-## Current Launch Train - Card Subtraction and Visual Hierarchy (2026-07-21)
+## Historical retained launch train — Card Subtraction (superseded)
 
 - Branch: `codex/card-subtraction-pass`
 - Base commit: `edc56e8`

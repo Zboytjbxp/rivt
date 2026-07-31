@@ -40,6 +40,12 @@ after this fail-closed boundary is verified.
 - Keep webhook truth monotonic when Stripe events arrive out of order:
   settlement cannot become failure, and an earlier refund or dispute cannot
   be overwritten by a later success event.
+- Refuse new Stripe Connect onboarding and bank-payment links unless the live
+  event destination is explicitly attested as `Connected accounts`; a signing
+  secret by itself does not prove that direct-charge events reach RIVT.
+- Bound Stripe and email-provider waits to eight seconds, including response-
+  body reads, and report an honest timeout instead of occupying a database
+  transaction indefinitely or claiming an unconfirmed success.
 
 ## Explicitly out of scope
 
@@ -51,8 +57,8 @@ after this fail-closed boundary is verified.
 - No attempt to represent a partially paid invoice in an email that still
   prints the original total as fully due. That case fails closed until the
   customer document can show total, paid, and remaining balance correctly.
-- No change to Stripe webhook authority or the existing external-payment
-  confirmation workflow.
+- No provider-side Stripe event-destination change or existing external-
+  payment confirmation workflow change.
 
 ## Money invariants
 
@@ -69,6 +75,10 @@ after this fail-closed boundary is verified.
    failure must not.
 7. A lost HTTP response or repeated tap must not send an unchanged invoice
    twice or downgrade an already-delivered document back to draft.
+8. A signing secret and feature flag must not enable new bank-payment links
+   unless connected-account event delivery is explicitly attested.
+9. A stalled Stripe or email request must release the server path within a
+   bounded deadline and must not be recorded as a confirmed success.
 
 ## Required server behavior
 
@@ -134,6 +144,12 @@ after this fail-closed boundary is verified.
     or void.
 15. Prove out-of-order Stripe failure/success/refund/dispute events cannot
     erase the most consequential accepted payment state.
+16. Prove missing or incorrect Stripe webhook scope keeps provider readiness
+    false even when the key, signing secret, flag, and merchant account exist.
+17. Prove the inbound signed webhook remains available for delayed events from
+    existing requests while creation of new links is disabled.
+18. Prove Stripe and email header/body stalls return explicit bounded timeout
+    failures rather than hanging or claiming delivery.
 
 ## Rollback
 
@@ -155,7 +171,7 @@ Before advancing, explicitly review:
    can all be represented from one invoice ledger without another manual
    status silo.
 
-## Verification status
+## Packet 87 pre-integration verification (historical)
 
 Local implementation is complete on exact baseline
 `29e3c613f2eb95a6583b52c671275e5046dde0d3`.
@@ -182,6 +198,13 @@ ordering, and same-status no-op behavior.
 Independent final review found no remaining Packet 87 code blocker. Its
 conditional database requirement is now satisfied locally.
 
+The later combined Packet 87 plus Railway Stage 1 candidate passed 252/252
+unit/frontend tests, all three browser E2E journeys, the Tools, Shop Talk/Trade
+News, mobile-actions, and Work-lifecycle rendered suites, and 25/25 disposable-
+database integration tests on the local Node 24/PostgreSQL 18 environment.
+Those combined results supersede the historical counts and three-suite list
+above without rewriting the original packet evidence.
+
 This packet adds a narrow content-derived provider-idempotency and transaction
 boundary for invoice email. It does not replace Packet 90's broader durable
 outbox/reconciliation requirement for every external side effect.
@@ -189,5 +212,7 @@ outbox/reconciliation requirement for every external side effect.
 No production data, provider configuration, paid resource, deployment, or
 live payment was changed.
 
-Packet status: **Locally verified and independently reviewed — merge,
-deployment, and exact-source acceptance remain pending**.
+Packet status: **Integrated, locally re-verified, and independently reviewed
+with Stage 1 source-safety; the formal exact-source security scan, exact-
+runtime CI, merge, deployment, provider-scope proof, and exact-source
+acceptance remain pending**.

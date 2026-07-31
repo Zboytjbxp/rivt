@@ -1,6 +1,6 @@
 # Production Credential Exposure - 2026-07-29
 
-- Status: contained; forensic/provider review remains open
+- Status: contained; closure, Stripe delivery remediation, and exact-source release review remain open
 - Severity: critical
 - Environment: Railway production
 - Incident owner: Michael
@@ -63,7 +63,7 @@ moment.
 | PostgreSQL | Rotated; prior credential superseded | RIVT now uses the managed `${{Postgres.DATABASE_URL}}` reference; in-place PostgreSQL password regeneration and final RIVT redeployment succeeded; pre-change, reference-cutover, and post-rotation rolled-back temporary-table transactions passed |
 | Stripe API | Rotated; prior key expired | Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded; replacement authenticated to Stripe with a read-only HTTP 200 account response before the superseded key was expired |
 | Stripe billing webhook | Rotated; prior secret retired | Destination `we_1TnpZWIz6JDg8LdahYHPwX0o` at `https://rivt.pro/api/stripe/webhook`; Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded; harmless probe accepted; provider inventory confirms the prior secret expired |
-| Stripe Connect webhook | Rotated; prior secret retired | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted; provider inventory confirms the prior secret expired |
+| Stripe Connect webhook | Rotated for the existing `Your account` destination; prior secret retired | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; a locally signed no-charge/no-payment probe was accepted and provider inventory confirms the prior secret expired. This did not prove Stripe delivery for connected contractor accounts. |
 | Google OAuth | Rotated; prior secret deleted | Provider UI verifies `support@rivt.pro` owns project `rivt-499402`; the June 13 secret was disabled and then deleted on July 30; final provider inventory contains exactly one enabled July 30 replacement; Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; health, provider-configuration, callback, and production-monitor checks pass |
 | Resend | Rotated; prior key deleted | Replacement sending-only key is restricted to `rivt.pro`; a proof email was delivered; the provider dashboard confirmed deletion of the prior key and shows one replacement key remaining |
 | Object storage | Rotated; prior copied pair invalidated | Railway bucket `rivt-private` (`83403a81-f912-431e-b0fc-40a238f347e8`) retained identical object count and bytes across the one-time reset; both managed references persisted; deployment `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` and an existing-object read passed |
@@ -76,8 +76,9 @@ moment.
 
 - Removed the temporary local output file.
 - Stopped all secret-enumerating Railway commands.
-- Paused the separately approved Railway Stage 1 activation. That approval does
-  not apply to any changed source or configuration.
+- Paused the previously approved Railway Stage 1 activation. That approval is
+  expired and unusable; no changed or current source, configuration, evidence,
+  cost, or activation inherits it.
 - Preserved the existing encrypted production backup artifact. No backup was
   deleted, replaced, or re-encrypted.
 - Created a narrow hotfix from the exact production source. It adds:
@@ -205,6 +206,9 @@ moment.
   no-charge/no-payment probes. The final probe returned HTTP 200 with
   `{"received":true,"duplicate":false}`. The checks left two clearly named
   idempotency-ledger records.
+- The rotated signing secret belongs to the existing `Your account`
+  destination. Local signature acceptance proves only RIVT's verifier and does
+  not prove that Stripe will send connected-contractor account events to it.
 - Stripe provider inventory now confirms the prior Connect signing secret is
   expired; only the active replacement remains usable.
 - Stripe live API key rotation is complete.
@@ -396,8 +400,9 @@ moment.
   At this stage of the response, provider rotations and bounded access-log
   review were still open. Rotations were completed later; the current open
   boundaries are listed in the provider-review synthesis below. This work does
-  not clear the incident or launch hold, and final Stage 1 re-review remains
-  open.
+  not clear the incident or launch hold. Combined local source review is now
+  complete; exact-runtime CI, Stripe delivery remediation, final approval, and
+  strict activation preflight remain open.
 
 ## Structured-log containment evidence
 
@@ -486,8 +491,9 @@ moment.
   the most recent isolated CI run remains the 22/22 PostgreSQL integration
   proof recorded above.
 - Sentry credential rotation is complete. The broader incident and
-  `ACTIVE_LAUNCH_HOLD` remain open for a fresh Railway Stage 1 re-review and
-  approval.
+  `ACTIVE_LAUNCH_HOLD` remain open. Combined local source review is complete;
+  exact-runtime CI, Stripe delivery remediation, fresh Stage 1 evidence and
+  approval, and strict preflight remain required.
 
 ## Bounded access-log review evidence
 
@@ -570,8 +576,12 @@ Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
 
 This table completes the bounded provider/forensic review. It does not prove
 that no historical access, exfiltration, token exchange, or offline secret use
-occurred. The incident and launch hold remain open for the exact-source Railway
-Stage 1 re-review and approval.
+occurred. The Stage 1 sequence has been replayed onto the Packet 87 candidate
+and the combined local gates pass. The incident and launch hold remain open
+pending final exact-source security review, exact-runtime CI, Stripe delivery
+remediation, fresh plan / provider / cost / recovery evidence, a new exact-plan
+approval, and a passing strict preflight. Deployment and Stage 1 activation
+remain separately authorized actions.
 
 The aggregate database review used a repeatable-read, read-only transaction over
 the named billing, subscription, entitlement, invoice, payment-request,
@@ -610,8 +620,10 @@ state; it is not proof that an action absent from those tables never occurred.
   decision requirements. It does not reconstruct missing evidence, prove that
   no misuse occurred, close the incident, clear `ACTIVE_LAUNCH_HOLD`, authorize
   deployment, or approve cost.
-- A fresh exact-source Railway Stage 1 re-review and approval remains required
-  before incident closure.
+- Combined local source review is complete. Formal exact-source security scan,
+  exact-runtime CI, Stripe delivery remediation, fresh Stage 1 evidence and
+  approval, and a passing strict preflight remain required before incident
+  closure.
 
 ## Recovery plan
 
@@ -635,15 +647,23 @@ This incident remains open until:
   incident may be contained but not closed;
 - authentication, database, storage, email, payments/webhooks, OAuth, Web Push,
   monitoring, and backup restore access are verified without printing secrets;
-- the existing backup artifact is still recoverable through the approved
-  previous-key path;
+- the recorded previous-key restore proof completed before retirement is
+  preserved, and current active-key restore evidence remains valid;
 - every row in the provider-review synthesis is either bounded as reviewed or
   has a named owner decision, with incident-owner acceptance recorded for each
   historical limit that cannot be reconstructed;
 - the incident record contains only nonsecret evidence and timestamps;
 - a follow-up prevents secret-bearing environment enumeration in operator
   workflows; and
-- Stage 1 is re-reviewed against its new exact source and configuration.
+- the combined Packet 87 plus Stage 1 exact-source candidate receives final
+  independent review and required exact-runtime CI evidence;
+- fresh provider snapshot, operator review, cost/recovery plan, owner-approved
+  digest, and strict preflight pass; and
+- the Stripe `Connected accounts` destination gap is resolved or invoice bank
+  payments are demonstrably disabled before launch-hold clearance.
+
+Incident closure alone does not authorize deployment, spending, or Stage 1
+activation.
 
 ## Evidence rules
 

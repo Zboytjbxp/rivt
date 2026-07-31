@@ -1,6 +1,6 @@
 # RIVT Gate A Launch Operations Checklist
 
-This checklist is the go/no-go operating contract for the first named customer cohort. It complements `npm run launch:readiness`; the command checks the machine-readable incident and recovery files, while this document tells the operator what to complete and where evidence belongs.
+This checklist is the go/no-go operating contract for the first named customer cohort. It complements `npm run launch:readiness`; the command checks the machine-readable incident, recovery, and payment-provider files, while this document tells the operator what to complete and where evidence belongs.
 
 Do not mark Gate A approved while any required item is `TBD`, missing an owner, missing evidence, or only verified in a local/dev environment.
 
@@ -59,6 +59,11 @@ Evidence:
 - Google OAuth is configured for production domain and no local fallback is enabled.
 - Twilio/SMS is either configured with compliant sender registration or explicitly deferred from Gate A.
 - Stripe/subscription billing is either configured for production or explicitly deferred from Gate A.
+- Invoice bank payments are either proved disabled in production or have a
+  `Connected accounts` Stripe destination with fresh signed-delivery proof.
+- `docs/operations/payment-provider-readiness.json` is current and approved by
+  a named owner after verification, and its approval digest matches the exact
+  reviewed mode/evidence; a `Your account` destination alone is insufficient.
 - Operational kill switches are known and documented.
 - No temporary `RESTORE_*` or `CONFIRM_*` variables are left on production services.
 
@@ -67,6 +72,7 @@ Evidence:
 - `npm run smoke:gate-a:live`
 - `npm run monitor:production`
 - Redacted provider configuration screenshots or settings export.
+- Approved payment-provider readiness record and nonsecret delivery evidence.
 
 ## 5. Accessibility And Device Readiness
 

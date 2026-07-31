@@ -12,16 +12,16 @@ commit, add high availability, prove redundancy, or clear any launch hold.
 
 ## Source and production boundary
 
-- The re-review worktree was created from `origin/master` at
-  `29e3c613f2eb95a6583b52c671275e5046dde0d3`.
-- The committed Railway safety sequence in this worktree currently ends at
-  `b6b83f89cc11c95e551fd9b16902cb634f1642b0` after the strict
-  activation-control follow-up.
+- The Railway sequence was replayed onto the committed Packet 87 line ending
+  at `070243f`; the integration base is
+  `9490c860736fbbf3ab916e488bfc994cca60753e`, and the reviewed provider-safety
+  follow-up is `0b78de26aa7c7ee60e8cc5b3cdb608be6c7c2c3f`.
 - The final activation candidate SHA must be recorded only after all current
   review changes are committed and reviewed. Neither SHA above is described
   here as deployed production source.
-- Packet 86 remains the active product packet. The production credential
-  incident, `ACTIVE_LAUNCH_HOLD`, and Railway Stage 1 pause remain in force.
+- Packet 87 remains the active product packet. The production credential
+  incident, `ACTIVE_LAUNCH_HOLD`, Stripe connected-account event-delivery
+  blocker, and Railway Stage 1 pause remain in force.
 
 ## Accepted implementation scope
 
@@ -125,12 +125,14 @@ Before this packet can be cited by an activation plan:
 - run `git diff --check`;
 - complete Packet 94's fresh read-only provider and operator-control review.
 
-Current local preparation evidence: build, application/security lint, 229
-unit/frontend checks, 92 focused Railway/runtime/push/security checks, all
-three browser E2E journeys, dependency audit, and diff integrity pass. The
-aggregate test command passes its available suites, but 21 PostgreSQL
-integration suites skip because the isolated worktree has no local
-`TEST_DATABASE_URL`; disposable-database CI remains required after push.
+Current combined evidence: build, application/security lint, 252/252
+unit/frontend checks, focused Railway/runtime/push/security checks, all three
+browser E2E journeys, Tools/Shop Talk/Trade News/mobile-actions/Work-lifecycle
+UI smoke, dependency audit, and diff integrity pass. A disposable loopback-only PostgreSQL 18
+cluster with `RIVT_DB_MAX_CONNECTIONS=97` passed 25/25 integration tests with
+zero failures or skips; production and Railway were not used. Local runtime
+was Node 24 and PostgreSQL 18. Gate A now reads Node 20 from `.nvmrc` and uses
+PostgreSQL 16, but an exact-source CI run remains a later gate.
 
 ## Three-things review
 
@@ -144,5 +146,6 @@ integration suites skip because the isolated worktree has no local
    overlap a new one. The activation plan must include the transition peak and
    still retain 30 percent database headroom.
 
-Packet status: **Source prepared and re-reviewed; activation not authorized or
-performed**.
+Packet status: **Combined source prepared and locally verified; fresh exact-
+plan approval, strict preflight, incident decision, and separately authorized
+provider activation remain pending**.

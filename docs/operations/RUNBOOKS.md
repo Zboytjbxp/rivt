@@ -74,11 +74,15 @@ The gate requires:
 - A passed incident rehearsal within the last 30 days.
 - Founder, support, and legal/safety approvals.
 
-Current state: primary owner is recorded as Michael at `support@rivt.pro`, and GitHub synthetic issue routing is configured. Backup owner, support hours, dedicated error monitoring, paging, rehearsal, and approvals remain missing; therefore Gate A remains blocked.
+Current state: incident ownership, support hours, synthetic monitoring, error
+monitoring, paging, a recent rehearsal, and the named approvals are recorded;
+`npm run incident:readiness -- --require-ready` passes. That does not clear the
+separate launch hold or payment-provider gate described below.
 
 ## Launch Readiness Gate
 
-Launch readiness combines incident routing with the approved recovery policy. Run:
+Launch readiness combines incident routing, the approved recovery policy, and
+the machine-readable payment-provider launch state. Run:
 
 ```text
 npm run launch:readiness -- --json
@@ -98,8 +102,16 @@ The gate requires everything from incident readiness plus:
 - Restore-drill cadence, owner, and next due date.
 - A passed named backup-artifact restore from the last 30 days.
 - Founder and operations approvals for the recovery policy.
+- A reviewed `docs/operations/payment-provider-readiness.json` record proving
+  either that invoice bank payments are disabled in production or that fresh,
+  signed `Connected accounts` delivery is working.
+- Named payment-provider approval recorded after verification and bound to the
+  exact reviewed mode/evidence digest.
 
-Current state: the latest named backup-artifact restore is recorded in `docs/operations/recovery-policy.json`, but RPO/RTO targets, retention, cadence, and recovery-policy approvals remain missing; therefore Gate A remains blocked.
+Current state: incident and recovery-policy evidence pass their machine checks.
+Launch remains blocked by `ACTIVE_LAUNCH_HOLD` and the unapproved payment-
+provider record. The recorded `Your account` Stripe destination does not prove
+delivery for charges created on connected contractor accounts.
 
 ## Operational Kill Switches
 

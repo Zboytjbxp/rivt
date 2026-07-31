@@ -64,10 +64,12 @@ completion.
 ### Tier 0 — launch remains held
 
 1. **Credential-incident closure is operationally incomplete.** Credential
-   replacement and provider continuity evidence are extensive, but the active
-   launch hold remains intentional until the incident owner accepts the
-   unavailable historical database/object-access evidence and the Stage 1
-   design is freshly reviewed.
+   replacement, provider continuity evidence, the incident owner's explicit
+   forensic-limit acceptances, and local Stage 1 review are recorded. The
+   active launch hold remains intentional until the formal exact-source Codex
+   Security scan, exact-runtime CI, fresh provider/cost evidence and approval,
+   strict preflight, and Stripe connected-account delivery boundary are
+   resolved or explicitly disabled.
 2. **Backups do not yet meet the intended 24-hour RPO automatically.** Restore
    drills prove that a named artifact can be recovered, but artifact creation,
    missed-backup alerting, retention enforcement, and an independent failure
@@ -409,6 +411,8 @@ Completion boundary:
 
 RIVT is **not yet 100% product-complete** under this definition. Offline and
 recovery behavior is production verified. Security/accessibility/operations
-closure is next. The machine launch-readiness and incident-readiness gates
-pass, but they do not override the unfinished final architecture subtraction
-and physical-device acceptance items above.
+closure is next. The incident-readiness gate passes. The machine launch-
+readiness gate remains blocked by `ACTIVE_LAUNCH_HOLD` and
+`PAYMENT_PROVIDER_NOT_APPROVED`; even after those are resolved, the gate does
+not override unfinished final architecture subtraction and physical-device
+acceptance items above.

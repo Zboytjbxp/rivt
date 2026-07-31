@@ -12,19 +12,21 @@ availability, prove redundancy, or declare RIVT launch-ready.
 
 ## Source and production boundary
 
-- The re-review worktree was based on `origin/master`
-  `29e3c613f2eb95a6583b52c671275e5046dde0d3`.
-- Its current committed Railway safety tip is
-  `b6b83f89cc11c95e551fd9b16902cb634f1642b0`.
+- The Railway sequence was replayed onto the committed Packet 87 line ending
+  at `070243f`; the committed integration base before the provider-safety
+  follow-up is `9490c860736fbbf3ab916e488bfc994cca60753e`.
+- The reviewed provider-safety follow-up is committed locally as
+  `0b78de26aa7c7ee60e8cc5b3cdb608be6c7c2c3f`; neither commit is pushed or
+  deployed from this packet.
 - The final prepared implementation and candidate commits must be filled with
   the clean, reviewed commit that actually contains the complete preflight.
   A working-tree state is never an activation candidate.
 - The plan must separately record the exact live-before source and rollback
   source proven by fresh production health and a current successful,
   redeployable Railway deployment.
-- Packet 86 remains active. The production incident and
-  `ACTIVE_LAUNCH_HOLD` remain open unless they are closed through their own
-  evidence and authority.
+- Packet 87 remains active. The production incident, Stripe connected-account
+  event-delivery blocker, and `ACTIVE_LAUNCH_HOLD` remain open unless they are
+  closed through their own evidence and authority.
 
 ## Prepared topology
 
@@ -206,9 +208,14 @@ npm run railway:activation:preflight -- --plan <plan.json> --provider-snapshot <
 - preserve only redacted hashes, timestamps, costs, results, and deployment
   evidence in repository documentation after an authorized activation.
 
-Current source-only evidence passes all 22 strict preflight checks, including
+The combined candidate passes 252/252 unit/frontend checks, its other local
+source gates, 25/25 disposable-database integration tests, and all 22 strict preflight checks, including
 negative approval-drift, database overlap, failed-Git, and default-exit tests.
-No live plan, snapshot, operator review, or owner approval was created.
+No live plan, fresh provider snapshot, operator review, owner approval, or
+provider action exists. The previous approval is expired and unusable. Before
+strict preflight, autodeploy must be proven off before the candidate is merged
+to `master`. Stripe `Connected accounts` delivery is a separate fail-closed
+payment/launch prerequisite and is not cleared by Stage 1 preflight alone.
 
 ## Three-things review
 
@@ -223,5 +230,7 @@ No live plan, snapshot, operator review, or owner approval was created.
    including the app and database. The plan must record that outage mechanism
    and acceptance instead of presenting the limit as risk-free.
 
-Packet status: **Readiness process prepared and re-reviewed; owner activation
-still pending and no provider action performed**.
+Packet status: **Combined source prepared and locally verified; formal exact-
+source security scan, exact-runtime CI, fresh exact-plan approval, strict
+preflight, incident decision, and separately authorized provider activation
+remain pending**.
