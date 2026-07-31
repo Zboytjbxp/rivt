@@ -24,10 +24,14 @@ returned production environment-variable values into a restricted automation
 transcript. The temporary local output file was removed. No secret value is
 included in this record.
 
-No unauthorized use is currently known; provider and audit-log review remains
-open. Data-access and exfiltration impact is under investigation, and no
-conclusion has been reached. Because transcript confidentiality cannot be used
-as a security boundary, every exposed credential is treated as compromised.
+No unauthorized use is currently known. The available Stripe, Resend, Sentry,
+Railway control-plane, application-ledger, and bounded Railway/PostgreSQL log
+evidence has been reviewed without an identified misuse indicator. The Google
+production-project activity review still requires fresh owner
+reauthentication. Historical successful PostgreSQL access and Railway Bucket
+object reads cannot be reconstructed, so data access or exfiltration cannot be
+ruled out. Because transcript confidentiality cannot be used as a security
+boundary, every exposed credential is treated as compromised.
 
 The detection window is bounded by a documented 19:01 Railway observation that
 explicitly read no credentials or variables and the first formal critical
@@ -57,7 +61,7 @@ moment.
 | Stripe API | Rotated; prior key expired | Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded; replacement authenticated to Stripe with a read-only HTTP 200 account response before the superseded key was expired |
 | Stripe billing webhook | Rotated; prior secret retired | Destination `we_1TnpZWIz6JDg8LdahYHPwX0o` at `https://rivt.pro/api/stripe/webhook`; Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded; harmless probe accepted; provider inventory confirms the prior secret expired |
 | Stripe Connect webhook | Rotated; prior secret retired | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted; provider inventory confirms the prior secret expired |
-| Google OAuth | Rotated; prior secret deleted | Provider UI verifies `support@rivt.pro` owns project `rivt-499402`; the June 13 secret was disabled and then deleted on July 30; final provider inventory contains exactly one enabled July 30 replacement; Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; health, provider-configuration, callback, and production-monitor checks pass |
+| Google OAuth | Rotated; prior secret deleted | Provider UI verifies `support@rivt.pro` owns project `rivt-499402`; the June 13 secret was disabled and then deleted on July 30; final provider inventory contains exactly one enabled July 30 replacement; Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; health, provider-configuration, callback, and production-monitor checks pass; retrospective activity review remains pending fresh owner-profile reauthentication |
 | Resend | Rotated; prior key deleted | Replacement sending-only key is restricted to `rivt.pro`; a proof email was delivered; the provider dashboard confirmed deletion of the prior key and shows one replacement key remaining |
 | Object storage | Rotated; prior copied pair invalidated | Railway bucket `rivt-private` (`83403a81-f912-431e-b0fc-40a238f347e8`) retained identical object count and bytes across the one-time reset; both managed references persisted; deployment `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` and an existing-object read passed |
 | Web Push VAPID | Rotated; previous pair retired | An already opted-in owner-controlled physical device received a real alert through the transition bridge; both previous-key variables were then removed, Railway deployment `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded, and the running service reports the active pair present and previous pair absent |
@@ -212,6 +216,17 @@ moment.
 - The superseded Resend key was deleted after delivery proof. The provider
   dashboard confirmed deletion with its success toast, and key inventory then
   showed one replacement key remaining.
+- The post-exposure provider review found only the owner-controlled production
+  security-check email. The only other post-exposure API record was an expected
+  rejected read of the domains endpoint, confirming the replacement key cannot
+  perform account-management reads because it is restricted to sending.
+- Current provider inventory shows one verified sending domain, one
+  sending-only API key, one workspace administrator, and no authorized
+  applications. No unexpected send or additional actor was identified in the
+  available Resend evidence.
+- Multi-factor authentication is not enabled for the sole Resend administrator.
+  This is a follow-up account-hardening gap, not evidence of unauthorized use,
+  and was not changed during the read-only incident review.
 - Email credential rotation is complete. The broader incident remains open and
   Railway Stage 1 remains paused.
 
@@ -227,9 +242,10 @@ moment.
 
 ## Google OAuth credential rotation evidence
 
-- The Google provider UI verifies that `support@rivt.pro` owns production
-  project `rivt-499402`. Production-project owner access is no longer a
-  blocker.
+- The Google provider UI previously verified that `support@rivt.pro` owns
+  production project `rivt-499402`. That completed ownership and rotation proof
+  does not substitute for the retrospective provider-activity review, which
+  now requires fresh owner-profile reauthentication.
 - Two unused replacement-secret candidates were deleted in the provider before
   either was installed. No value from those candidates or the final replacement
   is recorded in repository evidence.
@@ -250,8 +266,14 @@ moment.
 - After callback proof, the prior secret created June 13 was disabled and then
   deleted in the provider on July 30. Final provider inventory contains exactly
   one enabled secret: the July 30 replacement. Google OAuth secret rotation is
-  complete. The broader incident and `ACTIVE_LAUNCH_HOLD` remain open for
-  unrelated remaining evidence.
+  complete.
+- A separate attempt to review production activity remains incomplete. The
+  currently accessible alternate profile exposes only an unrelated empty or
+  stale project, while the production owner profile requires fresh
+  reauthentication. No activity conclusion is drawn from the unrelated
+  project.
+- The broader incident and `ACTIVE_LAUNCH_HOLD` remain open for the pending
+  production activity review and the other remaining evidence.
 
 ## Web Push VAPID rotation evidence
 
@@ -478,6 +500,61 @@ moment.
   explicit incident-owner acceptance of the historical PostgreSQL and object
   storage forensic limits, and a fresh Railway Stage 1 re-review and approval.
 
+## Provider activity and Railway control-plane review
+
+- Stripe Workbench's retained seven-day API log shows one post-exposure
+  request: the expected read-only replacement-key account check. No
+  post-exposure write or delete request was present. Stripe's retained event
+  view showed no financial or business event in the exposure window, both
+  production webhook destinations reported zero deliveries and zero failures
+  for the reviewed week, and the RIVT ledger contained only the already
+  documented rotation probes. No unexpected Stripe activity was identified in
+  the available provider and application evidence.
+- Resend provider evidence is recorded in the credential section above. It
+  identified no unexpected post-exposure send or additional account actor.
+- Railway deployment history contains 36 incident-window application
+  deployments. Their source commits, incident-response messages, and
+  variable-triggered redeployments align with the documented containment
+  sequence.
+- Railway project activity was reviewed through the exposure boundary. Every
+  visible human configuration action was attributed to the sole workspace
+  administrator, and the variable names, managed-resource actions, and
+  temporary restore-resource lifecycle match this incident record. No
+  unexpected Railway actor or control-plane change was identified in the
+  available activity history.
+- The Railway workspace has one administrator and does not enforce
+  multi-factor authentication because that administrator has not enabled it.
+  This is a follow-up account-hardening gap, not evidence of unauthorized use,
+  and was not changed during this read-only review.
+- Railway's logs page accepted the complete incident time range but returned
+  only 113 timestamped records from the current deployment, spanning
+  `2026-07-31T04:25:31Z` through `2026-07-31T05:09:30Z`. It returned no records
+  from the replaced deployments. The CLI has the same boundary: removed
+  deployments retain deployment metadata but no retrievable HTTP log rows.
+  The earlier 101-request bounded review below remains valid, but a new
+  full-window request reconstruction cannot be claimed. Enabling or purchasing
+  logging now would not recreate missing history.
+- Google OAuth replacement, callback continuity, prior-secret deletion, and
+  production-project ownership are already proven above. A fresh
+  production-project activity-log review is still pending because Google
+  requires the `support@rivt.pro` owner profile to reauthenticate. The unrelated
+  project visible to the currently signed-in profile is not treated as
+  production evidence.
+- Across the provider evidence available to this account, no misuse indicator
+  was identified. This is not proof that an exposed credential was never used,
+  and it does not close the historical PostgreSQL or object-storage evidence
+  gaps.
+
+## Identity-control follow-ups
+
+- Railway workspace and Resend team administration currently lack
+  multi-factor authentication.
+- Enabling MFA, securing recovery codes, and re-reviewing active sessions and
+  membership are separately controlled launch-hardening actions. They were not
+  performed during this read-only review.
+- These account-control gaps require follow-up but are not presented as
+  evidence of unauthorized activity.
+
 ## Bounded access-log review evidence
 
 - A secret-safe Railway review of the current RIVT deployment covered 101 HTTP
@@ -520,11 +597,13 @@ moment.
   immutable logging whose cost, privacy, residency, and retention have not
   been approved. No part of that proposed design is represented as implemented.
 - No misuse indicator has been identified in the evidence reviewed so far.
-  The bounded PostgreSQL error review is complete for the repository-backed
-  incident window, subject to the historical auditing limitation above. The
-  review remains open for provider logs and the unavoidable database/object-
-  storage forensic limitations. The incident is not represented as proof of
-  no access or no exfiltration.
+  The bounded PostgreSQL error review and the available Stripe, Resend, Sentry,
+  and Railway reviews are complete, subject to the historical and
+  removed-deployment logging limitations above. Google production-project
+  activity review, explicit incident-owner acceptance of the unavoidable
+  database/object-storage evidence limits, and the fresh Railway Stage 1 review
+  remain open. The incident is not represented as proof of no access or no
+  exfiltration.
 
 ## Recovery plan
 
@@ -550,8 +629,13 @@ This incident remains open until:
   monitoring, and backup restore access are verified without printing secrets;
 - the existing backup artifact is still recoverable through the approved
   previous-key path;
-- provider, PostgreSQL, and object-access logs have been reviewed for
-  unauthorized access or exfiltration;
+- all available provider, control-plane, PostgreSQL, and object-access evidence
+  has been reviewed; remaining retention or auditing gaps are explicitly
+  documented; and the incident owner explicitly accepts that historical
+  successful PostgreSQL activity and direct object reads cannot be
+  reconstructed;
+- the pending Google production activity review is completed or remains an
+  explicitly unresolved launch blocker;
 - the incident record contains only nonsecret evidence and timestamps;
 - a follow-up prevents secret-bearing environment enumeration in operator
   workflows; and

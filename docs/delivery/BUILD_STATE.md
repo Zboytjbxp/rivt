@@ -7,22 +7,22 @@ Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.m
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
+`29e3c613f2eb95a6583b52c671275e5046dde0d3`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
 
-Current incident packet: Sentry replacement-key rotation is deployed from
-`codex/vapid-generation-tracking` through `master` at exact source
-`f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`. Railway deployments
-`599620ce-18fc-4e86-b638-88283dd18857` and
-`c6ddf9c8-91a3-4953-a47c-70c72deb154e` succeeded with migration
+Current incident packet: the replacement Sentry path, retirement evidence, and
+final risk boundary are deployed from `codex/vapid-generation-tracking` through
+`master` at exact source
+`29e3c613f2eb95a6583b52c671275e5046dde0d3`. Final Railway deployment
+`e6c2d78d-e929-493e-a928-dd83229c494a` succeeded with migration
 `0042_push_vapid_generation` ready. Public health returned `ok: true` with
-PostgreSQL and S3-compatible storage healthy and Sentry configured; the
-exact-source production monitor passed in 590 ms. The replacement key received
-an exact production event and triggered the existing high-priority alert before
-the prior key was disabled. A second unique event was accepted and indexed
-after retirement, proving production continuity on the replacement.
+PostgreSQL and S3-compatible storage healthy and Sentry configured. The
+replacement key received an exact production event and triggered the existing
+high-priority alert before the prior key was disabled. A second unique event
+was accepted and indexed after retirement, proving production continuity on
+the replacement.
 
 Local production build, application/security lint, 158 unit/frontend tests,
 all three sequential browser E2E journeys, diff integrity, and the production
@@ -42,12 +42,30 @@ account and login session remained intact. Final production
 three active-generation registrations, three with successful-delivery proof,
 zero previous/unknown/retired/inactive registrations, and a fully clear
 outbox. This closes the Web Push key-retirement acceptance boundary without
-clearing the broader incident or `ACTIVE_LAUNCH_HOLD`. Sentry provider audit
-and usage views now also show only the expected rotation actions, 20 accepted
-errors in 14 days, zero filtered, rate-limited, or invalid events, and no
-significant spike. The remaining exit work is final evidence synthesis,
-explicit acceptance of the known historical database/object-storage forensic
-gaps, and a fresh Railway Stage 1 re-review and approval.
+clearing the broader incident or `ACTIVE_LAUNCH_HOLD`.
+
+Available provider evidence is now synthesized. Stripe's seven-day API history
+contains only the expected post-exposure read-only replacement-key proof, no
+post-exposure write/delete request, and no exposure-window financial event.
+Resend shows only the owner-controlled proof email plus an expected denied
+account-read made with the sending-only replacement key. Sentry shows only the
+expected rotation actions, 20 accepted errors in 14 days, zero filtered,
+rate-limited, or invalid events, and no significant spike. Railway records 36
+incident-window deployments and attributes every visible human configuration
+action to its sole workspace administrator; the sequence matches this incident
+record. Neither Resend nor Railway currently protects that sole administrator
+with multi-factor authentication, which remains a follow-up hardening gap.
+
+Railway's custom-range logs and CLI return HTTP rows only for the current
+deployment; removed deployments cannot be reconstructed from the available
+logs. Google OAuth rotation and callback continuity are proven, but the fresh
+production-project activity review still requires the `support@rivt.pro` owner
+profile to reauthenticate. No misuse indicator was found in the available
+evidence, but historical successful PostgreSQL activity, Railway Bucket reads,
+and removed-deployment HTTP traffic cannot be ruled out. The remaining exit
+work is the Google activity review, explicit incident-owner acceptance of the
+known historical database/object-storage forensic gaps, and a fresh Railway
+Stage 1 re-review and approval.
 
 ## Active operational incident - Production credential exposure
 
