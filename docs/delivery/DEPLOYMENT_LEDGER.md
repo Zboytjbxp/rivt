@@ -35,12 +35,27 @@
   healthy, and Web Push configured. The exact-source production monitor passed
   in 543 ms with seven anonymous private routes closed and operational
   controls open.
+- Current exact-source follow-up: Railway deployment
+  `a10eb556-f9ae-4148-83e9-5de1164202a7` serves
+  `df0bda2e592fd4c86c4ad6f30b1d0e191782506b`. A final public health check
+  returned `ok: true`, migration `0042` ready, PostgreSQL and S3-compatible
+  storage healthy, and Web Push configured.
 - Readiness evidence: the first production read-only inventory failed closed
   as designed: two eligible subscriptions remain unknown, zero devices have
   current-generation success proof, and the queue has zero due, stale, stale
   worker-claim, or recently terminal items. An owner-controlled desktop
   session loaded the exact deployment, but device alerts were off there; no
   notification permission or new desktop subscription was silently enabled.
+- Final physical acceptance: owner-controlled Android, iOS 16.7.16, and iOS
+  18.7.8 devices each enabled alerts through the installed RIVT experience,
+  received a real production test alert, opened it, and returned to RIVT.
+  Stale sessions were removed through the supported Security UI. With explicit
+  owner authorization, one separate legacy test-account notification
+  registration was deleted in an exact transaction that also proved the
+  account and login session remained intact. The final read-only inventory
+  returned `ready: true`: eligible/active/successful `3/3/3`,
+  previous/unknown/retired/inactive `0/0/0/0`, and zero due, stale,
+  processing, stale-processing, or recent terminal outbox work.
 - Data/provider boundary: migration `0042` changed schema while preserving
   legacy subscription and queued-outbox rows. Existing legacy rows remain
   `NULL` generation rather than being guessed. No VAPID key, other provider
@@ -53,11 +68,11 @@
   `fc1f80c1d3dc53b3914ba6d9fb763ba4de833ad1`. Migration rollback preserves
   subscriptions but removes generation evidence; no rollback may restore a
   retired previous VAPID key.
-- Launch boundary: physical-device re-registration, explicit real alert
-  receipt/tap, and a post-test inventory showing current-generation success
-  for every eligible device remain open. The incident and
-  `ACTIVE_LAUNCH_HOLD` are not cleared, and Railway Stage 1 must be rebased and
-  re-reviewed before a fresh approval.
+- Launch boundary: the Web Push retirement boundary is closed. The broader
+  incident and `ACTIVE_LAUNCH_HOLD` are not cleared because Sentry
+  replacement-key creation, exact-event/alert proof, and old-key retirement
+  remain open. Railway Stage 1 must still be rebased and re-reviewed before a
+  fresh approval.
 
 ## 2026-07-30 - Sentry Final-Boundary Redaction
 

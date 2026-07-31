@@ -7,15 +7,15 @@ Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.m
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`21e534feef86958f58fda108f26c6184174d346d`
+`df0bda2e592fd4c86c4ad6f30b1d0e191782506b`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
 
 Current incident packet: Web Push generation tracking is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
-`21e534feef86958f58fda108f26c6184174d346d`. Railway deployment
-`9a7d4657-5c2d-4b11-8333-2b210601227c` succeeded with migration
+`df0bda2e592fd4c86c4ad6f30b1d0e191782506b`. Railway deployment
+`a10eb556-f9ae-4148-83e9-5de1164202a7` succeeded with migration
 `0042_push_vapid_generation` ready. Public health returned `ok: true` with
 PostgreSQL and S3-compatible storage healthy and Web Push configured; the
 exact-source production monitor passed in 543 ms. Migration `0042` preserves
@@ -23,22 +23,27 @@ every legacy subscription as unknown, accepts cached clients without a false
 key claim, records the key that actually delivers, and adds a secret-safe
 read-only `push:readiness` gate.
 
-Local production build, application/security lint, 152 unit/frontend tests,
+Local production build, application/security lint, 158 unit/frontend tests,
 all three sequential browser E2E journeys, diff integrity, and the production
 dependency audit pass. GitHub Actions run `30577678020` passed build, lint, all
 152 unit/frontend tests, and all 22 database integration tests against
 PostgreSQL 16. The workflow then stopped only at the intentional
 `ACTIVE_LAUNCH_HOLD`; the complete workflow is therefore not labeled green.
-The first production readiness inventory is also correctly blocked: two
-eligible legacy devices remain unknown, no active current-generation delivery
-has yet been proved, and the queue has no due, stale, or recently terminal
-work. An owner-controlled desktop session was refreshed on the deployed
-source, but device alerts are off on that desktop, so no new permission or
-subscription was silently created. The remaining acceptance boundary is to
-open each opted-in physical device, send and explicitly receive/tap a real
-test alert, and rerun `push:readiness` until every eligible device has
-current-generation success proof. No provider key, payment, object, service,
-bucket, or paid resource was changed by this packet.
+Physical-device acceptance is complete. Owner-controlled Android, iOS
+16.7.16, and iOS 18.7.8 devices each enabled alerts through the installed
+RIVT experience, received a real production test alert, opened it, and
+returned to RIVT. The owner then removed stale sessions through the supported
+Security UI. One remaining pre-tracking Safari registration belonged to a
+separate owner-identified test account; with explicit authorization, an exact
+transaction deleted only that notification registration and proved its
+account and login session remained intact. Final production
+`push:readiness -- --json` reports `ready: true`: three eligible devices,
+three active-generation registrations, three with successful-delivery proof,
+zero previous/unknown/retired/inactive registrations, and a fully clear
+outbox. This closes the Web Push key-retirement acceptance boundary without
+clearing the separate Sentry incident boundary or `ACTIVE_LAUNCH_HOLD`. No
+provider key, payment, object, service, bucket, or paid resource was changed
+by this acceptance work.
 
 ## Active operational incident - Production credential exposure
 
@@ -58,7 +63,8 @@ bucket, or paid resource was changed by this packet.
   active/previous Web Push fallback plus best-effort resubscription for
   existing opted-in clients. That deployment did not yet carry launch-grade
   per-subscription key-retirement tracking; exact-source generation tracking
-  is now deployed as recorded above, while physical-device proof remains open.
+  is now deployed and its three-device physical acceptance is complete as
+  recorded above.
 - Follow-up commit `854eef63b4d169746faf87157aaa9f3c1345329d`
   corrected JSON value replay in logical backup restores. Railway deployment
   prefix `0b020e13` served that exact source and public `/api/health` returned
@@ -151,7 +157,15 @@ bucket, or paid resource was changed by this packet.
   Railway deployment `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded on
   exact source `599c352b3c69592a8afcf1182e73e8ebbce5dfdb`. Secret-safe runtime
   checks report the active pair present and previous pair absent, and the
-  expected-source production monitor passed in 592 ms.
+  expected-source production monitor passed in 592 ms. Exact-source generation
+  tracking later reached physical acceptance on owner-controlled Android,
+  iOS 16.7.16, and iOS 18.7.8 devices. Each received and opened a real
+  production alert. After the narrowly authorized removal of one legacy
+  unclassified test-account registration, the final read-only readiness
+  inventory returned `ready: true` with active/successful `3/3`,
+  previous/unknown/retired `0/0/0`, and no due, stale, processing, or recent
+  terminal outbox work. Web Push no longer blocks the incident exit; Sentry
+  replacement-key proof and retirement remain open.
 - Google OAuth production-project ownership is verified in the provider UI:
   `support@rivt.pro` owns project `rivt-499402`. A final replacement secret is
   installed in Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` on exact source
@@ -193,7 +207,7 @@ bucket, or paid resource was changed by this packet.
   bucket, volume, or production-data mutation was created by this source
   deployment.
 - Current-head verification passes production build, application and security
-  lint, all 152 unit/frontend tests, the full three-journey browser E2E suite,
+  lint, all 158 unit/frontend tests, the full three-journey browser E2E suite,
   diff integrity, and the production dependency audit with zero known
   vulnerabilities. GitHub Actions run `30577678020` passed the real
   PostgreSQL 16 test step with 22 database integration tests; the workflow
