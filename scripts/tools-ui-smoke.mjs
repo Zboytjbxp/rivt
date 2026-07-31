@@ -280,8 +280,11 @@ async function configurePage(page) {
         data: {
           connect: {
             provider: "stripe_connect",
+            accountApiVersion: "v2",
+            dashboardType: "full",
             providerConfigured: true,
             webhookConfigured: true,
+            webhookScopeConfigured: true,
             missing: [],
             connected: true,
             onboardingStatus: "ready",
@@ -289,6 +292,9 @@ async function configurePage(page) {
             chargesEnabled: true,
             payoutsEnabled: true,
             detailsSubmitted: true,
+            accountReady: true,
+            managementAvailable: true,
+            paymentLinksAvailable: true,
             ready: true,
             lastSyncedAt: "2026-07-25T12:00:00.000Z",
           },

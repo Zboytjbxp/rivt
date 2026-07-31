@@ -139,6 +139,7 @@ export interface StripeConnectStatus {
   dashboardType: "express" | "full" | "none" | null;
   providerConfigured: boolean;
   webhookConfigured: boolean;
+  webhookScopeConfigured: boolean;
   missing: string[];
   connected: boolean;
   onboardingStatus: "not_started" | "pending" | "ready" | "restricted";
@@ -146,6 +147,9 @@ export interface StripeConnectStatus {
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
+  accountReady: boolean;
+  managementAvailable: boolean;
+  paymentLinksAvailable: boolean;
   ready: boolean;
   lastSyncedAt: string | null;
 }

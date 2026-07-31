@@ -1,10 +1,12 @@
 import "dotenv/config";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import { evaluateIncidentReadiness, loadIncidentRoutingConfig } from "./incident-readiness-check.js";
 
 const defaultIncidentPath = "docs/operations/incident-routing.json";
 const defaultRecoveryPath = "docs/operations/recovery-policy.json";
+const defaultPaymentProviderPath = "docs/operations/payment-provider-readiness.json";
 const maxEvidenceAgeDays = 30;
 
 function hasValue(value) {
@@ -13,6 +15,25 @@ function hasValue(value) {
 
 function approved(record) {
   return record?.status === "approved" && hasValue(record.approvedBy) && Boolean(record.approvedAt);
+}
+
+function dateValue(value) {
+  const date = new Date(value ?? "");
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+export function paymentProviderConfigurationDigest(policy = {}) {
+  const reviewedConfiguration = {
+    version: policy.version ?? null,
+    status: policy.status ?? null,
+    mode: policy.mode ?? null,
+    featureFlagVerifiedOff: policy.featureFlagVerifiedOff === true,
+    webhookDestinationScope: policy.webhookDestinationScope ?? null,
+    signedDeliveryVerified: policy.signedDeliveryVerified === true,
+    verifiedAt: policy.verifiedAt ?? null,
+    evidence: policy.evidence ?? null,
+  };
+  return crypto.createHash("sha256").update(JSON.stringify(reviewedConfiguration)).digest("hex");
 }
 
 function positiveNumber(value) {
@@ -112,9 +133,92 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
   };
 }
 
-export function evaluateLaunchReadiness({ incidentConfig, recoveryPolicy }, { now = new Date() } = {}) {
+function evaluatePaymentProviderPolicy(policy, { now = new Date() } = {}) {
+  if (policy?.status !== "approved") {
+    return {
+      ok: false,
+      findings: [{
+        code: "PAYMENT_PROVIDER_NOT_APPROVED",
+        message: "Bank payments must be provably disabled or have verified Connected accounts webhook delivery before launch.",
+      }],
+      summary: { status: policy?.status ?? "missing", mode: policy?.mode ?? "unknown" },
+    };
+  }
+
+  const findings = [];
+  if (policy.mode === "disabled") {
+    if (
+      policy.featureFlagVerifiedOff !== true
+      || !withinDays(policy.verifiedAt, maxEvidenceAgeDays, now)
+      || !hasValue(policy.evidence)
+    ) {
+      findings.push({
+        code: "BANK_PAYMENTS_DISABLEMENT_UNVERIFIED",
+        message: "Disabled bank payments require recent evidence that the production feature flag is off.",
+      });
+    }
+  } else if (policy.mode === "enabled") {
+    if (
+      policy.webhookDestinationScope !== "connected_accounts"
+      || policy.signedDeliveryVerified !== true
+      || !withinDays(policy.verifiedAt, maxEvidenceAgeDays, now)
+      || !hasValue(policy.evidence)
+    ) {
+      findings.push({
+        code: "CONNECTED_ACCOUNT_WEBHOOK_UNVERIFIED",
+        message: "Enabled bank payments require recent signed-delivery proof from a Connected accounts Stripe destination.",
+      });
+    }
+  } else {
+    findings.push({
+      code: "PAYMENT_PROVIDER_MODE_INVALID",
+      message: "Bank-payment launch mode must be exactly disabled or enabled.",
+    });
+  }
+
+  const approval = policy.approval;
+  if (!approved(approval)) {
+    findings.push({
+      code: "PAYMENT_PROVIDER_APPROVAL_MISSING",
+      message: "The verified bank-payment launch mode requires named operations approval.",
+    });
+  } else {
+    const approvedAt = dateValue(approval.approvedAt);
+    const verifiedAt = dateValue(policy.verifiedAt);
+    if (
+      !approvedAt
+      || !verifiedAt
+      || approvedAt.getTime() < verifiedAt.getTime()
+      || !withinDays(approval.approvedAt, maxEvidenceAgeDays, now)
+    ) {
+      findings.push({
+        code: "PAYMENT_PROVIDER_APPROVAL_STALE",
+        message: "Bank-payment approval must be current, non-future, and recorded after the provider evidence was verified.",
+      });
+    }
+    if (approval.configurationDigest !== paymentProviderConfigurationDigest(policy)) {
+      findings.push({
+        code: "PAYMENT_PROVIDER_APPROVAL_EVIDENCE_MISMATCH",
+        message: "Bank-payment approval must match the exact reviewed provider mode and evidence.",
+      });
+    }
+  }
+
+  return {
+    ok: findings.length === 0,
+    findings,
+    summary: {
+      status: policy.status,
+      mode: policy.mode,
+      verifiedAt: policy.verifiedAt ?? null,
+    },
+  };
+}
+
+export function evaluateLaunchReadiness({ incidentConfig, recoveryPolicy, paymentProviderPolicy }, { now = new Date() } = {}) {
   const incident = evaluateIncidentReadiness(incidentConfig, { now });
   const recovery = evaluateRecoveryPolicy(recoveryPolicy, { now });
+  const paymentProvider = evaluatePaymentProviderPolicy(paymentProviderPolicy, { now });
   const findings = [
     ...(incidentConfig.launchHold?.active
       ? [{
@@ -127,6 +231,7 @@ export function evaluateLaunchReadiness({ incidentConfig, recoveryPolicy }, { no
       : []),
     ...incident.findings.map((finding) => ({ ...finding, source: "incident" })),
     ...recovery.findings.map((finding) => ({ ...finding, source: "recovery" })),
+    ...paymentProvider.findings.map((finding) => ({ ...finding, source: "payment_provider" })),
   ];
 
   return {
@@ -136,12 +241,17 @@ export function evaluateLaunchReadiness({ incidentConfig, recoveryPolicy }, { no
     summary: {
       incident: incident.summary,
       recovery: recovery.summary,
+      paymentProvider: paymentProvider.summary,
       activeLaunchHold: Boolean(incidentConfig.launchHold?.active),
     },
   };
 }
 
 export function loadRecoveryPolicy(filePath = defaultRecoveryPath) {
+  return JSON.parse(fs.readFileSync(filePath, "utf8"));
+}
+
+export function loadPaymentProviderPolicy(filePath = defaultPaymentProviderPath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
@@ -155,9 +265,11 @@ export async function main(argv = process.argv.slice(2)) {
   const jsonOnly = argv.includes("--json");
   const incidentPath = argValue(argv, "--incident-file", defaultIncidentPath);
   const recoveryPath = argValue(argv, "--recovery-file", defaultRecoveryPath);
+  const paymentProviderPath = argValue(argv, "--payment-provider-file", defaultPaymentProviderPath);
   const result = evaluateLaunchReadiness({
     incidentConfig: loadIncidentRoutingConfig(incidentPath),
     recoveryPolicy: loadRecoveryPolicy(recoveryPath),
+    paymentProviderPolicy: loadPaymentProviderPolicy(paymentProviderPath),
   });
 
   if (jsonOnly || !result.ok) {

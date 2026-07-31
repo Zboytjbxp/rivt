@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { evaluateLaunchReadiness } from "../scripts/launch-readiness-check.js";
+import {
+  evaluateLaunchReadiness,
+  paymentProviderConfigurationDigest,
+} from "../scripts/launch-readiness-check.js";
 
 const readyIncidentConfig = {
   status: "approved",
@@ -61,10 +64,29 @@ const readyRecoveryPolicy = {
   },
 };
 
+const readyPaymentProviderConfiguration = {
+  version: 1,
+  status: "approved",
+  mode: "disabled",
+  featureFlagVerifiedOff: true,
+  verifiedAt: "2026-06-21T12:00:00.000Z",
+  evidence: "Production feature flag read-only snapshot.",
+};
+const readyPaymentProviderPolicy = {
+  ...readyPaymentProviderConfiguration,
+  approval: {
+    status: "approved",
+    approvedBy: "Michael",
+    approvedAt: "2026-06-21T12:00:00.000Z",
+    configurationDigest: paymentProviderConfigurationDigest(readyPaymentProviderConfiguration),
+  },
+};
+
 test("launch readiness passes only when incident and recovery policy evidence are approved", () => {
   const result = evaluateLaunchReadiness({
     incidentConfig: readyIncidentConfig,
     recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: readyPaymentProviderPolicy,
   }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.equal(result.ok, true);
@@ -89,6 +111,7 @@ test("launch readiness reports recovery policy gaps without hiding incident gaps
       latestNamedArtifactRestore: { status: "missing" },
       approvals: {},
     },
+    paymentProviderPolicy: readyPaymentProviderPolicy,
   }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.equal(result.ok, false);
@@ -120,6 +143,7 @@ test("launch readiness rejects future-dated restore evidence", () => {
         completedAt: "2026-07-21T12:00:00.000Z",
       },
     },
+    paymentProviderPolicy: readyPaymentProviderPolicy,
   }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.equal(result.ok, false);
@@ -136,6 +160,7 @@ test("launch readiness fails closed while an explicit incident hold is active", 
       },
     },
     recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: readyPaymentProviderPolicy,
   }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.equal(result.ok, false);
@@ -146,4 +171,148 @@ test("launch readiness fails closed while an explicit incident hold is active", 
     message: "Emergency credential containment remains open.",
     source: "incident",
   }]);
+});
+
+test("launch readiness fails closed when bank-payment launch state is not approved", () => {
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: { status: "blocked", mode: "unknown" },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.findings, [{
+    code: "PAYMENT_PROVIDER_NOT_APPROVED",
+    message: "Bank payments must be provably disabled or have verified Connected accounts webhook delivery before launch.",
+    source: "payment_provider",
+  }]);
+});
+
+test("enabled bank payments require current Connected accounts signed-delivery proof", () => {
+  const enabledConfiguration = {
+    version: 1,
+    status: "approved",
+    mode: "enabled",
+    webhookDestinationScope: "your_account",
+    signedDeliveryVerified: false,
+    verifiedAt: "2026-06-21T12:00:00.000Z",
+    evidence: "Wrong-scope destination observed.",
+  };
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: {
+      ...enabledConfiguration,
+      approval: {
+        ...readyPaymentProviderPolicy.approval,
+        configurationDigest: paymentProviderConfigurationDigest(enabledConfiguration),
+      },
+    },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.findings.map((finding) => finding.code), ["CONNECTED_ACCOUNT_WEBHOOK_UNVERIFIED"]);
+});
+
+test("enabled bank payments pass with current Connected accounts signed-delivery proof", () => {
+  const enabledConfiguration = {
+    version: 1,
+    status: "approved",
+    mode: "enabled",
+    webhookDestinationScope: "connected_accounts",
+    signedDeliveryVerified: true,
+    verifiedAt: "2026-06-21T12:00:00.000Z",
+    evidence: "Signed connected-account event delivery recorded.",
+  };
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: {
+      ...enabledConfiguration,
+      approval: {
+        ...readyPaymentProviderPolicy.approval,
+        configurationDigest: paymentProviderConfigurationDigest(enabledConfiguration),
+      },
+    },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.equal(result.ok, true);
+});
+
+test("bank-payment approval expires even when the provider evidence remains current", () => {
+  const policy = {
+    ...readyPaymentProviderConfiguration,
+    verifiedAt: "2026-06-20T12:00:00.000Z",
+  };
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: {
+      ...policy,
+      approval: {
+        status: "approved",
+        approvedBy: "Michael",
+        approvedAt: "2026-05-20T12:00:00.000Z",
+        configurationDigest: paymentProviderConfigurationDigest(policy),
+      },
+    },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.deepEqual(result.findings.map((finding) => finding.code), ["PAYMENT_PROVIDER_APPROVAL_STALE"]);
+});
+
+test("bank-payment approval cannot predate provider verification", () => {
+  const policy = {
+    ...readyPaymentProviderConfiguration,
+    verifiedAt: "2026-06-21T11:00:00.000Z",
+  };
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: {
+      ...policy,
+      approval: {
+        status: "approved",
+        approvedBy: "Michael",
+        approvedAt: "2026-06-21T10:59:59.000Z",
+        configurationDigest: paymentProviderConfigurationDigest(policy),
+      },
+    },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.deepEqual(result.findings.map((finding) => finding.code), ["PAYMENT_PROVIDER_APPROVAL_STALE"]);
+});
+
+test("bank-payment approval cannot be future-dated", () => {
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: {
+      ...readyPaymentProviderConfiguration,
+      approval: {
+        status: "approved",
+        approvedBy: "Michael",
+        approvedAt: "2026-06-22T12:00:00.000Z",
+        configurationDigest: paymentProviderConfigurationDigest(readyPaymentProviderConfiguration),
+      },
+    },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.deepEqual(result.findings.map((finding) => finding.code), ["PAYMENT_PROVIDER_APPROVAL_STALE"]);
+});
+
+test("bank-payment approval is invalidated when reviewed evidence changes", () => {
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: {
+      ...readyPaymentProviderPolicy,
+      evidence: "A different production snapshot.",
+    },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.deepEqual(
+    result.findings.map((finding) => finding.code),
+    ["PAYMENT_PROVIDER_APPROVAL_EVIDENCE_MISMATCH"],
+  );
 });

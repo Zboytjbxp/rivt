@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "status": "blocked",
+  "mode": "unknown",
+  "featureFlagVerifiedOff": false,
+  "webhookDestinationScope": "your_account",
+  "signedDeliveryVerified": false,
+  "verifiedAt": null,
+  "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-31---packet-87--railway-stage-1-combined-candidate-no-deployment",
+  "approval": {
+    "status": "pending",
+    "approvedBy": "",
+    "approvedAt": null,
+    "configurationDigest": ""
+  },
+  "notes": "Production currently has a Your account Stripe destination. Before launch, either verify STRIPE_CONNECT_ACH_ENABLED is off and approve disabled mode, or create and prove signed delivery from a Connected accounts destination and approve enabled mode."
+}
