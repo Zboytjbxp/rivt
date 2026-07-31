@@ -82,10 +82,11 @@ were also reviewed with no identified misuse indicator. Michael's exact
 `2026-07-31T12:22:03.895Z` statement is preserved in the incident record; later
 review found its blanket provider-review premise incomplete, so only its
 PostgreSQL/direct-bucket historical limitation remains valid closure evidence.
-Google Cloud audit/activity history remains pending, while direct VAPID misuse,
-offline backup-key use, and offline authentication-pepper use are unobservable
-and require separate owner acceptance. The remaining exit work is those named
-provider/owner boundaries plus a fresh Railway Stage 1 re-review and approval.
+The bounded Google Cloud audit/activity review is complete with no identified
+misuse indicator in the queried retained entries. Direct VAPID misuse, offline
+backup-key use, and offline authentication-pepper use remain unobservable and
+require separate owner acceptance. The remaining exit work is those three
+owner decisions plus a fresh Railway Stage 1 re-review and approval.
 
 ## Active operational incident - Production credential exposure
 
@@ -243,10 +244,11 @@ provider/owner boundaries plus a fresh Railway Stage 1 re-review and approval.
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Google OAuth secret rotation is
   complete. The owner statement is preserved verbatim in the incident record;
   its PostgreSQL/direct-bucket historical limitation is the only part used as
-  valid closure evidence. Google audit/activity history, three unobservable-
-  secret decisions,
-  and the fresh Railway Stage 1 review remain open, so the overall incident and
-  launch hold are not cleared.
+  valid closure evidence. The Google Cloud review found no identified misuse
+  indicator within the queried retained audit entries, while explicitly not
+  proving that no OAuth token exchange or unlogged action occurred. Three
+  unobservable-secret decisions and the fresh Railway Stage 1 review remain
+  open, so the overall incident and launch hold are not cleared.
 - The incident-remediation source was fast-forwarded to `master` and Railway
   deployment `e12e66b2-9701-44d6-b57f-8e12fe436738` succeeded on exact commit
   `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`. This activates the final-boundary
@@ -347,10 +349,12 @@ provider/owner boundaries plus a fresh Railway Stage 1 re-review and approval.
   The owner's exact statement is preserved; later review found its blanket
   provider-review premise incomplete, so only its successful-PostgreSQL/direct-
   bucket historical limitation remains valid closure evidence. No claim of no
-  access or no exfiltration is made. Google audit/activity history remains
-  pending, while VAPID, backup-key, and authentication-pepper offline misuse are
-  unobservable and still require explicit owner acceptance. Railway Stage 1
-  re-review also remains open.
+  access or no exfiltration is made. The bounded Google Cloud audit/activity
+  review is complete with no identified misuse indicator in the queried
+  retained entries; it does not prove no OAuth token exchange or action outside
+  logged event types. VAPID, backup-key, and authentication-pepper offline
+  misuse remain unobservable and require explicit owner acceptance. Railway
+  Stage 1 re-review also remains open.
 - Aggregate read-only production money reconciliation from the conservative
   exposure start through the owner-acceptance timestamp found three matching
   controlled rotation-probe rows, no additional application-recorded webhook

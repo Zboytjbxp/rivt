@@ -49,15 +49,27 @@
   retained reviewed window. Matching account/connection identity does not
   prove that valid credentials were never compromised, and this review cannot
   prove an action outside Railway's logged event set.
+- Google Cloud audit/activity follow-up: completed read-only at
+  `2026-07-31T19:32:50.0134267Z` under the founder-controlled support account
+  for project `rivt-499402`. An exact exposure-window Logs Explorer query from
+  `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` returned zero retained
+  entries across the Admin Activity, Data Access, System Event, and Policy
+  Denied log IDs. A separate post-window containment query through
+  `2026-07-30T15:00:00Z` returned nine Client Auth Configuration API events for
+  the same OAuth client: three `AddClientSecret`, three `UpdateClientSecret`,
+  and three `DeleteClientSecret`, all attributed to the founder-controlled
+  support account and consistent with the documented replacement/cleanup
+  sequence. No other actor or method appeared in that query. This bounds only
+  the queried retained audit entries; it does not prove no OAuth code/token
+  exchange, no action outside logged event types, or no historical access, and
+  it does not infer that Data Access logging was complete.
 - Correction: Michael's exact `2026-07-31T12:22:03.895Z` statement is preserved
   in the incident record. Later review found its blanket provider-review premise
   incomplete; only the PostgreSQL/direct-bucket historical limitation remains
   valid closure evidence, and no other blind spot is accepted.
-- Open evidence: Google OAuth credential inventory and controlled callbacks
-  were reviewed, but Google Cloud audit/activity history requires a session
-  authorized for project `rivt-499402`. Direct VAPID misuse, offline backup-key
-  use, and offline authentication-pepper use have no historical provider ledger
-  and need explicit owner decisions.
+- Open evidence: direct VAPID misuse, offline backup-key use, and offline
+  authentication-pepper use have no historical provider ledger and need
+  explicit owner decisions.
 - Launch/cost boundary: `ACTIVE_LAUNCH_HOLD` and the Railway Stage 1 pause remain
   active. No prior cost/configuration approval is reused.
 
@@ -109,9 +121,8 @@
   be restored; any rollback keeps the replacement DSN.
 - Launch boundary: Sentry credential rotation is closed. The broader incident
   and `ACTIVE_LAUNCH_HOLD` remain open. PostgreSQL/direct-bucket historical
-  limits are valid owner-accepted closure evidence; Google audit/activity
-  history, three unobservable-secret decisions, and a fresh Railway Stage 1
-  re-review/approval remain open.
+  limits are valid owner-accepted closure evidence; three unobservable-secret
+  decisions and a fresh Railway Stage 1 re-review/approval remain open.
 
 ## 2026-07-30 - Web Push VAPID Generation Tracking
 

@@ -25,11 +25,10 @@ transcript. The temporary local output file was removed. No secret value is
 included in this record.
 
 No unauthorized use is currently known. The bounded Stripe platform-account
-and configured production destination/delivery views, Resend, Sentry, Railway
-workspace audit/deployment history, application-ledger, and retained PostgreSQL
-evidence reviewed so far contain no identified misuse indicator. Google OAuth
-credential inventory and controlled callbacks were reviewed, but Google Cloud
-audit/activity history has not yet been reviewed.
+and configured production destination/delivery views, Resend, Sentry, Google
+Cloud audit/activity, Railway workspace audit/deployment history, application-
+ledger, and retained PostgreSQL evidence reviewed so far contain no identified
+misuse indicator within their named query and retention bounds.
 Historical
 successful PostgreSQL access and direct bucket reads cannot be reconstructed,
 and several application-generated secrets have no provider audit trail. RIVT
@@ -545,8 +544,10 @@ for the Stripe credential retirements is `2026-07-30T03:08:57Z`; the wider
 application-ledger review continues through the recorded owner-acceptance time
 `2026-07-31T12:22:03.895Z`.
 
-Codex completed this read-only review at `2026-07-31T13:07:24.122Z` under
-Michael's incident authorization against deployed production source
+Codex completed the initial read-only review at `2026-07-31T13:07:24.122Z`,
+the Railway follow-up at `2026-07-31T19:10:46.1221413Z`, and the Google Cloud
+follow-up at `2026-07-31T19:32:50.0134267Z` under Michael's incident
+authorization against deployed production source
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`. No provider setting, credential,
 customer record, payment, deployment, or paid resource was changed. Provider
 identifiers used for the review were the live-mode RIVT Stripe account
@@ -559,7 +560,7 @@ Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
 | Stripe API, Billing, and Connect | Live-mode Workbench request and `Your account` event views, active-key and production-destination inventory, the selected ACH destination's Overview and Event deliveries views, suspicious-activity view, and aggregate read-only production billing/invoice/payment reconciliation | The only API request visible in the bounded incident window was the controlled replacement-key `GET /v1/account` at `2026-07-30T02:55:35Z` (July 29 EDT). No `Your account` event was visible from `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z`, and the suspicious-activity view contained zero cases. The production ACH destination is scoped to `Your account`; no `Connected accounts` destination is configured. Its Event deliveries view reported `No event deliveries found`, and its Overview reported total `0` for `This week`. Within the named aggregate database queries, the only matching event rows were one controlled billing rotation probe and two controlled unknown/no-charge Connect rotation probes; no additional webhook row, recorded billing/invoice audit action, or nonzero reconciliation counter was found. | **Reviewed/bounded for the platform account, current production destination inventory, selected-destination delivery view, and retained application tables.** The absence of a separate `Connected accounts` destination means there was no separate configured destination delivery view to inspect; it is not proof that no Connect-side activity occurred outside retained or logged evidence. |
 | Resend | Available 15-day API/email logs and active-key inventory, reviewed through `2026-07-31T13:07:24.122Z` | The retained window fully covers the incident interval. Its incident-window records are the expected sending-only key restriction check (`401`) and controlled delivery proof. Earlier visible sends predate exposure and are consistent with documented verification/UI tests. Exactly one sending-only replacement key remains. | **Reviewed/bounded.** No unexplained provider activity was found in the available log window. |
 | Sentry | Provider audit log, key inventory, event ingestion, alert proof, and 14-day usage | Only expected replacement-key creation/rename and prior-key disable actions were present; usage showed no significant spike and zero filtered, rate-limited, or invalid events. | **Reviewed/bounded.** An ingestion DSN does not provide proof that it was never copied or attempted elsewhere. |
-| Google OAuth | Credential inventory and controlled callbacks from the rotation plus aggregate read-only application identity/login/transaction reconciliation | The application ledger has zero Google identity creation/update or Google login during the exposure window, zero pending OAuth transactions, and one post-retirement login/update matching the controlled physical sign-in. | **Pending audit/activity review.** The current Google Cloud session is an account without permission to inspect project `rivt-499402`; `support@rivt.pro` must review Google Cloud audit/activity history. |
+| Google OAuth | Credential inventory and controlled callbacks from the rotation; aggregate read-only application identity/login/transaction reconciliation; and Google Cloud Logs Explorer queries under the founder-controlled support account for project `rivt-499402` | The application ledger has zero Google identity creation/update or Google login during the exposure window, zero pending OAuth transactions, and one post-retirement login/update matching the controlled physical sign-in. The exact `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` query returned zero retained entries across the Admin Activity, Data Access, System Event, and Policy Denied log IDs. The post-window query through `2026-07-30T15:00:00Z` returned nine Client Auth Configuration API events for the same OAuth client: three `AddClientSecret`, three `UpdateClientSecret`, and three `DeleteClientSecret`, all attributed to the founder-controlled support account and consistent with the documented replacement/cleanup sequence. No other actor or method appeared in that query. | **Reviewed/bounded for the queried retained audit entries.** Zero matching entries does not prove no OAuth authorization-code or token exchange occurred, no action occurred outside the queried/logged event types, or no historical access occurred. The presence or completeness of Data Access logging is not inferred from the query. |
 | Railway | Pro workspace Audit Logs, paged through the complete `2026-07-29T16:00:00Z` through `2026-07-30T16:00:00Z` filtered view; representative event details; and secret-safe deployment evidence | In the exact `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` exposure window, Railway recorded five `SSHSession.authenticated` events and nine `Deployment.created` events. Every event was attributed to the founder-controlled Railway account; no other actor, variable/configuration change, credential regeneration, service/bucket/volume change, or tunnel event appears in-window. A representative in-window SSH event used the same source IP and SSH-key fingerprint as a controlled July 31 maintenance event, supporting but not proving same-operator attribution. Immediately after the repository upper bound, the same account performed the documented database-password and bucket-credential regenerations. | **Reviewed/bounded for retained workspace actions.** Railway documents that Pro workspace audit logs retain 30 days and cover project/service/deployment/variable/workspace changes. The workspace log does not establish the physical human behind a valid account/key/IP, supply a separate dashboard-login history in this view, or prove that an action outside Railway's logged event set did not occur. |
 | PostgreSQL | Retained platform logs plus aggregate read-only application/payment reconciliation | No authentication failure, `FATAL`, or `PANIC` record was found in the retained reviewed windows; canonical billing, invoice, payment-request, direct-payment, and Connect consistency counters were zero. | **Historical evidence unavailable; owner acceptance recorded.** Successful historical connections, reads, and writes cannot be reconstructed. |
 | Railway Bucket/object storage | Rotation continuity, stable object count/bytes, restore evidence, and controlled existing-object read | Rotation and continuity passed with no known customer-data loss. | **Historical evidence unavailable; owner acceptance recorded for direct reads.** Historical per-object direct reads cannot be reconstructed. |
@@ -568,8 +569,7 @@ Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
 | Authentication metadata pepper | Rotation and runtime/configuration verification | The replacement is active and the old value has no compatibility fallback. | **Unobservable; owner acceptance still required.** There is no provider ledger for offline correlation attempts using the exposed value. |
 
 This table is the synthesis; it is intentionally not marked complete while the
-Google audit/activity review and the three explicit unobservable-secret
-acceptances remain open.
+three explicit unobservable-secret acceptances remain open.
 
 The aggregate database review used a repeatable-read, read-only transaction over
 the named billing, subscription, entitlement, invoice, payment-request,
@@ -597,9 +597,9 @@ state; it is not proof that an action absent from those tables never occurred.
   pepper blind spots; reconstruct missing history; lower the incident severity;
   close the incident; clear `ACTIVE_LAUNCH_HOLD`; authorize deployment; or
   approve paid infrastructure work.
-- Google audit/activity history, the three explicit unobservable-secret
-  acceptances, and a fresh exact-source Railway Stage 1 re-review and approval
-  remain required before incident closure.
+- The three explicit unobservable-secret acceptances and a fresh exact-source
+  Railway Stage 1 re-review and approval remain required before incident
+  closure.
 
 ## Recovery plan
 
