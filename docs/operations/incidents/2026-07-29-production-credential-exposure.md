@@ -24,12 +24,13 @@ returned production environment-variable values into a restricted automation
 transcript. The temporary local output file was removed. No secret value is
 included in this record.
 
-No unauthorized use is currently known. The bounded Stripe platform-account,
-Resend, Sentry, Railway deployment, application-ledger, and retained PostgreSQL
-evidence reviewed so far contains no identified misuse indicator. Google OAuth
-credential inventory and controlled callbacks were reviewed, but Google Cloud
-audit/activity history, Stripe connected-account event history, and Railway
-account/variable administration history have not yet been reviewed. Historical
+No unauthorized use is currently known. The bounded Stripe platform-account
+and configured production destination/delivery views, Resend, Sentry, Railway
+deployment, application-ledger, and retained PostgreSQL evidence reviewed so
+far contain no identified misuse indicator. Google OAuth credential inventory
+and controlled callbacks were reviewed, but Google Cloud audit/activity history
+and Railway account/variable administration history have not yet been reviewed.
+Historical
 successful PostgreSQL access and direct bucket reads cannot be reconstructed,
 and several application-generated secrets have no provider audit trail. RIVT
 therefore cannot prove that no historical access or exfiltration occurred.
@@ -555,7 +556,7 @@ Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
 
 | Credential/provider | Evidence reviewed | Bounded result | Remaining limit/status |
 |---|---|---|---|
-| Stripe API, Billing, and Connect | Live-mode Workbench request view, `Your account` event view, active-key inventory, suspicious-activity view, and aggregate read-only production billing/invoice/payment reconciliation | The only API request visible in the bounded incident window was the controlled replacement-key `GET /v1/account` at `2026-07-30T02:55:35Z` (July 29 EDT). No `Your account` event was visible from `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z`, and the suspicious-activity view contained zero cases. Within the named aggregate database queries, the only matching event rows were one controlled billing rotation probe and two controlled unknown/no-charge Connect rotation probes; no additional webhook row, recorded billing/invoice audit action, or nonzero reconciliation counter was found. | **Reviewed/bounded for the platform account and retained application tables.** The separate `Connected accounts` provider-event scope remains pending. Provider-retained views and application records cannot prove activity outside what those systems retained or logged. |
+| Stripe API, Billing, and Connect | Live-mode Workbench request and `Your account` event views, active-key and production-destination inventory, the selected ACH destination's Overview and Event deliveries views, suspicious-activity view, and aggregate read-only production billing/invoice/payment reconciliation | The only API request visible in the bounded incident window was the controlled replacement-key `GET /v1/account` at `2026-07-30T02:55:35Z` (July 29 EDT). No `Your account` event was visible from `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z`, and the suspicious-activity view contained zero cases. The production ACH destination is scoped to `Your account`; no `Connected accounts` destination is configured. Its Event deliveries view reported `No event deliveries found`, and its Overview reported total `0` for `This week`. Within the named aggregate database queries, the only matching event rows were one controlled billing rotation probe and two controlled unknown/no-charge Connect rotation probes; no additional webhook row, recorded billing/invoice audit action, or nonzero reconciliation counter was found. | **Reviewed/bounded for the platform account, current production destination inventory, selected-destination delivery view, and retained application tables.** The absence of a separate `Connected accounts` destination means there was no separate configured destination delivery view to inspect; it is not proof that no Connect-side activity occurred outside retained or logged evidence. |
 | Resend | Available 15-day API/email logs and active-key inventory, reviewed through `2026-07-31T13:07:24.122Z` | The retained window fully covers the incident interval. Its incident-window records are the expected sending-only key restriction check (`401`) and controlled delivery proof. Earlier visible sends predate exposure and are consistent with documented verification/UI tests. Exactly one sending-only replacement key remains. | **Reviewed/bounded.** No unexplained provider activity was found in the available log window. |
 | Sentry | Provider audit log, key inventory, event ingestion, alert proof, and 14-day usage | Only expected replacement-key creation/rename and prior-key disable actions were present; usage showed no significant spike and zero filtered, rate-limited, or invalid events. | **Reviewed/bounded.** An ingestion DSN does not provide proof that it was never copied or attempted elsewhere. |
 | Google OAuth | Credential inventory and controlled callbacks from the rotation plus aggregate read-only application identity/login/transaction reconciliation | The application ledger has zero Google identity creation/update or Google login during the exposure window, zero pending OAuth transactions, and one post-retirement login/update matching the controlled physical sign-in. | **Pending audit/activity review.** The current Google Cloud session is an account without permission to inspect project `rivt-499402`; `support@rivt.pro` must review Google Cloud audit/activity history. |
@@ -567,9 +568,8 @@ Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
 | Authentication metadata pepper | Rotation and runtime/configuration verification | The replacement is active and the old value has no compatibility fallback. | **Unobservable; owner acceptance still required.** There is no provider ledger for offline correlation attempts using the exposed value. |
 
 This table is the synthesis; it is intentionally not marked complete while the
-Stripe connected-account event review, Google audit/activity review, Railway
-administrator-history review, and the three explicit unobservable-secret
-acceptances remain open.
+Google audit/activity review, Railway administrator-history review, and the
+three explicit unobservable-secret acceptances remain open.
 
 The aggregate database review used a repeatable-read, read-only transaction over
 the named billing, subscription, entitlement, invoice, payment-request,
@@ -597,10 +597,9 @@ state; it is not proof that an action absent from those tables never occurred.
   pepper blind spots; reconstruct missing history; lower the incident severity;
   close the incident; clear `ACTIVE_LAUNCH_HOLD`; authorize deployment; or
   approve paid infrastructure work.
-- Stripe connected-account event history, Google audit/activity history,
-  Railway administrator history, the three explicit unobservable-secret
-  acceptances, and a fresh exact-source Railway Stage 1 re-review and approval
-  remain required before incident closure.
+- Google audit/activity history, Railway administrator history, the three
+  explicit unobservable-secret acceptances, and a fresh exact-source Railway
+  Stage 1 re-review and approval remain required before incident closure.
 
 ## Recovery plan
 
