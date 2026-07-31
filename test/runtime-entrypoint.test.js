@@ -187,6 +187,24 @@ test("web-owned migrate pre-deploy fails closed without DATABASE_URL after a saf
   assert.doesNotMatch(result.output, new RegExp(secretMarker));
 });
 
+test("hosted web fails closed before import when required push is not configured", async () => {
+  const result = await runRuntime({
+    environment: cleanEnvironment({
+      ...healthyConnectionBudget(),
+      RIVT_PROCESS_ROLE: "web",
+      RIVT_PUSH_REQUIRED: "true",
+    }),
+    requestedRole: "web",
+  });
+
+  assert.equal(result.timedOut, false);
+  assert.notEqual(result.code, 0);
+  assert.match(result.output, /runtime\.configuration_ready/);
+  assert.match(result.output, /VAPID provider is not configured/i);
+  assert.doesNotMatch(result.output, /DATABASE_URL is required|server\.started|EADDRINUSE/);
+  assert.doesNotMatch(result.output, new RegExp(secretMarker));
+});
+
 test("local runtime preserves the combined no-role compatibility path", async () => {
   const result = await withReservedPort((port) => runRuntime({
     environment: cleanEnvironment({

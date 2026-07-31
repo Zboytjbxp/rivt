@@ -120,6 +120,7 @@ import { registerCustomerRoutes } from "./customers.js";
 import { registerContactRoutes } from "./contacts.js";
 import { registerMessagingContinuityRoutes } from "./messaging-continuity.js";
 import {
+  assertRequiredPushProvider,
   pushProviderStatus,
   queuePushDeliveries,
   queuePushDeliveriesForNotifications,
@@ -172,6 +173,7 @@ import { assertMigrationsCurrent, migrateUp } from "./migrations.js";
 import {
   assertConnectionBudget,
   assertDatabaseConnectionCeiling,
+  isHostedRuntime,
   processCapabilities,
   resolveProcessRole,
 } from "./process-role.js";
@@ -1110,6 +1112,16 @@ app.get("/api/health", asyncRoute(async (_request, response) => {
   const dependencies = await dependencyHealth();
   const monitoring = errorMonitoringStatus();
   const webPush = pushProviderStatus();
+  let requiredPushReady = true;
+  try {
+    assertRequiredPushProvider(
+      process.env,
+      webPush,
+      { required: isHostedRuntime(process.env) },
+    );
+  } catch {
+    requiredPushReady = false;
+  }
   const invoiceBankPayments = stripeConnectProviderStatus(productionOrigin);
   const passwordScreening = breachedPasswordScreeningStatus();
   const sessionSecurity = authSecurityStatus();
@@ -1117,6 +1129,7 @@ app.get("/api/health", asyncRoute(async (_request, response) => {
     dependenciesOk: dependencies.ok,
     authSecurityOk: sessionSecurity.ok,
     migrationState,
+    requiredProviderOk: requiredPushReady,
   });
 
   response.status(ok ? 200 : 503).json({
