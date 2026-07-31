@@ -185,6 +185,7 @@ const operatorControlDatabaseSchema = z.object({
   workerPoolMax: nullableInteger,
   migratePoolMax: nullableInteger,
   reservedConnections: nullableInteger,
+  oldCombinedPoolMax: nullableInteger,
 }).strict();
 
 const operatorControlReviewSchema = z.object({
@@ -1171,7 +1172,10 @@ export function evaluateRailwayActivationPlan(
       || topology.reservedConnections !== reviewedDatabase.reservedConnections
       || (
         name === "transition"
-        && topology.migratePoolMax !== reviewedDatabase.migratePoolMax
+        && (
+          topology.migratePoolMax !== reviewedDatabase.migratePoolMax
+          || topology.oldCombinedPoolMax !== reviewedDatabase.oldCombinedPoolMax
+        )
       )
     ) {
       add(
