@@ -66,10 +66,11 @@
 - Correction: Michael's exact `2026-07-31T12:22:03.895Z` statement is preserved
   in the incident record. Later review found its blanket provider-review premise
   incomplete; only the PostgreSQL/direct-bucket historical limitation remains
-  valid closure evidence, and no other blind spot is accepted.
-- Open evidence: direct VAPID misuse, offline backup-key use, and offline
-  authentication-pepper use have no historical provider ledger and need
-  explicit owner decisions.
+  valid closure evidence from that first statement.
+- Owner-decision follow-up: at `2026-07-31T19:39:34.5524830Z`, Michael accepted
+  the three unobservable VAPID, offline backup-key, and offline authentication-
+  pepper forensic limits. The exact statement is preserved in the incident
+  record. It does not prove no misuse, authorize deployment, or approve cost.
 - Launch/cost boundary: `ACTIVE_LAUNCH_HOLD` and the Railway Stage 1 pause remain
   active. No prior cost/configuration approval is reused.
 
@@ -121,8 +122,8 @@
   be restored; any rollback keeps the replacement DSN.
 - Launch boundary: Sentry credential rotation is closed. The broader incident
   and `ACTIVE_LAUNCH_HOLD` remain open. PostgreSQL/direct-bucket historical
-  limits are valid owner-accepted closure evidence; three unobservable-secret
-  decisions and a fresh Railway Stage 1 re-review/approval remain open.
+  limits and the three unobservable-secret decisions are valid owner-accepted
+  closure evidence; a fresh Railway Stage 1 re-review/approval remains open.
 
 ## 2026-07-30 - Web Push VAPID Generation Tracking
 

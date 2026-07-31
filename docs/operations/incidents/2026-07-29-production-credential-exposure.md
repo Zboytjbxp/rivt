@@ -486,8 +486,8 @@ moment.
   the most recent isolated CI run remains the 22/22 PostgreSQL integration
   proof recorded above.
 - Sentry credential rotation is complete. The broader incident and
-  `ACTIVE_LAUNCH_HOLD` remain open for the named provider/owner boundaries in
-  the synthesis below and a fresh Railway Stage 1 re-review and approval.
+  `ACTIVE_LAUNCH_HOLD` remain open for a fresh Railway Stage 1 re-review and
+  approval.
 
 ## Bounded access-log review evidence
 
@@ -536,7 +536,7 @@ moment.
   status and remaining blind spots are enumerated below. The incident is not
   represented as proof of no access or no exfiltration.
 
-## Provider-review synthesis (open)
+## Provider-review synthesis (bounded review complete; incident open)
 
 The exposure review window begins at the conservative repository bound
 `2026-07-29T23:01:00Z`. The conservative latest repository-evidence upper bound
@@ -564,12 +564,14 @@ Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
 | Railway | Pro workspace Audit Logs, paged through the complete `2026-07-29T16:00:00Z` through `2026-07-30T16:00:00Z` filtered view; representative event details; and secret-safe deployment evidence | In the exact `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` exposure window, Railway recorded five `SSHSession.authenticated` events and nine `Deployment.created` events. Every event was attributed to the founder-controlled Railway account; no other actor, variable/configuration change, credential regeneration, service/bucket/volume change, or tunnel event appears in-window. A representative in-window SSH event used the same source IP and SSH-key fingerprint as a controlled July 31 maintenance event, supporting but not proving same-operator attribution. Immediately after the repository upper bound, the same account performed the documented database-password and bucket-credential regenerations. | **Reviewed/bounded for retained workspace actions.** Railway documents that Pro workspace audit logs retain 30 days and cover project/service/deployment/variable/workspace changes. The workspace log does not establish the physical human behind a valid account/key/IP, supply a separate dashboard-login history in this view, or prove that an action outside Railway's logged event set did not occur. |
 | PostgreSQL | Retained platform logs plus aggregate read-only application/payment reconciliation | No authentication failure, `FATAL`, or `PANIC` record was found in the retained reviewed windows; canonical billing, invoice, payment-request, direct-payment, and Connect consistency counters were zero. | **Historical evidence unavailable; owner acceptance recorded.** Successful historical connections, reads, and writes cannot be reconstructed. |
 | Railway Bucket/object storage | Rotation continuity, stable object count/bytes, restore evidence, and controlled existing-object read | Rotation and continuity passed with no known customer-data loss. | **Historical evidence unavailable; owner acceptance recorded for direct reads.** Historical per-object direct reads cannot be reconstructed. |
-| Web Push VAPID private key | Rotation, retirement, outbox/readiness state, and three controlled physical-device deliveries | Current registrations and outbox state are clean and all controlled devices delivered through the active generation. | **Unobservable; owner acceptance still required.** There is no provider audit trail proving the exposed private key was not used outside RIVT. |
-| Backup-encryption key | Rotation, previous-key retirement, and controlled restore proofs | Active and retained artifacts restore successfully; the previous key is absent from runtime. | **Unobservable; owner acceptance still required.** Existing evidence cannot prove an encrypted artifact and exposed key were never copied or used offline. |
-| Authentication metadata pepper | Rotation and runtime/configuration verification | The replacement is active and the old value has no compatibility fallback. | **Unobservable; owner acceptance still required.** There is no provider ledger for offline correlation attempts using the exposed value. |
+| Web Push VAPID private key | Rotation, retirement, outbox/readiness state, and three controlled physical-device deliveries | Current registrations and outbox state are clean and all controlled devices delivered through the active generation. | **Unobservable; owner acceptance recorded at `2026-07-31T19:39:34.5524830Z`.** There is no provider audit trail proving the exposed private key was not used outside RIVT. |
+| Backup-encryption key | Rotation, previous-key retirement, and controlled restore proofs | Active and retained artifacts restore successfully; the previous key is absent from runtime. | **Unobservable; owner acceptance recorded at `2026-07-31T19:39:34.5524830Z`.** Existing evidence cannot prove an encrypted artifact and exposed key were never copied or used offline. |
+| Authentication metadata pepper | Rotation and runtime/configuration verification | The replacement is active and the old value has no compatibility fallback. | **Unobservable; owner acceptance recorded at `2026-07-31T19:39:34.5524830Z`.** There is no provider ledger for offline correlation attempts using the exposed value. |
 
-This table is the synthesis; it is intentionally not marked complete while the
-three explicit unobservable-secret acceptances remain open.
+This table completes the bounded provider/forensic review. It does not prove
+that no historical access, exfiltration, token exchange, or offline secret use
+occurred. The incident and launch hold remain open for the exact-source Railway
+Stage 1 re-review and approval.
 
 The aggregate database review used a repeatable-read, read-only transaction over
 the named billing, subscription, entitlement, invoice, payment-request,
@@ -597,9 +599,19 @@ state; it is not proof that an action absent from those tables never occurred.
   pepper blind spots; reconstruct missing history; lower the incident severity;
   close the incident; clear `ACTIVE_LAUNCH_HOLD`; authorize deployment; or
   approve paid infrastructure work.
-- The three explicit unobservable-secret acceptances and a fresh exact-source
-  Railway Stage 1 re-review and approval remain required before incident
-  closure.
+- At `2026-07-31T19:39:34.5524830Z`, incident owner Michael stated: "I accept
+  these three forensic limits: RIVT cannot prove the retired VAPID private key
+  was never used outside RIVT; cannot prove an encrypted backup and retired
+  backup key were never copied and used offline; and cannot prove the retired
+  authentication metadata pepper was never used offline. This acceptance does
+  not prove no misuse occurred and does not authorize deployment or added
+  cost."
+- This second acceptance closes only the three named unobservable-secret owner-
+  decision requirements. It does not reconstruct missing evidence, prove that
+  no misuse occurred, close the incident, clear `ACTIVE_LAUNCH_HOLD`, authorize
+  deployment, or approve cost.
+- A fresh exact-source Railway Stage 1 re-review and approval remains required
+  before incident closure.
 
 ## Recovery plan
 

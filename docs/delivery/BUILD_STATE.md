@@ -2,8 +2,8 @@
 
 Last updated: 2026-07-31 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Production credential containment complete; forensic/provider
-review and local money-integrity containment open; feature activation paused.
+Current phase: Production credential containment and bounded provider review
+complete; local money-integrity containment open; feature activation paused.
 Active packet: `docs/delivery/packets/87_MONEY_INTEGRITY_CONTAINMENT.md`
 Repository branch: `codex/money-integrity-canonical-invoices` from current
 `origin/master`
@@ -11,9 +11,8 @@ Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
-Operational status: launch and Railway Stage 1 are paused while the production
-credential-exposure forensic/provider review and incident exit criteria remain
-open.
+Operational status: launch and Railway Stage 1 are paused while the final fresh
+exact-source Railway Stage 1 re-review and approval remain open.
 
 Current product packet: Packet 87 is implemented locally from exact current
 `origin/master` source
@@ -84,9 +83,11 @@ review found its blanket provider-review premise incomplete, so only its
 PostgreSQL/direct-bucket historical limitation remains valid closure evidence.
 The bounded Google Cloud audit/activity review is complete with no identified
 misuse indicator in the queried retained entries. Direct VAPID misuse, offline
-backup-key use, and offline authentication-pepper use remain unobservable and
-require separate owner acceptance. The remaining exit work is those three
-owner decisions plus a fresh Railway Stage 1 re-review and approval.
+backup-key use, and offline authentication-pepper use remain unobservable; at
+`2026-07-31T19:39:34.5524830Z`, Michael explicitly accepted those three
+forensic limits without claiming no misuse and without authorizing deployment
+or cost. The remaining exit work is a fresh Railway Stage 1 re-review and
+approval.
 
 ## Active operational incident - Production credential exposure
 
@@ -246,9 +247,11 @@ owner decisions plus a fresh Railway Stage 1 re-review and approval.
   its PostgreSQL/direct-bucket historical limitation is the only part used as
   valid closure evidence. The Google Cloud review found no identified misuse
   indicator within the queried retained audit entries, while explicitly not
-  proving that no OAuth token exchange or unlogged action occurred. Three
-  unobservable-secret decisions and the fresh Railway Stage 1 review remain
-  open, so the overall incident and launch hold are not cleared.
+  proving that no OAuth token exchange or unlogged action occurred. Michael's
+  later exact statement accepts the three named unobservable-secret forensic
+  limits without claiming no misuse or authorizing deployment/cost. The fresh
+  Railway Stage 1 review remains open, so the overall incident and launch hold
+  are not cleared.
 - The incident-remediation source was fast-forwarded to `master` and Railway
   deployment `e12e66b2-9701-44d6-b57f-8e12fe436738` succeeded on exact commit
   `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`. This activates the final-boundary
@@ -353,8 +356,9 @@ owner decisions plus a fresh Railway Stage 1 re-review and approval.
   review is complete with no identified misuse indicator in the queried
   retained entries; it does not prove no OAuth token exchange or action outside
   logged event types. VAPID, backup-key, and authentication-pepper offline
-  misuse remain unobservable and require explicit owner acceptance. Railway
-  Stage 1 re-review also remains open.
+  misuse remain unobservable; Michael explicitly accepted those three forensic
+  limits at `2026-07-31T19:39:34.5524830Z` without claiming no misuse or
+  authorizing deployment/cost. Railway Stage 1 re-review remains open.
 - Aggregate read-only production money reconciliation from the conservative
   exposure start through the owner-acceptance timestamp found three matching
   controlled rotation-probe rows, no additional application-recorded webhook
