@@ -552,6 +552,7 @@ if (!testDatabaseUrl) {
         payTo: "Project Electrician",
         terms: "Due on completion",
         paymentMethod: "Direct payment",
+        recipientEmail: contractor.email,
         taxCents: 500,
         lineItems: [
           { description: "Panel labor", quantity: 8, rateCents: 8500, kind: "labor" },
@@ -572,14 +573,100 @@ if (!testDatabaseUrl) {
     });
     assert.equal(contractorInvoiceStatus.response.status, 403);
 
-    const sentInvoice = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}`, {
+    const linkedInvoiceRecord = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-record-${randomUUID()}`,
+      body: {
+        recordType: "invoice_draft",
+        localId: "invoice:closeout-email",
+        title: "CLOSEOUT-001 - project invoice",
+        status: "draft",
+        recordDate: "2026-07-04",
+        amountCents: 69700,
+        activeWorkId: activeWork.id,
+        payload: {
+          invoiceNumber: "CLOSEOUT-001",
+          projectInvoiceId: invoiceId,
+          recipientName: "Project Contractor",
+          recipientEmail: contractor.email,
+          workLabel: "Electrical closeout",
+          issueDate: "2026-07-04",
+          terms: "Due on completion",
+          paymentMethod: "Direct payment",
+          outsidePaymentInstructions: "Arrange payment directly with Project Electrician.",
+          documentFingerprint: "project-invoice-fingerprint-one",
+          customerLines: [
+            { description: "Panel labor", quantity: 8, totalCents: 68000 },
+            { description: "Labels", quantity: 1, totalCents: 1200 },
+          ],
+        },
+      },
+    });
+    assert.equal(linkedInvoiceRecord.response.status, 200);
+
+    clearCapturedEmailMessages();
+    const emailedProjectInvoice = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Acloseout-email/send", {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-email-${randomUUID()}`,
+    });
+    assert.equal(emailedProjectInvoice.response.status, 200);
+    assert.equal(emailedProjectInvoice.payload.data.record.status, "sent");
+    assert.equal((await database.query(
+      "SELECT status FROM project_invoices WHERE id = $1",
+      [invoiceId],
+    )).rows[0].status, "sent");
+    assert.ok(capturedEmailMessages().some((message) => message.to === contractor.email));
+    assert.equal(Number((await database.query(
+      `SELECT count(*) AS count
+       FROM project_entries
+       WHERE project_id = $1
+         AND metadata->>'invoiceId' = $2
+         AND metadata->>'source' = 'project_invoice_email'`,
+      [project.id, invoiceId],
+    )).rows[0].count), 1);
+    assert.equal(Number((await database.query(
+      `SELECT count(*) AS count
+       FROM in_app_notifications
+       WHERE account_id = $1
+         AND source_type = 'project_invoice'
+         AND source_id = $2
+         AND title = 'Invoice recorded'`,
+      [contractor.id, invoiceId],
+    )).rows[0].count), 1);
+    assert.equal(Number((await database.query(
+      `SELECT count(*) AS count
+       FROM audit_events
+       WHERE actor_account_id = $1
+         AND subject_type = 'project_invoice'
+         AND subject_id = $2
+         AND action = 'project.invoice.status_changed'
+         AND metadata->>'source' = 'invoice_email'`,
+      [tradesperson.id, invoiceId],
+    )).rows[0].count), 1);
+    const entriesBeforeSentNoOp = Number((await database.query(
+      `SELECT count(*) AS count
+       FROM project_entries
+       WHERE project_id = $1
+         AND metadata->>'invoiceId' = $2`,
+      [project.id, invoiceId],
+    )).rows[0].count);
+    const sentNoOp = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}`, {
       method: "PATCH",
       cookie: tradesperson.cookie,
-      idempotencyKey: `invoice-sent-${randomUUID()}`,
+      idempotencyKey: `invoice-sent-no-op-${randomUUID()}`,
       body: { status: "sent" },
     });
-    assert.equal(sentInvoice.response.status, 200);
-    assert.equal(sentInvoice.payload.data.invoice.status, "sent");
+    assert.equal(sentNoOp.response.status, 200);
+    assert.equal(sentNoOp.payload.meta.existing, true);
+    assert.equal(Number((await database.query(
+      `SELECT count(*) AS count
+       FROM project_entries
+       WHERE project_id = $1
+         AND metadata->>'invoiceId' = $2`,
+      [project.id, invoiceId],
+    )).rows[0].count), entriesBeforeSentNoOp);
 
     const connectStatus = await requestJson(baseUrl, "/api/v1/payments/connect/status", {
       cookie: tradesperson.cookie,
@@ -693,7 +780,162 @@ if (!testDatabaseUrl) {
     )).rows[0].status, "refunded");
     assert.equal((await database.query("SELECT status FROM project_invoices WHERE id = $1", [invoiceId])).rows[0].status, "sent");
 
-    const partialPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
+    const paymentAfterRefund = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
+      method: "POST",
+      cookie: contractor.cookie,
+      idempotencyKey: `invoice-payment-refunded-${randomUUID()}`,
+      body: { amountCents: 20000, paymentDate: "2026-07-04", method: "Check", note: "Deposit handed over." },
+    });
+    assert.equal(paymentAfterRefund.response.status, 409);
+    assert.equal(paymentAfterRefund.payload.error.code, "INVOICE_PAYMENT_HISTORY_LOCKED");
+
+    const voidAfterRefund = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}`, {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-void-refunded-${randomUUID()}`,
+      body: { status: "void" },
+    });
+    assert.equal(voidAfterRefund.response.status, 409);
+    assert.equal(voidAfterRefund.payload.error.code, "INVOICE_PAYMENT_HISTORY_LOCKED");
+    const draftAfterRefund = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}`, {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-draft-refunded-${randomUUID()}`,
+      body: { status: "draft" },
+    });
+    assert.equal(draftAfterRefund.response.status, 409);
+    assert.equal(draftAfterRefund.payload.error.code, "INVOICE_PAYMENT_HISTORY_LOCKED");
+
+    const orderingInvoice = await requestJson(baseUrl, `/api/v1/active-work/${activeWork.id}/invoices`, {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-ordering-${randomUUID()}`,
+      body: {
+        invoiceNumber: "ORDERING-001",
+        billTo: "Project Contractor LLC",
+        payTo: "Project Electrician",
+        terms: "Due on completion",
+        paymentMethod: "Secure bank payment",
+        recipientEmail: contractor.email,
+        taxCents: 0,
+        lineItems: [{ description: "Ordering test labor", quantity: 1, rateCents: 12500, kind: "labor" }],
+      },
+    });
+    assert.equal(orderingInvoice.response.status, 201);
+    const orderingInvoiceId = orderingInvoice.payload.data.invoice.id;
+    const orderingPaymentIntentId = `pi_ordering_${randomUUID().replaceAll("-", "")}`;
+    const orderingRequest = (await database.query(
+      `INSERT INTO project_invoice_payment_requests (
+         invoice_id, project_id, active_work_id, merchant_account_id,
+         stripe_connected_account_id, stripe_checkout_session_id, stripe_payment_intent_id,
+         amount_cents, status, checkout_url
+       )
+       VALUES ($1, $2, $3, $4, 'acct_test_rivt', $5, $6, 12500, 'open', 'https://checkout.stripe.test/ordering')
+       RETURNING id`,
+      [
+        orderingInvoiceId,
+        project.id,
+        activeWork.id,
+        tradesperson.id,
+        `cs_ordering_${randomUUID().replaceAll("-", "")}`,
+        orderingPaymentIntentId,
+      ],
+    )).rows[0];
+    const refundBeforeSuccess = await sendStripeConnectEvent(baseUrl, {
+      id: `evt_${randomUUID().replaceAll("-", "")}`,
+      type: "charge.refunded",
+      account: "acct_test_rivt",
+      livemode: false,
+      data: {
+        object: {
+          id: `ch_ordering_${randomUUID().replaceAll("-", "")}`,
+          payment_intent: orderingPaymentIntentId,
+          amount: 12500,
+          amount_refunded: 12500,
+          metadata: { payment_request_id: orderingRequest.id },
+        },
+      },
+    });
+    assert.equal(refundBeforeSuccess.response.status, 200);
+    const successAfterRefund = await sendStripeConnectEvent(baseUrl, {
+      id: `evt_${randomUUID().replaceAll("-", "")}`,
+      type: "payment_intent.succeeded",
+      account: "acct_test_rivt",
+      livemode: false,
+      data: { object: { id: orderingPaymentIntentId } },
+    });
+    assert.equal(successAfterRefund.response.status, 200);
+    assert.equal((await database.query(
+      "SELECT status FROM project_invoice_payment_requests WHERE id = $1",
+      [orderingRequest.id],
+    )).rows[0].status, "refunded");
+    assert.equal((await database.query(
+      "SELECT status FROM project_invoices WHERE id = $1",
+      [orderingInvoiceId],
+    )).rows[0].status, "sent");
+
+    const voidTerminalInvoice = await requestJson(baseUrl, `/api/v1/active-work/${activeWork.id}/invoices`, {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-void-terminal-${randomUUID()}`,
+      body: {
+        invoiceNumber: "VOID-TERMINAL-001",
+        billTo: "Project Contractor LLC",
+        payTo: "Project Electrician",
+        terms: "Due on completion",
+        paymentMethod: "Direct payment",
+        recipientEmail: contractor.email,
+        taxCents: 0,
+        lineItems: [{ description: "Voided scope", quantity: 1, rateCents: 5000, kind: "labor" }],
+      },
+    });
+    assert.equal(voidTerminalInvoice.response.status, 201);
+    const voidTerminalInvoiceId = voidTerminalInvoice.payload.data.invoice.id;
+    const voidedInvoice = await requestJson(baseUrl, `/api/v1/project-invoices/${voidTerminalInvoiceId}`, {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-void-${randomUUID()}`,
+      body: { status: "void" },
+    });
+    assert.equal(voidedInvoice.response.status, 200);
+    const reopenVoidedInvoice = await requestJson(baseUrl, `/api/v1/project-invoices/${voidTerminalInvoiceId}`, {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-reopen-void-${randomUUID()}`,
+      body: { status: "draft" },
+    });
+    assert.equal(reopenVoidedInvoice.response.status, 409);
+    assert.equal(reopenVoidedInvoice.payload.error.code, "PROJECT_INVOICE_VOID");
+
+    const replacementInvoice = await requestJson(baseUrl, `/api/v1/active-work/${activeWork.id}/invoices`, {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-replacement-${randomUUID()}`,
+      body: {
+        invoiceNumber: "CLOSEOUT-002",
+        billTo: "Project Contractor LLC",
+        payTo: "Project Electrician",
+        terms: "Due on completion",
+        paymentMethod: "Direct payment",
+        recipientEmail: contractor.email,
+        taxCents: 500,
+        lineItems: [
+          { description: "Replacement panel labor", quantity: 8, rateCents: 8500, kind: "labor" },
+          { description: "Replacement labels", quantity: 1, rateCents: 1200, kind: "material" },
+        ],
+      },
+    });
+    assert.equal(replacementInvoice.response.status, 201);
+    const replacementInvoiceId = replacementInvoice.payload.data.invoice.id;
+    const replacementSent = await requestJson(baseUrl, `/api/v1/project-invoices/${replacementInvoiceId}`, {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      idempotencyKey: `invoice-replacement-sent-${randomUUID()}`,
+      body: { status: "sent" },
+    });
+    assert.equal(replacementSent.response.status, 200);
+
+    const partialPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${replacementInvoiceId}/payments`, {
       method: "POST",
       cookie: contractor.cookie,
       idempotencyKey: `invoice-payment-one-${randomUUID()}`,
@@ -702,8 +944,18 @@ if (!testDatabaseUrl) {
     assert.equal(partialPayment.response.status, 201);
     assert.equal(partialPayment.payload.data.invoice.paidCents, 20000);
     assert.equal(partialPayment.payload.data.invoice.balanceCents, 49700);
+    for (const status of ["draft", "void"]) {
+      const mutationAfterPartialPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${replacementInvoiceId}`, {
+        method: "PATCH",
+        cookie: tradesperson.cookie,
+        idempotencyKey: `invoice-${status}-after-partial-${randomUUID()}`,
+        body: { status },
+      });
+      assert.equal(mutationAfterPartialPayment.response.status, 409);
+      assert.equal(mutationAfterPartialPayment.payload.error.code, "INVOICE_PAYMENT_HISTORY_LOCKED");
+    }
 
-    const excessPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
+    const excessPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${replacementInvoiceId}/payments`, {
       method: "POST",
       cookie: contractor.cookie,
       idempotencyKey: `invoice-payment-excess-${randomUUID()}`,
@@ -712,7 +964,7 @@ if (!testDatabaseUrl) {
     assert.equal(excessPayment.response.status, 422);
     assert.equal(excessPayment.payload.error.code, "PROJECT_PAYMENT_EXCEEDS_INVOICE");
 
-    const finalPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${invoiceId}/payments`, {
+    const finalPayment = await requestJson(baseUrl, `/api/v1/project-invoices/${replacementInvoiceId}/payments`, {
       method: "POST",
       cookie: contractor.cookie,
       idempotencyKey: `invoice-payment-two-${randomUUID()}`,
@@ -724,9 +976,10 @@ if (!testDatabaseUrl) {
 
     const firstReport = await requestJson(baseUrl, `/api/v1/projects/${project.id}/report`, { cookie: contractor.cookie });
     assert.equal(firstReport.response.status, 200);
-    assert.equal(firstReport.payload.data.report.financialRecords.length, 1);
-    assert.equal(firstReport.payload.data.report.financialRecords[0].status, "paid");
-    assert.equal(firstReport.payload.data.report.financialRecords[0].payments.length, 2);
+    assert.equal(firstReport.payload.data.report.financialRecords.length, 4);
+    const paidFinancialRecord = firstReport.payload.data.report.financialRecords.find((record) => record.invoiceNumber === "CLOSEOUT-002");
+    assert.equal(paidFinancialRecord.status, "paid");
+    assert.equal(paidFinancialRecord.payments.length, 2);
     assert.equal(firstReport.payload.data.report.reportVersion, "gate-a-project-closeout-v2");
     assert.equal(firstReport.payload.data.report.workspaceRecords.length, 4);
     assert.equal(firstReport.payload.data.report.workspaceRecords.some((record) => record.id === privateNote.payload.data.record.id), false);

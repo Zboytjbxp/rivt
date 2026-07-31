@@ -182,9 +182,62 @@ test("only settled and unrefunded online funds contribute to invoice paid balanc
 
 test("out-of-order Stripe events cannot regress a settled bank payment", () => {
   assert.equal(stripeConnectInternals.nextPaymentStatus("paid", "processing"), "paid");
+  assert.equal(stripeConnectInternals.nextPaymentStatus("paid", "failed"), "paid");
   assert.equal(stripeConnectInternals.nextPaymentStatus("paid", "disputed"), "disputed");
   assert.equal(stripeConnectInternals.nextPaymentStatus("processing", "paid"), "paid");
   assert.equal(stripeConnectInternals.nextPaymentStatus("expired", "paid"), "expired");
+});
+
+test("consequential refund and dispute events win when Stripe delivers them before success", () => {
+  for (const currentStatus of ["created", "open", "processing"]) {
+    assert.equal(stripeConnectInternals.nextPaymentStatus(currentStatus, "disputed"), "disputed");
+    assert.equal(stripeConnectInternals.nextPaymentStatus(currentStatus, "partially_refunded"), "partially_refunded");
+    assert.equal(stripeConnectInternals.nextPaymentStatus(currentStatus, "refunded"), "refunded");
+  }
+  assert.equal(stripeConnectInternals.nextPaymentStatus("refunded", "paid"), "refunded");
+  assert.equal(stripeConnectInternals.nextPaymentStatus("disputed", "paid"), "disputed");
+});
+
+test("refund events retain the payment-intent lookup used to find the canonical request", () => {
+  assert.deepEqual(stripeConnectInternals.eventPaymentUpdate({
+    type: "charge.refunded",
+    data: {
+      object: {
+        id: "ch_refund_1",
+        payment_intent: "pi_refund_1",
+        amount: 10_000,
+        amount_refunded: 10_000,
+        metadata: { payment_request_id: "6d317040-ffb5-426c-b125-1999753a2763" },
+      },
+    },
+  }), {
+    lookup: { paymentIntentId: "pi_refund_1" },
+    status: "refunded",
+    refundedCents: 10_000,
+  });
+});
+
+test("closed disputes remain locked for an explicit operator-reviewed resolution", () => {
+  assert.equal(stripeConnectInternals.eventPaymentUpdate({
+    type: "charge.dispute.closed",
+    data: {
+      object: {
+        id: "dp_closed_1",
+        payment_intent: "pi_disputed_1",
+        status: "won",
+      },
+    },
+  }), null);
+  assert.equal(stripeConnectInternals.nextPaymentStatus("disputed", "paid"), "disputed");
+});
+
+test("settled, refunded, processing, and disputed invoice payments remain immutable", () => {
+  for (const status of ["processing", "paid", "partially_refunded", "refunded", "disputed"]) {
+    assert.equal(stripeConnectInternals.IMMUTABLE_INVOICE_PAYMENT_STATUSES.has(status), true);
+  }
+  for (const status of ["created", "open", "failed", "expired"]) {
+    assert.equal(stripeConnectInternals.IMMUTABLE_INVOICE_PAYMENT_STATUSES.has(status), false);
+  }
 });
 
 test("Stripe ACH payment links enforce provider amount limits", () => {

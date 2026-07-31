@@ -14,6 +14,13 @@ const STRIPE_ACCOUNT_V2_INCLUDE = [
 ];
 const SETTLED_PAYMENT_STATUSES = new Set(["paid", "partially_refunded"]);
 const ACTIVE_PAYMENT_STATUSES = new Set(["created", "open", "processing"]);
+const IMMUTABLE_INVOICE_PAYMENT_STATUSES = new Set([
+  "processing",
+  "paid",
+  "partially_refunded",
+  "refunded",
+  "disputed",
+]);
 const ACH_MIN_AMOUNT_CENTS = 50;
 const ACH_MAX_AMOUNT_CENTS = 99_999_999;
 const invoiceIdSchema = z.uuid();
@@ -476,6 +483,11 @@ function eventPaymentUpdate(event) {
         },
         status: "disputed",
       };
+    case "charge.dispute.closed":
+      // A closed dispute can represent different financial outcomes. Keep the
+      // invoice locked as disputed until RIVT has a durable operator-reviewed
+      // resolution workflow instead of guessing from this event alone.
+      return null;
     case "charge.refunded": {
       const amount = Number(object.amount ?? 0);
       const refundedCents = Math.max(0, Number(object.amount_refunded ?? 0));
@@ -495,10 +507,13 @@ function eventPaymentUpdate(event) {
 function nextPaymentStatus(currentStatus, requestedStatus) {
   if (currentStatus === requestedStatus) return currentStatus;
   const allowed = {
-    created: new Set(["open", "processing", "paid", "failed", "expired"]),
-    open: new Set(["processing", "paid", "failed", "expired"]),
-    processing: new Set(["paid", "failed", "disputed"]),
-    paid: new Set(["failed", "disputed", "partially_refunded", "refunded"]),
+    // Stripe does not guarantee webhook order. Consequential charge states
+    // must win even if their event arrives before checkout/payment success.
+    created: new Set(["open", "processing", "paid", "failed", "expired", "disputed", "partially_refunded", "refunded"]),
+    open: new Set(["processing", "paid", "failed", "expired", "disputed", "partially_refunded", "refunded"]),
+    processing: new Set(["paid", "failed", "disputed", "partially_refunded", "refunded"]),
+    // A confirmed settlement cannot be erased by a late failure event.
+    paid: new Set(["disputed", "partially_refunded", "refunded"]),
     partially_refunded: new Set(["partially_refunded", "disputed", "refunded"]),
     failed: new Set(),
     expired: new Set(),
@@ -618,8 +633,11 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
     }
 
     const acceptedStatus = nextPaymentStatus(paymentRequest.status, update.status);
+    const acceptedRefundedCents = ["partially_refunded", "refunded"].includes(acceptedStatus)
+      ? Math.max(Number(paymentRequest.refunded_cents ?? 0), Number(update.refundedCents ?? 0))
+      : Number(paymentRequest.refunded_cents ?? 0);
     const stateChanged = acceptedStatus !== paymentRequest.status
-      || Number(update.refundedCents ?? 0) > Number(paymentRequest.refunded_cents ?? 0);
+      || acceptedRefundedCents > Number(paymentRequest.refunded_cents ?? 0);
     const paymentTable = paymentKind === "project"
       ? "project_invoice_payment_requests"
       : "tool_invoice_payment_requests";
@@ -628,8 +646,8 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
        SET status = $2,
            stripe_payment_intent_id = COALESCE($3, stripe_payment_intent_id),
            payment_method_type = COALESCE(payment_method_type, 'us_bank_account'),
-           failure_code = COALESCE($4, failure_code),
-           refunded_cents = GREATEST(refunded_cents, COALESCE($5, refunded_cents)),
+            failure_code = CASE WHEN $2 = 'failed' THEN COALESCE($4, failure_code) ELSE failure_code END,
+            refunded_cents = GREATEST(refunded_cents, $5),
            paid_at = CASE WHEN $2 = 'paid' THEN COALESCE(paid_at, now()) ELSE paid_at END,
            failed_at = CASE WHEN $2 = 'failed' THEN COALESCE(failed_at, now()) ELSE failed_at END,
            disputed_at = CASE WHEN $2 = 'disputed' THEN COALESCE(disputed_at, now()) ELSE disputed_at END,
@@ -641,8 +659,8 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
         paymentRequest.id,
         acceptedStatus,
         update.paymentIntentId ?? null,
-        update.failureCode ?? null,
-        update.refundedCents ?? null,
+        acceptedStatus === "failed" ? update.failureCode ?? null : null,
+        acceptedRefundedCents,
       ],
     );
     const nextRequest = updatedRequest.rows[0];
@@ -994,6 +1012,30 @@ export function registerStripeConnectRoutes({
         if (record.status === "paid") {
           throw new ApiError(409, "TOOL_INVOICE_ALREADY_PAID", "This invoice is already marked paid.");
         }
+        const immutablePayment = (await client.query(
+          `SELECT status
+           FROM tool_invoice_payment_requests
+           WHERE tool_record_id = $1
+             AND status = ANY($2::text[])
+           ORDER BY created_at DESC
+           LIMIT 1
+           FOR UPDATE`,
+          [record.id, [...IMMUTABLE_INVOICE_PAYMENT_STATUSES]],
+        )).rows[0] ?? null;
+        if (immutablePayment?.status === "processing") {
+          throw new ApiError(
+            409,
+            "BANK_PAYMENT_PROCESSING",
+            "This ACH payment is processing. Wait for it to settle or fail before creating another payment request.",
+          );
+        }
+        if (immutablePayment) {
+          throw new ApiError(
+            409,
+            "INVOICE_PAYMENT_HISTORY_LOCKED",
+            "This invoice already has bank-payment history. Start a new invoice for a correction or additional amount.",
+          );
+        }
         const activeRequest = await client.query(
           `SELECT *
            FROM tool_invoice_payment_requests
@@ -1237,6 +1279,37 @@ export function registerStripeConnectRoutes({
           throw new ApiError(403, "PROJECT_INVOICE_AUTHOR_REQUIRED", "Only the invoice author can create its bank-payment link.");
         }
         if (invoice.status === "void") throw new ApiError(409, "PROJECT_INVOICE_VOID", "A void invoice cannot accept a bank payment.");
+        const immutablePayment = await client.query(
+          `SELECT id, status
+           FROM project_invoice_payment_requests
+           WHERE invoice_id = $1
+              AND status = ANY($2::text[])
+            ORDER BY created_at DESC
+            LIMIT 1`,
+          [invoiceId, [...IMMUTABLE_INVOICE_PAYMENT_STATUSES]],
+        );
+        if (immutablePayment.rowCount) {
+          const immutableStatus = immutablePayment.rows[0].status;
+          if (immutableStatus === "processing") {
+            throw new ApiError(
+              409,
+              "BANK_PAYMENT_PROCESSING",
+              "A bank payment is processing. Wait for Stripe to confirm it before creating another payment request.",
+            );
+          }
+          if (immutableStatus === "disputed") {
+            throw new ApiError(
+              409,
+              "BANK_PAYMENT_DISPUTED",
+              "This invoice has an unresolved bank-payment dispute. Resolve it before creating another payment request.",
+            );
+          }
+          throw new ApiError(
+            409,
+            "INVOICE_PAYMENT_HISTORY_LOCKED",
+            "This invoice has settled or refunded bank-payment history. Keep it unchanged and create a new invoice for any new amount.",
+          );
+        }
         const paidCents = await invoicePaidCents(client, invoiceId);
         const balanceCents = Math.max(0, Number(invoice.total_cents) - paidCents);
         if (!balanceCents || invoice.status === "paid") {
@@ -1251,6 +1324,20 @@ export function registerStripeConnectRoutes({
         );
         if (activeRequest.rowCount) {
           const existing = activeRequest.rows[0];
+          if (Number(existing.amount_cents) !== balanceCents) {
+            if (existing.status === "processing") {
+              throw new ApiError(
+                409,
+                "BANK_PAYMENT_PROCESSING",
+                "A bank payment is processing. Wait for it to settle or fail before changing this invoice balance.",
+              );
+            }
+            throw new ApiError(
+              409,
+              "BANK_PAYMENT_AMOUNT_CHANGED",
+              "The invoice balance changed. Cancel the existing bank-payment link before creating another.",
+            );
+          }
           return {
             status: 200,
             body: {
@@ -1336,14 +1423,6 @@ export function registerStripeConnectRoutes({
            RETURNING *`,
           [paymentRequest.id, session.id, session.url, Number(session.expires_at)],
         )).rows[0];
-        await client.query(
-          `UPDATE project_invoices
-           SET status = CASE WHEN status = 'draft' THEN 'sent' ELSE status END,
-               sent_at = COALESCE(sent_at, now()),
-               updated_at = now()
-           WHERE id = $1`,
-          [invoice.id],
-        );
         await client.query(
           `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
            VALUES ($1, $2, $3, 'project.invoice.bank_payment_link_created', 'project_invoice_payment_request', $4, $5::jsonb)`,
@@ -1444,18 +1523,62 @@ export function registerStripeConnectRoutes({
   app.get("/pay/:requestId", preventPaymentResponseCaching, publicPaymentRateLimit, asyncRoute(async (request, response) => {
     const requestId = validate(z.uuid(), request.params.requestId);
     const result = await database.query(
-      `SELECT status, checkout_url, stripe_checkout_session_id
-       FROM project_invoice_payment_requests
-       WHERE id = $1
+      `SELECT pir.status, pir.checkout_url, pir.stripe_checkout_session_id,
+              (
+                pi.id IS NOT NULL
+                AND pi.status <> 'void'
+                AND (
+                  pir.status NOT IN ('created', 'open', 'processing')
+                  OR pir.amount_cents = GREATEST(
+                    0,
+                    pi.total_cents
+                      - COALESCE((
+                        SELECT sum(payment.amount_cents)
+                        FROM project_invoice_payments payment
+                        WHERE payment.invoice_id = pi.id
+                      ), 0)
+                      - COALESCE((
+                        SELECT sum(
+                          CASE WHEN settled.status IN ('paid', 'partially_refunded')
+                            THEN settled.amount_cents - settled.refunded_cents
+                            ELSE 0
+                          END
+                        )
+                        FROM project_invoice_payment_requests settled
+                        WHERE settled.invoice_id = pi.id
+                      ), 0)
+                  )
+                )
+              ) AS invoice_valid
+       FROM project_invoice_payment_requests pir
+       LEFT JOIN project_invoices pi ON pi.id = pir.invoice_id
+       WHERE pir.id = $1
        UNION ALL
-       SELECT status, checkout_url, stripe_checkout_session_id
-       FROM tool_invoice_payment_requests
-       WHERE id = $1
+       SELECT tipr.status, tipr.checkout_url, tipr.stripe_checkout_session_id,
+              (
+                tr.id IS NOT NULL
+                AND tr.deleted_at IS NULL
+                AND tr.record_type = 'invoice_draft'
+                AND (
+                  tipr.status NOT IN ('created', 'open', 'processing')
+                  OR tipr.amount_cents = tr.amount_cents
+                )
+              ) AS invoice_valid
+       FROM tool_invoice_payment_requests tipr
+       LEFT JOIN tool_records tr ON tr.id = tipr.tool_record_id
+       WHERE tipr.id = $1
        LIMIT 1`,
       [requestId],
     );
     const payment = result.rows[0];
     if (!payment) throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
+    if (!payment.invoice_valid) {
+      throw new ApiError(
+        409,
+        "INVOICE_PAYMENT_OUT_OF_DATE",
+        "This payment link no longer matches the current invoice. Ask the sender for an updated invoice.",
+      );
+    }
     if (["created", "open"].includes(payment.status)
       && typeof payment.checkout_url === "string"
       && payment.checkout_url.startsWith("https://checkout.stripe.com/")) {
@@ -1525,6 +1648,7 @@ export function registerStripeConnectRoutes({
 
 export const stripeConnectInternals = {
   ACTIVE_PAYMENT_STATUSES,
+  IMMUTABLE_INVOICE_PAYMENT_STATUSES,
   ACH_MAX_AMOUNT_CENTS,
   ACH_MIN_AMOUNT_CENTS,
   SETTLED_PAYMENT_STATUSES,

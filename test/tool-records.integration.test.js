@@ -83,6 +83,16 @@ if (!testDatabaseUrl) {
     return account;
   }
 
+  async function createUnverifiedAccount(baseUrl, role, label) {
+    const email = `${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${randomUUID()}@example.test`;
+    const signup = await requestJson(baseUrl, "/api/v1/auth/signup", {
+      method: "POST",
+      body: { email, password: "SafePassword!1234", displayName: label, role },
+    });
+    assert.equal(signup.response.status, 201);
+    return { email, cookie: sessionCookie(signup.response) };
+  }
+
   test("tool records are server-owned", async (context) => {
     await ensureDatabaseReady();
     clearCapturedEmailMessages();
@@ -97,6 +107,32 @@ if (!testDatabaseUrl) {
 
     const owner = await createAccount(baseUrl, "contractor", "Tool Records Owner");
     const other = await createAccount(baseUrl, "contractor", "Tool Records Other");
+    const unverified = await createUnverifiedAccount(baseUrl, "contractor", "Unverified Delivery Actor");
+    const ownerAccount = await database.query(
+      "SELECT account_id AS id FROM auth_identities WHERE lower(email) = lower($1) LIMIT 1",
+      [owner.email],
+    );
+    assert.equal(ownerAccount.rowCount, 1);
+    await database.query(
+      `UPDATE accounts
+       SET status = 'active', updated_at = now()
+       WHERE id = (
+         SELECT account_id FROM auth_identities WHERE lower(email) = lower($1) LIMIT 1
+       )`,
+      [unverified.email],
+    );
+    for (const path of [
+      "/api/v1/estimates/nonexistent/send",
+      "/api/v1/invoices/nonexistent/send",
+    ]) {
+      const unverifiedDelivery = await requestJson(baseUrl, path, {
+        method: "POST",
+        cookie: unverified.cookie,
+        idempotencyKey: randomUUID(),
+      });
+      assert.equal(unverifiedDelivery.response.status, 403);
+      assert.equal(unverifiedDelivery.payload.error.code, "EMAIL_VERIFICATION_REQUIRED");
+    }
 
     const anonymousBrand = await requestJson(baseUrl, "/api/v1/document-brand");
     assert.equal(anonymousBrand.response.status, 401);
@@ -183,49 +219,10 @@ if (!testDatabaseUrl) {
         payload: { id: "invoice-one", jobId: "", jobTitle: "Panel trim invoice", invoiceDate: "2026-07-03", invoiceAmount: 1250, status: "invoiced" },
       },
     });
-    assert.equal(missingKey.response.status, 400);
-    assert.equal(missingKey.payload.error.code, "IDEMPOTENCY_KEY_REQUIRED");
+    assert.equal(missingKey.response.status, 410);
+    assert.equal(missingKey.payload.error.code, "PAYMENT_RECORD_RETIRED");
 
-    const idempotencyKey = randomUUID();
-    const created = await requestJson(baseUrl, "/api/v1/tool-records", {
-      method: "POST",
-      cookie: owner.cookie,
-      idempotencyKey,
-      body: {
-        recordType: "payment_record",
-        localId: "invoice-one",
-        title: "Panel trim invoice",
-        status: "invoiced",
-        recordDate: "2026-07-03",
-        amountCents: 125000,
-        payload: { id: "invoice-one", jobId: "", jobTitle: "Panel trim invoice", invoiceDate: "2026-07-03", invoiceAmount: 1250, status: "invoiced" },
-      },
-    });
-    assert.equal(created.response.status, 200);
-    assert.equal(created.payload.data.record.recordType, "payment_record");
-    assert.equal(created.payload.data.record.localId, "invoice-one");
-    assert.equal(created.payload.data.record.amountCents, 125000);
-    assert.equal(created.payload.data.record.payload.jobTitle, "Panel trim invoice");
-
-    const replay = await requestJson(baseUrl, "/api/v1/tool-records", {
-      method: "POST",
-      cookie: owner.cookie,
-      idempotencyKey,
-      body: {
-        recordType: "payment_record",
-        localId: "invoice-one",
-        title: "Panel trim invoice",
-        status: "invoiced",
-        recordDate: "2026-07-03",
-        amountCents: 125000,
-        payload: { id: "invoice-one", jobId: "", jobTitle: "Panel trim invoice", invoiceDate: "2026-07-03", invoiceAmount: 1250, status: "invoiced" },
-      },
-    });
-    assert.equal(replay.response.status, 200);
-    assert.equal(replay.response.headers.get("idempotent-replayed"), "true");
-    assert.equal(replay.payload.data.record.id, created.payload.data.record.id);
-
-    const updated = await requestJson(baseUrl, "/api/v1/tool-records", {
+    const retiredPaymentWrite = await requestJson(baseUrl, "/api/v1/tool-records", {
       method: "POST",
       cookie: owner.cookie,
       idempotencyKey: randomUUID(),
@@ -248,9 +245,27 @@ if (!testDatabaseUrl) {
         },
       },
     });
-    assert.equal(updated.response.status, 200);
-    assert.equal(updated.payload.data.record.id, created.payload.data.record.id);
-    assert.equal(updated.payload.data.record.status, "paid");
+    assert.equal(retiredPaymentWrite.response.status, 410);
+    assert.equal(retiredPaymentWrite.payload.error.code, "PAYMENT_RECORD_RETIRED");
+
+    await database.query(
+      `INSERT INTO tool_records (
+         account_id, record_type, local_id, title, status, record_date, amount_cents, payload
+       )
+       VALUES ($1, 'payment_record', 'invoice-one', 'Panel trim invoice', 'paid',
+         '2026-07-03'::date, 125000, $2::jsonb)`,
+      [
+        ownerAccount.rows[0].id,
+        JSON.stringify({
+          id: "invoice-one",
+          jobTitle: "Panel trim invoice",
+          invoiceDate: "2026-07-03",
+          invoiceAmount: 1250,
+          paidAmount: 1250,
+          status: "paid",
+        }),
+      ],
+    );
 
     const list = await requestJson(baseUrl, "/api/v1/tool-records?type=payment_record", { cookie: owner.cookie });
     assert.equal(list.response.status, 200);
@@ -304,11 +319,6 @@ if (!testDatabaseUrl) {
     });
     assert.equal(freeExport.status, 403);
 
-    const ownerAccount = await database.query(
-      "SELECT account_id AS id FROM auth_identities WHERE lower(email) = lower($1) LIMIT 1",
-      [owner.email],
-    );
-    assert.equal(ownerAccount.rowCount, 1);
     await database.query(
       `INSERT INTO billing_entitlements (account_id, plan, status, source, active_until)
        VALUES ($1, 'pro', 'active', 'stripe', now() + interval '30 days')
@@ -643,6 +653,70 @@ if (!testDatabaseUrl) {
     });
     assert.equal(otherCannotSendEstimate.response.status, 404);
 
+    const forgedPaidInvoice = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "invoice_draft",
+        localId: "invoice:forged-paid",
+        title: "Forged paid invoice",
+        status: "paid",
+        recordDate: "2026-07-14",
+        amountCents: 10000,
+        payload: { invoiceNumber: "FORGED-PAID" },
+      },
+    });
+    assert.equal(forgedPaidInvoice.response.status, 422);
+    assert.equal(forgedPaidInvoice.payload.error.code, "INVOICE_STATUS_SERVER_OWNED");
+
+    const forgedServerPayload = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "invoice_draft",
+        localId: "invoice:forged-server-payload",
+        title: "Forged server payload",
+        status: "sent",
+        recordDate: "2026-07-14",
+        amountCents: 10000,
+        payload: {
+          invoiceNumber: "FORGED-PAYLOAD",
+          delivery: { status: "sent", providerMessageId: "invented" },
+          bankPayment: { status: "paid", amountCents: 10000 },
+        },
+      },
+    });
+    assert.equal(forgedServerPayload.response.status, 200);
+    assert.equal(forgedServerPayload.payload.data.record.status, "draft");
+    assert.equal(forgedServerPayload.payload.data.record.payload.delivery, undefined);
+    assert.equal(forgedServerPayload.payload.data.record.payload.bankPayment, undefined);
+    await database.query(
+      `UPDATE tool_records
+       SET status = 'sent', updated_at = now()
+       WHERE account_id = $1
+         AND record_type = 'invoice_draft'
+         AND local_id = 'invoice:forged-server-payload'`,
+      [ownerAccount.rows[0].id],
+    );
+    const normalizeLegacyForgedSent = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "invoice_draft",
+        localId: "invoice:forged-server-payload",
+        title: "Forged server payload",
+        status: "sent",
+        recordDate: "2026-07-14",
+        amountCents: 10000,
+        payload: { invoiceNumber: "FORGED-PAYLOAD" },
+      },
+    });
+    assert.equal(normalizeLegacyForgedSent.response.status, 200);
+    assert.equal(normalizeLegacyForgedSent.payload.data.record.status, "draft");
+
     const deliveryInvoice = await requestJson(baseUrl, "/api/v1/tool-records", {
       method: "POST",
       cookie: owner.cookie,
@@ -725,6 +799,74 @@ if (!testDatabaseUrl) {
     assert.equal(missingPublicPayment.headers.get("cache-control"), "no-store");
     assert.equal(missingPublicPayment.headers.get("pragma"), "no-cache");
 
+    const changedInvoiceWithActiveLink = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        ...deliveryInvoice.payload.data.record,
+        recordType: "invoice_draft",
+        localId: "invoice:email-one",
+        title: "Kitchen cabinet invoice",
+        status: "draft",
+        recordDate: "2026-07-14",
+        amountCents: 248600,
+        payload: deliveryInvoice.payload.data.record.payload,
+      },
+    });
+    assert.equal(changedInvoiceWithActiveLink.response.status, 409);
+    assert.equal(changedInvoiceWithActiveLink.payload.error.code, "BANK_PAYMENT_AMOUNT_CHANGED");
+
+    const deleteInvoiceWithActiveLink = await requestJson(baseUrl, "/api/v1/tool-records/invoice_draft/invoice%3Aemail-one", {
+      method: "DELETE",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(deleteInvoiceWithActiveLink.response.status, 409);
+    assert.equal(deleteInvoiceWithActiveLink.payload.error.code, "BANK_PAYMENT_LINK_ACTIVE");
+
+    await database.query(
+      "UPDATE tool_invoice_payment_requests SET amount_cents = 248400 WHERE id = $1",
+      [toolPaymentRequestId],
+    );
+    const stalePublicPay = await fetch(`${baseUrl}/pay/${toolPaymentRequestId}`, { redirect: "manual" });
+    assert.equal(stalePublicPay.status, 409);
+    const staleInvoiceSend = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(staleInvoiceSend.response.status, 409);
+    assert.equal(staleInvoiceSend.payload.error.code, "INVOICE_PAYMENT_AMOUNT_MISMATCH");
+    await database.query(
+      "UPDATE tool_invoice_payment_requests SET amount_cents = 248500 WHERE id = $1",
+      [toolPaymentRequestId],
+    );
+    await database.query(
+      "UPDATE tool_invoice_payment_requests SET status = 'processing' WHERE id = $1",
+      [toolPaymentRequestId],
+    );
+    const editWhileProcessing = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "invoice_draft",
+        localId: "invoice:email-one",
+        title: "Kitchen cabinet invoice",
+        status: "draft",
+        recordDate: "2026-07-14",
+        amountCents: 248500,
+        payload: deliveryInvoice.payload.data.record.payload,
+      },
+    });
+    assert.equal(editWhileProcessing.response.status, 409);
+    assert.equal(editWhileProcessing.payload.error.code, "BANK_PAYMENT_PROCESSING");
+    await database.query(
+      "UPDATE tool_invoice_payment_requests SET status = 'open' WHERE id = $1",
+      [toolPaymentRequestId],
+    );
+
     const invalidDeliveryInvoice = await requestJson(baseUrl, "/api/v1/tool-records", {
       method: "POST",
       cookie: owner.cookie,
@@ -751,11 +893,24 @@ if (!testDatabaseUrl) {
 
     clearCapturedEmailMessages();
     const invoiceSendKey = randomUUID();
-    const sentInvoice = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
-      method: "POST",
-      cookie: owner.cookie,
-      idempotencyKey: invoiceSendKey,
-    });
+    const concurrentInvoiceSends = await Promise.all([
+      requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
+        method: "POST",
+        cookie: owner.cookie,
+        idempotencyKey: invoiceSendKey,
+      }),
+      requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
+        method: "POST",
+        cookie: owner.cookie,
+        idempotencyKey: randomUUID(),
+      }),
+    ]);
+    assert.deepEqual(concurrentInvoiceSends.map((result) => result.response.status), [200, 200]);
+    const sentInvoice = concurrentInvoiceSends.find((result) => result.payload.data.replayed === false);
+    const concurrentInvoiceReplay = concurrentInvoiceSends.find((result) => result.payload.data.replayed === true);
+    assert.ok(sentInvoice);
+    assert.ok(concurrentInvoiceReplay);
+    assert.equal(concurrentInvoiceReplay.response.headers.get("idempotent-replayed"), "true");
     assert.equal(sentInvoice.response.status, 200);
     assert.equal(sentInvoice.payload.data.record.status, "sent");
     assert.equal(sentInvoice.payload.data.record.payload.delivery.status, "sent");
@@ -778,6 +933,7 @@ if (!testDatabaseUrl) {
     assert.match(deliveredInvoice.html, /CBC-12345/);
     assert.match(deliveredInvoice.html, /Created with RIVT\./);
     assert.match(deliveredInvoice.html, /background:#151515/);
+    assert.match(deliveredInvoice.idempotencyKey, new RegExp(`^invoice-${invoiceRecord.rows[0].id}-[a-f0-9]{64}$`));
 
     const invoiceReplay = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
       method: "POST",
@@ -788,12 +944,86 @@ if (!testDatabaseUrl) {
     assert.equal(invoiceReplay.response.headers.get("idempotent-replayed"), "true");
     assert.equal(capturedEmailMessages().filter((message) => message.to === "jordan.client@example.test").length, 1);
 
+    // Simulate a successful send whose HTTP response was lost, followed by the
+    // client's unchanged autosave using its older draft view. Server delivery
+    // truth must keep the record sent.
+    const autosaveAfterLostResponse = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        ...deliveryInvoice.payload.data.record,
+        recordType: "invoice_draft",
+        status: "draft",
+        payload: deliveryInvoice.payload.data.record.payload,
+      },
+    });
+    assert.equal(autosaveAfterLostResponse.response.status, 200);
+    assert.equal(autosaveAfterLostResponse.payload.data.record.status, "sent");
+    assert.equal(autosaveAfterLostResponse.payload.data.record.payload.delivery.status, "sent");
+    const identicalDocumentReplay = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(identicalDocumentReplay.response.status, 200);
+    assert.equal(identicalDocumentReplay.response.headers.get("idempotent-replayed"), "true");
+    assert.equal(identicalDocumentReplay.payload.data.replayed, true);
+    assert.equal(identicalDocumentReplay.payload.data.record.status, "sent");
+    assert.equal(identicalDocumentReplay.payload.meta.replayReason, "identical_document");
+    assert.equal(capturedEmailMessages().filter((message) => message.to === "jordan.client@example.test").length, 1);
+
     const otherCannotSendInvoice = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
       method: "POST",
       cookie: other.cookie,
       idempotencyKey: randomUUID(),
     });
     assert.equal(otherCannotSendInvoice.response.status, 404);
+
+    await database.query(
+      "UPDATE tool_invoice_payment_requests SET status = 'paid', paid_at = now() WHERE id = $1",
+      [toolPaymentRequestId],
+    );
+    await database.query(
+      "UPDATE tool_records SET status = 'paid', updated_at = now() WHERE id = $1",
+      [invoiceRecord.rows[0].id],
+    );
+    const settledPublicPay = await fetch(`${baseUrl}/pay/${toolPaymentRequestId}`, { redirect: "manual" });
+    assert.equal(settledPublicPay.status, 303);
+    assert.match(settledPublicPay.headers.get("location") ?? "", /\/payment\/complete/);
+
+    const editPaidInvoice = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "invoice_draft",
+        localId: "invoice:email-one",
+        title: "Kitchen cabinet invoice",
+        status: "draft",
+        recordDate: "2026-07-14",
+        amountCents: 248600,
+        payload: deliveryInvoice.payload.data.record.payload,
+      },
+    });
+    assert.equal(editPaidInvoice.response.status, 409);
+    assert.equal(editPaidInvoice.payload.error.code, "INVOICE_PAYMENT_HISTORY_LOCKED");
+
+    const resendPaidInvoice = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(resendPaidInvoice.response.status, 409);
+    assert.equal(resendPaidInvoice.payload.error.code, "INVOICE_PAYMENT_HISTORY_LOCKED");
+
+    const deletePaidInvoice = await requestJson(baseUrl, "/api/v1/tool-records/invoice_draft/invoice%3Aemail-one", {
+      method: "DELETE",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(deletePaidInvoice.response.status, 409);
+    assert.equal(deletePaidInvoice.payload.error.code, "INVOICE_PAYMENT_HISTORY_LOCKED");
 
     const projectAlbum = await requestJson(baseUrl, "/api/v1/albums", {
       method: "POST",

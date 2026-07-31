@@ -184,6 +184,45 @@ test("invoice delivery refuses to advertise bank payment without a current link"
   );
 });
 
+test("invoice provider identity is stable for identical rendered content", () => {
+  const delivery = {
+    to: "Jordan@Example.Test",
+    subject: "Invoice INV-100",
+    text: "Total due: $125.00",
+    html: "<strong>Total due: $125.00</strong>",
+    attachments: [{ filename: "logo.png", content: "base64-logo" }],
+  };
+  const first = toolRecordInternals.stableDeliveryContentHash(delivery);
+  const repeated = toolRecordInternals.stableDeliveryContentHash({
+    ...delivery,
+    to: "jordan@example.test",
+  });
+  const changed = toolRecordInternals.stableDeliveryContentHash({
+    ...delivery,
+    text: "Total due: $126.00",
+  });
+  assert.match(first, /^[a-f0-9]{64}$/);
+  assert.equal(repeated, first);
+  assert.notEqual(changed, first);
+});
+
+test("invoice browser payload cannot supply server-owned delivery or payment truth", () => {
+  const cleaned = toolRecordInternals.stripServerOwnedInvoicePayload({
+    invoiceNumber: "INV-100",
+    delivery: { status: "sent", providerMessageId: "forged" },
+    bankPayment: { status: "paid", amountCents: 12_500 },
+  });
+  assert.deepEqual(cleaned, { invoiceNumber: "INV-100" });
+  assert.equal(toolRecordInternals.equivalentInvoicePayload(
+    { invoiceNumber: "INV-100", delivery: { status: "sent" } },
+    { bankPayment: { status: "paid" }, invoiceNumber: "INV-100" },
+  ), true);
+  assert.equal(toolRecordInternals.equivalentInvoicePayload(
+    { invoiceNumber: "INV-100" },
+    { invoiceNumber: "INV-101" },
+  ), false);
+});
+
 test("message send requires text or a managed staged attachment", () => {
   assert.equal(messageCreateSchema.safeParse({ body: "", attachments: [] }).success, false);
   assert.equal(messageCreateSchema.safeParse({

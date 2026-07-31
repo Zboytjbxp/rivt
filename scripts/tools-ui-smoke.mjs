@@ -321,13 +321,16 @@ async function configurePage(page) {
       body: JSON.stringify({ data: { paymentRequest } }),
     });
   });
-  let toolInvoicePaymentRequest = null;
+  const toolInvoiceAmounts = new Map();
+  const toolInvoicePaymentRequests = new Map();
   await page.route("**/api/v1/tool-invoices/*/bank-payment-link", (route) => {
-    toolInvoicePaymentRequest = {
+    const pathMatch = new URL(route.request().url()).pathname.match(/\/api\/v1\/tool-invoices\/([^/]+)\/bank-payment-link$/);
+    const localId = decodeURIComponent(pathMatch?.[1] ?? "");
+    const paymentRequest = {
       id: "abababab-abab-4bab-8bab-abababababab",
       invoiceId: null,
       toolRecordId: "cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd",
-      amountCents: 277000,
+      amountCents: toolInvoiceAmounts.get(localId) ?? 10000,
       refundedCents: 0,
       currency: "usd",
       status: "open",
@@ -342,19 +345,22 @@ async function configurePage(page) {
       createdAt: "2026-07-25T12:00:00.000Z",
       updatedAt: "2026-07-25T12:00:00.000Z",
     };
+    toolInvoicePaymentRequests.set(localId, paymentRequest);
     return route.fulfill({
       status: 201,
       contentType: "application/json",
-      body: JSON.stringify({ data: { paymentRequest: toolInvoicePaymentRequest } }),
+      body: JSON.stringify({ data: { paymentRequest } }),
     });
   });
-  await page.route("**/api/v1/tool-invoices/*/bank-payment", (route) =>
-    route.fulfill({
+  await page.route("**/api/v1/tool-invoices/*/bank-payment", (route) => {
+    const pathMatch = new URL(route.request().url()).pathname.match(/\/api\/v1\/tool-invoices\/([^/]+)\/bank-payment$/);
+    const localId = decodeURIComponent(pathMatch?.[1] ?? "");
+    return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ data: { paymentRequest: toolInvoicePaymentRequest } }),
-    }),
-  );
+      body: JSON.stringify({ data: { paymentRequest: toolInvoicePaymentRequests.get(localId) ?? null } }),
+    });
+  });
   await page.route("**/api/v1/invoice-payments/cs_test_rivt_ach_status", (route) =>
     route.fulfill({
       status: 200,
@@ -690,6 +696,9 @@ async function configurePage(page) {
     if (method === "POST") {
       const input = route.request().postDataJSON();
       if (input?.recordType === "price_book") savedPriceBookPayload = input.payload;
+      if (input?.recordType === "invoice_draft" && input?.localId) {
+        toolInvoiceAmounts.set(input.localId, input.amountCents ?? 0);
+      }
       if (input?.recordType === "daily_report") {
         const idempotencyKey = route.request().headers()["idempotency-key"] ?? "";
         if (failDailyLogSync) {
@@ -1699,6 +1708,9 @@ async function runToolsFlow(page, viewportName) {
     "page",
     "Receivables should be reachable inside Invoice",
   );
+  await page.getByText("Invoice status stays with the real invoice", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(await page.getByRole("button", { name: /Add Invoice/i }).count(), 0, "Receivables must not create a second manual invoice ledger");
+  assert.equal(await page.getByRole("button", { name: /Mark Paid/i }).count(), 0, "Receivables must not claim payment from a manual toggle");
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice-receivables.png`), fullPage: true });
   await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "Tools" }).click();
 
