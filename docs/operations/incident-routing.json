@@ -45,7 +45,7 @@
       "provider": "Sentry Cloud",
       "route": "Sentry project for RIVT production API errors; Railway RIVT service has SENTRY_DSN configured.",
       "implementationStatus": "code_ready",
-      "evidence": "server/monitoring.js captures HTTP 500/startup/unhandled process errors without exposing DSNs; Railway deployment eaa7409d-0e75-4ae4-8ac7-1aaa8c8e1a68 reports observability.errorMonitoring.mode=configured; Sentry accepted smoke event 'RIVT Sentry smoke test' with HTTP 200."
+      "evidence": "server/monitoring.js captures HTTP 500/startup/unhandled process errors through the final redaction boundary without exposing DSNs. Railway deployment c6ddf9c8-91a3-4953-a47c-70c72deb154e serves exact source f505e5fcdd9874a172bb61b59ab083a2ff86e6d0 with error monitoring configured. Replacement-key event 52d1e8add9f7492eb440de033209da0e and post-retirement event 7ed1315e474448ce9807dbb4bd6bf420 were accepted and indexed in production; the prior Default key is disabled."
     },
     {
       "id": "paging",
@@ -54,7 +54,7 @@
       "provider": "Sentry Cloud issue alert",
       "route": "Sentry high-priority issue alert: notify suggested assignees and, if none found, recently active members for project node-express.",
       "frequency": "Notify on every trigger",
-      "evidence": "Sentry alert rule 'Send a notification for high priority issues' is connected to project node-express and triggered on smoke issue 'RIVT Sentry smoke test' at 2026-06-22 02:38 UTC. This is the first pilot escalation route; dedicated phone/SMS paging should be added before broader scale."
+      "evidence": "Sentry alert rule 'Send a notification for high priority issues' is connected to project node-express, notifies suggested assignees or recently active members on every qualifying trigger, and recorded the exact replacement-key verification issue at 2026-07-31 04:13 UTC. This is the first pilot escalation route; dedicated phone/SMS paging should be added before broader scale."
     }
   ],
   "rehearsals": [

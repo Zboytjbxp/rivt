@@ -1,27 +1,28 @@
 # RIVT Build State
 
-Last updated: 2026-07-30 America/New_York
+Last updated: 2026-07-31 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Emergency production credential containment; feature activation paused.
 Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
 Repository branch: `master` (source: `codex/customer-documents-contact-import`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
-`922e94415ffd3bea3e2e6ac633705b91c283bb8b`
+`f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
 
-Current incident packet: Web Push generation tracking is deployed from
+Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
-`922e94415ffd3bea3e2e6ac633705b91c283bb8b`. Railway deployment
-`e4dbe7fb-5290-4732-b377-b164002217a7` succeeded with migration
+`f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`. Railway deployments
+`599620ce-18fc-4e86-b638-88283dd18857` and
+`c6ddf9c8-91a3-4953-a47c-70c72deb154e` succeeded with migration
 `0042_push_vapid_generation` ready. Public health returned `ok: true` with
-PostgreSQL and S3-compatible storage healthy and Web Push configured; the
-exact-source production monitor passed in 605 ms. Migration `0042` preserves
-every legacy subscription as unknown, accepts cached clients without a false
-key claim, records the key that actually delivers, and adds a secret-safe
-read-only `push:readiness` gate.
+PostgreSQL and S3-compatible storage healthy and Sentry configured; the
+exact-source production monitor passed in 590 ms. The replacement key received
+an exact production event and triggered the existing high-priority alert before
+the prior key was disabled. A second unique event was accepted and indexed
+after retirement, proving production continuity on the replacement.
 
 Local production build, application/security lint, 158 unit/frontend tests,
 all three sequential browser E2E journeys, diff integrity, and the production
@@ -41,9 +42,12 @@ account and login session remained intact. Final production
 three active-generation registrations, three with successful-delivery proof,
 zero previous/unknown/retired/inactive registrations, and a fully clear
 outbox. This closes the Web Push key-retirement acceptance boundary without
-clearing the separate Sentry incident boundary or `ACTIVE_LAUNCH_HOLD`. No
-provider key, payment, object, service, bucket, or paid resource was changed
-by this acceptance work.
+clearing the broader incident or `ACTIVE_LAUNCH_HOLD`. Sentry provider audit
+and usage views now also show only the expected rotation actions, 20 accepted
+errors in 14 days, zero filtered, rate-limited, or invalid events, and no
+significant spike. The remaining exit work is final evidence synthesis,
+explicit acceptance of the known historical database/object-storage forensic
+gaps, and a fresh Railway Stage 1 re-review and approval.
 
 ## Active operational incident - Production credential exposure
 
@@ -164,8 +168,20 @@ by this acceptance work.
   unclassified test-account registration, the final read-only readiness
   inventory returned `ready: true` with active/successful `3/3`,
   previous/unknown/retired `0/0/0`, and no due, stale, processing, or recent
-  terminal outbox work. Web Push no longer blocks the incident exit; Sentry
-  replacement-key proof and retirement remain open.
+  terminal outbox work. Web Push no longer blocks the incident exit.
+- Sentry DSN rotation is complete. A replacement client key in the existing
+  `node-express` project was installed without exposing it in repository
+  evidence. Deployment `c6ddf9c8-91a3-4953-a47c-70c72deb154e` serves exact
+  source `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`; production health and the
+  590 ms expected-source monitor pass. Event
+  `52d1e8add9f7492eb440de033209da0e` was indexed as a High-priority production
+  issue and triggered the configured rule. The prior `Default` key was then
+  disabled, and post-retirement event
+  `7ed1315e474448ce9807dbb4bd6bf420` was accepted and indexed on the same
+  release. Provider audit and usage views show only the expected key actions,
+  no significant spike, and zero filtered, rate-limited, or invalid errors.
+  No misuse indicator was identified in the available Sentry evidence; that
+  statement is not proof the exposed ingestion DSN was never used.
 - Google OAuth production-project ownership is verified in the provider UI:
   `support@rivt.pro` owns project `rivt-499402`. A final replacement secret is
   installed in Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` on exact source
@@ -187,8 +203,9 @@ by this acceptance work.
   `/api/health` returned `ok: true`, `/api/auth/providers` reported Google
   configured, and `npm run monitor:production` passed against build
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Google OAuth secret rotation is
-  complete. The Sentry DSN and unrelated remaining incident evidence remain
-  open, so the overall incident and launch hold are not cleared.
+  complete. Final incident evidence synthesis, explicit forensic-limit
+  acceptance, and the fresh Railway Stage 1 review remain open, so the
+  overall incident and launch hold are not cleared.
 - The incident-remediation source was fast-forwarded to `master` and Railway
   deployment `e12e66b2-9701-44d6-b57f-8e12fe436738` succeeded on exact commit
   `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`. This activates the final-boundary

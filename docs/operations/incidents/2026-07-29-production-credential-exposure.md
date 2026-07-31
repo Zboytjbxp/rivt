@@ -10,7 +10,7 @@
   was not recorded)
 - Declared at: `2026-07-29T21:42:25-04:00` (first formal repository
   declaration; any earlier verbal declaration is unverified)
-- Last updated: 2026-07-30 America/New_York
+- Last updated: 2026-07-31 America/New_York
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
   followed by authorization to continue the remaining incident work unless
@@ -63,7 +63,7 @@ moment.
 | Web Push VAPID | Rotated; previous pair retired | An already opted-in owner-controlled physical device received a real alert through the transition bridge; both previous-key variables were then removed, Railway deployment `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded, and the running service reports the active pair present and previous pair absent |
 | Backup encryption | Rotated; previous key retired | Fresh active-key artifact `2026-07-30T03-58-45.931Z`, the 2026-07-29 legacy artifact, and the retained 2026-07-25 artifact all restored without count differences; deployment prefix `638e213e` is healthy on commit `854eef63b4d169746faf87157aaa9f3c1345329d`, and runtime checks report the restore URL and both previous-key aliases absent |
 | Authentication metadata pepper | Rotated | Replacement is deployed; the old value has no compatibility fallback and is no longer configured for active use |
-| Sentry DSN | Pending | None yet |
+| Sentry DSN | Rotated; prior key disabled | Replacement key `RIVT production replacement 2026-07-31` is the only enabled production key used by Railway; deployments `599620ce-18fc-4e86-b638-88283dd18857` and `c6ddf9c8-91a3-4953-a47c-70c72deb154e` succeeded; exact-source event `52d1e8add9f7492eb440de033209da0e` was indexed as a high-priority production issue and triggered the existing alert; the prior `Default` key was disabled; post-retirement event `7ed1315e474448ce9807dbb4bd6bf420` was then accepted and indexed |
 
 ## Immediate containment
 
@@ -420,11 +420,63 @@ moment.
 - A secret-safe read-only check inside the running production container found
   the intended `SENTRY_DSN` variable configured and the legacy
   `ERROR_MONITORING_DSN` alias absent. This is configuration-shape evidence
-  only; it does not rotate the pending Sentry key or prove replacement-event
-  ingestion.
+  only; at that stage it did not rotate the then-pending Sentry key or prove
+  replacement-event ingestion. The later provider rotation and proof are
+  recorded below.
 - This is defense in depth. Call sites must still avoid arbitrary user text,
   and this change cannot retroactively remove values from historical provider
   logs or prove that every future unidentified PII shape will be recognized.
+
+## Sentry DSN rotation evidence
+
+- A replacement client key named
+  `RIVT production replacement 2026-07-31` was created in the existing
+  `node-express` project. The prior `Default` key remained enabled during the
+  cutover; no project, organization, plan, or paid resource was created.
+- Railway deployment `599620ce-18fc-4e86-b638-88283dd18857` installed the
+  replacement DSN on source
+  `eca3a5caa08a9961a60e516551e465d5473139aa`. Follow-up deployment
+  `c6ddf9c8-91a3-4953-a47c-70c72deb154e` serves the exact verifier-hardening
+  source `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`. Public health reported
+  `ok: true`, migration `0042_push_vapid_generation` ready, PostgreSQL and
+  S3-compatible storage healthy, and Sentry configured. The exact-source
+  production monitor passed in 590 ms.
+- The verifier fails closed unless it runs in production against an exact
+  40-character deployed source. It prints no DSN. If provider delivery is
+  ambiguous, it now preserves only a safe unique marker, timestamp,
+  environment, and source commit so the operator can search Sentry before
+  retrying.
+- The first replacement-key proof was accepted as event
+  `52d1e8add9f7492eb440de033209da0e`, indexed in environment `production` on
+  release `f505e5fcdd98`, and marked High priority. The existing rule
+  `Send a notification for high priority issues` recorded one alert for that
+  exact marker at `2026-07-31T04:13:00Z`.
+- Only after that exact event and alert were visible was the prior `Default`
+  client key disabled. A second unique post-retirement proof was accepted as
+  event `7ed1315e474448ce9807dbb4bd6bf420` and indexed in production on the same
+  exact release, proving the running service still reaches Sentry through the
+  enabled replacement. Because Sentry grouped the two verifier events into
+  one already-high issue, the second event was ingestion proof and did not
+  create a second alert transition.
+- Sentry's audit log shows only the expected replacement-key creation/rename
+  and prior-key disable actions during the incident window. Fourteen-day
+  provider usage reported 20 accepted errors, zero filtered errors, zero
+  rate-limited errors, zero invalid errors, and no significant two-hour spike.
+  No misuse indicator was identified in those available records. This does
+  not prove that an exposed ingestion DSN was never used; it establishes that
+  no anomalous key-management action or volume spike is visible in the
+  provider evidence available to this account.
+- Local verification passed production build, application lint, 158
+  unit/frontend tests, all three browser E2E journeys, diff integrity, and the
+  production dependency audit with zero known vulnerabilities. The aggregate
+  local integration command passed its three database-independent checks and
+  skipped 19 database-backed checks because `TEST_DATABASE_URL` was absent;
+  the most recent isolated CI run remains the 22/22 PostgreSQL integration
+  proof recorded above.
+- Sentry credential rotation is complete. The broader incident and
+  `ACTIVE_LAUNCH_HOLD` remain open for the final provider-review synthesis,
+  explicit incident-owner acceptance of the historical PostgreSQL and object
+  storage forensic limits, and a fresh Railway Stage 1 re-review and approval.
 
 ## Bounded access-log review evidence
 

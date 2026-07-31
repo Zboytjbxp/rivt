@@ -1,5 +1,56 @@
 # Deployment Ledger
 
+## 2026-07-31 - Sentry DSN Rotation and Retirement
+
+- Production source commit:
+  `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
+- Branch: `master` (fast-forwarded from
+  `codex/vapid-generation-tracking`)
+- Railway application deployments:
+  `599620ce-18fc-4e86-b638-88283dd18857` for the replacement-DSN cutover and
+  `c6ddf9c8-91a3-4953-a47c-70c72deb154e` for exact-source verifier hardening.
+- Production: `https://rivt.pro`
+- Scope: replace the exposed Sentry ingestion DSN in the existing
+  `node-express` project, prove replacement ingestion and the real alert path,
+  disable the prior key, and prove post-retirement ingestion without exposing
+  either DSN.
+- Automated evidence: production build, application lint, 158 unit/frontend
+  tests, the complete three-journey browser E2E suite, diff integrity, and the
+  zero-vulnerability production dependency audit passed. The aggregate local
+  integration command passed three database-independent checks and skipped 19
+  database-backed checks because `TEST_DATABASE_URL` is absent; the latest
+  isolated CI proof remains 22/22 PostgreSQL integration tests.
+- Deployment proof: live `/api/health` returned `ok: true` on exact source
+  `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0` with migration
+  `0042_push_vapid_generation` ready, PostgreSQL/S3-compatible storage
+  healthy, and Sentry configured. The exact-source production monitor passed
+  in 590 ms with seven anonymous private routes closed and controls open.
+- Provider proof: event `52d1e8add9f7492eb440de033209da0e` was accepted,
+  indexed in environment `production` on release `f505e5fcdd98`, classified
+  High priority, and recorded by the existing high-priority issue alert. The
+  prior `Default` key was then disabled. Post-retirement event
+  `7ed1315e474448ce9807dbb4bd6bf420` was accepted and indexed on the same
+  release.
+- Provider review: the Sentry audit log contains the expected replacement-key
+  create/rename and prior-key disable actions, with no unexplained key
+  management action in the incident window. Fourteen-day usage shows 20
+  accepted errors, zero filtered, rate-limited, or invalid errors, and no
+  significant two-hour spike. No misuse indicator was found in available
+  Sentry evidence; this is not proof that the exposed ingestion DSN was never
+  used.
+- Data/cost boundary: no customer record, payment, project, Sentry
+  organization, paid plan, Railway service, bucket, or volume was created.
+  Two harmless error events were intentionally created. Existing services
+  were used within the standing sub-$2 approval; no exact provider cost is
+  claimed.
+- Rollback boundary: application source may roll back only to a revision that
+  preserves final-boundary Sentry redaction. The disabled prior key must never
+  be restored; any rollback keeps the replacement DSN.
+- Launch boundary: Sentry credential rotation is closed. The broader incident
+  and `ACTIVE_LAUNCH_HOLD` remain open until the final provider-review
+  synthesis, explicit acceptance of unavailable historical PostgreSQL and
+  object-access evidence, and a fresh Railway Stage 1 re-review and approval.
+
 ## 2026-07-30 - Web Push VAPID Generation Tracking
 
 - Production source commit:
