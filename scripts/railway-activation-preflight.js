@@ -26,11 +26,17 @@ const approvalSchema = z.object({
   approvedBy: nullableText(128),
   approvedAt: nullableText(64),
   expiresAt: nullableText(64),
+  approvedPlanSha256: nullableHash,
   oneTimeMaximumUsd: nullableNumber,
   incrementalMonthlyMaximumUsd: nullableNumber,
   totalMonthlyApprovedCeilingUsd: nullableNumber,
   testDurationMinutes: nullableNumber,
   maximumWorkerUnavailableMinutes: nullableNumber,
+}).strict();
+
+const activationWindowSchema = z.object({
+  plannedTestDurationMinutes: nullableNumber,
+  plannedWorkerUnavailableMinutes: nullableNumber,
 }).strict();
 
 const sourceSchema = z.object({
@@ -51,6 +57,7 @@ const serviceSchema = z.object({
   region: nullableText(128),
   volumeAttached: nullableBoolean,
   serverlessDisabled: nullableBoolean,
+  pushRequired: nullableBoolean,
   drainingSeconds: nullableInteger,
   deploymentTrigger: nullableText(64),
   configurationHash: nullableHash,
@@ -123,11 +130,15 @@ const monitoringSchema = z.object({
 }).strict();
 
 const costSchema = z.object({
+  oneTimeActivationEstimateUsd: nullableNumber,
   currentMonthActualUsd: nullableNumber,
   currentMonthEstimateBeforeUsd: nullableNumber,
+  currentCycleIncrementalEstimateUsd: nullableNumber,
   stagedEstimateUsd: nullableNumber,
+  stagedEstimateIncludesOneTimeActivation: nullableBoolean,
   retainedMonthlyCostUsd: nullableNumber,
   agentUsageUsd: nullableNumber,
+  agentMonthlyLimitUsd: nullableNumber,
   providerHardLimitVerified: nullableBoolean,
   providerEnforcedHardLimitUsd: nullableNumber,
   providerHardLimitScope: z.enum(["workspace_compute"]).nullable(),
@@ -136,6 +147,70 @@ const costSchema = z.object({
   agentLimitRecordedSeparately: nullableBoolean,
   residualCostRiskAccepted: nullableBoolean,
   manualStopAtUsd: nullableNumber,
+}).strict();
+
+const operatorControlServiceSchema = z.object({
+  name: z.enum(["web", "worker"]),
+  configPath: nullableText(128),
+  startCommand: nullableText(128),
+  preDeployCommand: nullableText(128),
+  healthcheckPath: nullableText(128),
+  renderedReplicaCount: nullableInteger,
+  region: nullableText(128),
+  volumeAttached: nullableBoolean,
+  serverlessDisabled: nullableBoolean,
+  pushRequired: nullableBoolean,
+  drainingSeconds: nullableInteger,
+  deploymentTrigger: nullableText(64),
+}).strict();
+
+const operatorControlCostSchema = z.object({
+  currentMonthActualUsd: nullableNumber,
+  currentMonthEstimateBeforeUsd: nullableNumber,
+  agentUsageUsd: nullableNumber,
+  providerHardLimitVerified: nullableBoolean,
+  providerEnforcedHardLimitUsd: nullableNumber,
+  providerHardLimitScope: z.enum(["workspace_compute"]).nullable(),
+  providerHardLimitCanStopWorkspace: nullableBoolean,
+  agentMonthlyLimitUsd: nullableNumber,
+}).strict();
+
+const operatorControlDatabaseSchema = z.object({
+  privateEndpointConfirmed: nullableBoolean,
+  endpointMode: z.enum(["direct", "pgbouncer", "ha"]).nullable(),
+  observedGlobalUsableConnections: nullableNumber,
+  observedEffectiveConnections: nullableNumber,
+  declaredMaxConnections: nullableNumber,
+  webPoolMax: nullableInteger,
+  workerPoolMax: nullableInteger,
+  migratePoolMax: nullableInteger,
+  reservedConnections: nullableInteger,
+}).strict();
+
+const operatorControlReviewSchema = z.object({
+  schemaVersion: z.literal(1),
+  source: z.literal("operator_activation_control_review_v1"),
+  reviewedAt: text(64),
+  reviewedBy: text(128),
+  environmentName: text(128),
+  environmentIdFingerprint: z.string().regex(SHA_256),
+  connectedBranch: text(128),
+  autodeployMode: text(64),
+  effectiveConfigSource: text(256),
+  serverlessDisabled: z.boolean(),
+  billingCycleStartsAt: text(64),
+  billingCycleEndsAt: text(64),
+  services: z.array(operatorControlServiceSchema).length(2),
+  database: operatorControlDatabaseSchema,
+  monitoring: monitoringSchema,
+  cost: operatorControlCostSchema,
+}).strict();
+
+const operatorControlReviewBindingSchema = z.object({
+  source: z.literal("operator_activation_control_review_v1"),
+  artifactSha256: nullableHash,
+  reviewedAt: nullableText(64),
+  reviewedBy: nullableText(128),
 }).strict();
 
 const rollbackSchema = z.object({
@@ -166,6 +241,7 @@ const activationPlanSchema = z.object({
   status: z.enum(["draft", "authorized_preflight"]),
   activationStage: z.enum(["split", "redundancy"]),
   approval: approvalSchema,
+  activationWindow: activationWindowSchema,
   source: sourceSchema,
   railway: railwaySchema,
   database: databaseSchema,
@@ -175,6 +251,7 @@ const activationPlanSchema = z.object({
   cost: costSchema,
   rollback: rollbackSchema,
   providerSnapshotBinding: snapshotBindingSchema,
+  operatorControlReviewBinding: operatorControlReviewBindingSchema,
 }).strict();
 
 const snapshotServiceSchema = z.object({
@@ -298,6 +375,18 @@ function configurationDigest(value) {
   return sha256(canonicalJson(value));
 }
 
+export function approvalBindingDigest(plan) {
+  if (!plan || typeof plan !== "object" || !plan.approval) return null;
+  return configurationDigest({
+    ...plan,
+    approval: {
+      ...plan.approval,
+      approved: false,
+      approvedPlanSha256: null,
+    },
+  });
+}
+
 function fingerprint(value) {
   return hasText(value) ? sha256(String(value)) : null;
 }
@@ -408,11 +497,17 @@ function runGit(repositoryRoot, args) {
     cwd: repositoryRoot,
     encoding: "utf8",
     windowsHide: true,
+    timeout: 15_000,
+    maxBuffer: 1024 * 1024,
   });
   return {
     ok: result.status === 0,
     output: String(result.stdout ?? "").trim(),
   };
+}
+
+export function gitStatusIsClean(result) {
+  return result?.ok === true && result.output === "";
 }
 
 function readDeploymentConfig(repositoryRoot, name) {
@@ -433,9 +528,16 @@ export function deriveLocalRepositoryFacts(repositoryRoot, source) {
   }
   const webConfig = readDeploymentConfig(repositoryRoot, "railway.json");
   const workerConfig = readDeploymentConfig(repositoryRoot, "railway.worker.json");
+  const originMasterCommit = runGit(repositoryRoot, [
+    "ls-remote",
+    "--exit-code",
+    "origin",
+    "refs/heads/master",
+  ]).output.split(/\s+/)[0] ?? "";
+  const workingTreeStatus = runGit(repositoryRoot, ["status", "--porcelain"]);
   return {
     headCommit: runGit(repositoryRoot, ["rev-parse", "HEAD"]).output,
-    workingTreeClean: runGit(repositoryRoot, ["status", "--porcelain"]).output === "",
+    workingTreeClean: gitStatusIsClean(workingTreeStatus),
     commits,
     preparedAncestorOfCandidate: (
       commits.preparedImplementationCommit
@@ -446,6 +548,21 @@ export function deriveLocalRepositoryFacts(repositoryRoot, source) {
         source.preparedImplementationCommit,
         source.candidateCommit,
       ]).ok
+    ),
+    liveAncestorOfCandidate: (
+      commits.liveCommitBefore
+      && commits.candidateCommit
+      && runGit(repositoryRoot, [
+        "merge-base",
+        "--is-ancestor",
+        source.liveCommitBefore,
+        source.candidateCommit,
+      ]).ok
+    ),
+    originMasterCommit,
+    candidateMatchesOriginMaster: (
+      GIT_SHA.test(originMasterCommit)
+      && originMasterCommit === source?.candidateCommit
     ),
     webConfig,
     webConfigHash: configurationDigest(webConfig),
@@ -458,7 +575,11 @@ function schemaFindings(prefix, result) {
   if (result.success) return [];
   return result.error.issues.map((issue) => ({
     code: `${prefix}_SCHEMA_INVALID`,
-    message: `${issue.path.length ? issue.path.join(".") : "$"}: ${issue.message}`,
+    message: `${issue.path.length ? issue.path.map((part) => (
+      typeof part === "number" || /^[A-Za-z0-9_-]{1,64}$/.test(String(part))
+        ? String(part)
+        : "<redacted>"
+    )).join(".") : "$"}: schema validation failed (${issue.code}).`,
   }));
 }
 
@@ -487,16 +608,23 @@ export function evaluateRailwayActivationPlan(
     now = new Date(),
     providerSnapshot: rawProviderSnapshot = null,
     providerSnapshotSha256 = null,
+    operatorControlReview: rawOperatorControlReview = null,
+    operatorControlReviewSha256 = null,
+    independentApprovedPlanSha256 = null,
     localFacts = null,
   } = {},
 ) {
   const planResult = activationPlanSchema.safeParse(rawPlan);
   const snapshotResult = providerSnapshotSchema.safeParse(rawProviderSnapshot);
+  const operatorControlResult = operatorControlReviewSchema.safeParse(
+    rawOperatorControlReview,
+  );
   const findings = [
     ...schemaFindings("PLAN", planResult),
     ...schemaFindings("PROVIDER_SNAPSHOT", snapshotResult),
+    ...schemaFindings("OPERATOR_CONTROL_REVIEW", operatorControlResult),
   ];
-  if (!planResult.success || !snapshotResult.success) {
+  if (!planResult.success || !snapshotResult.success || !operatorControlResult.success) {
     return {
       ok: false,
       status: "blocked",
@@ -514,11 +642,13 @@ export function evaluateRailwayActivationPlan(
 
   const plan = planResult.data;
   const providerSnapshot = snapshotResult.data;
+  const operatorControlReview = operatorControlResult.data;
   const add = (code, message) => findings.push({ code, message });
 
   const sensitivePaths = [
     ...sensitiveValuePaths(plan),
     ...sensitiveValuePaths(providerSnapshot, "$providerSnapshot"),
+    ...sensitiveValuePaths(operatorControlReview, "$operatorControlReview"),
   ];
   if (sensitivePaths.length > 0) {
     add("SENSITIVE_VALUE_PRESENT", `Remove sensitive values at: ${sensitivePaths.join(", ")}.`);
@@ -556,6 +686,40 @@ export function evaluateRailwayActivationPlan(
   ]) {
     if (!positive(approval[name])) add("APPROVAL_LIMIT_MISSING", `${name} must be a positive number.`);
   }
+  const expectedApprovalDigest = approvalBindingDigest(plan);
+  if (
+    !SHA_256.test(String(approval.approvedPlanSha256 ?? ""))
+    || approval.approvedPlanSha256 !== expectedApprovalDigest
+    || !SHA_256.test(String(independentApprovedPlanSha256 ?? ""))
+    || independentApprovedPlanSha256 !== approval.approvedPlanSha256
+  ) {
+    add(
+      "APPROVAL_PLAN_BINDING_INVALID",
+      "Owner approval must match an independently supplied digest for the exact reviewed plan and authority limits.",
+    );
+  }
+
+  const activationWindow = plan.activationWindow;
+  if (!positive(activationWindow.plannedTestDurationMinutes)) {
+    add("ACTIVATION_WINDOW_MISSING", "A positive planned test duration is required.");
+  } else if (
+    positive(approval.testDurationMinutes)
+    && activationWindow.plannedTestDurationMinutes > approval.testDurationMinutes
+  ) {
+    add("TEST_DURATION_EXCEEDS_APPROVAL", "Planned testing exceeds the approved duration.");
+  }
+  if (!finiteNonNegative(activationWindow.plannedWorkerUnavailableMinutes)) {
+    add("ACTIVATION_WINDOW_MISSING", "Planned worker unavailability must be recorded.");
+  } else if (
+    positive(approval.maximumWorkerUnavailableMinutes)
+    && activationWindow.plannedWorkerUnavailableMinutes
+      > approval.maximumWorkerUnavailableMinutes
+  ) {
+    add(
+      "WORKER_UNAVAILABILITY_EXCEEDS_APPROVAL",
+      "Planned worker unavailability exceeds the approved maximum.",
+    );
+  }
 
   const source = plan.source;
   if (source.candidateCommit === source.liveCommitBefore) {
@@ -576,6 +740,15 @@ export function evaluateRailwayActivationPlan(
     if (localFacts.preparedAncestorOfCandidate !== true) {
       add("SOURCE_ANCESTRY_INVALID", "Prepared implementation commit must be an ancestor of candidate commit.");
     }
+    if (localFacts.liveAncestorOfCandidate !== true) {
+      add("LIVE_SOURCE_ANCESTRY_INVALID", "Candidate commit must contain the exact live-before commit.");
+    }
+    if (localFacts.candidateMatchesOriginMaster !== true) {
+      add(
+        "CANDIDATE_NOT_ORIGIN_MASTER",
+        "Candidate commit must equal a freshly resolved origin master commit.",
+      );
+    }
   }
 
   const railway = plan.railway;
@@ -590,6 +763,15 @@ export function evaluateRailwayActivationPlan(
   if (railway.autodeployMode !== EXPECTED_AUTODEPLOY_MODE) {
     add("AUTODEPLOY_UNSAFE", `Autodeploy mode must be ${EXPECTED_AUTODEPLOY_MODE}.`);
   }
+  if (railway.connectedBranch !== "master") {
+    add("DEPLOY_BRANCH_INVALID", "The reviewed Railway deploy branch must be master.");
+  }
+  if (railway.effectiveConfigSource !== "checked-in Railway configuration") {
+    add(
+      "EFFECTIVE_CONFIG_SOURCE_INVALID",
+      "The reviewed deployment must use the checked-in Railway configuration.",
+    );
+  }
   if (railway.serverlessDisabled !== true) {
     add("APP_SLEEP_NOT_DISABLED", "Serverless/app sleep must be disabled for web and worker.");
   }
@@ -598,6 +780,19 @@ export function evaluateRailwayActivationPlan(
   }
   if (!validDate(railway.billingCycleStartsAt) || !validDate(railway.billingCycleEndsAt)) {
     add("BILLING_CYCLE_MISSING", "Current Railway billing-cycle dates are required.");
+  } else {
+    const cycleStartsAt = new Date(railway.billingCycleStartsAt).getTime();
+    const cycleEndsAt = new Date(railway.billingCycleEndsAt).getTime();
+    if (
+      cycleStartsAt >= cycleEndsAt
+      || now.getTime() < cycleStartsAt
+      || now.getTime() >= cycleEndsAt
+    ) {
+      add(
+        "BILLING_CYCLE_INVALID",
+        "The recorded Railway billing cycle must be ordered and contain the activation time.",
+      );
+    }
   }
 
   const web = serviceByName(railway, "web");
@@ -634,6 +829,9 @@ export function evaluateRailwayActivationPlan(
       if (service.region !== railway.region) add("REGION_MISMATCH", `${role} must share the reviewed region.`);
       if (service.volumeAttached !== false) add("SERVICE_VOLUME_ATTACHED", `${role} must not have a volume.`);
       if (service.serverlessDisabled !== true) add("SERVICE_APP_SLEEP_ENABLED", `${role} app sleep must be disabled.`);
+      if (service.pushRequired !== true) {
+        add("PUSH_NOT_REQUIRED", `${role} must set RIVT_PUSH_REQUIRED=true.`);
+      }
       if (service.drainingSeconds !== 30) add("DRAIN_MISMATCH", `${role} drain must be 30 seconds.`);
       if (service.deploymentTrigger !== EXPECTED_DEPLOYMENT_TRIGGER) {
         add("DEPLOYMENT_TRIGGER_UNSAFE", `${role} must use the reviewed manual staged trigger.`);
@@ -653,7 +851,9 @@ export function evaluateRailwayActivationPlan(
 
   const binding = plan.providerSnapshotBinding;
   if (
-    binding.artifactSha256 !== providerSnapshotSha256
+    !SHA_256.test(String(binding.artifactSha256 ?? ""))
+    || !SHA_256.test(String(providerSnapshotSha256 ?? ""))
+    || binding.artifactSha256 !== providerSnapshotSha256
     || binding.source !== providerSnapshot.source
     || binding.observedAt !== providerSnapshot.observedAt
   ) {
@@ -661,6 +861,83 @@ export function evaluateRailwayActivationPlan(
   }
   if (!recentNotFuture(providerSnapshot.observedAt, now, MAX_SNAPSHOT_AGE_MS)) {
     add("PROVIDER_SNAPSHOT_STALE", "Provider snapshot must be no more than 15 minutes old and not future.");
+  }
+
+  const operatorControlBinding = plan.operatorControlReviewBinding;
+  if (
+    !SHA_256.test(String(operatorControlBinding.artifactSha256 ?? ""))
+    || !SHA_256.test(String(operatorControlReviewSha256 ?? ""))
+    || operatorControlBinding.artifactSha256 !== operatorControlReviewSha256
+    || operatorControlBinding.source !== operatorControlReview.source
+    || operatorControlBinding.reviewedAt !== operatorControlReview.reviewedAt
+    || operatorControlBinding.reviewedBy !== operatorControlReview.reviewedBy
+  ) {
+    add(
+      "OPERATOR_CONTROL_REVIEW_BINDING_INVALID",
+      "Plan is not bound to the supplied operator-reviewed activation controls.",
+    );
+  }
+  if (!recentNotFuture(operatorControlReview.reviewedAt, now, MAX_SNAPSHOT_AGE_MS)) {
+    add(
+      "OPERATOR_CONTROL_REVIEW_STALE",
+      "The operator control review must be no more than 15 minutes old and not future.",
+    );
+  }
+  if (
+    operatorControlReview.environmentName !== railway.environmentName
+    || operatorControlReview.environmentIdFingerprint
+      !== providerSnapshot.environmentIdFingerprint
+  ) {
+    add(
+      "OPERATOR_CONTROL_REVIEW_SCOPE_MISMATCH",
+      "The operator control review does not match the reviewed Railway environment.",
+    );
+  }
+  for (const name of [
+    "connectedBranch",
+    "autodeployMode",
+    "effectiveConfigSource",
+    "serverlessDisabled",
+    "billingCycleStartsAt",
+    "billingCycleEndsAt",
+  ]) {
+    if (operatorControlReview[name] !== railway[name]) {
+      add(
+        "OPERATOR_CONTROL_REVIEW_MISMATCH",
+        `${name} differs from the bound operator control review.`,
+      );
+    }
+  }
+  for (const serviceName of ["web", "worker"]) {
+    const plannedService = serviceByName(railway, serviceName);
+    const reviewedService = serviceByName(operatorControlReview, serviceName);
+    if (!plannedService || !reviewedService) {
+      add(
+        "OPERATOR_CONTROL_REVIEW_SERVICE_MISMATCH",
+        `${serviceName} is missing from the operator control review.`,
+      );
+      continue;
+    }
+    for (const name of [
+      "configPath",
+      "startCommand",
+      "preDeployCommand",
+      "healthcheckPath",
+      "renderedReplicaCount",
+      "region",
+      "volumeAttached",
+      "serverlessDisabled",
+      "pushRequired",
+      "drainingSeconds",
+      "deploymentTrigger",
+    ]) {
+      if (plannedService[name] !== reviewedService[name]) {
+        add(
+          "OPERATOR_CONTROL_REVIEW_SERVICE_MISMATCH",
+          `${serviceName}.${name} differs from the bound operator control review.`,
+        );
+      }
+    }
   }
 
   const currentWebServices = providerSnapshot.services
@@ -717,6 +994,16 @@ export function evaluateRailwayActivationPlan(
   }
   if (
     positive(database.observedEffectiveConnections)
+    && positive(database.observedGlobalUsableConnections)
+    && database.observedEffectiveConnections > database.observedGlobalUsableConnections
+  ) {
+    add(
+      "DATABASE_EFFECTIVE_LIMIT_INVALID",
+      "Observed effective connections cannot exceed the observed global usable connection ceiling.",
+    );
+  }
+  if (
+    positive(database.observedEffectiveConnections)
     && positive(database.declaredMaxConnections)
     && database.declaredMaxConnections > database.observedEffectiveConnections
   ) {
@@ -746,6 +1033,16 @@ export function evaluateRailwayActivationPlan(
       add(
         "TOPOLOGY_REPLICA_MISMATCH",
         `${name} topology candidate replicas must match the validated web and worker services.`,
+      );
+    }
+    if (
+      (topology.candidateWebReplicas > 0 && !positive(topology.webPoolMax))
+      || (topology.candidateWorkerReplicas > 0 && !positive(topology.workerPoolMax))
+      || !positive(topology.reservedConnections)
+    ) {
+      add(
+        "TOPOLOGY_POOL_BOUND_INVALID",
+        `${name} topology must use positive pool bounds for active roles and a positive connection reserve.`,
       );
     }
   }
@@ -842,18 +1139,138 @@ export function evaluateRailwayActivationPlan(
     "alertReceiverTested",
   ]) {
     if (monitoring[name] !== true) add("MONITORING_INCOMPLETE", `${name} must be true.`);
+    if (monitoring[name] !== operatorControlReview.monitoring[name]) {
+      add(
+        "MONITORING_REVIEW_MISMATCH",
+        `${name} differs from the bound operator control review.`,
+      );
+    }
   }
-  if (!hasText(monitoring.onCallOwner)) add("ON_CALL_OWNER_MISSING", "Monitoring requires an on-call owner.");
+  const reviewedDatabase = operatorControlReview.database;
+  for (const name of [
+    "privateEndpointConfirmed",
+    "endpointMode",
+    "observedGlobalUsableConnections",
+    "observedEffectiveConnections",
+    "declaredMaxConnections",
+  ]) {
+    if (database[name] !== reviewedDatabase[name]) {
+      add(
+        "OPERATOR_CONTROL_REVIEW_DATABASE_MISMATCH",
+        `${name} differs from the fresh operator-reviewed database control.`,
+      );
+    }
+  }
+  for (const [name, topology] of [
+    ["steady", steadyTopology],
+    ["transition", transitionTopology],
+  ]) {
+    if (
+      topology.webPoolMax !== reviewedDatabase.webPoolMax
+      || topology.workerPoolMax !== reviewedDatabase.workerPoolMax
+      || topology.reservedConnections !== reviewedDatabase.reservedConnections
+      || (
+        name === "transition"
+        && topology.migratePoolMax !== reviewedDatabase.migratePoolMax
+      )
+    ) {
+      add(
+        "OPERATOR_CONTROL_REVIEW_DATABASE_MISMATCH",
+        `${name} database pool bounds differ from the fresh operator review.`,
+      );
+    }
+  }
+  if (!hasText(monitoring.onCallOwner)) {
+    add("ON_CALL_OWNER_MISSING", "Monitoring requires an on-call owner.");
+  }
+  if (monitoring.onCallOwner !== operatorControlReview.monitoring.onCallOwner) {
+    add(
+      "MONITORING_REVIEW_MISMATCH",
+      "The on-call owner differs from the bound operator control review.",
+    );
+  }
 
   const cost = plan.cost;
   for (const name of [
+    "oneTimeActivationEstimateUsd",
     "currentMonthActualUsd",
     "currentMonthEstimateBeforeUsd",
+    "currentCycleIncrementalEstimateUsd",
     "stagedEstimateUsd",
     "retainedMonthlyCostUsd",
     "agentUsageUsd",
+    "agentMonthlyLimitUsd",
   ]) {
     if (!finiteNonNegative(cost[name])) add("COST_FACT_MISSING", `${name} must be recorded.`);
+  }
+  if (cost.stagedEstimateIncludesOneTimeActivation !== true) {
+    add(
+      "STAGED_ESTIMATE_SCOPE_INVALID",
+      "The staged current-cycle estimate must explicitly include the one-time activation estimate.",
+    );
+  }
+  if (
+    (
+      finiteNonNegative(cost.currentMonthActualUsd)
+      && finiteNonNegative(cost.stagedEstimateUsd)
+      && cost.stagedEstimateUsd < cost.currentMonthActualUsd
+    )
+    || (
+      finiteNonNegative(cost.currentMonthEstimateBeforeUsd)
+      && finiteNonNegative(cost.stagedEstimateUsd)
+      && cost.stagedEstimateUsd < cost.currentMonthEstimateBeforeUsd
+    )
+  ) {
+    add(
+      "STAGED_ESTIMATE_UNDERSTATED",
+      "The staged estimate cannot be below current actual usage or the prior provider estimate.",
+    );
+  }
+  if (
+    finiteNonNegative(cost.currentMonthEstimateBeforeUsd)
+    && finiteNonNegative(cost.currentCycleIncrementalEstimateUsd)
+    && finiteNonNegative(cost.oneTimeActivationEstimateUsd)
+    && finiteNonNegative(cost.stagedEstimateUsd)
+  ) {
+    const reconciledStagedEstimate = Math.round((
+      cost.currentMonthEstimateBeforeUsd
+      + cost.currentCycleIncrementalEstimateUsd
+      + cost.oneTimeActivationEstimateUsd
+    ) * 100) / 100;
+    if (Math.abs(cost.stagedEstimateUsd - reconciledStagedEstimate) > 0.009) {
+      add(
+        "STAGED_ESTIMATE_NOT_RECONCILED",
+        "The staged estimate must equal the prior estimate, current-cycle increment, and one-time activation estimate.",
+      );
+    }
+  }
+  if (
+    finiteNonNegative(cost.currentCycleIncrementalEstimateUsd)
+    && (
+      (
+        positive(approval.incrementalMonthlyMaximumUsd)
+        && cost.currentCycleIncrementalEstimateUsd > approval.incrementalMonthlyMaximumUsd
+      )
+      || (
+        finiteNonNegative(cost.retainedMonthlyCostUsd)
+        && cost.currentCycleIncrementalEstimateUsd > cost.retainedMonthlyCostUsd
+      )
+    )
+  ) {
+    add(
+      "CURRENT_CYCLE_INCREMENT_EXCEEDS_RECURRING_APPROVAL",
+      "The current-cycle recurring increment cannot exceed its approved or full-month retained amount.",
+    );
+  }
+  if (
+    finiteNonNegative(cost.oneTimeActivationEstimateUsd)
+    && positive(approval.oneTimeMaximumUsd)
+    && cost.oneTimeActivationEstimateUsd > approval.oneTimeMaximumUsd
+  ) {
+    add(
+      "ONE_TIME_COST_EXCEEDS_APPROVAL",
+      "The one-time activation estimate exceeds its approved maximum.",
+    );
   }
   if (
     finiteNonNegative(cost.stagedEstimateUsd)
@@ -891,6 +1308,36 @@ export function evaluateRailwayActivationPlan(
         "The provider hard limit cannot exceed the approved total monthly ceiling.",
       );
     }
+    if (
+      positive(cost.providerEnforcedHardLimitUsd)
+      && (
+        (
+          finiteNonNegative(cost.currentMonthActualUsd)
+          && cost.providerEnforcedHardLimitUsd <= cost.currentMonthActualUsd
+        )
+        || (
+          finiteNonNegative(cost.stagedEstimateUsd)
+          && cost.providerEnforcedHardLimitUsd < cost.stagedEstimateUsd
+        )
+      )
+    ) {
+      add(
+        "PROVIDER_HARD_LIMIT_BELOW_PLAN",
+        "The Compute hard limit must remain above current usage and cover the staged estimate.",
+      );
+    }
+    if (
+      positive(cost.providerEnforcedHardLimitUsd)
+      && finiteNonNegative(cost.agentMonthlyLimitUsd)
+      && positive(approval.totalMonthlyApprovedCeilingUsd)
+      && cost.providerEnforcedHardLimitUsd + cost.agentMonthlyLimitUsd
+        > approval.totalMonthlyApprovedCeilingUsd
+    ) {
+      add(
+        "COMBINED_ENFORCEMENT_CEILING_EXCEEDED",
+        "The Compute hard limit plus the separate Agent limit exceeds the approved total ceiling.",
+      );
+    }
   } else {
     if (cost.residualCostRiskAccepted !== true || !positive(cost.manualStopAtUsd)) {
       add(
@@ -907,6 +1354,36 @@ export function evaluateRailwayActivationPlan(
     }
     if (
       positive(cost.manualStopAtUsd)
+      && (
+        (
+          finiteNonNegative(cost.currentMonthActualUsd)
+          && cost.manualStopAtUsd <= cost.currentMonthActualUsd
+        )
+        || (
+          finiteNonNegative(cost.stagedEstimateUsd)
+          && cost.manualStopAtUsd < cost.stagedEstimateUsd
+        )
+      )
+    ) {
+      add(
+        "MANUAL_STOP_BELOW_PLAN",
+        "The Compute manual stop must remain above current usage and cover the staged estimate.",
+      );
+    }
+    if (
+      positive(cost.manualStopAtUsd)
+      && finiteNonNegative(cost.agentMonthlyLimitUsd)
+      && positive(approval.totalMonthlyApprovedCeilingUsd)
+      && cost.manualStopAtUsd + cost.agentMonthlyLimitUsd
+        > approval.totalMonthlyApprovedCeilingUsd
+    ) {
+      add(
+        "COMBINED_ENFORCEMENT_CEILING_EXCEEDED",
+        "The Compute manual stop plus the separate Agent limit exceeds the approved total ceiling.",
+      );
+    }
+    if (
+      positive(cost.manualStopAtUsd)
       && finiteNonNegative(cost.currentMonthActualUsd)
       && cost.currentMonthActualUsd >= cost.manualStopAtUsd
     ) {
@@ -918,6 +1395,48 @@ export function evaluateRailwayActivationPlan(
       "AGENT_LIMIT_UNVERIFIED",
       "Railway Agent usage needs its own recorded limit because the Compute limit does not cover it.",
     );
+  }
+  if (
+    !finiteNonNegative(cost.agentMonthlyLimitUsd)
+    || (
+      finiteNonNegative(cost.agentUsageUsd)
+      && finiteNonNegative(cost.agentMonthlyLimitUsd)
+      && cost.agentUsageUsd > cost.agentMonthlyLimitUsd
+    )
+  ) {
+    add(
+      "AGENT_LIMIT_INVALID",
+      "The separate Railway Agent monthly limit must be numeric and cannot be below current Agent usage.",
+    );
+  }
+  if (
+    finiteNonNegative(cost.stagedEstimateUsd)
+    && finiteNonNegative(cost.agentMonthlyLimitUsd)
+    && positive(approval.totalMonthlyApprovedCeilingUsd)
+    && cost.stagedEstimateUsd + cost.agentMonthlyLimitUsd
+      > approval.totalMonthlyApprovedCeilingUsd
+  ) {
+    add(
+      "COMBINED_COST_CEILING_EXCEEDED",
+      "The staged Railway estimate plus the separate Agent limit exceeds the approved total ceiling.",
+    );
+  }
+  for (const name of [
+    "currentMonthActualUsd",
+    "currentMonthEstimateBeforeUsd",
+    "agentUsageUsd",
+    "providerHardLimitVerified",
+    "providerEnforcedHardLimitUsd",
+    "providerHardLimitScope",
+    "providerHardLimitCanStopWorkspace",
+    "agentMonthlyLimitUsd",
+  ]) {
+    if (cost[name] !== operatorControlReview.cost[name]) {
+      add(
+        "COST_REVIEW_MISMATCH",
+        `${name} differs from the bound operator control review.`,
+      );
+    }
   }
 
   const rollback = plan.rollback;
@@ -934,7 +1453,7 @@ export function evaluateRailwayActivationPlan(
   return {
     ok: findings.length === 0,
     status: findings.length === 0
-      ? "plan_and_read_only_snapshot_consistent_pending_owner_activation"
+      ? "plan_snapshot_and_operator_review_consistent_pending_owner_activation"
       : "blocked",
     findings,
     summary: {
@@ -942,6 +1461,13 @@ export function evaluateRailwayActivationPlan(
       candidateCommit: source.candidateCommit,
       providerSnapshotSha256: providerSnapshotSha256 && SHA_256.test(providerSnapshotSha256)
         ? providerSnapshotSha256
+        : null,
+      operatorControlReviewSha256: operatorControlReviewSha256
+        && SHA_256.test(operatorControlReviewSha256)
+        ? operatorControlReviewSha256
+        : null,
+      approvedPlanSha256: SHA_256.test(String(approval.approvedPlanSha256 ?? ""))
+        ? approval.approvedPlanSha256
         : null,
       steadyStateConnections: steadyTotal,
       transitionPeakConnections: transitionTotal,
@@ -954,6 +1480,102 @@ export function evaluateRailwayActivationPlan(
 function argValue(argv, name) {
   const index = argv.indexOf(name);
   return index >= 0 ? argv[index + 1] : null;
+}
+
+export function validateActivationPreflightArguments(argv) {
+  const valueArguments = new Set([
+    "--capture-provider-snapshot",
+    "--environment",
+    "--web-service",
+    "--plan",
+    "--provider-snapshot",
+    "--operator-control-review",
+    "--approved-plan-digest",
+  ]);
+  const booleanArguments = new Set([
+    "--print-approval-digest",
+    "--require-ready",
+    "--report-only",
+  ]);
+  const seenArguments = new Set();
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (seenArguments.has(argument)) {
+      throw new Error(`${argument} may be provided only once.`);
+    }
+    seenArguments.add(argument);
+    if (valueArguments.has(argument)) {
+      const value = argv[index + 1];
+      if (!value || value.startsWith("--")) {
+        throw new Error(`${argument} requires a value.`);
+      }
+      index += 1;
+      continue;
+    }
+    if (booleanArguments.has(argument)) continue;
+    throw new Error(`Unsupported activation-preflight argument: ${argument}.`);
+  }
+
+  const captureMode = argv.includes("--capture-provider-snapshot");
+  const digestMode = argv.includes("--print-approval-digest");
+  const evaluationMode = !captureMode && !digestMode;
+  if ([captureMode, digestMode, evaluationMode].filter(Boolean).length !== 1) {
+    throw new Error("Choose exactly one activation-preflight mode.");
+  }
+  if (captureMode && argv.some((argument) => [
+    "--plan",
+    "--provider-snapshot",
+    "--operator-control-review",
+    "--approved-plan-digest",
+    "--print-approval-digest",
+    "--require-ready",
+    "--report-only",
+  ].includes(argument))) {
+    throw new Error("Snapshot capture cannot be combined with evaluation or approval flags.");
+  }
+  if (digestMode && argv.some((argument) => [
+    "--provider-snapshot",
+    "--operator-control-review",
+    "--approved-plan-digest",
+    "--capture-provider-snapshot",
+    "--environment",
+    "--web-service",
+    "--require-ready",
+    "--report-only",
+  ].includes(argument))) {
+    throw new Error("Approval-digest mode cannot be combined with capture or readiness flags.");
+  }
+  if (evaluationMode && argv.some((argument) => [
+    "--environment",
+    "--web-service",
+  ].includes(argument))) {
+    throw new Error("Environment and web-service flags are only valid in snapshot-capture mode.");
+  }
+  if (evaluationMode && !argv.includes("--approved-plan-digest")) {
+    throw new Error("--approved-plan-digest is required for evaluation.");
+  }
+  if (argv.includes("--require-ready") && argv.includes("--report-only")) {
+    throw new Error("--require-ready cannot be combined with --report-only.");
+  }
+}
+
+export function activationPreflightExitCode(result, { reportOnly = false } = {}) {
+  return result?.ok === true || reportOnly === true ? 0 : 1;
+}
+
+function assertArtifactPathExternalOrIgnored(repositoryRoot, artifactPath) {
+  const resolvedRoot = path.resolve(repositoryRoot);
+  const resolvedArtifact = path.resolve(artifactPath);
+  const relative = path.relative(resolvedRoot, resolvedArtifact);
+  const insideRepository = relative !== ""
+    && relative !== ".."
+    && !relative.startsWith(`..${path.sep}`)
+    && !path.isAbsolute(relative);
+  if (!insideRepository) return resolvedArtifact;
+  if (runGit(resolvedRoot, ["check-ignore", "-q", "--", relative]).ok) return resolvedArtifact;
+  throw new Error(
+    "Activation artifacts must be stored outside the repository or in an explicitly ignored path.",
+  );
 }
 
 function railwayStatusJson() {
@@ -988,6 +1610,8 @@ function railwayStatusJson() {
 }
 
 export async function main(argv = process.argv.slice(2)) {
+  validateActivationPreflightArguments(argv);
+  const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const capturePath = argValue(argv, "--capture-provider-snapshot");
   if (capturePath) {
     const environmentName = argValue(argv, "--environment") ?? "production";
@@ -1000,10 +1624,14 @@ export async function main(argv = process.argv.slice(2)) {
       webServiceName,
     });
     const snapshotRaw = `${JSON.stringify(snapshot, null, 2)}\n`;
-    fs.writeFileSync(path.resolve(capturePath), snapshotRaw, {
-      encoding: "utf8",
-      flag: "wx",
-    });
+    fs.writeFileSync(
+      assertArtifactPathExternalOrIgnored(repositoryRoot, capturePath),
+      snapshotRaw,
+      {
+        encoding: "utf8",
+        flag: "wx",
+      },
+    );
     console.log(JSON.stringify({
       written: true,
       source: snapshot.source,
@@ -1015,15 +1643,36 @@ export async function main(argv = process.argv.slice(2)) {
   }
 
   const planPath = argValue(argv, "--plan");
-  const providerSnapshotPath = argValue(argv, "--provider-snapshot");
   if (!planPath) throw new Error("--plan is required.");
-  if (!providerSnapshotPath) throw new Error("--provider-snapshot is required.");
-
-  const planRaw = fs.readFileSync(planPath, "utf8");
-  const snapshotRaw = fs.readFileSync(providerSnapshotPath, "utf8");
+  const safePlanPath = assertArtifactPathExternalOrIgnored(repositoryRoot, planPath);
+  const planRaw = fs.readFileSync(safePlanPath, "utf8");
   const plan = JSON.parse(planRaw);
+  if (argv.includes("--print-approval-digest")) {
+    const parsed = activationPlanSchema.safeParse(plan);
+    if (!parsed.success) {
+      throw new Error("The activation plan must match the strict schema before approval.");
+    }
+    console.log(JSON.stringify({
+      approvalPlanSha256: approvalBindingDigest(parsed.data),
+    }, null, 2));
+    return;
+  }
+
+  const providerSnapshotPath = argValue(argv, "--provider-snapshot");
+  if (!providerSnapshotPath) throw new Error("--provider-snapshot is required.");
+  const operatorControlReviewPath = argValue(argv, "--operator-control-review");
+  if (!operatorControlReviewPath) throw new Error("--operator-control-review is required.");
+
+  const snapshotRaw = fs.readFileSync(
+    assertArtifactPathExternalOrIgnored(repositoryRoot, providerSnapshotPath),
+    "utf8",
+  );
+  const operatorControlReviewRaw = fs.readFileSync(
+    assertArtifactPathExternalOrIgnored(repositoryRoot, operatorControlReviewPath),
+    "utf8",
+  );
   const providerSnapshot = JSON.parse(snapshotRaw);
-  const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+  const operatorControlReview = JSON.parse(operatorControlReviewRaw);
   const planSource = activationPlanSchema.safeParse(plan);
   const localFacts = planSource.success
     ? deriveLocalRepositoryFacts(repositoryRoot, planSource.data.source)
@@ -1031,10 +1680,16 @@ export async function main(argv = process.argv.slice(2)) {
   const result = evaluateRailwayActivationPlan(plan, {
     providerSnapshot,
     providerSnapshotSha256: sha256(snapshotRaw),
+    operatorControlReview,
+    operatorControlReviewSha256: sha256(operatorControlReviewRaw),
+    independentApprovedPlanSha256: argValue(argv, "--approved-plan-digest"),
     localFacts,
   });
   console.log(JSON.stringify(result, null, 2));
-  if (argv.includes("--require-ready") && !result.ok) process.exitCode = 1;
+  const exitCode = activationPreflightExitCode(result, {
+    reportOnly: argv.includes("--report-only"),
+  });
+  if (exitCode !== 0) process.exitCode = exitCode;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
