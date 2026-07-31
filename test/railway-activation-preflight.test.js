@@ -164,6 +164,7 @@ function readyProviderControls(snapshot) {
       workerPoolMax: 2,
       migratePoolMax: 1,
       reservedConnections: 3,
+      oldCombinedPoolMax: 10,
     },
     monitoring: {
       publicUptimeConfigured: true,
@@ -886,6 +887,15 @@ test("database ceilings and active pool bounds cannot be understated or drift fr
   assert.ok(codes.has("DATABASE_EFFECTIVE_LIMIT_INVALID"));
   assert.ok(codes.has("TOPOLOGY_POOL_BOUND_INVALID"));
   assert.ok(codes.has("OPERATOR_CONTROL_REVIEW_DATABASE_MISMATCH"));
+
+  const overlapPlan = readyPlan(snapshot, controls);
+  overlapPlan.database.transitionTopology.oldCombinedPoolMax = 1;
+  overlapPlan.database.plannedTransitionPeakConnections = 11;
+  bindAuthorizedPlan(overlapPlan, controls);
+  assert.ok(
+    evaluate(overlapPlan, snapshot, { providerControlEvidence: controls })
+      .findings.some(({ code }) => code === "OPERATOR_CONTROL_REVIEW_DATABASE_MISMATCH"),
+  );
 });
 
 test("verified provider hard limit requires exact scope, outage acceptance, and separate Agent evidence", () => {
