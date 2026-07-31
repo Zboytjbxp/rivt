@@ -74,9 +74,12 @@ outbox. This closes the Web Push key-retirement acceptance boundary without
 clearing the broader incident or `ACTIVE_LAUNCH_HOLD`. Sentry provider audit
 and usage views now also show only the expected rotation actions, 20 accepted
 errors in 14 days, zero filtered, rate-limited, or invalid events, and no
-significant spike. The remaining exit work is final evidence synthesis,
-explicit acceptance of the known historical database/object-storage forensic
-gaps, and a fresh Railway Stage 1 re-review and approval.
+significant spike. Incident owner Michael's forensic-limit acceptance was
+recorded at `2026-07-31T12:22:03.895Z`: the available evidence found no misuse
+indicator, while historical successful PostgreSQL access and direct bucket
+reads cannot be reconstructed and no claim of no access or exfiltration is
+possible. The remaining exit work is final evidence synthesis and a fresh
+Railway Stage 1 re-review and approval.
 
 ## Active operational incident - Production credential exposure
 
@@ -232,9 +235,9 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   `/api/health` returned `ok: true`, `/api/auth/providers` reported Google
   configured, and `npm run monitor:production` passed against build
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Google OAuth secret rotation is
-  complete. Final incident evidence synthesis, explicit forensic-limit
-  acceptance, and the fresh Railway Stage 1 review remain open, so the
-  overall incident and launch hold are not cleared.
+  complete. The incident owner's explicit forensic-limit acceptance is now
+  recorded. Final incident evidence synthesis and the fresh Railway Stage 1
+  review remain open, so the overall incident and launch hold are not cleared.
 - The incident-remediation source was fast-forwarded to `master` and Railway
   deployment `e12e66b2-9701-44d6-b57f-8e12fe436738` succeeded on exact commit
   `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`. This activates the final-boundary
@@ -317,9 +320,11 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   the current RIVT HTTP window, current application audit ledger, or
   post-rotation PostgreSQL authentication logs. It also documented the honest
   forensic boundary: historical successful PostgreSQL reads/writes were not
-  audited, and Railway Buckets provide no per-object access history. Earlier
-  provider review stays open; no claim of “no access” or “no exfiltration” is
-  made.
+  audited, and Railway Buckets provide no per-object access history. Available
+  provider evidence has now been reviewed and the incident owner explicitly
+  accepts that the missing history cannot be reconstructed; no claim of no
+  access or no exfiltration is made. Final synthesis and Railway Stage 1
+  re-review remain open.
 - PostgreSQL error classification is now complete across the immediately
   preceding deployment from 23:00 UTC through credential cutover and the
   replacement deployment through 13:04 UTC. Every error-shaped record maps to

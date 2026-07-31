@@ -24,10 +24,13 @@ returned production environment-variable values into a restricted automation
 transcript. The temporary local output file was removed. No secret value is
 included in this record.
 
-No unauthorized use is currently known; provider and audit-log review remains
-open. Data-access and exfiltration impact is under investigation, and no
-conclusion has been reached. Because transcript confidentiality cannot be used
-as a security boundary, every exposed credential is treated as compromised.
+No unauthorized use is currently known. All provider and audit evidence
+available to and documented in this investigation has been reviewed, with no
+misuse indicator identified; final synthesis remains open. Historical
+successful PostgreSQL access and direct bucket reads cannot be reconstructed,
+so RIVT cannot prove that no historical access or exfiltration occurred.
+Because transcript confidentiality cannot be used as a security boundary,
+every exposed credential is treated as compromised.
 
 The detection window is bounded by a documented 19:01 Railway observation that
 explicitly read no credentials or variables and the first formal critical
@@ -474,9 +477,8 @@ moment.
   the most recent isolated CI run remains the 22/22 PostgreSQL integration
   proof recorded above.
 - Sentry credential rotation is complete. The broader incident and
-  `ACTIVE_LAUNCH_HOLD` remain open for the final provider-review synthesis,
-  explicit incident-owner acceptance of the historical PostgreSQL and object
-  storage forensic limits, and a fresh Railway Stage 1 re-review and approval.
+  `ACTIVE_LAUNCH_HOLD` remain open for the final provider-review synthesis and
+  a fresh Railway Stage 1 re-review and approval.
 
 ## Bounded access-log review evidence
 
@@ -519,12 +521,27 @@ moment.
   that no-new-service application control from later provider/external
   immutable logging whose cost, privacy, residency, and retention have not
   been approved. No part of that proposed design is represented as implemented.
-- No misuse indicator has been identified in the evidence reviewed so far.
+- No misuse indicator has been identified in the available evidence reviewed.
   The bounded PostgreSQL error review is complete for the repository-backed
   incident window, subject to the historical auditing limitation above. The
-  review remains open for provider logs and the unavoidable database/object-
-  storage forensic limitations. The incident is not represented as proof of
-  no access or no exfiltration.
+  provider evidence available to and documented in this investigation has been
+  reviewed, but final synthesis remains open. The incident is not represented
+  as proof of no access or no exfiltration.
+
+## Incident-owner acceptance of forensic limits
+
+- Incident owner Michael explicitly accepted the following bounded conclusion;
+  the acceptance was recorded at `2026-07-31T12:22:03.895Z`: all provider
+  evidence available to and documented in this investigation was reviewed and
+  no misuse indicator was found, but historical successful PostgreSQL access
+  and direct bucket reads cannot be reconstructed. RIVT cannot honestly prove
+  that no historical access or exfiltration occurred.
+- This acceptance closes only the forensic-limit acceptance requirement. It
+  does not reconstruct missing history, lower the incident severity, close the
+  incident, clear `ACTIVE_LAUNCH_HOLD`, authorize deployment, or approve paid
+  infrastructure work.
+- Final provider-review synthesis and a fresh exact-source Railway Stage 1
+  re-review and approval remain required before incident closure.
 
 ## Recovery plan
 
@@ -550,8 +567,9 @@ This incident remains open until:
   monitoring, and backup restore access are verified without printing secrets;
 - the existing backup artifact is still recoverable through the approved
   previous-key path;
-- provider, PostgreSQL, and object-access logs have been reviewed for
-  unauthorized access or exfiltration;
+- available provider, PostgreSQL, and object-access evidence has been reviewed
+  for unauthorized access or exfiltration, with incident-owner acceptance
+  recorded where historical evidence cannot be reconstructed;
 - the incident record contains only nonsecret evidence and timestamps;
 - a follow-up prevents secret-bearing environment enumeration in operator
   workflows; and
