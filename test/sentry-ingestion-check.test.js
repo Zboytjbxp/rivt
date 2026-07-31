@@ -136,6 +136,7 @@ test("Sentry verification sends one event only with matching production proof", 
 test("Sentry verification contains provider failures without exposing their errors", async () => {
   const output = outputCapture();
   const secretBearingError = "https://private-key@sentry.example/api/123/store?sentry_key=private-key";
+  let capturedMarker = null;
   const exitCode = await runSentryIngestionCheck({
     args: [
       "--send-production-event",
@@ -143,7 +144,8 @@ test("Sentry verification contains provider failures without exposing their erro
       `--expected-commit=${fakeCommit}`,
     ],
     env: configuredEnv({ NODE_ENV: "production", SOURCE_COMMIT: fakeCommit }),
-    captureExceptionImpl: async () => {
+    captureExceptionImpl: async (marker) => {
+      capturedMarker = marker;
       throw new Error(secretBearingError);
     },
     ...output.options,
@@ -151,6 +153,13 @@ test("Sentry verification contains provider failures without exposing their erro
 
   assert.equal(exitCode, 1);
   assert.equal(output.stdout.length, 0);
-  assert.equal(JSON.parse(output.stderr.join("")).mode, "provider_request_failed");
+  const result = JSON.parse(output.stderr.join(""));
+  assert.equal(result.mode, "provider_request_failed");
+  assert.equal(result.marker, capturedMarker);
+  assert.match(result.marker, /^RIVT Sentry rotation verification /);
+  assert.equal(result.environment, "production");
+  assert.equal(result.sourceCommit, fakeCommit);
+  assert.match(result.sentAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.match(result.next, /Search Sentry for this exact marker before retrying/);
   assert.equal(output.stderr.join("").includes("private-key"), false);
 });

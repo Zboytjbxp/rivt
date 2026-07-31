@@ -132,7 +132,11 @@ export async function runSentryIngestionCheck({
     writeJson(stderr, {
       ok: false,
       mode: "provider_request_failed",
-      next: "Do not retire the previous client key.",
+      marker,
+      environment,
+      sourceCommit,
+      sentAt,
+      next: "Search Sentry for this exact marker before retrying. Do not retire the previous client key unless the event and its alert are confirmed.",
     });
     return 1;
   }
