@@ -1,5 +1,44 @@
 # Deployment Ledger
 
+## 2026-07-31 - Credential-Incident Provider Review Correction (No Deployment)
+
+- Branch/source: `codex/money-integrity-canonical-invoices` at source
+  `b0151bce6f481a4ccf39eb2726ba208066e874b4` before this documentation-only
+  correction.
+- Review completed: `2026-07-31T13:07:24.122Z` by Codex under Michael's
+  read-only incident authorization, against deployed production source
+  `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`.
+- Environment: read-only review of existing production/provider evidence; no
+  application deployment, provider configuration change, customer-data write,
+  payment, new service, or paid resource.
+- Reviewed/bounded: Stripe Workbench API/event/key/suspicious-activity views;
+  Resend's available 15-day API/email logs and key inventory; Sentry provider
+  audit/usage; Railway deployment history; retained PostgreSQL logs; and
+  aggregate read-only billing, subscription, entitlement, invoice, payment-
+  request, direct-payment, Connect, OAuth-identity, and audit-ledger state.
+- Result: no identified misuse indicator within the named retained bounds.
+  Stripe's platform-account view showed only the controlled replacement-key
+  account read, no `Your account` event in the bounded interval, and zero
+  suspicious-activity cases. Within the named aggregate production queries,
+  the only matching event rows were three documented rotation probes; no
+  additional application-recorded webhook row or nonzero consistency counter
+  was found. Resend showed the expected restriction check, proof delivery, and
+  older sends consistent with documented pre-exposure tests. These tables and
+  provider views cannot reconstruct an action they did not log or retain.
+- Correction: Michael's exact `2026-07-31T12:22:03.895Z` statement is preserved
+  in the incident record. Later review found its blanket provider-review premise
+  incomplete; only the PostgreSQL/direct-bucket historical limitation remains
+  valid closure evidence, and no other blind spot is accepted.
+- Open evidence: Stripe's separate connected-account event scope remains
+  pending. Google OAuth credential inventory and controlled callbacks were
+  reviewed, but Google Cloud audit/activity history requires a session
+  authorized for project `rivt-499402`. Railway account sign-in/variable-change
+  history was unavailable through the authenticated CLI/current browser; direct
+  VAPID misuse, offline backup-key use, and offline authentication-pepper use
+  have no historical provider ledger and need explicit owner decisions.
+- Launch/cost boundary: `ACTIVE_LAUNCH_HOLD` and the Railway Stage 1 pause remain
+  active. No prior cost/configuration approval is reused.
+
 ## 2026-07-31 - Sentry DSN Rotation and Retirement
 
 - Production source commit:
@@ -47,9 +86,11 @@
   preserves final-boundary Sentry redaction. The disabled prior key must never
   be restored; any rollback keeps the replacement DSN.
 - Launch boundary: Sentry credential rotation is closed. The broader incident
-  and `ACTIVE_LAUNCH_HOLD` remain open until the final provider-review
-  synthesis, explicit acceptance of unavailable historical PostgreSQL and
-  object-access evidence, and a fresh Railway Stage 1 re-review and approval.
+  and `ACTIVE_LAUNCH_HOLD` remain open. PostgreSQL/direct-bucket historical
+  limits are valid owner-accepted closure evidence; Stripe connected-account
+  events, Google audit/activity history, Railway administrator-history review,
+  three unobservable-secret decisions, and a fresh Railway Stage 1 re-review/
+  approval remain open.
 
 ## 2026-07-30 - Web Push VAPID Generation Tracking
 

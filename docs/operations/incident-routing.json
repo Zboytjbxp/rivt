@@ -9,7 +9,7 @@
   },
   "launchHold": {
     "active": true,
-    "reason": "Emergency production credential containment remains open. Clear only after every exit criterion in the 2026-07-29 incident record is verified.",
+    "reason": "Production credential containment is complete, but forensic/provider review and incident exit criteria remain open. Clear only after every exit criterion in the 2026-07-29 incident record is verified.",
     "incident": "docs/operations/incidents/2026-07-29-production-credential-exposure.md",
     "setAt": "2026-07-30T04:39:06.4424071Z"
   },
