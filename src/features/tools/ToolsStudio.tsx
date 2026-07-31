@@ -1923,10 +1923,6 @@ function readPaymentTrackerRecords(): PaymentTrackerRecord[] {
   } catch { return []; }
 }
 
-function savePaymentTrackerRecords(records: PaymentTrackerRecord[]) {
-  try { localStorage.setItem(paymentsTrackerKey, JSON.stringify(records)); } catch { /* noop */ }
-}
-
 function isPaymentTrackerRecord(value: unknown): value is PaymentTrackerRecord {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<PaymentTrackerRecord>;
@@ -1950,229 +1946,64 @@ function paymentRecordFromServer(record: ServerToolRecord): PaymentTrackerRecord
   };
 }
 
-function paymentRecordToServerInput(record: PaymentTrackerRecord) {
-  return {
-    recordType: "payment_record" as const,
-    localId: record.id,
-    title: record.jobTitle || "Standalone invoice",
-    status: record.status,
-    recordDate: record.invoiceDate || null,
-    amountCents: Math.round(Math.max(0, record.invoiceAmount) * 100),
-    payload: { ...record },
-  };
-}
-
-function readLocalJobsForPayments(): Array<{ id: string; title: string }> {
-  try {
-    const stored = localStorage.getItem("rivt.jobs.v1");
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as Array<{ id: string; title: string }>;
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
-}
-
-function getDisplayStatus(record: PaymentTrackerRecord): PaymentTrackerRecord["status"] {
-  if (record.status === "invoiced") {
-    const invoiceDate = new Date(record.invoiceDate);
-    const daysDiff = (Date.now() - invoiceDate.getTime()) / (1000 * 60 * 60 * 24);
-    if (daysDiff > 30) return "overdue";
-  }
-  return record.status;
-}
-
-function PaymentTrackerTool() {
+function ReceivablesTool() {
   const [records, setRecords] = useState<PaymentTrackerRecord[]>(readPaymentTrackerRecords);
-  const [syncMessage, setSyncMessage] = useState("Saved on this device.");
-  const localJobs = readLocalJobsForPayments();
-  const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({
-    jobId: localJobs[0]?.id ?? "",
-    invoiceAmount: "",
-    invoiceDate: new Date().toISOString().slice(0, 10),
-    notes: "",
-  });
-
-  const totalInvoiced = records.reduce((sum, r) => sum + r.invoiceAmount, 0);
-  const received = records.filter((r) => r.status === "paid").reduce((sum, r) => sum + (r.paidAmount ?? 0), 0);
-  const outstanding = totalInvoiced - received;
+  const [loadMessage, setLoadMessage] = useState("Checking for earlier manual records...");
 
   useEffect(() => {
     let cancelled = false;
     void fetchToolRecords("payment_record").then((serverRecords) => {
       if (cancelled) return;
       if (!serverRecords) {
-        setSyncMessage("Saved on this device. Sign in with network access to sync.");
+        setLoadMessage("RIVT could not check the account right now. Any earlier device records remain listed below as reference only.");
         return;
       }
       const mapped = serverRecords.map(paymentRecordFromServer).filter((record): record is PaymentTrackerRecord => Boolean(record));
-      if (mapped.length) {
-        setRecords(mapped);
-        savePaymentTrackerRecords(mapped);
-        setSyncMessage("Synced to your RIVT account.");
-        return;
-      }
       const localSnapshot = readPaymentTrackerRecords();
-      if (localSnapshot.length) {
-        void Promise.all(localSnapshot.map((record) => upsertToolRecord(paymentRecordToServerInput(record)))).then((results) => {
-          setSyncMessage(results.some(Boolean)
-            ? "Local payment records synced to your RIVT account."
-            : "Couldn't sync - saved on this device only.");
-        });
-        return;
-      }
-      setSyncMessage("New payment records sync to your RIVT account.");
+      const merged = [...mapped];
+      const knownIds = new Set(mapped.map((record) => record.id));
+      localSnapshot.forEach((record) => {
+        if (!knownIds.has(record.id)) merged.push(record);
+      });
+      setRecords(merged);
+      setLoadMessage(merged.length
+        ? "Earlier manually entered records are shown for reference only."
+        : "No earlier manual payment records were found.");
     });
     return () => { cancelled = true; };
   }, []);
 
-  function persistRecords(next: PaymentTrackerRecord[], changedRecord?: PaymentTrackerRecord) {
-    setRecords(next);
-    savePaymentTrackerRecords(next);
-    if (!changedRecord) return;
-    void upsertToolRecord(paymentRecordToServerInput(changedRecord)).then((record) => {
-      setSyncMessage(record ? "Synced to your RIVT account." : "Couldn't sync - saved on this device only.");
-    });
-  }
-
-  function saveInvoice() {
-    const job = localJobs.find((j) => j.id === form.jobId);
-    const record: PaymentTrackerRecord = {
-      id: crypto.randomUUID(),
-      jobId: form.jobId,
-      jobTitle: job?.title ?? "Standalone",
-      invoiceDate: form.invoiceDate,
-      invoiceAmount: parseFloat(form.invoiceAmount) || 0,
-      status: "invoiced",
-      notes: form.notes || undefined,
-    };
-    const next = [record, ...records];
-    persistRecords(next, record);
-    setShowForm(false);
-    setForm({ jobId: localJobs[0]?.id ?? "", invoiceAmount: "", invoiceDate: new Date().toISOString().slice(0, 10), notes: "" });
-  }
-
-  function markPaid(id: string) {
-    let changed: PaymentTrackerRecord | undefined;
-    const next = records.map((r) => {
-      if (r.id !== id) return r;
-      changed = {
-        ...r,
-        paidDate: new Date().toISOString().slice(0, 10),
-        paidAmount: r.invoiceAmount,
-        status: "paid" as const,
-      };
-      return changed;
-    });
-    persistRecords(next, changed);
-  }
-
-  function deleteRecord(id: string) {
-    const next = records.filter((r) => r.id !== id);
-    setRecords(next);
-    savePaymentTrackerRecords(next);
-    void deleteToolRecordByLocalId("payment_record", id).then((ok) => {
-      setSyncMessage(ok ? "Deleted from this device and your RIVT account." : "Deleted on this device only. Could not sync deletion.");
-    });
-  }
-
   const sorted = [...records].sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
-
-  function statusBadgeClass(status: PaymentTrackerRecord["status"]) {
-    return `v2-payment-badge ${status}`;
-  }
-
-  function daysSince(dateStr: string) {
-    // eslint-disable-next-line react-hooks/purity
-    const days = Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
-    return days === 0 ? "Today" : `${days}d ago`;
-  }
 
   return (
     <div className="v2-tool-panel" style={{ maxWidth: 720 }}>
-      <div className="v2-payment-summary">
-        <div className="v2-payment-stat">
-          <div className="v2-payment-stat-value">${totalInvoiced.toLocaleString()}</div>
-          <div className="v2-payment-stat-label">Total Invoiced</div>
-        </div>
-        <div className="v2-payment-stat">
-          <div className="v2-payment-stat-value">${received.toLocaleString()}</div>
-          <div className="v2-payment-stat-label">Received</div>
-        </div>
-        <div className="v2-payment-stat">
-          <div className="v2-payment-stat-value">${outstanding.toLocaleString()}</div>
-          <div className="v2-payment-stat-label">Outstanding</div>
+      <div className="v2-payment-row">
+        <div>
+          <strong>Invoice status stays with the real invoice</strong>
+          <p className="v2-muted-copy">Create and send invoices from the Draft tab. Bank and outside-payment status is recorded on that invoice or its job record, so RIVT does not maintain a second editable payment total here.</p>
         </div>
       </div>
-
-      <button type="button" className="v2-payment-add-btn" onClick={() => setShowForm(!showForm)}>
-        {showForm ? "Cancel" : "+ Add Invoice"}
-      </button>
-      <p className="v2-record-notice" role="status">{syncMessage}</p>
-
-      {showForm && (
-        <div className="v2-payment-form">
-          <select
-            value={form.jobId}
-            onChange={(e) => setForm((f) => ({ ...f, jobId: e.target.value }))}
-          >
-            <option value="">Standalone / no job</option>
-            {localJobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
-          </select>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Invoice amount ($)"
-            value={form.invoiceAmount}
-            onChange={(e) => setForm((f) => ({ ...f, invoiceAmount: e.target.value }))}
-          />
-          <input
-            type="date"
-            value={form.invoiceDate}
-            onChange={(e) => setForm((f) => ({ ...f, invoiceDate: e.target.value }))}
-          />
-          <input
-            type="text"
-            placeholder="Notes (optional)"
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          />
-          <div className="v2-payment-form-btns">
-            <button type="button" className="v2-payment-save-btn" onClick={saveInvoice} disabled={!form.invoiceAmount}>Save Invoice</button>
-            <button type="button" className="v2-payment-cancel-btn" onClick={() => setShowForm(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
+      <p className="v2-record-notice" role="status">{loadMessage}</p>
 
       <div className="v2-payment-list">
+        {sorted.length ? <h3>Legacy manually entered records</h3> : null}
+        {sorted.length ? <p className="v2-muted-copy">Reference only. These rows are excluded from invoice totals and do not prove that money was sent or received.</p> : null}
         {sorted.map((record) => {
-          const displayStatus = getDisplayStatus(record);
           return (
             <div key={record.id} className="v2-payment-row">
               <div className="v2-payment-row-top">
                 <span className="v2-payment-job-name">{record.jobTitle}</span>
-                <span className="v2-payment-amount">${record.invoiceAmount.toLocaleString()}</span>
+                <span className="v2-payment-amount">${record.invoiceAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="v2-payment-row-meta">
-                <span className={statusBadgeClass(displayStatus)}>{displayStatus}</span>
-                <span>{daysSince(record.invoiceDate)}</span>
+                <span className={`v2-payment-badge ${record.status}`}>Legacy entry: {record.status}</span>
+                <span>{record.invoiceDate}</span>
                 {record.notes && <span>{record.notes}</span>}
               </div>
-              {record.status !== "paid" && (
-                <div className="v2-payment-row-actions">
-                  <button type="button" className="v2-payment-paid-btn" onClick={() => markPaid(record.id)}>Mark Paid</button>
-                  <button type="button" className="v2-payment-delete-btn" onClick={() => deleteRecord(record.id)}>Delete</button>
-                </div>
-              )}
-              {record.status === "paid" && (
-                <div className="v2-payment-row-actions">
-                  <button type="button" className="v2-payment-delete-btn" onClick={() => deleteRecord(record.id)}>Delete</button>
-                </div>
-              )}
             </div>
           );
         })}
-        {records.length === 0 && <p className="v2-muted-copy">No invoices tracked yet. Add your first invoice above.</p>}
+        {records.length === 0 && <p className="v2-muted-copy">Use Draft to create the next invoice. Its delivery and payment state will stay attached to the actual invoice.</p>}
       </div>
     </div>
   );
@@ -2778,7 +2609,7 @@ function InvoiceWorkspaceTool({
       </nav>
       <div className="v2-invoice-workspace-content">
         {activeView === "draft" ? draft : null}
-        {activeView === "receivables" ? <PaymentTrackerTool /> : null}
+        {activeView === "receivables" ? <ReceivablesTool /> : null}
       </div>
     </div>
   );

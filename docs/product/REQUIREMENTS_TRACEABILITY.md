@@ -1,5 +1,39 @@
 # Gate A Requirements Traceability
 
+## Packet 87 — Money-integrity containment (local verification)
+
+- `GA-FND-003` gains one authoritative amount boundary for each invoice path:
+  standalone customer documents use the account-owned tool record, while
+  accepted-work documents must match the participant-authorized project
+  invoice and its unpaid balance exactly.
+- `GA-FND-004` gains server-side refusal for deleted, void, mismatched,
+  processing, settled, externally paid, refunded, and disputed
+  invoice/payment combinations. Public payer redirects revalidate the current
+  invoice before forwarding to Stripe, and consequential out-of-order Stripe
+  events cannot erase settlement, refund, or dispute truth.
+- `GA-UX-005` gains honest Receivables and delivery behavior. New manual
+  `payment_record` writes are retired; older rows remain readable but cannot
+  contribute to current totals or claim settlement. A bank-link creation no
+  longer labels an invoice sent.
+- `GA-UX-006` gains content-bound invoice delivery: the provider retry
+  identity derives from the exact recipient and rendered document,
+  different-key concurrent sends serialize, and an identical lost-response
+  replay restores the truthful sent label without another email. Browser
+  writes cannot forge paid/sent state or provider metadata, provider delivery
+  requires an active verified account, and repeated status writes do not
+  duplicate project effects.
+- Local evidence: production build, full/security lint, 164 unit/frontend
+  tests, all three browser E2E journeys, Tools/Invoice, mobile-actions, and
+  Work-lifecycle rendered suites, dependency audit, and diff integrity pass.
+  A freshly reset disposable PostgreSQL 16.14 cluster passed all 22
+  integration tests, including all 19 database-backed suites, with zero
+  failures or skips. It was loopback-only, stopped, and removed after the
+  run; production and Railway were not used. Independent review found no
+  remaining code blocker.
+- No migration, production data, provider configuration, paid resource,
+  deployment, or live payment changed. Packet 87 remains launch-blocking until
+  merge, deployment, and exact-source acceptance pass.
+
 ## Operational Incident Addendum - 2026-07-29 Credential Containment
 
 - `GA-OPS-007` gains local Web Push retirement instrumentation: migration

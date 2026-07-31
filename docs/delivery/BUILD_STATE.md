@@ -2,15 +2,44 @@
 
 Last updated: 2026-07-31 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Emergency production credential containment; feature activation paused.
-Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
-Repository branch: `master` (source: `codex/customer-documents-contact-import`)
+Current phase: Emergency production credential containment; local
+money-integrity containment; feature activation paused.
+Active packet: `docs/delivery/packets/87_MONEY_INTEGRITY_CONTAINMENT.md`
+Repository branch: `codex/money-integrity-canonical-invoices` from current
+`origin/master`
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
+
+Current product packet: Packet 87 is implemented locally from exact current
+`origin/master` source
+`29e3c613f2eb95a6583b52c671275e5046dde0d3`. It fails closed when an invoice,
+project balance, or bank-payment request disagrees; invalidates payer
+redirects for deleted, void, or mismatched invoices; locks processing,
+settled, refunded, and disputed payment history; retires new manual
+`payment_record` writes while preserving older rows as read-only references;
+and records successful project-invoice email delivery atomically. Exact
+rendered content now supplies a stable provider retry identity, concurrent
+different-key sends serialize, and an identical replay restores a stale
+draft label without sending again. Browser writes cannot forge paid/sent
+state, delivery evidence, or bank-payment metadata; provider email requires
+an active verified account; void, external-payment, processing, settlement,
+refund, and dispute truth cannot be manually erased; and consequential
+out-of-order Stripe events remain monotonic. Production build, full/security
+lint, 164 unit/frontend tests, three browser E2E journeys, Tools/Invoice,
+mobile-actions, Work-lifecycle, dependency audit, and diff integrity pass.
+A freshly reset, disposable, loopback-only PostgreSQL 16.14 cluster passed all
+22 integration tests, including all 19 database-backed suites, with zero
+failures or skips; it was stopped and removed after the run, and neither
+production nor the older Railway test URL was used. Independent final review
+found no remaining Packet 87 code blocker. Commit, merge, deployment, and
+exact-source acceptance remain mandatory. The packet adds no migration and
+has not changed production data, provider configuration, paid resources, or
+the live application. The broader incident and `ACTIVE_LAUNCH_HOLD` remain in
+force.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source

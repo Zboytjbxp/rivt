@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { ApiError, asyncRoute, validate, z } from "./api.js";
 
 const toolRecordTypeSchema = z.enum([
@@ -17,6 +18,16 @@ const toolRecordTypeSchema = z.enum([
   "job_checklist",
   "client",
 ]);
+
+const ACTIVE_INVOICE_PAYMENT_STATUSES = ["created", "open", "processing"];
+const IMMUTABLE_INVOICE_PAYMENT_STATUSES = [
+  "processing",
+  "paid",
+  "partially_refunded",
+  "refunded",
+  "disputed",
+];
+const CLIENT_INVOICE_STATUSES = new Set(["draft", "sent"]);
 
 const localIdSchema = z.string().trim().min(1).max(120).regex(/^[A-Za-z0-9:_-]+$/);
 
@@ -74,6 +85,43 @@ function objectValue(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
+function stripServerOwnedInvoicePayload(value) {
+  const payload = { ...objectValue(value) };
+  delete payload.bankPayment;
+  delete payload.delivery;
+  return payload;
+}
+
+function canonicalJson(value) {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, canonicalJson(value[key])]),
+    );
+  }
+  return value;
+}
+
+function equivalentInvoicePayload(left, right) {
+  return JSON.stringify(canonicalJson(stripServerOwnedInvoicePayload(left)))
+    === JSON.stringify(canonicalJson(stripServerOwnedInvoicePayload(right)));
+}
+
+function requireVerifiedDeliveryActor(actor) {
+  if (actor?.account?.status !== "active") {
+    throw new ApiError(403, "ACCOUNT_NOT_ACTIVE", "Only an active RIVT account can deliver customer documents.");
+  }
+  if (!actor.account.emailVerified) {
+    throw new ApiError(
+      403,
+      "EMAIL_VERIFICATION_REQUIRED",
+      "Verify your RIVT email before delivering customer documents.",
+    );
+  }
+}
+
 function textValue(value, fallback = "", maxLength = 400) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) || fallback : fallback;
 }
@@ -98,6 +146,18 @@ function escapeHtml(value) {
 
 function escapeCsv(value) {
   return `"${String(value ?? "").replaceAll('"', '""')}"`;
+}
+
+function stableDeliveryContentHash({ to, subject, text, html, attachments }) {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      to: String(to ?? "").trim().toLowerCase(),
+      subject: String(subject ?? ""),
+      text: String(text ?? ""),
+      html: String(html ?? ""),
+      attachments: Array.isArray(attachments) ? attachments : [],
+    }))
+    .digest("hex");
 }
 
 function expenseCsv(records) {
@@ -397,6 +457,7 @@ export function registerToolRecordRoutes({
   sendIdempotentResult,
   sendTransactionalEmail,
   loadDocumentBrandForDelivery = null,
+  createInAppNotification = null,
 }) {
   app.get("/api/v1/tool-records/expenses/export.csv", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     if (!await hasActiveProEntitlement(database, request.actor.account.id)) {
@@ -450,11 +511,116 @@ export function registerToolRecordRoutes({
 
   app.post("/api/v1/tool-records", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const input = validate(toolRecordUpsertSchema, request.body);
+    if (input.recordType === "payment_record") {
+      throw new ApiError(
+        410,
+        "PAYMENT_RECORD_RETIRED",
+        "Manual payment records are retired. Use the invoice and its verified payment status instead.",
+      );
+    }
     const result = await runIdempotentMutation(
       request,
       request.actor.account.id,
       `tool-records.upsert:${input.recordType}:${input.localId}`,
       async (client) => {
+        let existingInvoice = null;
+        let persistedPayload = input.payload;
+        let persistedStatus = input.status;
+        if (input.recordType === "invoice_draft") {
+          if (!CLIENT_INVOICE_STATUSES.has(input.status)) {
+            throw new ApiError(
+              422,
+              "INVOICE_STATUS_SERVER_OWNED",
+              "Payment and delivery states are recorded by RIVT. Save browser edits as a draft.",
+            );
+          }
+          const incomingPayload = stripServerOwnedInvoicePayload(input.payload);
+          persistedPayload = incomingPayload;
+          persistedStatus = "draft";
+          existingInvoice = (await client.query(
+            `SELECT *
+             FROM tool_records
+             WHERE account_id = $1
+               AND record_type = 'invoice_draft'
+               AND local_id = $2
+               AND deleted_at IS NULL
+             FOR UPDATE`,
+            [request.actor.account.id, input.localId],
+          )).rows[0] ?? null;
+          if (existingInvoice) {
+            if (existingInvoice.status === "paid") {
+              throw new ApiError(
+                409,
+                "INVOICE_PAYMENT_HISTORY_LOCKED",
+                "A paid invoice cannot be edited. Start a new invoice for any correction or additional amount.",
+              );
+            }
+            const immutablePayment = (await client.query(
+              `SELECT status
+               FROM tool_invoice_payment_requests
+               WHERE tool_record_id = $1
+                 AND status = ANY($2::text[])
+               ORDER BY created_at DESC
+               LIMIT 1
+               FOR UPDATE`,
+              [existingInvoice.id, IMMUTABLE_INVOICE_PAYMENT_STATUSES],
+            )).rows[0] ?? null;
+            if (immutablePayment?.status === "processing") {
+              throw new ApiError(
+                409,
+                "BANK_PAYMENT_PROCESSING",
+                "This ACH payment is processing. The invoice cannot be changed until it settles or fails.",
+              );
+            }
+            if (immutablePayment) {
+              throw new ApiError(
+                409,
+                "INVOICE_PAYMENT_HISTORY_LOCKED",
+                "This invoice has bank-payment history and cannot be edited. Start a new invoice for a correction or additional amount.",
+              );
+            }
+            const activePayment = (await client.query(
+              `SELECT status, amount_cents
+               FROM tool_invoice_payment_requests
+               WHERE tool_record_id = $1
+                 AND status = ANY($2::text[])
+               ORDER BY created_at DESC
+               LIMIT 1
+               FOR UPDATE`,
+              [existingInvoice.id, ACTIVE_INVOICE_PAYMENT_STATUSES.filter((status) => status !== "processing")],
+            )).rows[0] ?? null;
+            if (activePayment && Number(activePayment.amount_cents) !== Number(input.amountCents ?? 0)) {
+              throw new ApiError(
+                409,
+                "BANK_PAYMENT_AMOUNT_CHANGED",
+                "Cancel the existing bank-payment link before changing the invoice total.",
+              );
+            }
+
+            const currentPayload = objectValue(existingInvoice.payload);
+            const currentProjectInvoiceId = textValue(currentPayload.projectInvoiceId, "", 80);
+            const incomingProjectInvoiceId = textValue(incomingPayload.projectInvoiceId, "", 80);
+            if (z.uuid().safeParse(currentProjectInvoiceId).success
+              && currentProjectInvoiceId !== incomingProjectInvoiceId) {
+              throw new ApiError(
+                409,
+                "INVOICE_PROJECT_LINK_IMMUTABLE",
+                "A saved job invoice cannot be relinked to a different project invoice.",
+              );
+            }
+            persistedPayload = {
+              ...incomingPayload,
+              ...(currentPayload.bankPayment ? { bankPayment: currentPayload.bankPayment } : {}),
+              ...(currentPayload.delivery ? { delivery: currentPayload.delivery } : {}),
+            };
+            if (
+              objectValue(currentPayload.delivery).status === "sent"
+              && equivalentInvoicePayload(currentPayload, incomingPayload)
+            ) {
+              persistedStatus = "sent";
+            }
+          }
+        }
         if (input.standaloneProjectId) {
           const ownedProject = await client.query(
             "SELECT id FROM standalone_projects WHERE id = $1 AND account_id = $2 AND status = 'active'",
@@ -471,6 +637,77 @@ export function registerToolRecordRoutes({
           );
           if (!participant.rowCount) {
             throw new ApiError(403, "ACTIVE_WORK_ACCESS_DENIED", "You cannot save records to that RIVT workspace.");
+          }
+          if (input.recordType === "invoice_draft") {
+            const projectInvoiceId = textValue(objectValue(persistedPayload).projectInvoiceId, "", 80);
+            if (!z.uuid().safeParse(projectInvoiceId).success) {
+              throw new ApiError(
+                409,
+                "INVOICE_PROJECT_LINK_REQUIRED",
+                "Create the job invoice record before saving this draft. No payment amount was changed.",
+              );
+            }
+            const linkedProjectInvoice = (await client.query(
+              `SELECT pi.status, pi.total_cents,
+                      payment_request.status AS payment_status
+               FROM project_invoices pi
+               LEFT JOIN LATERAL (
+                 SELECT request.status
+                 FROM project_invoice_payment_requests request
+                 WHERE request.invoice_id = pi.id
+                   AND request.status = ANY($4::text[])
+                 ORDER BY request.created_at DESC
+                 LIMIT 1
+               ) payment_request ON true
+               WHERE pi.id = $1
+                 AND pi.active_work_id = $2
+                 AND pi.created_by_account_id = $3
+               FOR UPDATE OF pi`,
+              [
+                projectInvoiceId,
+                input.activeWorkId,
+                request.actor.account.id,
+                IMMUTABLE_INVOICE_PAYMENT_STATUSES,
+              ],
+            )).rows[0] ?? null;
+            if (!linkedProjectInvoice) {
+              throw new ApiError(
+                409,
+                "INVOICE_PROJECT_OUT_OF_DATE",
+                "The linked job invoice could not be verified. Reopen the invoice from the job before saving.",
+              );
+            }
+            if (linkedProjectInvoice.status === "void") {
+              throw new ApiError(409, "PROJECT_INVOICE_VOID", "A void job invoice cannot be edited.");
+            }
+            if (linkedProjectInvoice.status === "paid") {
+              throw new ApiError(
+                409,
+                "INVOICE_PAYMENT_HISTORY_LOCKED",
+                "A paid job invoice cannot be edited. Start a new invoice for a correction or additional amount.",
+              );
+            }
+            if (linkedProjectInvoice.payment_status === "processing") {
+              throw new ApiError(
+                409,
+                "BANK_PAYMENT_PROCESSING",
+                "This ACH payment is processing. The invoice cannot be changed until it settles or fails.",
+              );
+            }
+            if (linkedProjectInvoice.payment_status) {
+              throw new ApiError(
+                409,
+                "INVOICE_PAYMENT_HISTORY_LOCKED",
+                "This job invoice has bank-payment history and cannot be edited. Start a new invoice for a correction or additional amount.",
+              );
+            }
+            if (Number(linkedProjectInvoice.total_cents) !== Number(input.amountCents ?? 0)) {
+              throw new ApiError(
+                409,
+                "INVOICE_PROJECT_TOTAL_MISMATCH",
+                "The saved draft and job invoice totals differ. Reopen the invoice from the job before saving.",
+              );
+            }
           }
         }
         if (input.customerId) {
@@ -529,10 +766,10 @@ export function registerToolRecordRoutes({
             input.recordType,
             input.localId,
             input.title,
-            input.status,
+            persistedStatus,
             input.recordDate,
             input.amountCents,
-            JSON.stringify(input.payload),
+            JSON.stringify(persistedPayload),
             input.standaloneProjectId,
             input.activeWorkId,
             input.customerId,
@@ -551,6 +788,7 @@ export function registerToolRecordRoutes({
   }));
 
   app.post("/api/v1/estimates/:localId/send", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    requireVerifiedDeliveryActor(request.actor);
     const params = validate(estimateSendParamsSchema, request.params);
     const idempotencyKey = String(request.headers["idempotency-key"] ?? "").trim();
     if (idempotencyKey.length < 8 || idempotencyKey.length > 200) {
@@ -648,15 +886,22 @@ export function registerToolRecordRoutes({
   }));
 
   app.post("/api/v1/invoices/:localId/send", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+    requireVerifiedDeliveryActor(request.actor);
     const params = validate(invoiceSendParamsSchema, request.params);
     const idempotencyKey = String(request.headers["idempotency-key"] ?? "").trim();
     if (idempotencyKey.length < 8 || idempotencyKey.length > 200) {
       throw new ApiError(400, "IDEMPOTENCY_KEY_REQUIRED", "Use a valid Idempotency-Key for this request.");
     }
-    const existing = await database.query(
+    const result = await runIdempotentMutation(
+      request,
+      request.actor.account.id,
+      `tool-records.invoice.send:${params.localId}`,
+      async (client) => {
+    const existing = await client.query(
       `SELECT * FROM tool_records
        WHERE account_id = $1 AND record_type = 'invoice_draft' AND local_id = $2 AND deleted_at IS NULL
-       LIMIT 1`,
+       LIMIT 1
+       FOR UPDATE`,
       [request.actor.account.id, params.localId],
     );
     if (!existing.rowCount) {
@@ -666,33 +911,207 @@ export function registerToolRecordRoutes({
     const payload = objectValue(record.payload);
     const previousDelivery = objectValue(payload.delivery);
     if (previousDelivery.idempotencyKey === idempotencyKey && previousDelivery.status === "sent") {
-      response.setHeader("Idempotent-Replayed", "true");
-      response.json({ data: { record: mapToolRecord(record), replayed: true }, meta: { requestId: request.requestId } });
-      return;
+      return {
+        status: 200,
+        body: {
+          data: { record: mapToolRecord(record), replayed: true },
+          meta: { requestId: request.requestId },
+        },
+      };
+    }
+    if (record.status === "paid") {
+      throw new ApiError(
+        409,
+        "INVOICE_PAYMENT_HISTORY_LOCKED",
+        "This invoice is already paid. Keep it as a payment record instead of sending it as unpaid.",
+      );
     }
     const projectInvoiceId = textValue(payload.projectInvoiceId, "", 80);
     let bankPaymentUrl = null;
-    if (record.active_work_id && z.uuid().safeParse(projectInvoiceId).success) {
-      const paymentLink = await database.query(
-        `SELECT pir.id
-         FROM project_invoice_payment_requests pir
-         INNER JOIN project_invoices pi ON pi.id = pir.invoice_id
+    let validatedProjectInvoiceId = null;
+    if (record.active_work_id && !z.uuid().safeParse(projectInvoiceId).success) {
+      throw new ApiError(
+        409,
+        "INVOICE_PROJECT_LINK_REQUIRED",
+        "This RIVT job invoice is not linked to its project record. Save it again before sending.",
+      );
+    }
+    if (record.active_work_id) {
+      const lockedProjectInvoice = await client.query(
+        `SELECT id
+         FROM project_invoices
+         WHERE id = $1
+           AND active_work_id = $2
+           AND created_by_account_id = $3
+         FOR UPDATE`,
+        [projectInvoiceId, record.active_work_id, request.actor.account.id],
+      );
+      if (!lockedProjectInvoice.rowCount) {
+        throw new ApiError(
+          409,
+          "INVOICE_PROJECT_OUT_OF_DATE",
+          "The linked project invoice could not be verified. Save the invoice again before sending.",
+        );
+      }
+      await client.query(
+        `SELECT id
+         FROM project_invoice_payment_requests
+         WHERE invoice_id = $1
+         ORDER BY id
+         FOR UPDATE`,
+        [projectInvoiceId],
+      );
+      const paymentLink = await client.query(
+        `SELECT pir.id, pir.amount_cents AS request_amount_cents,
+                pi.total_cents AS invoice_total_cents, pi.status AS invoice_status,
+                payment_lock.status AS payment_lock_status,
+                GREATEST(
+                  0,
+                  pi.total_cents
+                    - COALESCE((
+                      SELECT sum(payment.amount_cents)
+                      FROM project_invoice_payments payment
+                      WHERE payment.invoice_id = pi.id
+                    ), 0)
+                    - COALESCE((
+                      SELECT sum(
+                        CASE WHEN settled.status IN ('paid', 'partially_refunded')
+                          THEN settled.amount_cents - settled.refunded_cents
+                          ELSE 0
+                        END
+                      )
+                      FROM project_invoice_payment_requests settled
+                      WHERE settled.invoice_id = pi.id
+                    ), 0)
+                ) AS invoice_balance_cents
+         FROM project_invoices pi
+         LEFT JOIN LATERAL (
+           SELECT request.id, request.amount_cents
+           FROM project_invoice_payment_requests request
+           WHERE request.invoice_id = pi.id
+             AND request.status = 'open'
+             AND request.checkout_url LIKE 'https://checkout.stripe.com/%'
+           ORDER BY request.created_at DESC
+           LIMIT 1
+         ) pir ON true
+         LEFT JOIN LATERAL (
+           SELECT request.status
+           FROM project_invoice_payment_requests request
+           WHERE request.invoice_id = pi.id
+             AND request.status = ANY($4::text[])
+           ORDER BY request.created_at DESC
+           LIMIT 1
+         ) payment_lock ON true
          WHERE pi.id = $1
            AND pi.active_work_id = $2
            AND pi.created_by_account_id = $3
-           AND pir.status = 'open'
-           AND pir.checkout_url LIKE 'https://checkout.stripe.com/%'
-         ORDER BY pir.created_at DESC
-         LIMIT 1`,
-        [projectInvoiceId, record.active_work_id, request.actor.account.id],
+         LIMIT 1
+         FOR UPDATE OF pi`,
+        [
+          projectInvoiceId,
+          record.active_work_id,
+          request.actor.account.id,
+          IMMUTABLE_INVOICE_PAYMENT_STATUSES,
+        ],
       );
       if (paymentLink.rowCount) {
-        bankPaymentUrl = `${appOrigin}/pay/${paymentLink.rows[0].id}`;
+        const link = paymentLink.rows[0];
+        if (link.invoice_status === "void") {
+          throw new ApiError(409, "PROJECT_INVOICE_VOID", "A void project invoice cannot be sent for payment.");
+        }
+        if (link.payment_lock_status === "processing") {
+          throw new ApiError(
+            409,
+            "BANK_PAYMENT_PROCESSING",
+            "This ACH payment is processing. Wait for it to settle or fail before sending another invoice.",
+          );
+        }
+        if (link.payment_lock_status === "disputed") {
+          throw new ApiError(
+            409,
+            "BANK_PAYMENT_DISPUTED",
+            "This invoice has a disputed bank payment. Resolve the dispute before sending or changing it.",
+          );
+        }
+        if (link.payment_lock_status) {
+          throw new ApiError(
+            409,
+            "INVOICE_PAYMENT_HISTORY_LOCKED",
+            "This invoice has bank-payment history and cannot be sent again as unpaid.",
+          );
+        }
+        if (Number(link.invoice_total_cents) !== Number(record.amount_cents ?? 0)) {
+          throw new ApiError(
+            409,
+            "INVOICE_PROJECT_TOTAL_MISMATCH",
+            "The saved invoice and project invoice totals differ. Reconcile them before sending.",
+          );
+        }
+        if (Number(link.invoice_balance_cents) !== Number(record.amount_cents ?? 0)) {
+          throw new ApiError(
+            409,
+            "INVOICE_PROJECT_BALANCE_MISMATCH",
+            "This project invoice has payments recorded, but the email still shows the full total due. Reconcile the balance before sending.",
+          );
+        }
+        if (link.id && Number(link.request_amount_cents) !== Number(record.amount_cents ?? 0)) {
+          throw new ApiError(
+            409,
+            "INVOICE_PAYMENT_BALANCE_MISMATCH",
+            "This payment link is for a remaining balance, but the email shows the full invoice total. Reconcile the invoice before sending.",
+          );
+        }
+        bankPaymentUrl = link.id ? `${appOrigin}/pay/${link.id}` : null;
+        validatedProjectInvoiceId = projectInvoiceId;
+      } else {
+        throw new ApiError(
+          409,
+          "INVOICE_PROJECT_OUT_OF_DATE",
+          "The linked project invoice could not be verified. Save the invoice again before sending.",
+        );
       }
     }
-    if (!bankPaymentUrl) {
-      const paymentLink = await database.query(
-        `SELECT tipr.id
+    if (!bankPaymentUrl && !validatedProjectInvoiceId) {
+      await client.query(
+        `SELECT id
+         FROM tool_invoice_payment_requests
+         WHERE tool_record_id = $1
+         ORDER BY id
+         FOR UPDATE`,
+        [record.id],
+      );
+      const paymentLock = (await client.query(
+        `SELECT status
+         FROM tool_invoice_payment_requests
+         WHERE tool_record_id = $1
+           AND status = ANY($2::text[])
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [record.id, IMMUTABLE_INVOICE_PAYMENT_STATUSES],
+      )).rows[0] ?? null;
+      if (paymentLock?.status === "processing") {
+        throw new ApiError(
+          409,
+          "BANK_PAYMENT_PROCESSING",
+          "This ACH payment is processing. Wait for it to settle or fail before sending another invoice.",
+        );
+      }
+      if (paymentLock?.status === "disputed") {
+        throw new ApiError(
+          409,
+          "BANK_PAYMENT_DISPUTED",
+          "This invoice has a disputed bank payment. Resolve the dispute before sending or changing it.",
+        );
+      }
+      if (paymentLock) {
+        throw new ApiError(
+          409,
+          "INVOICE_PAYMENT_HISTORY_LOCKED",
+          "This invoice has bank-payment history and cannot be sent again as unpaid.",
+        );
+      }
+      const paymentLink = await client.query(
+        `SELECT tipr.id, tipr.amount_cents
          FROM tool_invoice_payment_requests tipr
          WHERE tipr.tool_record_id = $1
            AND tipr.status = 'open'
@@ -702,38 +1121,243 @@ export function registerToolRecordRoutes({
         [record.id],
       );
       if (paymentLink.rowCount) {
-        bankPaymentUrl = `${appOrigin}/pay/${paymentLink.rows[0].id}`;
+        const link = paymentLink.rows[0];
+        if (Number(link.amount_cents) !== Number(record.amount_cents ?? 0)) {
+          throw new ApiError(
+            409,
+            "INVOICE_PAYMENT_AMOUNT_MISMATCH",
+            "The bank-payment link total differs from this invoice. Cancel the old link or restore the matching total.",
+          );
+        }
+        bankPaymentUrl = `${appOrigin}/pay/${link.id}`;
       }
     }
     const brandDelivery = loadDocumentBrandForDelivery
       ? await loadDocumentBrandForDelivery(request.actor)
       : { brand: deliveryBrandFallback(request.actor), attachments: [] };
     const snapshot = invoiceDeliverySnapshot(record, request.actor, bankPaymentUrl, brandDelivery.brand);
+    const subject = `${snapshot.senderName} sent invoice ${snapshot.invoiceNumber}`;
+    const message = invoiceEmailContent(snapshot, brandDelivery.attachments);
+    const contentHash = stableDeliveryContentHash({
+      to: snapshot.recipientEmail,
+      subject,
+      ...message,
+      attachments: brandDelivery.attachments,
+    });
+    const providerIdempotencyKey = `invoice-${record.id}-${contentHash}`.slice(0, 255);
+    if (previousDelivery.status === "sent" && previousDelivery.contentHash === contentHash) {
+      const replayedRecord = await client.query(
+        `UPDATE tool_records
+         SET status = 'sent', updated_at = now()
+         WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL
+         RETURNING *`,
+        [request.actor.account.id, record.id],
+      );
+      return {
+        status: 200,
+        body: {
+          data: {
+            record: mapToolRecord(replayedRecord.rows[0] ?? record),
+            replayed: true,
+          },
+          meta: { requestId: request.requestId, replayReason: "identical_document" },
+        },
+      };
+    }
     const attemptedAt = new Date().toISOString();
     const attemptCount = integerValue(previousDelivery.attemptCount) + 1;
     let delivery;
     try {
       delivery = await sendTransactionalEmail({
         to: snapshot.recipientEmail,
-        subject: `${snapshot.senderName} sent invoice ${snapshot.invoiceNumber}`,
-        ...invoiceEmailContent(snapshot, brandDelivery.attachments),
+        subject,
+        ...message,
         attachments: brandDelivery.attachments,
-        idempotencyKey: `invoice-${record.id}-${idempotencyKey}`.slice(0, 255),
+        idempotencyKey: providerIdempotencyKey,
       });
     } catch (error) {
-      await database.query(
-        `UPDATE tool_records SET status = 'delivery_failed', payload = $3::jsonb, updated_at = now()
-         WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL`,
-        [request.actor.account.id, record.id, JSON.stringify({ ...payload, delivery: { ...previousDelivery, status: "failed", recipientEmail: snapshot.recipientEmail, attemptedAt, attemptCount, lastErrorCode: error instanceof ApiError ? error.code : "EMAIL_DELIVERY_FAILED" } })],
+      const errorCode = error instanceof ApiError ? error.code : "EMAIL_DELIVERY_UNCONFIRMED";
+      const errorMessage = error instanceof ApiError
+        ? error.message
+        : "RIVT could not confirm email delivery. Retrying this unchanged invoice is safe.";
+      const errorStatus = error instanceof ApiError ? error.status : 502;
+      const failedPayload = {
+        ...payload,
+        delivery: {
+          ...previousDelivery,
+          status: "failed",
+          recipientEmail: snapshot.recipientEmail,
+          attemptedAt,
+          attemptCount,
+          lastErrorCode: errorCode,
+          contentHash,
+          providerIdempotencyKey,
+          documentFingerprint: textValue(payload.documentFingerprint, "", 20_000),
+        },
+      };
+      const failed = await client.query(
+        `UPDATE tool_records
+         SET status = 'delivery_failed',
+             payload = $3::jsonb,
+             updated_at = now()
+         WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL
+         RETURNING *`,
+        [request.actor.account.id, record.id, JSON.stringify(failedPayload)],
       );
-      throw error;
+      return {
+        status: errorStatus,
+        body: {
+          error: {
+            code: errorCode,
+            message: errorMessage,
+            requestId: request.requestId,
+          },
+          data: { record: failed.rowCount ? mapToolRecord(failed.rows[0]) : null },
+        },
+      };
     }
-    const updated = await database.query(
-      `UPDATE tool_records SET status = 'sent', payload = $3::jsonb, updated_at = now()
-       WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL RETURNING *`,
-      [request.actor.account.id, record.id, JSON.stringify({ ...payload, delivery: { status: "sent", recipientEmail: snapshot.recipientEmail, attemptedAt, sentAt: attemptedAt, attemptCount, provider: delivery.provider, providerMessageId: delivery.id, idempotencyKey, documentFingerprint: textValue(payload.documentFingerprint, "", 20_000) } })],
+    const sentPayload = JSON.stringify({
+      ...payload,
+      delivery: {
+        status: "sent",
+        recipientEmail: snapshot.recipientEmail,
+        attemptedAt,
+        sentAt: attemptedAt,
+        attemptCount,
+        provider: delivery.provider,
+        providerMessageId: delivery.id,
+        idempotencyKey,
+        providerIdempotencyKey,
+        contentHash,
+        documentFingerprint: textValue(payload.documentFingerprint, "", 20_000),
+      },
+    });
+    let updated;
+    if (validatedProjectInvoiceId) {
+      const projectInvoice = (await client.query(
+        `SELECT pi.*, project.organization_id, project.contractor_account_id,
+                project.tradesperson_account_id, job.title AS job_title,
+                location.city AS public_city, location.region AS public_region
+         FROM project_invoices pi
+         INNER JOIN projects project ON project.id = pi.project_id
+         INNER JOIN jobs job ON job.id = project.job_id
+         INNER JOIN job_public_locations location ON location.job_id = job.id
+         WHERE pi.id = $1
+           AND pi.active_work_id = $2
+           AND pi.created_by_account_id = $3`,
+        [validatedProjectInvoiceId, record.active_work_id, request.actor.account.id],
+      )).rows[0] ?? null;
+      if (!projectInvoice || projectInvoice.status === "void" || projectInvoice.status === "paid") {
+        throw new ApiError(
+          409,
+          "INVOICE_PROJECT_OUT_OF_DATE",
+          "The project invoice changed before delivery could be recorded. Review its status before trying again.",
+        );
+      }
+      const transitionedToSent = projectInvoice.status === "draft";
+      if (transitionedToSent) {
+        await client.query(
+          `UPDATE project_invoices
+           SET status = 'sent', sent_at = COALESCE(sent_at, now()), updated_at = now()
+           WHERE id = $1`,
+          [validatedProjectInvoiceId],
+        );
+        await client.query(
+          `INSERT INTO project_entries (
+             project_id, active_work_id, actor_account_id, entry_type, body, metadata
+           ) VALUES ($1, $2, $3, 'system', $4, $5::jsonb)`,
+          [
+            projectInvoice.project_id,
+            projectInvoice.active_work_id,
+            request.actor.account.id,
+            `Invoice sent: ${projectInvoice.invoice_number}.`,
+            JSON.stringify({
+              invoiceId: validatedProjectInvoiceId,
+              status: "sent",
+              source: "project_invoice_email",
+            }),
+          ],
+        );
+        await client.query(
+          "UPDATE projects SET updated_at = now() WHERE id = $1",
+          [projectInvoice.project_id],
+        );
+        if (createInAppNotification) {
+          const recipientAccountId = projectInvoice.contractor_account_id === request.actor.account.id
+            ? projectInvoice.tradesperson_account_id
+            : projectInvoice.contractor_account_id;
+          await createInAppNotification(client, {
+            accountId: recipientAccountId,
+            type: "work",
+            title: "Invoice recorded",
+            body: `${projectInvoice.job_title} - ${projectInvoice.public_city}, ${projectInvoice.public_region}`,
+            actionHref: `/app/tools/records?activeWork=${projectInvoice.active_work_id}&project=${projectInvoice.project_id}`,
+            sourceType: "project_invoice",
+            sourceId: validatedProjectInvoiceId,
+            priority: "normal",
+            metadata: {
+              activeWorkId: projectInvoice.active_work_id,
+              projectId: projectInvoice.project_id,
+              invoiceId: validatedProjectInvoiceId,
+            },
+          });
+        }
+        await client.query(
+          `INSERT INTO audit_events (
+             request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata
+           ) VALUES (
+             $1, $2::uuid, $3::uuid, 'project.invoice.status_changed',
+             'project_invoice', ($4::uuid)::text, $5::jsonb
+           )`,
+          [
+            request.requestId,
+            request.actor.account.id,
+            projectInvoice.organization_id,
+            validatedProjectInvoiceId,
+            JSON.stringify({ status: "sent", source: "invoice_email" }),
+          ],
+        );
+      }
+      updated = await client.query(
+        `UPDATE tool_records
+         SET status = 'sent',
+             payload = $3::jsonb,
+             updated_at = now()
+         WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL
+         RETURNING *`,
+        [request.actor.account.id, record.id, sentPayload],
+      );
+    } else {
+      updated = await client.query(
+        `UPDATE tool_records
+         SET status = 'sent',
+             payload = $3::jsonb,
+             updated_at = now()
+         WHERE account_id = $1 AND id = $2 AND deleted_at IS NULL
+         RETURNING *`,
+        [request.actor.account.id, record.id, sentPayload],
+      );
+    }
+    if (!updated.rowCount) {
+      throw new ApiError(
+        409,
+        "INVOICE_PROJECT_OUT_OF_DATE",
+        "The project invoice changed while the email was being sent. Review its status before trying again.",
+      );
+    }
+    return {
+      status: 200,
+      body: {
+        data: { record: mapToolRecord(updated.rows[0]), replayed: false },
+        meta: { requestId: request.requestId },
+      },
+    };
+      },
     );
-    response.json({ data: { record: mapToolRecord(updated.rows[0]), replayed: false }, meta: { requestId: request.requestId } });
+    if (result.replayed || result.body?.data?.replayed) {
+      response.setHeader("Idempotent-Replayed", "true");
+    }
+    sendIdempotentResult(response, result);
   }));
 
   app.delete("/api/v1/tool-records/:recordType/:localId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
@@ -743,6 +1367,75 @@ export function registerToolRecordRoutes({
       request.actor.account.id,
       `tool-records.delete:${params.recordType}:${params.localId}`,
       async (client) => {
+        if (params.recordType === "invoice_draft") {
+          const existingInvoice = (await client.query(
+            `SELECT id, status, active_work_id, payload
+             FROM tool_records
+             WHERE account_id = $1
+               AND record_type = 'invoice_draft'
+               AND local_id = $2
+               AND deleted_at IS NULL
+             FOR UPDATE`,
+            [request.actor.account.id, params.localId],
+          )).rows[0] ?? null;
+          if (existingInvoice) {
+            if (existingInvoice.active_work_id) {
+              throw new ApiError(
+                409,
+                "PROJECT_INVOICE_RECORD_REQUIRED",
+                "Job invoices stay in the project financial record. Void the invoice from the job instead of deleting this copy.",
+              );
+            }
+            if (existingInvoice.status === "paid") {
+              throw new ApiError(
+                409,
+                "INVOICE_PAYMENT_HISTORY_LOCKED",
+                "A paid invoice cannot be deleted. Keep it as part of the payment record.",
+              );
+            }
+            const immutablePayment = (await client.query(
+              `SELECT status
+               FROM tool_invoice_payment_requests
+               WHERE tool_record_id = $1
+                 AND status = ANY($2::text[])
+               ORDER BY created_at DESC
+               LIMIT 1
+               FOR UPDATE`,
+              [existingInvoice.id, IMMUTABLE_INVOICE_PAYMENT_STATUSES],
+            )).rows[0] ?? null;
+            if (immutablePayment?.status === "processing") {
+              throw new ApiError(
+                409,
+                "BANK_PAYMENT_PROCESSING",
+                "This ACH payment is processing. The invoice cannot be deleted.",
+              );
+            }
+            if (immutablePayment) {
+              throw new ApiError(
+                409,
+                "INVOICE_PAYMENT_HISTORY_LOCKED",
+                "This invoice has bank-payment history and cannot be deleted.",
+              );
+            }
+            const activePayment = (await client.query(
+              `SELECT status
+               FROM tool_invoice_payment_requests
+               WHERE tool_record_id = $1
+                 AND status = ANY($2::text[])
+               ORDER BY created_at DESC
+               LIMIT 1
+               FOR UPDATE`,
+              [existingInvoice.id, ACTIVE_INVOICE_PAYMENT_STATUSES.filter((status) => status !== "processing")],
+            )).rows[0] ?? null;
+            if (activePayment) {
+              throw new ApiError(
+                409,
+                "BANK_PAYMENT_LINK_ACTIVE",
+                "Cancel the active bank-payment link before deleting this invoice.",
+              );
+            }
+          }
+        }
         const deleted = await client.query(
           `UPDATE tool_records
            SET deleted_at = now(), updated_at = now()
@@ -770,8 +1463,12 @@ export function registerToolRecordRoutes({
 }
 
 export const toolRecordInternals = {
+  equivalentInvoicePayload,
   expenseCsv,
   hasActiveProEntitlement,
   invoiceDeliverySnapshot,
   invoiceEmailContent,
+  requireVerifiedDeliveryActor,
+  stableDeliveryContentHash,
+  stripServerOwnedInvoicePayload,
 };
