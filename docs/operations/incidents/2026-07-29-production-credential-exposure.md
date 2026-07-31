@@ -26,10 +26,10 @@ included in this record.
 
 No unauthorized use is currently known. The bounded Stripe platform-account
 and configured production destination/delivery views, Resend, Sentry, Railway
-deployment, application-ledger, and retained PostgreSQL evidence reviewed so
-far contain no identified misuse indicator. Google OAuth credential inventory
-and controlled callbacks were reviewed, but Google Cloud audit/activity history
-and Railway account/variable administration history have not yet been reviewed.
+workspace audit/deployment history, application-ledger, and retained PostgreSQL
+evidence reviewed so far contain no identified misuse indicator. Google OAuth
+credential inventory and controlled callbacks were reviewed, but Google Cloud
+audit/activity history has not yet been reviewed.
 Historical
 successful PostgreSQL access and direct bucket reads cannot be reconstructed,
 and several application-generated secrets have no provider audit trail. RIVT
@@ -560,7 +560,7 @@ Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
 | Resend | Available 15-day API/email logs and active-key inventory, reviewed through `2026-07-31T13:07:24.122Z` | The retained window fully covers the incident interval. Its incident-window records are the expected sending-only key restriction check (`401`) and controlled delivery proof. Earlier visible sends predate exposure and are consistent with documented verification/UI tests. Exactly one sending-only replacement key remains. | **Reviewed/bounded.** No unexplained provider activity was found in the available log window. |
 | Sentry | Provider audit log, key inventory, event ingestion, alert proof, and 14-day usage | Only expected replacement-key creation/rename and prior-key disable actions were present; usage showed no significant spike and zero filtered, rate-limited, or invalid events. | **Reviewed/bounded.** An ingestion DSN does not provide proof that it was never copied or attempted elsewhere. |
 | Google OAuth | Credential inventory and controlled callbacks from the rotation plus aggregate read-only application identity/login/transaction reconciliation | The application ledger has zero Google identity creation/update or Google login during the exposure window, zero pending OAuth transactions, and one post-retirement login/update matching the controlled physical sign-in. | **Pending audit/activity review.** The current Google Cloud session is an account without permission to inspect project `rivt-499402`; `support@rivt.pro` must review Google Cloud audit/activity history. |
-| Railway | Secret-safe HTTP/log evidence and CLI deployment history | No deployment occurred between the conservative exposure start and formal detection. The timing and status of the 35 later deployment records are consistent with documented containment/rotation work; some provider records omit commit metadata, so operator attribution is not inferred. | **Pending administrator review.** The available CLI does not expose account sign-in or variable-change audit history, and the provider dashboard was not authenticated during this review. |
+| Railway | Pro workspace Audit Logs, paged through the complete `2026-07-29T16:00:00Z` through `2026-07-30T16:00:00Z` filtered view; representative event details; and secret-safe deployment evidence | In the exact `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` exposure window, Railway recorded five `SSHSession.authenticated` events and nine `Deployment.created` events. Every event was attributed to the founder-controlled Railway account; no other actor, variable/configuration change, credential regeneration, service/bucket/volume change, or tunnel event appears in-window. A representative in-window SSH event used the same source IP and SSH-key fingerprint as a controlled July 31 maintenance event, supporting but not proving same-operator attribution. Immediately after the repository upper bound, the same account performed the documented database-password and bucket-credential regenerations. | **Reviewed/bounded for retained workspace actions.** Railway documents that Pro workspace audit logs retain 30 days and cover project/service/deployment/variable/workspace changes. The workspace log does not establish the physical human behind a valid account/key/IP, supply a separate dashboard-login history in this view, or prove that an action outside Railway's logged event set did not occur. |
 | PostgreSQL | Retained platform logs plus aggregate read-only application/payment reconciliation | No authentication failure, `FATAL`, or `PANIC` record was found in the retained reviewed windows; canonical billing, invoice, payment-request, direct-payment, and Connect consistency counters were zero. | **Historical evidence unavailable; owner acceptance recorded.** Successful historical connections, reads, and writes cannot be reconstructed. |
 | Railway Bucket/object storage | Rotation continuity, stable object count/bytes, restore evidence, and controlled existing-object read | Rotation and continuity passed with no known customer-data loss. | **Historical evidence unavailable; owner acceptance recorded for direct reads.** Historical per-object direct reads cannot be reconstructed. |
 | Web Push VAPID private key | Rotation, retirement, outbox/readiness state, and three controlled physical-device deliveries | Current registrations and outbox state are clean and all controlled devices delivered through the active generation. | **Unobservable; owner acceptance still required.** There is no provider audit trail proving the exposed private key was not used outside RIVT. |
@@ -568,8 +568,8 @@ Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
 | Authentication metadata pepper | Rotation and runtime/configuration verification | The replacement is active and the old value has no compatibility fallback. | **Unobservable; owner acceptance still required.** There is no provider ledger for offline correlation attempts using the exposed value. |
 
 This table is the synthesis; it is intentionally not marked complete while the
-Google audit/activity review, Railway administrator-history review, and the
-three explicit unobservable-secret acceptances remain open.
+Google audit/activity review and the three explicit unobservable-secret
+acceptances remain open.
 
 The aggregate database review used a repeatable-read, read-only transaction over
 the named billing, subscription, entitlement, invoice, payment-request,
@@ -597,9 +597,9 @@ state; it is not proof that an action absent from those tables never occurred.
   pepper blind spots; reconstruct missing history; lower the incident severity;
   close the incident; clear `ACTIVE_LAUNCH_HOLD`; authorize deployment; or
   approve paid infrastructure work.
-- Google audit/activity history, Railway administrator history, the three
-  explicit unobservable-secret acceptances, and a fresh exact-source Railway
-  Stage 1 re-review and approval remain required before incident closure.
+- Google audit/activity history, the three explicit unobservable-secret
+  acceptances, and a fresh exact-source Railway Stage 1 re-review and approval
+  remain required before incident closure.
 
 ## Recovery plan
 

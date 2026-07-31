@@ -32,16 +32,32 @@
   found`, and its Overview reported total `0` for `This week`. This bounds the
   current configured destination view; it does not prove that no Connect-side
   activity occurred outside evidence Stripe retained or logged.
+- Railway administrator-history follow-up: completed read-only at
+  `2026-07-31T19:10:46.1221413Z` against the existing Pro workspace Audit Logs.
+  The complete `2026-07-29T16:00:00Z` through `2026-07-30T16:00:00Z` filtered
+  view was paged to its oldest entry. In the exact exposure window, the log
+  contained five `SSHSession.authenticated` events and nine
+  `Deployment.created` events, all attributed to the founder-controlled
+  account. No other actor,
+  variable/configuration change, credential regeneration, service/bucket/
+  volume change, or tunnel event appeared in-window. A representative
+  in-window SSH event matched the source IP and SSH-key fingerprint of a
+  controlled July 31 maintenance event, supporting but not proving same-
+  operator attribution. The documented database-password and bucket-
+  credential regenerations appear immediately after the repository upper
+  bound. No unexplained Railway administrator event was identified within the
+  retained reviewed window. Matching account/connection identity does not
+  prove that valid credentials were never compromised, and this review cannot
+  prove an action outside Railway's logged event set.
 - Correction: Michael's exact `2026-07-31T12:22:03.895Z` statement is preserved
   in the incident record. Later review found its blanket provider-review premise
   incomplete; only the PostgreSQL/direct-bucket historical limitation remains
   valid closure evidence, and no other blind spot is accepted.
 - Open evidence: Google OAuth credential inventory and controlled callbacks
   were reviewed, but Google Cloud audit/activity history requires a session
-  authorized for project `rivt-499402`. Railway account sign-in/variable-change
-  history was unavailable through the authenticated CLI/current browser; direct
-  VAPID misuse, offline backup-key use, and offline authentication-pepper use
-  have no historical provider ledger and need explicit owner decisions.
+  authorized for project `rivt-499402`. Direct VAPID misuse, offline backup-key
+  use, and offline authentication-pepper use have no historical provider ledger
+  and need explicit owner decisions.
 - Launch/cost boundary: `ACTIVE_LAUNCH_HOLD` and the Railway Stage 1 pause remain
   active. No prior cost/configuration approval is reused.
 
@@ -94,9 +110,8 @@
 - Launch boundary: Sentry credential rotation is closed. The broader incident
   and `ACTIVE_LAUNCH_HOLD` remain open. PostgreSQL/direct-bucket historical
   limits are valid owner-accepted closure evidence; Google audit/activity
-  history, Railway administrator-history review,
-  three unobservable-secret decisions, and a fresh Railway Stage 1 re-review/
-  approval remain open.
+  history, three unobservable-secret decisions, and a fresh Railway Stage 1
+  re-review/approval remain open.
 
 ## 2026-07-30 - Web Push VAPID Generation Tracking
 

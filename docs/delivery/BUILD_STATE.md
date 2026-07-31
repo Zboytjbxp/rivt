@@ -76,14 +76,13 @@ clearing the broader incident or `ACTIVE_LAUNCH_HOLD`. Sentry provider audit
 and usage views now also show only the expected rotation actions, 20 accepted
 errors in 14 days, zero filtered, rate-limited, or invalid events, and no
 significant spike. Bounded Stripe platform-account and configured production
-destination/delivery views, Resend provider records, Railway deployment
-history, and aggregate read-only production money ledgers were also reviewed
-with no identified misuse indicator. Michael's exact
+destination/delivery views, Resend provider records, Railway workspace
+audit/deployment history, and aggregate read-only production money ledgers
+were also reviewed with no identified misuse indicator. Michael's exact
 `2026-07-31T12:22:03.895Z` statement is preserved in the incident record; later
 review found its blanket provider-review premise incomplete, so only its
 PostgreSQL/direct-bucket historical limitation remains valid closure evidence.
-Google Cloud audit/activity history and Railway administrator history remain
-pending, while direct VAPID misuse,
+Google Cloud audit/activity history remains pending, while direct VAPID misuse,
 offline backup-key use, and offline authentication-pepper use are unobservable
 and require separate owner acceptance. The remaining exit work is those named
 provider/owner boundaries plus a fresh Railway Stage 1 re-review and approval.
@@ -244,8 +243,8 @@ provider/owner boundaries plus a fresh Railway Stage 1 re-review and approval.
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Google OAuth secret rotation is
   complete. The owner statement is preserved verbatim in the incident record;
   its PostgreSQL/direct-bucket historical limitation is the only part used as
-  valid closure evidence. Google audit/activity history, Railway administrator
-  history, three unobservable-secret decisions,
+  valid closure evidence. Google audit/activity history, three unobservable-
+  secret decisions,
   and the fresh Railway Stage 1 review remain open, so the overall incident and
   launch hold are not cleared.
 - The incident-remediation source was fast-forwarded to `master` and Railway
@@ -334,14 +333,22 @@ provider/owner boundaries plus a fresh Railway Stage 1 re-review and approval.
   forensic boundary: historical successful PostgreSQL reads/writes were not
   audited, and Railway Buckets provide no per-object access history. Available
   Stripe platform-account and configured production destination/delivery,
-  Resend, Sentry, Railway deployment, and application-ledger evidence has now
-  been reviewed with no identified misuse indicator.
+  Resend, Sentry, Railway workspace audit/deployment, and application-ledger
+  evidence has now been reviewed with no identified misuse indicator. The
+  Railway Pro workspace audit log was paged through the complete date-filtered
+  view. In the exact exposure window it recorded five
+  `SSHSession.authenticated` events and nine `Deployment.created` events, all
+  attributed to the founder-controlled account, with no other actor or
+  variable/credential/resource change. One representative in-window SSH audit
+  event used the same source IP and SSH-key fingerprint as a controlled July 31
+  maintenance session. This is bounded retained workspace-action
+  evidence, not proof of the physical human behind valid credentials or of an
+  action Railway did not log.
   The owner's exact statement is preserved; later review found its blanket
   provider-review premise incomplete, so only its successful-PostgreSQL/direct-
   bucket historical limitation remains valid closure evidence. No claim of no
-  access or no exfiltration is made. Google audit/activity history and Railway
-  administrator history remain pending,
-  while VAPID, backup-key, and authentication-pepper offline misuse are
+  access or no exfiltration is made. Google audit/activity history remains
+  pending, while VAPID, backup-key, and authentication-pepper offline misuse are
   unobservable and still require explicit owner acceptance. Railway Stage 1
   re-review also remains open.
 - Aggregate read-only production money reconciliation from the conservative
