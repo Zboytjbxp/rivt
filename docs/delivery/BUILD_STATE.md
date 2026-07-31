@@ -41,6 +41,59 @@ has not changed production data, provider configuration, paid resources, or
 the live application. The broader incident and `ACTIVE_LAUNCH_HOLD` remain in
 force.
 
+## Railway Stage 1 source-safety re-review - local preparation only
+
+- A fresh worktree and `codex/railway-stage1-rereview` branch were created
+  from `origin/master`
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`. The committed source-safety
+  sequence currently ends at
+  `b6b83f89cc11c95e551fd9b16902cb634f1642b0` and includes explicit hosted process
+  roles, one migration owner, bounded shutdown/drain behavior, role-specific
+  database budgets, required Web Push startup, and strict activation review.
+- The activation preflight now requires three fresh external/ignored
+  artifacts: an allowlisted Railway status snapshot, a named operator review
+  of provider controls, and the exact plan. Snapshot and review hashes, source
+  ancestry, clean `origin/master` equality, billing cycle, monitoring,
+  database ceilings/pool bounds, recovery, rollback, and cost facts all fail
+  closed.
+- Owner authority is no longer represented by an editable plan hash alone.
+  Evaluation requires the separately preserved owner-approved digest through
+  `--approved-plan-digest`; changing authority, cost, source, topology, or
+  evidence cannot accidentally reuse the earlier digest during trusted
+  operation. This is an audit/drift control, not cryptographic authentication:
+  a trusted operator, separately access-controlled approval record,
+  independent comparison, and owner-performed final provider action remain
+  required.
+- Current-cycle incremental cost, one-time cost, retained monthly cost,
+  Railway Agent limit, provider/manual stop, test duration, and worker
+  unavailability have separate approval ceilings. A blocked evaluation exits
+  nonzero by default. `--report-only` is an explicit diagnostic mode and is
+  not an activation gate.
+- Packets 93 and 94, the Railway activation runbook, cost brief, blank strict
+  templates, and evidence-boundary README document the future manual process.
+  They contain no live inventory, credentials, completed approval, provider
+  receipt, or activation evidence.
+- Focused Railway/runtime/push/security coverage passes 92/92, including
+  22/22 strict activation-preflight checks. `npm run build`, `npm run lint`,
+  `npm run lint:security`, and 229/229 unit/frontend checks pass. The aggregate
+  `npm run test` command passes its available suites; 3 no-database integration
+  contracts pass and 21 PostgreSQL suites explicitly skip because this
+  isolated worktree has no `TEST_DATABASE_URL`. The only existing `.env`
+  available outside the worktree points to a nonlocal database and was not
+  used. All three browser E2E journeys pass after installing the worktree's
+  locked dependencies. The production dependency audit reports zero
+  vulnerabilities and diff integrity passes.
+- `npm run launch:readiness -- --require-ready` fails closed only on
+  `ACTIVE_LAUNCH_HOLD`, as intended. This branch does not claim a complete
+  database-integration or launch-readiness gate; the disposable PostgreSQL CI
+  run remains required after push.
+- No Railway setting, service, database, bucket, variable, deployment,
+  billing limit, production row, or backup was changed. No cost was incurred,
+  no earlier approval was reused, no Stage 1 activation was performed, and no
+  redundancy/high-availability or launch-ready claim is made. Packet 86,
+  credential-incident exit, `ACTIVE_LAUNCH_HOLD`, and owner activation remain
+  separate open boundaries.
+
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`. Railway deployments
