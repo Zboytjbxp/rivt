@@ -78,7 +78,7 @@ export function assertRequiredPushProvider(
 ) {
   const configuredAsRequired = pushDeliveryRequired(environment);
   if (required && !configuredAsRequired) {
-    throw new Error("RIVT_PUSH_REQUIRED=true is required for a hosted worker.");
+    throw new Error("RIVT_PUSH_REQUIRED=true is required for hosted web and worker services.");
   }
   if (configuredAsRequired && !status.ok) {
     throw new Error("Push delivery is required, but the VAPID provider is not configured.");
@@ -398,15 +398,28 @@ export async function sendNotificationWithVapidFallback(
   payload,
   options,
   environment = process.env,
+  { now = Date.now } = {},
 ) {
   const { active, previous } = vapidProviders(environment);
   const providers = previous ? [active, previous] : [active];
+  const totalTimeoutMs = Number.isSafeInteger(Number(options?.timeout))
+    && Number(options.timeout) > 0
+    ? Number(options.timeout)
+    : pushDeliveryTimeoutMs(environment);
+  const deadlineAt = now() + totalTimeoutMs;
   let firstError = null;
   for (let index = 0; index < providers.length; index += 1) {
     const provider = providers[index];
+    const remainingTimeoutMs = Math.floor(deadlineAt - now());
+    if (remainingTimeoutMs <= 0) {
+      const timeoutError = new Error("Web Push delivery deadline expired.");
+      timeoutError.code = "ETIMEDOUT";
+      throw timeoutError;
+    }
     try {
       const response = await sendNotification(subscription, payload, {
         ...options,
+        timeout: remainingTimeoutMs,
         vapidDetails: {
           subject: provider.subject,
           publicKey: provider.publicKey,

@@ -134,7 +134,7 @@ test("required push delivery fails closed and outbound attempts have a hard dead
       { ok: true, mode: "configured" },
       { required: true },
     ),
-    /required for a hosted worker/i,
+    /required for hosted web and worker services/i,
   );
   assert.throws(
     () => assertRequiredPushProvider(
@@ -142,7 +142,7 @@ test("required push delivery fails closed and outbound attempts have a hard dead
       { ok: true, mode: "configured" },
       { required: true },
     ),
-    /required for a hosted worker/i,
+    /required for hosted web and worker services/i,
   );
   assert.equal(pushNotificationInternals.pushDeliveryTimeoutMs({}), 8_000);
   assert.equal(
@@ -179,7 +179,7 @@ test("required worker push configuration is rejected before a delivery batch can
       required: true,
       unref: false,
     }),
-    /required for a hosted worker/i,
+    /required for hosted web and worker services/i,
   );
   assert.equal(queries, 0);
 });
@@ -283,6 +283,39 @@ test("web push retries an authentication rejection once with the previous VAPID 
     pushNotificationInternals.vapidGeneration(environment.VAPID_PREVIOUS_PUBLIC_KEY),
   );
   assert.deepEqual(attempts, [environment.VAPID_PUBLIC_KEY, environment.VAPID_PREVIOUS_PUBLIC_KEY]);
+});
+
+test("web push fallback shares one total outbound deadline", async () => {
+  const attemptedTimeouts = [];
+  let clock = 1_000;
+  const environment = {
+    VAPID_PUBLIC_KEY: "A".repeat(60),
+    VAPID_PRIVATE_KEY: "B".repeat(60),
+    VAPID_SUBJECT: "mailto:alerts@example.test",
+    VAPID_PREVIOUS_PUBLIC_KEY: "C".repeat(60),
+    VAPID_PREVIOUS_PRIVATE_KEY: "D".repeat(60),
+  };
+
+  const result = await pushNotificationInternals.sendNotificationWithVapidFallback(
+    async (_subscription, _payload, options) => {
+      attemptedTimeouts.push(options.timeout);
+      if (attemptedTimeouts.length === 1) {
+        clock += 7_000;
+        const error = new Error("Active VAPID credentials rejected");
+        error.statusCode = 403;
+        throw error;
+      }
+      return { statusCode: 201 };
+    },
+    { endpoint: "https://push.example.test/device", keys: { p256dh: "p", auth: "a" } },
+    "{}",
+    { TTL: 60, timeout: 8_000 },
+    environment,
+    { now: () => clock },
+  );
+
+  assert.equal(result.response.statusCode, 201);
+  assert.deepEqual(attemptedTimeouts, [8_000, 1_000]);
 });
 
 test("web push active-key success does not use the previous VAPID pair", async () => {

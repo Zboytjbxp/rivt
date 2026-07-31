@@ -14,10 +14,16 @@ function requirePositiveInteger(value, name) {
   return value;
 }
 
-export function serviceHealthReady({ dependenciesOk, authSecurityOk, migrationState }) {
+export function serviceHealthReady({
+  dependenciesOk,
+  authSecurityOk,
+  migrationState,
+  requiredProviderOk = true,
+}) {
   return dependenciesOk === true
     && authSecurityOk === true
-    && migrationState === "ready";
+    && migrationState === "ready"
+    && requiredProviderOk === true;
 }
 
 async function runDependencyProbe(probe, timeoutMs) {

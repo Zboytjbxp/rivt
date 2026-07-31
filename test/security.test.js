@@ -869,6 +869,12 @@ test("service health requires live dependencies, session security, and completed
     dependenciesOk: true,
     authSecurityOk: true,
     migrationState: "ready",
+    requiredProviderOk: false,
+  }), false);
+  assert.equal(serviceHealthReady({
+    dependenciesOk: true,
+    authSecurityOk: true,
+    migrationState: "ready",
   }), true);
   assert.equal(serviceHealthReady({
     dependenciesOk: false,
