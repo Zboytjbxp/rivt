@@ -23,6 +23,8 @@ const IMMUTABLE_INVOICE_PAYMENT_STATUSES = new Set([
 ]);
 const ACH_MIN_AMOUNT_CENTS = 50;
 const ACH_MAX_AMOUNT_CENTS = 99_999_999;
+const STRIPE_REQUEST_TIMEOUT_MS = 8_000;
+const REQUIRED_CONNECT_WEBHOOK_SCOPE = "connected_accounts";
 const invoiceIdSchema = z.uuid();
 const toolInvoiceLocalIdSchema = z.string().trim().min(1).max(120).regex(/^[A-Za-z0-9:_-]+$/);
 const onboardingInputSchema = z.object({
@@ -43,14 +45,18 @@ function envValue(name, fallback = undefined) {
 function connectConfig(appOrigin) {
   const secretKey = envValue("STRIPE_SECRET_KEY");
   const webhookSecret = envValue("STRIPE_CONNECT_WEBHOOK_SECRET");
+  const webhookScope = envValue("STRIPE_CONNECT_WEBHOOK_SCOPE");
   const enabled = envValue("STRIPE_CONNECT_ACH_ENABLED") === "true";
+  const webhookScopeConfigured = webhookScope === REQUIRED_CONNECT_WEBHOOK_SCOPE;
   const missing = [];
   if (!enabled) missing.push("STRIPE_CONNECT_ACH_ENABLED");
   if (!secretKey) missing.push("STRIPE_SECRET_KEY");
   if (!webhookSecret) missing.push("STRIPE_CONNECT_WEBHOOK_SECRET");
+  if (!webhookScopeConfigured) missing.push("STRIPE_CONNECT_WEBHOOK_SCOPE=connected_accounts");
   return {
     secretKey,
     webhookSecret,
+    webhookScopeConfigured,
     enabled,
     appOrigin,
     configured: missing.length === 0,
@@ -66,6 +72,7 @@ export function stripeConnectProviderStatus(appOrigin) {
     enabled: config.enabled,
     configured: config.configured,
     webhookConfigured: Boolean(config.webhookSecret),
+    webhookScopeConfigured: config.webhookScopeConfigured,
     mode: config.configured ? "configured" : "setup_required",
   };
 }
@@ -79,6 +86,44 @@ function encodeForm(params) {
   return form;
 }
 
+function isProviderTimeout(error, signal) {
+  return error?.name === "TimeoutError"
+    || error?.name === "AbortError"
+    || (signal?.aborted && signal.reason?.name === "TimeoutError");
+}
+
+function stripeProviderFailure(error, signal) {
+  if (isProviderTimeout(error, signal)) {
+    return new ApiError(504, "STRIPE_CONNECT_TIMEOUT", "Stripe did not respond in time. Try again shortly.");
+  }
+  return new ApiError(502, "STRIPE_CONNECT_UNAVAILABLE", "Stripe could not be reached. Try again shortly.");
+}
+
+async function stripeProviderRequest(url, init, {
+  fetchImpl = globalThis.fetch,
+  timeoutMs = STRIPE_REQUEST_TIMEOUT_MS,
+  signal = AbortSignal.timeout(timeoutMs),
+} = {}) {
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      ...init,
+      signal,
+    });
+  } catch (error) {
+    throw stripeProviderFailure(error, signal);
+  }
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch (error) {
+    if (isProviderTimeout(error, signal) || response.ok) {
+      throw stripeProviderFailure(error, signal);
+    }
+  }
+  return { response, payload };
+}
+
 async function stripeConnectRequest(config, path, params = {}, options = {}) {
   if (!config.secretKey) {
     throw new ApiError(424, "STRIPE_CONNECT_NOT_CONFIGURED", "Stripe Connect is not configured.", {
@@ -87,7 +132,7 @@ async function stripeConnectRequest(config, path, params = {}, options = {}) {
   }
   const method = options.method ?? "POST";
   const body = method === "GET" ? undefined : encodeForm(params);
-  const response = await fetch(`https://api.stripe.com/v1${path}`, {
+  const { response, payload } = await stripeProviderRequest(`https://api.stripe.com/v1${path}`, {
     method,
     signal: providerAbortSignal(),
     headers: {
@@ -98,8 +143,11 @@ async function stripeConnectRequest(config, path, params = {}, options = {}) {
       ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
     },
     body,
+  }, {
+    fetchImpl: options.fetchImpl,
+    timeoutMs: options.timeoutMs,
+    signal: options.signal,
   });
-  const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new ApiError(502, "STRIPE_CONNECT_REQUEST_FAILED", "Stripe could not complete the bank-payment request.", {
       providerStatus: response.status,
@@ -135,7 +183,7 @@ async function stripeConnectV2Request(config, path, params = {}, options = {}) {
   const url = new URL(`https://api.stripe.com/v2${path}`);
   if (query) url.search = query.toString();
   const body = method === "GET" ? undefined : JSON.stringify(params);
-  const response = await fetch(url, {
+  const { response, payload } = await stripeProviderRequest(url, {
     method,
     signal: providerAbortSignal(),
     headers: {
@@ -145,8 +193,11 @@ async function stripeConnectV2Request(config, path, params = {}, options = {}) {
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     body,
+  }, {
+    fetchImpl: options.fetchImpl,
+    timeoutMs: options.timeoutMs,
+    signal: options.signal,
   });
-  const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new ApiError(502, "STRIPE_CONNECT_REQUEST_FAILED", "Stripe could not complete the bank-payment request.", {
       providerStatus: response.status,
@@ -344,12 +395,15 @@ async function syncConnectAccount(database, config, row) {
 function mapConnectStatus(row, config) {
   const onboarding = row?.onboarding_status ?? "not_started";
   const achStatus = row?.ach_payments_status ?? "unrequested";
+  const accountReady = onboarding === "ready" && achStatus === "active";
+  const paymentLinksAvailable = config.configured && accountReady;
   return {
     provider: "stripe_connect",
     accountApiVersion: row?.stripe_account_api_version ?? null,
     dashboardType: row?.stripe_dashboard ?? null,
     providerConfigured: config.configured,
     webhookConfigured: Boolean(config.webhookSecret),
+    webhookScopeConfigured: config.webhookScopeConfigured,
     missing: config.missing,
     connected: Boolean(row),
     onboardingStatus: onboarding,
@@ -357,9 +411,17 @@ function mapConnectStatus(row, config) {
     chargesEnabled: Boolean(row?.charges_enabled),
     payoutsEnabled: Boolean(row?.payouts_enabled),
     detailsSubmitted: Boolean(row?.details_submitted),
-    ready: config.configured && onboarding === "ready" && achStatus === "active",
+    accountReady,
+    managementAvailable: connectManagementAvailable(row, config),
+    paymentLinksAvailable,
+    ready: paymentLinksAvailable,
     lastSyncedAt: row?.last_synced_at ? new Date(row.last_synced_at).toISOString() : null,
   };
+}
+
+function connectManagementAvailable(row, config) {
+  if (!row) return false;
+  return row.stripe_account_api_version === "v2" || Boolean(config.secretKey);
 }
 
 function mapPaymentRequest(row, { includeCheckoutUrl = true, appOrigin = null } = {}) {
@@ -923,19 +985,19 @@ export function registerStripeConnectRoutes({
   app.post("/api/v1/payments/connect/dashboard", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const config = connectConfig(appOrigin);
     requireVerifiedActor(request.actor);
-    if (!config.configured) {
-      throw new ApiError(424, "STRIPE_CONNECT_PROVIDER_UNAVAILABLE", "Bank-payment account management is not configured yet.", {
-        provider: "stripe_connect",
-        mode: "setup_required",
-        missing: config.missing,
-      });
-    }
     const row = (await database.query(
       "SELECT * FROM stripe_connect_accounts WHERE account_id = $1 LIMIT 1",
       [request.actor.account.id],
     )).rows[0];
     if (!row) {
       throw new ApiError(409, "STRIPE_CONNECT_ONBOARDING_REQUIRED", "Set up bank payments before opening the Stripe account.");
+    }
+    if (!connectManagementAvailable(row, config)) {
+      throw new ApiError(424, "STRIPE_CONNECT_PROVIDER_UNAVAILABLE", "Bank-payment account management is temporarily unavailable.", {
+        provider: "stripe_connect",
+        mode: "setup_required",
+        missing: ["STRIPE_SECRET_KEY"],
+      });
     }
     const dashboardUrl = row.stripe_account_api_version === "v2"
       ? STRIPE_FULL_DASHBOARD_URL
@@ -1652,8 +1714,10 @@ export const stripeConnectInternals = {
   ACH_MAX_AMOUNT_CENTS,
   ACH_MIN_AMOUNT_CENTS,
   SETTLED_PAYMENT_STATUSES,
+  STRIPE_REQUEST_TIMEOUT_MS,
   assertAchAmount,
   connectConfig,
+  connectManagementAvailable,
   eventPaymentUpdate,
   mapConnectStatus,
   mapPaymentRequest,
@@ -1664,5 +1728,8 @@ export const stripeConnectInternals = {
   normalizeConnectAccount,
   providerContributionCents,
   preventPaymentResponseCaching,
+  stripeConnectRequest,
+  stripeConnectV2Request,
+  stripeProviderRequest,
   v2DetailsSubmitted,
 };

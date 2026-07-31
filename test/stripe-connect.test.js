@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { stripeConnectInternals } from "../server/stripe-connect.js";
+import { stripeConnectInternals, stripeConnectProviderStatus } from "../server/stripe-connect.js";
 
 test("public invoice payment responses are marked non-cacheable", () => {
   const headers = new Map();
@@ -20,15 +20,23 @@ test("Stripe Connect ACH stays fail-closed until explicitly enabled and signed",
     key: process.env.STRIPE_SECRET_KEY,
     webhook: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
     enabled: process.env.STRIPE_CONNECT_ACH_ENABLED,
+    scope: process.env.STRIPE_CONNECT_WEBHOOK_SCOPE,
   };
   process.env.STRIPE_SECRET_KEY = "sk_test_placeholder";
   process.env.STRIPE_CONNECT_WEBHOOK_SECRET = "whsec_placeholder";
   delete process.env.STRIPE_CONNECT_ACH_ENABLED;
+  delete process.env.STRIPE_CONNECT_WEBHOOK_SCOPE;
   try {
     const disabled = stripeConnectInternals.connectConfig("https://rivt.example");
     assert.equal(disabled.configured, false);
     assert.ok(disabled.missing.includes("STRIPE_CONNECT_ACH_ENABLED"));
     process.env.STRIPE_CONNECT_ACH_ENABLED = "true";
+    const missingScope = stripeConnectInternals.connectConfig("https://rivt.example");
+    assert.equal(missingScope.configured, false);
+    assert.ok(missingScope.missing.includes("STRIPE_CONNECT_WEBHOOK_SCOPE=connected_accounts"));
+    process.env.STRIPE_CONNECT_WEBHOOK_SCOPE = "your_account";
+    assert.equal(stripeConnectInternals.connectConfig("https://rivt.example").configured, false);
+    process.env.STRIPE_CONNECT_WEBHOOK_SCOPE = "connected_accounts";
     assert.equal(stripeConnectInternals.connectConfig("https://rivt.example").configured, true);
   } finally {
     if (previous.key === undefined) delete process.env.STRIPE_SECRET_KEY;
@@ -37,7 +45,128 @@ test("Stripe Connect ACH stays fail-closed until explicitly enabled and signed",
     else process.env.STRIPE_CONNECT_WEBHOOK_SECRET = previous.webhook;
     if (previous.enabled === undefined) delete process.env.STRIPE_CONNECT_ACH_ENABLED;
     else process.env.STRIPE_CONNECT_ACH_ENABLED = previous.enabled;
+    if (previous.scope === undefined) delete process.env.STRIPE_CONNECT_WEBHOOK_SCOPE;
+    else process.env.STRIPE_CONNECT_WEBHOOK_SCOPE = previous.scope;
   }
+});
+
+test("Stripe provider status distinguishes webhook signing from Connected accounts delivery scope", async () => {
+  const previous = {
+    key: process.env.STRIPE_SECRET_KEY,
+    webhook: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
+    enabled: process.env.STRIPE_CONNECT_ACH_ENABLED,
+    scope: process.env.STRIPE_CONNECT_WEBHOOK_SCOPE,
+  };
+  process.env.STRIPE_SECRET_KEY = "sk_test_placeholder";
+  process.env.STRIPE_CONNECT_WEBHOOK_SECRET = "whsec_placeholder";
+  process.env.STRIPE_CONNECT_ACH_ENABLED = "true";
+  delete process.env.STRIPE_CONNECT_WEBHOOK_SCOPE;
+  try {
+    const unsignedScope = stripeConnectInternals.connectConfig("https://rivt.example");
+    assert.equal(unsignedScope.webhookScopeConfigured, false);
+    const readyRow = {
+      onboarding_status: "ready",
+      ach_payments_status: "active",
+      charges_enabled: true,
+      payouts_enabled: true,
+      details_submitted: true,
+    };
+    const pausedStatus = stripeConnectInternals.mapConnectStatus(readyRow, unsignedScope);
+    assert.equal(pausedStatus.accountReady, true);
+    assert.equal(pausedStatus.paymentLinksAvailable, false);
+    assert.equal(pausedStatus.managementAvailable, true);
+    assert.equal(pausedStatus.ready, false);
+    assert.deepEqual(stripeConnectProviderStatus("https://rivt.example"), {
+      provider: "stripe_connect",
+      accountsApi: "v2",
+      enabled: true,
+      configured: false,
+      webhookConfigured: true,
+      webhookScopeConfigured: false,
+      mode: "setup_required",
+    });
+    process.env.STRIPE_CONNECT_WEBHOOK_SCOPE = "connected_accounts";
+    const connectedScope = stripeConnectInternals.connectConfig("https://rivt.example");
+    assert.equal(connectedScope.webhookScopeConfigured, true);
+    assert.equal(connectedScope.configured, true);
+    const availableStatus = stripeConnectInternals.mapConnectStatus(readyRow, connectedScope);
+    assert.equal(availableStatus.accountReady, true);
+    assert.equal(availableStatus.paymentLinksAvailable, true);
+    assert.equal(availableStatus.managementAvailable, true);
+    assert.equal(availableStatus.ready, true);
+  } finally {
+    for (const [name, value] of Object.entries({
+      STRIPE_SECRET_KEY: previous.key,
+      STRIPE_CONNECT_WEBHOOK_SECRET: previous.webhook,
+      STRIPE_CONNECT_ACH_ENABLED: previous.enabled,
+      STRIPE_CONNECT_WEBHOOK_SCOPE: previous.scope,
+    })) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
+
+test("existing Accounts v2 merchants can still reach Stripe while new payment links are paused", () => {
+  const row = { stripe_account_api_version: "v2" };
+  assert.equal(stripeConnectInternals.connectManagementAvailable(row, { secretKey: null }), true);
+  assert.equal(stripeConnectInternals.connectManagementAvailable({ stripe_account_api_version: "v1" }, { secretKey: null }), false);
+  assert.equal(stripeConnectInternals.connectManagementAvailable({ stripe_account_api_version: "v1" }, { secretKey: "sk_test_placeholder" }), true);
+  assert.equal(stripeConnectInternals.connectManagementAvailable(null, { secretKey: "sk_test_placeholder" }), false);
+});
+
+test("Stripe requests fail with a bounded, explicit timeout", async () => {
+  assert.equal(stripeConnectInternals.STRIPE_REQUEST_TIMEOUT_MS, 8_000);
+  const signal = AbortSignal.abort(new DOMException("deadline", "TimeoutError"));
+  const stalledFetch = (_url, options) => Promise.reject(options.signal.reason);
+  await assert.rejects(
+    () => stripeConnectInternals.stripeConnectRequest(
+      { secretKey: "sk_test_placeholder" },
+      "/accounts/acct_test",
+      {},
+      { method: "GET", fetchImpl: stalledFetch, signal },
+    ),
+    (error) => error.status === 504 && error.code === "STRIPE_CONNECT_TIMEOUT",
+  );
+});
+
+test("Stripe creates and enforces its default timeout signal", async () => {
+  await assert.rejects(
+    () => stripeConnectInternals.stripeConnectRequest(
+      { secretKey: "sk_test_placeholder" },
+      "/accounts/acct_test",
+      {},
+      {
+        method: "GET",
+        timeoutMs: 5,
+        fetchImpl: (_url, options) => new Promise((_resolve, reject) => {
+          options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true });
+        }),
+      },
+    ),
+    (error) => error.status === 504 && error.code === "STRIPE_CONNECT_TIMEOUT",
+  );
+});
+
+test("Stripe response-body timeouts are not mistaken for successful requests", async () => {
+  const signal = AbortSignal.abort(new DOMException("deadline", "TimeoutError"));
+  await assert.rejects(
+    () => stripeConnectInternals.stripeConnectV2Request(
+      { secretKey: "sk_test_placeholder" },
+      "/core/accounts/acct_test",
+      {},
+      {
+        method: "GET",
+        signal,
+        fetchImpl: async () => ({
+          ok: true,
+          status: 200,
+          json: async () => { throw signal.reason; },
+        }),
+      },
+    ),
+    (error) => error.status === 504 && error.code === "STRIPE_CONNECT_TIMEOUT",
+  );
 });
 
 test("connected account is ready only with ACH, charges, payouts, and submitted details", () => {

@@ -1290,8 +1290,10 @@ export function InvoiceDraftTool({
       setProjectInvoiceError("Add clear payment instructions so the customer knows how and where to pay.");
       return;
     }
-    if (paymentOptions.bank && !connectStatus?.ready) {
-      setProjectInvoiceError("Finish Stripe bank-payment setup before sending an invoice with a pay button.");
+    if (paymentOptions.bank && !connectStatus?.paymentLinksAvailable) {
+      setProjectInvoiceError(connectStatus && !connectStatus.providerConfigured
+        ? "RIVT bank payments are currently paused. Remove the bank-payment option or try again later."
+        : "Finish Stripe bank-payment setup before sending an invoice with a pay button.");
       return;
     }
     if (paymentOptions.bank && !bankPaymentUrl) {
@@ -1338,9 +1340,11 @@ export function InvoiceDraftTool({
       setDraftSaveMessage("Payment instructions are still required.");
       return false;
     }
-    if (paymentOptions.bank && !connectStatus?.ready) {
+    if (paymentOptions.bank && !connectStatus?.paymentLinksAvailable) {
       setSendOpen(false);
-      setProjectInvoiceError("Finish Stripe bank-payment setup before emailing this invoice with a pay button.");
+      setProjectInvoiceError(connectStatus && !connectStatus.providerConfigured
+        ? "RIVT bank payments are currently paused. Remove the bank-payment option or try again later."
+        : "Finish Stripe bank-payment setup before emailing this invoice with a pay button.");
       return false;
     }
     if (paymentIntegrityIssue) {
@@ -1499,28 +1503,32 @@ export function InvoiceDraftTool({
                   <span>
                     <strong>{bankPaymentUrl
                       ? "Customer payment page is ready"
-                      : connectStatus?.ready
+                      : connectStatus?.paymentLinksAvailable
                         ? "Create the secure payment page"
+                        : connectStatus && !connectStatus.providerConfigured
+                          ? "RIVT bank payments are paused"
                         : connectStatus?.connected
                           ? "Finish Stripe setup"
                           : "Set up bank payments"}</strong>
                     <small>{bankPaymentUrl
                       ? "Email will include a clear Pay securely by bank button."
-                      : connectStatus?.ready
+                      : connectStatus?.paymentLinksAvailable
                         ? "RIVT will create a short customer link and include it when you email."
+                        : connectStatus && !connectStatus.providerConfigured
+                          ? "RIVT cannot safely create new bank-payment links right now. Existing Stripe account access remains available."
                         : "Stripe must verify your payout account before RIVT can add a pay button."}</small>
                     <small>Stripe fees and ACH timing apply. RIVT does not hold job funds.</small>
                   </span>
                 </div>
-                {!connectStatus?.ready ? (
+                {!connectStatus?.paymentLinksAvailable && connectStatus?.providerConfigured ? (
                   <button type="button" className="v2-primary-button" onClick={() => void openBankPaymentSetup()} disabled={connectBusy || !connectStatus?.providerConfigured}>
                     {connectBusy ? "Opening Stripe..." : connectStatus?.connected ? "Continue Stripe setup" : "Set up bank payments"}
                   </button>
-                ) : !bankPaymentUrl ? (
+                ) : connectStatus?.paymentLinksAvailable && !bankPaymentUrl ? (
                   <button type="button" className="v2-primary-button" onClick={() => void createBankPaymentLink()} disabled={connectBusy || totalCents <= 0 || paymentActionsBlocked}>
                     {connectBusy ? "Creating pay link..." : "Create secure pay link"}
                   </button>
-                ) : (
+                ) : bankPaymentUrl ? (
                   <div className="v2-tool-action-row">
                     <button type="button" className="v2-primary-button" onClick={() => void copyBankPaymentLink(activeBankPayment!)} disabled={paymentActionsBlocked}><Copy size={15} />Copy pay link</button>
                     {!paymentActionsBlocked ? <a href={bankPaymentUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} />Open customer page</a> : null}
@@ -1528,8 +1536,8 @@ export function InvoiceDraftTool({
                       <button type="button" onClick={() => void cancelBankPaymentLink()} disabled={connectBusy}>Cancel link</button>
                     ) : null}
                   </div>
-                )}
-                {connectStatus?.ready ? (
+                ) : null}
+                {connectStatus?.managementAvailable ? (
                   <button type="button" className="v2-invoice-manage-stripe" onClick={() => void manageBankPaymentAccount()} disabled={connectBusy}>
                     Manage payout account
                   </button>
