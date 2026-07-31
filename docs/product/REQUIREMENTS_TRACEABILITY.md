@@ -1,5 +1,52 @@
 # Gate A Requirements Traceability
 
+## Railway Stage 1 Source-Safety Addendum - 2026-07-30
+
+- `GA-OPS-003` gains source-level readiness separation for a future Railway
+  web/worker split. Hosted startup now rejects the local-only combined role,
+  the web service owns the single migration predeploy, the worker uses a
+  non-mutating readiness check, both hosted roles fail closed when required
+  Web Push configuration is incomplete, and public health becomes unavailable
+  when required push delivery is not ready.
+- `GA-OPS-005` gains a fail-closed activation review boundary. A fresh,
+  allowlisted Railway status snapshot must be paired with a separate named
+  operator review of controls that provider status does not prove, including
+  connected branch, staged manual deployment, effective configuration,
+  serverless state, monitoring, billing cycle, and cost limits. Both artifacts
+  are time-bounded and SHA-256-bound to the exact approved plan.
+- `GA-OPS-007` gains focused regression coverage for hosted process roles,
+  migration ownership, bounded shutdown, VAPID active/previous fallback,
+  required push startup, exact approval binding, evidence freshness and scope,
+  database transition headroom, source ancestry, current-cycle cost
+  reconciliation, provider/manual stop levels, and strict command modes. This
+  Local evidence passes 92/92 focused checks, 229/229 unit/frontend checks,
+  build, application/security lint, all three browser E2E journeys, and a
+  zero-vulnerability production dependency audit. The aggregate test command
+  passes but 21 PostgreSQL suites skip because this isolated worktree has no
+  `TEST_DATABASE_URL`; a nonlocal database setting outside the worktree was
+  deliberately not used. Disposable-PostgreSQL CI and any later authorized
+  activation acceptance therefore remain required.
+- `GA-OPS-008` gains checked-in `railway.json` and
+  `railway.worker.json` contracts plus Packets 93 and 94, an activation
+  runbook, strict blank evidence templates, and an explicit rollback boundary.
+  The preflight requires a clean candidate equal to freshly resolved
+  `origin/master` and returns only
+  `plan_snapshot_and_operator_review_consistent_pending_owner_activation`.
+  That status is permission to request a separate owner decision, not proof of
+  deployment, migration, spend, push delivery, rollback, redundancy, incident
+  closure, or launch readiness.
+- The separate approval digest is an audit/drift control for a trusted
+  operator, not cryptographic owner authentication. The approval record must
+  remain separately access-controlled, be independently compared, and be
+  followed by an owner-performed provider action. Owner-controlled signing is
+  a future hardening option and is not claimed here.
+- This addendum records local preparation only. No Railway control, service,
+  database, bucket, production row, deployment, or billing limit was changed,
+  and no earlier approval is treated as reusable. `GA-OPS-005`,
+  `GA-OPS-007`, and `GA-OPS-008` remain `Partial` at the product level because
+  provider activation, acceptance, incident exit, and broader operational
+  proof are still open.
+
 ## Operational Incident Addendum - 2026-07-29 Credential Containment
 
 - `GA-OPS-007` gains local Web Push retirement instrumentation: migration
