@@ -2159,7 +2159,10 @@ Evidence must eventually link to implementation, automated tests, manual accepta
   candidate passes 258/258 unit/frontend checks, including receipt-content
   mutation and provider-inventory/runtime-scope substitution regressions. The
   exact disabled approval now binds the receipt SHA-256 and complete verified
-  public-health state; hosted PR-head parity remains to be recorded.
+  public-health state. GitHub Actions run `30682797549`, job `91322960536`,
+  passed hosted build, lint, the full unit/frontend set, and the full
+  PostgreSQL 16 integration set on approval-binding commit `b1f3aa2`; launch
+  readiness then stopped solely on the intentional `ACTIVE_LAUNCH_HOLD`.
 
 ## Traceability Addendum - 2026-06-22 App Activity Feed Hook Extraction
 

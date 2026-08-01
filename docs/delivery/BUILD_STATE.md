@@ -96,6 +96,13 @@ approval is recorded with a matching configuration digest in
 `docs/operations/payment-provider-readiness.json` and the nonsecret provider
 receipt. It does not enable ACH, approve deployment or a worker, clear the
 incident, or authorize launch.
+Approval-binding commit `b1f3aa2eb80e624a89b34577e35efaab1cefe796`
+passed hosted Node/PostgreSQL verification in GitHub Actions run
+`30682797549`, job `91322960536`: build, lint, all 258 unit/frontend checks,
+and the full PostgreSQL 16 integration suite passed. Launch readiness then
+failed solely on the intentional `ACTIVE_LAUNCH_HOLD`; hosted browser/audit
+steps were skipped after that fail-closed stop, while their local equivalents
+pass.
 
 ## Railway Stage 1 source-safety re-review - combined local candidate only
 
@@ -141,9 +148,10 @@ incident, or authorize launch.
   database integration tests described above.
 - `npm run launch:readiness -- --require-ready` now recognizes the exact
   disabled-mode approval and fails closed only on the intentional
-  `ACTIVE_LAUNCH_HOLD`. Hosted Node 20/PostgreSQL 16 source and database checks are complete; the
-  hosted E2E/audit steps were skipped only because readiness intentionally
-  stopped the job. Launch readiness remains blocked.
+  `ACTIVE_LAUNCH_HOLD`. GitHub Actions run `30682797549`, job `91322960536`,
+  supplies current hosted source/database parity; hosted E2E/audit steps were
+  skipped only because readiness intentionally stopped the job. Launch
+  readiness remains blocked.
 - Railway automatic deployments were disabled and Wait for CI was enabled.
   Payment-provider configuration was contained as described above. No worker,
   new service, database, bucket, production row, or backup was created; no

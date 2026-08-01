@@ -57,6 +57,12 @@
   production source and disabled/setup-required state. The readiness check now
   clears the payment-provider prerequisite and stops only on
   `ACTIVE_LAUNCH_HOLD`.
+  Approval-binding commit `b1f3aa2eb80e624a89b34577e35efaab1cefe796`
+  passed hosted build, lint, all 258 unit/frontend checks, and the full
+  PostgreSQL 16 integration suite in GitHub Actions run `30682797549`, job
+  `91322960536`. The hosted launch-readiness step then failed solely on the
+  intentional `ACTIVE_LAUNCH_HOLD`; later hosted browser/audit steps were
+  skipped, while equivalent local gates pass.
 - Remaining boundary: health and the unsigned rejection do not prove the
   replacement secret accepts a Stripe-signed Connected-accounts event. No
   signed delivery, matching durable payment transition, scope attestation,
