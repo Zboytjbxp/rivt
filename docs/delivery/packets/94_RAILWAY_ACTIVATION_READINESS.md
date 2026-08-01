@@ -230,7 +230,8 @@ payment/launch prerequisite and is not cleared by Stage 1 preflight alone.
    including the app and database. The plan must record that outage mechanism
    and acceptance instead of presenting the limit as risk-free.
 
-Packet status: **Combined source prepared and locally verified; formal exact-
-source security scan, exact-runtime CI, fresh exact-plan approval, strict
-preflight, incident decision, and separately authorized provider activation
-remain pending**.
+Packet status: **Combined source prepared, locally verified, and covered by
+sealed exact-range Codex Security scan
+`7e499cf8-be43-4b6d-ace9-e61f0978a27c` with zero reportable findings;
+exact-runtime CI, fresh exact-plan approval, strict preflight, incident
+decision, and separately authorized provider activation remain pending**.

@@ -212,7 +212,8 @@ outbox/reconciliation requirement for every external side effect.
 No production data, provider configuration, paid resource, deployment, or
 live payment was changed.
 
-Packet status: **Integrated, locally re-verified, and independently reviewed
-with Stage 1 source-safety; the formal exact-source security scan, exact-
-runtime CI, merge, deployment, provider-scope proof, and exact-source
+Packet status: **Integrated, locally re-verified, independently reviewed with
+Stage 1 source-safety, and covered by sealed exact-range Codex Security scan
+`7e499cf8-be43-4b6d-ace9-e61f0978a27c` with zero reportable findings;
+exact-runtime CI, merge, deployment, provider-scope proof, and exact-source
 acceptance remain pending**.

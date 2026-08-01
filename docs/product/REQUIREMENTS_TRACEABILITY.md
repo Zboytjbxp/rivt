@@ -60,9 +60,13 @@
   payment-provider approval must be current, postdate verification, and match
   the digest of the exact reviewed mode and evidence.
 - No provider setting, deployment, production row, paid resource, or cost
-  changed. Local combined review is complete. The formal exact-source Codex
-  Security scan, exact-runtime CI, fresh Stage 1 evidence and approval, strict
-  preflight, Stripe delivery proof, incident exit, and deployment remain open.
+  changed. Local combined review is complete. Formal exact-source Codex
+  Security diff scan `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed for
+  `29e3c61..6c9e803` with complete 25/25 review-row coverage, zero reportable
+  findings, and zero deferred findings; its non-sensitive receipt is under
+  `docs/delivery/evidence/railway-stage1/`. Exact-runtime CI, fresh Stage 1
+  evidence and approval, strict preflight, Stripe delivery proof, incident
+  exit, and deployment remain open.
 
 ## Railway Stage 1 Source-Safety Addendum - 2026-07-30
 

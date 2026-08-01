@@ -20,6 +20,18 @@ Operational status: launch remains held. The former Stage 1 approval is
 expired and unusable. Fresh exact-source evidence, plan digest, cost approval,
 strict preflight, and separate activation authority are required.
 
+Formal exact-source security review is complete. Codex Security diff scan
+`7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed on
+`2026-08-01T01:04:18.767332Z` for exact range `29e3c61..6c9e803` with
+complete 25/25 review-row coverage, zero reportable findings, and zero
+deferred findings. One synthetic snapshot-sanitization candidate was
+validated and rejected after attack-path analysis found an operator-only
+local capture path with no realistic lower-privileged attacker route. The
+non-sensitive receipt and sealed artifact hashes are recorded in
+`docs/delivery/evidence/railway-stage1/SECURITY_SCAN_RECEIPT.md`. This closes
+the candidate's formal diff-scan prerequisite only; it does not authorize a
+push, merge, provider action, deployment, spend, incident exit, or launch.
+
 Current product packet: Packet 87 implementation commit `4e95c71` and its
 incident-evidence follow-ups through `070243f` are combined with the Railway
 Stage 1 sequence through `9490c86`. Packet 87 files remained intact during the
@@ -46,7 +58,8 @@ were not used. Local runtime was Node 24 and PostgreSQL 18. Gate A is now
 configured to read Node 20 from `.nvmrc` and use PostgreSQL 16, but an
 exact-source CI run remains open until a reviewed candidate is pushed. The
 provider-safety follow-up is committed and independently reviewed locally;
-formal exact-source security scan, push/merge, exact-runtime CI, deployment, and exact-source
+the formal exact-source security scan is sealed with zero reportable findings;
+push/merge, exact-runtime CI, deployment, and exact-source
 acceptance remain mandatory. No production data, provider configuration, paid resource, or live
 application changed. The missing Stripe `Connected accounts` event destination
 is a launch blocker independent of these passing source gates. The broader
