@@ -146,15 +146,17 @@ STRIPE_CONNECT_WEBHOOK_SCOPE=
 
 Production activation requires:
 
-1. Confirm the platform and every connected merchant can request the `us_bank_account_ach_payments` capability.
+1. Confirm the platform and every connected merchant can request the Accounts v2 `ach_debit_payments` capability and the required payout configuration.
 2. Create a Connect webhook endpoint at `https://rivt.pro/api/stripe/connect/webhook` with the destination scope set to **Connected accounts**, not **Your account**.
-3. Subscribe to `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.dispute.created`, and `charge.refunded`.
+3. Subscribe the snapshot money-state destination to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.dispute.created`, and `charge.refunded`.
 4. Store that endpoint's signing secret in `STRIPE_CONNECT_WEBHOOK_SECRET`. Do not reuse `STRIPE_WEBHOOK_SECRET`.
 5. Prove a signed connected-account delivery reaches RIVT and changes the intended durable payment state, then set `STRIPE_CONNECT_WEBHOOK_SCOPE=connected_accounts`. This variable is an operator attestation, not automatic provider discovery; never set it merely to make health appear configured.
 6. Exercise onboarding and one ACH lifecycle in Stripe test mode, including asynchronous success and failure, before setting `STRIPE_CONNECT_ACH_ENABLED=true` in production.
 7. After activation, verify the public payment return page discloses processing honestly and that signed events—not the browser redirect—change invoice paid state.
 
-Keep the feature disabled if the Connected-accounts destination, signed-delivery proof, support ownership, or merchant onboarding review is incomplete. The 2026-07-31 provider inventory found only a `Your account` destination, so current production evidence does not satisfy this activation contract. Disabling new links must not hide existing payment status records or stop signed webhook processing for already-submitted payments.
+Legacy `account.updated` is not part of this Accounts v2 snapshot money-state contract. Accounts v2 lifecycle notifications use separate thin events and require a handler that retrieves the versioned event or current account state. RIVT currently re-fetches Accounts v2 readiness before onboarding, status, and payment-link creation; do not add a legacy snapshot event and treat it as Accounts v2 readiness proof. A future thin-event destination/handler is separate hardening work.
+
+Keep the feature disabled if the Connected-accounts destination, signed-delivery proof, support ownership, or merchant onboarding review is incomplete. A Connected-accounts destination and dedicated secret were installed on 2026-08-01, but no Stripe-signed matching durable transition has been proved and scope attestation remains unset. Production ACH is therefore disabled and setup-required. Disabling new links must not hide existing payment status records or stop signed webhook processing for already-submitted payments.
 
 Uploads use private S3-compatible object storage and signed download URLs. RIVT production currently targets Railway Object Storage, which exposes an S3-compatible endpoint (`https://t3.storageapi.dev` in Railway's current storage service). Cloudflare R2, AWS S3, Backblaze B2, Supabase Storage S3 compatibility, or another managed S3-compatible provider can be used only if the same private-bucket and signed-URL behavior is preserved.
 

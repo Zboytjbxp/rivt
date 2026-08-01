@@ -1,17 +1,17 @@
 {
   "version": 1,
   "status": "blocked",
-  "mode": "unknown",
-  "featureFlagVerifiedOff": false,
-  "webhookDestinationScope": "your_account",
+  "mode": "disabled",
+  "featureFlagVerifiedOff": true,
+  "webhookDestinationScope": "connected_accounts",
   "signedDeliveryVerified": false,
-  "verifiedAt": null,
-  "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-31---packet-87--railway-stage-1-combined-candidate-no-deployment",
+  "verifiedAt": "2026-08-01T02:21:47.8089240Z",
+  "evidence": "docs/delivery/evidence/railway-stage1/PROVIDER_CONTAINMENT_2026-08-01.md",
   "approval": {
     "status": "pending",
     "approvedBy": "",
     "approvedAt": null,
     "configurationDigest": ""
   },
-  "notes": "Production currently has a Your account Stripe destination. Before launch, either verify STRIPE_CONNECT_ACH_ENABLED is off and approve disabled mode, or create and prove signed delivery from a Connected accounts destination and approve enabled mode."
+  "notes": "Production ACH is verified disabled and setup-required, and a read-only inventory found zero payment-request rows. Provider inventory confirms a Connected accounts destination and dedicated secret, but runtime scope attestation remains unset and signed delivery plus a matching durable transition remain unproven. Disabled mode still requires named approval; enabled mode additionally requires signed-delivery proof and exact runtime scope attestation."
 }

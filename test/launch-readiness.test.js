@@ -183,7 +183,7 @@ test("launch readiness fails closed when bank-payment launch state is not approv
   assert.equal(result.ok, false);
   assert.deepEqual(result.findings, [{
     code: "PAYMENT_PROVIDER_NOT_APPROVED",
-    message: "Bank payments must be provably disabled or have verified Connected accounts webhook delivery before launch.",
+    message: "Bank-payment configuration requires a current named approval; enabled mode also requires verified Connected accounts signed delivery.",
     source: "payment_provider",
   }]);
 });

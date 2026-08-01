@@ -1,11 +1,60 @@
 # Deployment Ledger
 
+## 2026-08-01 - Candidate push/CI and Stripe fail-closed correction (No packet deployment)
+
+- Candidate: `72e7ad7907d3725ff1232cce9af730e7e577dcfe` on
+  `codex/railway-stage1-packet87-integration`, pushed in draft PR #14. The
+  branch is not merged and none of its packet source is deployed.
+- Security/source evidence: Codex Security scan
+  `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed exact range
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` through
+  `6c9e803522c3bfd0ff9af1fdd1ba4e02b07e2324` with 25/25 coverage, zero
+  reportable findings, and zero deferred findings.
+  GitHub Actions run `30678574155`, job `91310753926`, passed Node 20 build,
+  lint, 252 unit/frontend checks, and 25/25 PostgreSQL 16 integration tests.
+  Launch readiness then intentionally failed on `ACTIVE_LAUNCH_HOLD` and
+  `PAYMENT_PROVIDER_NOT_APPROVED`; hosted E2E and audit were skipped after the
+  fail-closed stop. Equivalent local E2E and audit gates pass.
+- Railway controls: automatic deployments were disabled and Wait for CI was
+  enabled. No Stage 1 worker, new service, database, bucket, volume, or backup
+  was created. The approximately $10.05/month worker estimate is outside the
+  current $2 authorization and no activation was attempted.
+- Stripe containment: a live Connected-accounts destination was created with
+  the nine snapshot money-state events implemented by RIVT. Its dedicated
+  signing secret was installed without recording the value. The pre-existing
+  Your-account destination remains only as provider inventory/rollback
+  reference; RIVT no longer holds its signing secret, so it is not an
+  operational fallback.
+- Discovery: public health at `2026-08-01T02:12:38Z` unexpectedly reported
+  bank payments enabled and configured. The start time of that state is
+  unknown. No payment was initiated by this work. The flag was immediately
+  set false. Intermediate configuration deployment
+  `b02a245c-67ff-4bc5-9b82-1bc971fc855d` was replaced by corrective deployment
+  `3d53eb50-7317-499f-950b-845ee536074c`.
+- Verified result: at `2026-08-01T02:21:47.8089240Z`, live health served
+  unchanged production source `29e3c613f2eb95a6583b52c671275e5046dde0d3`,
+  migration `0042_push_vapid_generation`, and bank-payment state
+  `enabled:false`, `configured:false`, `webhookConfigured:true`,
+  `mode:setup_required`. An unsigned webhook probe returned HTTP 400 before
+  application writes. A production count-only, read-only transaction returned
+  zero project and zero tool invoice payment-request rows. No database-backed
+  RIVT payment request was available to reconcile or expire; provider-side
+  sessions without a durable row were not enumerated.
+- Remaining boundary: health and the unsigned rejection do not prove the
+  replacement secret accepts a Stripe-signed Connected-accounts event. No
+  signed delivery, matching durable payment transition, scope attestation,
+  payment-provider approval, incident exit, merge, packet deployment, or
+  launch occurred. No new recurring resource was added; ordinary usage from
+  the corrective deployment was not independently reconciled and is not
+  represented as zero cost.
+
 ## 2026-07-31 - Packet 87 + Railway Stage 1 Combined Candidate (No Deployment)
 
 - Branch: `codex/railway-stage1-packet87-integration`; Packet 87 history
   through `070243f` is combined with the Stage 1 sequence through the
-  integration base `9490c86`. The provider-safety follow-up is committed and
-  independently reviewed locally at `0b78de2`; it is not pushed or deployed.
+  integration base `9490c86`. The provider-safety follow-up was committed and
+  independently reviewed locally at `0b78de2`; it is now included in pushed
+  candidate `72e7ad7` but remains unmerged and undeployed.
 - Source result: Packet 87 files remained intact during replay. Local build,
   application/security lint, 252/252 unit/frontend checks, all three browser
   E2E journeys, Tools/Shop Talk/Trade News/mobile-actions/Work-lifecycle UI

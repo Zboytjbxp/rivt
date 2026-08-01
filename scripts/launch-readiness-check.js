@@ -139,7 +139,7 @@ function evaluatePaymentProviderPolicy(policy, { now = new Date() } = {}) {
       ok: false,
       findings: [{
         code: "PAYMENT_PROVIDER_NOT_APPROVED",
-        message: "Bank payments must be provably disabled or have verified Connected accounts webhook delivery before launch.",
+        message: "Bank-payment configuration requires a current named approval; enabled mode also requires verified Connected accounts signed delivery.",
       }],
       summary: { status: policy?.status ?? "missing", mode: policy?.mode ?? "unknown" },
     };

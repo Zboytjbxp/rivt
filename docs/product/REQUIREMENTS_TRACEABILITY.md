@@ -1,5 +1,42 @@
 # Gate A Requirements Traceability
 
+## 2026-08-01 - Candidate CI and payment-provider containment
+
+- Candidate `72e7ad7907d3725ff1232cce9af730e7e577dcfe` is pushed on
+  `codex/railway-stage1-packet87-integration` in draft PR #14. It is not merged
+  or deployed. Codex Security diff scan
+  `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed exact implementation range
+  `29e3c613..6c9e8035` with 25/25 review coverage, zero reportable findings,
+  and zero deferred findings. Later receipt/documentation commits were not
+  part of that sealed range.
+- `GA-OPS-007` and `GA-OPS-008`: GitHub Actions run `30678574155`, job
+  `91310753926`, passed the Node 20 build/lint/252 unit-and-frontend checks and
+  all 25 PostgreSQL 16 integration tests. Launch readiness then failed closed
+  on `ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`; hosted E2E and
+  audit were skipped after that stop. Their local equivalents remain passed.
+- `GA-OPS-003` and `GA-OPS-008`: Railway automatic deployments are off and
+  Wait for CI is on. Corrective configuration deployment
+  `3d53eb50-7317-499f-950b-845ee536074c` retained production source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`; no packet source or Stage 1
+  worker was deployed.
+- `GA-FND-004` and `GA-OPS-005`: a live Stripe Connected-accounts destination
+  with the nine snapshot money-state events used by RIVT now exists and its
+  dedicated secret is installed. Public health unexpectedly showed bank
+  payments enabled at `2026-08-01T02:12:38Z`; the beginning of that state is
+  unknown. The flag was immediately set false. Health at
+  `2026-08-01T02:21:47.8089240Z` proves `enabled:false`, `configured:false`,
+  `webhookConfigured:true`, and `mode:setup_required`. A count-only read-only
+  transaction found no project or tool invoice payment-request rows.
+- The new destination is not provider-approved: no Stripe-signed Connected-
+  accounts delivery or matching durable transition has been proved, scope
+  attestation remains unset. The old Your-account destination remains only as
+  provider inventory/rollback reference; RIVT no longer holds its signing
+  secret, so it is not an operational fallback. Fresh Stage 1 evidence,
+  exact-plan/cost approval, strict preflight, incident decision, merge,
+  deployment, and activation remain open. The last
+  conservative worker estimate of about $10.05/month is outside the current
+  $2 authorization.
+
 ## Packet 87 — Money-integrity containment (local verification)
 
 - `GA-FND-003` gains one authoritative amount boundary for each invoice path:
@@ -28,8 +65,9 @@
   and diff integrity
   pass. A disposable loopback-only PostgreSQL 18 cluster with
   `RIVT_DB_MAX_CONNECTIONS=97` passed 25/25 integration tests with zero
-  failures or skips. Production and Railway were not used. Local runtime was
-  Node 24/PostgreSQL 18, so exact Node 20/PostgreSQL 16 CI parity remains open.
+  failures or skips. Production and Railway were not used for that local run.
+  Local runtime was Node 24/PostgreSQL 18; the 2026-08-01 addendum above now
+  records the completed Node 20/PostgreSQL 16 hosted CI parity run.
 - No migration, production data, provider configuration, paid resource,
   deployment, or live payment changed. Packet 87 remains launch-blocking until
   merge, deployment, and exact-source acceptance pass.
@@ -39,8 +77,9 @@
 - The Stage 1 sequence was replayed onto Packet 87 through integration base
   `9490c860736fbbf3ab916e488bfc994cca60753e` before final follow-up changes;
   Packet 87 files remained intact during replay.
-- The independently reviewed provider-safety follow-up is committed locally as
-  `0b78de26aa7c7ee60e8cc5b3cdb608be6c7c2c3f`; it is not pushed or deployed.
+- The independently reviewed provider-safety follow-up is included in pushed
+  candidate `72e7ad7907d3725ff1232cce9af730e7e577dcfe`; the candidate remains
+  unmerged and undeployed.
 - `GA-OPS-007` gains the complete combined local evidence above, including
   25/25 disposable-database integration tests rather than skipped suites.
 - Current facts supersede older cumulative table wording below:
@@ -59,14 +98,14 @@
   and Resend header/body waits are bounded to eight seconds. Any future
   payment-provider approval must be current, postdate verification, and match
   the digest of the exact reviewed mode and evidence.
-- No provider setting, deployment, production row, paid resource, or cost
-  changed. Local combined review is complete. Formal exact-source Codex
+- The later 2026-08-01 addendum above supersedes this section's provider and
+  CI status. Local combined review is complete. Formal exact-source Codex
   Security diff scan `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed for
   `29e3c61..6c9e803` with complete 25/25 review-row coverage, zero reportable
   findings, and zero deferred findings; its non-sensitive receipt is under
-  `docs/delivery/evidence/railway-stage1/`. Exact-runtime CI, fresh Stage 1
-  evidence and approval, strict preflight, Stripe delivery proof, incident
-  exit, and deployment remain open.
+  `docs/delivery/evidence/railway-stage1/`. Exact-runtime source/database CI is
+  complete; fresh Stage 1 evidence and approval, strict preflight, Stripe
+  signed-delivery proof, incident exit, merge, and deployment remain open.
 
 ## Railway Stage 1 Source-Safety Addendum - 2026-07-30
 

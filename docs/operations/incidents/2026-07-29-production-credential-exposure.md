@@ -1,6 +1,6 @@
 # Production Credential Exposure - 2026-07-29
 
-- Status: contained; closure, Stripe delivery remediation, and exact-source release review remain open
+- Status: contained; closure, payment-provider closure, reviewed deployment, final approval, and strict Stage 1 preflight remain open
 - Severity: critical
 - Environment: Railway production
 - Incident owner: Michael
@@ -624,6 +624,42 @@ state; it is not proof that an action absent from those tables never occurred.
   exact-runtime CI, Stripe delivery remediation, fresh Stage 1 evidence and
   approval, and a passing strict preflight remain required before incident
   closure.
+
+## Exact-source review and provider containment - 2026-08-01
+
+- The sealed exact-source security scan
+  `7e499cf8-be43-4b6d-ace9-e61f0978a27c` completed with zero findings and
+  `25/25` review coverage for exact range
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` through
+  `6c9e803522c3bfd0ff9af1fdd1ba4e02b07e2324`. Commit
+  `72e7ad7907d3725ff1232cce9af730e7e577dcfe` records the receipt and is the
+  later draft-PR candidate that passed hosted source/database CI; its
+  receipt/documentation follow-ups were not represented as sealed scan input.
+- GitHub Actions run `30678574155`, job `91310753926`, passed the Node 20
+  production build, lint, `252` unit/frontend checks, and PostgreSQL 16
+  integration suite (`25/25`). Its later readiness step correctly stopped on
+  the still-active incident hold and unapproved payment-provider state; this
+  was a fail-closed policy result, not a source or database-CI defect.
+- Railway automatic deploys remain disabled and Wait for CI remains enabled.
+  The reviewed candidate is pushed only to draft pull request #14 and has not
+  been merged or deployed.
+- Production invoice bank payments were found unexpectedly enabled and were
+  immediately disabled. Public health then reported `enabled:false`,
+  `configured:false`, `webhookConfigured:true`, and `mode:setup_required` on
+  unchanged production source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`. A count-only, read-only
+  production transaction found zero project or tool invoice payment-request
+  rows. No database-backed RIVT payment request was available to reconcile or
+  expire; provider-side sessions without a durable row were not enumerated.
+- A dedicated Stripe `Connected accounts` destination and signing secret now
+  exist, but a real Stripe-signed delivery that causes a matching durable
+  payment-state transition has not been proved. Scope attestation remains
+  unset, ACH remains disabled, and payment-provider approval remains pending.
+  The nonsecret receipt is
+  `docs/delivery/evidence/railway-stage1/PROVIDER_CONTAINMENT_2026-08-01.md`.
+- The exact-source security-review and hosted source/database-CI exit criteria
+  are complete. The incident remains open for payment-provider closure,
+  reviewed deployment, final approval, and the remaining exit criteria below.
 
 ## Recovery plan
 

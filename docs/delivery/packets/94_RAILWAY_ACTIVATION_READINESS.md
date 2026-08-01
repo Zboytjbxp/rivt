@@ -15,9 +15,10 @@ availability, prove redundancy, or declare RIVT launch-ready.
 - The Railway sequence was replayed onto the committed Packet 87 line ending
   at `070243f`; the committed integration base before the provider-safety
   follow-up is `9490c860736fbbf3ab916e488bfc994cca60753e`.
-- The reviewed provider-safety follow-up is committed locally as
-  `0b78de26aa7c7ee60e8cc5b3cdb608be6c7c2c3f`; neither commit is pushed or
-  deployed from this packet.
+- The reviewed candidate is pushed as
+  `72e7ad7907d3725ff1232cce9af730e7e577dcfe` on
+  `codex/railway-stage1-packet87-integration` in draft PR #14. It is not merged
+  to `master` and the packet source is not deployed.
 - The final prepared implementation and candidate commits must be filled with
   the clean, reviewed commit that actually contains the complete preflight.
   A working-tree state is never an activation candidate.
@@ -209,13 +210,24 @@ npm run railway:activation:preflight -- --plan <plan.json> --provider-snapshot <
   evidence in repository documentation after an authorized activation.
 
 The combined candidate passes 252/252 unit/frontend checks, its other local
-source gates, 25/25 disposable-database integration tests, and all 22 strict preflight checks, including
-negative approval-drift, database overlap, failed-Git, and default-exit tests.
-No live plan, fresh provider snapshot, operator review, owner approval, or
-provider action exists. The previous approval is expired and unusable. Before
-strict preflight, autodeploy must be proven off before the candidate is merged
-to `master`. Stripe `Connected accounts` delivery is a separate fail-closed
-payment/launch prerequisite and is not cleared by Stage 1 preflight alone.
+source gates, 25/25 disposable-database integration tests, and all 22 strict
+preflight checks, including negative approval-drift, database overlap,
+failed-Git, and default-exit tests. GitHub Actions run `30678574155`, job
+`91310753926`, independently passed the Node 20 build/lint/unit checks and all
+25 PostgreSQL 16 integration tests before launch readiness correctly stopped
+on `ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`. Hosted E2E and
+audit were skipped after that intentional stop; their local counterparts pass.
+
+Railway automatic deployments are now off and Wait for CI is on, satisfying
+the pre-merge provider-control proof. The payment-provider work was containment
+only: a Connected-accounts destination and dedicated secret were configured,
+then production ACH was verified disabled and setup-required on unchanged
+`master` source. Signed delivery, scope attestation, and a durable matching
+payment transition remain unproven. No live Stage 1 plan, fresh provider
+snapshot, operator review, owner approval, worker, or Stage 1 activation
+exists. The previous approval is expired and unusable. Stripe Connected-
+accounts delivery remains a separate fail-closed payment/launch prerequisite
+and is not cleared by Stage 1 preflight alone.
 
 ## Three-things review
 
@@ -230,8 +242,12 @@ payment/launch prerequisite and is not cleared by Stage 1 preflight alone.
    including the app and database. The plan must record that outage mechanism
    and acceptance instead of presenting the limit as risk-free.
 
-Packet status: **Combined source prepared, locally verified, and covered by
-sealed exact-range Codex Security scan
-`7e499cf8-be43-4b6d-ace9-e61f0978a27c` with zero reportable findings;
-exact-runtime CI, fresh exact-plan approval, strict preflight, incident
-decision, and separately authorized provider activation remain pending**.
+Packet status: **Candidate `72e7ad7` is pushed to draft PR #14 and locally
+verified. Codex Security scan `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed
+the implementation range `29e3c613..6c9e8035` with zero reportable findings;
+later receipt/documentation commits were not part of that sealed range. The
+candidate passed hosted source/database CI. Launch readiness remains
+intentionally blocked. Production ACH is disabled; signed Connected-accounts
+delivery, scope attestation, fresh exact-plan approval, strict preflight,
+incident decision, merge, packet deployment, and separately authorized worker
+activation remain pending**.

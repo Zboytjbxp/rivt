@@ -3,9 +3,9 @@
 Last updated: 2026-07-31 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Packet 87 money-integrity containment and Railway Stage 1
-source-safety are integrated and locally verified on one candidate. Merge,
-deployment, provider mutation, spend, incident exit, and feature activation
-remain paused.
+source-safety are integrated on candidate `72e7ad7907d3725ff1232cce9af730e7e577dcfe`,
+pushed to draft PR #14. The packet is not merged or deployed. Launch, incident
+exit, payment activation, and Railway Stage 1 worker activation remain paused.
 Active packet: `docs/delivery/packets/87_MONEY_INTEGRITY_CONTAINMENT.md`
 Repository branch: `codex/railway-stage1-packet87-integration`
 Integration base before the provider-safety follow-up:
@@ -16,9 +16,13 @@ Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
-Operational status: launch remains held. The former Stage 1 approval is
-expired and unusable. Fresh exact-source evidence, plan digest, cost approval,
-strict preflight, and separate activation authority are required.
+Operational status: launch remains held. The sealed security review and hosted
+source/database CI prerequisites pass, but the workflow correctly stops on
+`ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`. Production ACH is
+disabled and setup-required. Connected-account signed delivery, fresh Stage 1
+evidence/approval/preflight, merge, packet deployment, worker activation,
+incident exit, and launch remain open. The former Stage 1 approval is expired
+and unusable.
 
 Formal exact-source security review is complete. Codex Security diff scan
 `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed on
@@ -30,7 +34,7 @@ local capture path with no realistic lower-privileged attacker route. The
 non-sensitive receipt and sealed artifact hashes are recorded in
 `docs/delivery/evidence/railway-stage1/SECURITY_SCAN_RECEIPT.md`. This closes
 the candidate's formal diff-scan prerequisite only; it does not authorize a
-push, merge, provider action, deployment, spend, incident exit, or launch.
+merge, packet deployment, Stage 1 activation, incident exit, or launch.
 
 Current product packet: Packet 87 implementation commit `4e95c71` and its
 incident-evidence follow-ups through `070243f` are combined with the Railway
@@ -54,23 +58,41 @@ Work-lifecycle UI smoke,
 dependency audit with zero vulnerabilities, and diff integrity. A disposable
 loopback-only PostgreSQL 18 cluster with `RIVT_DB_MAX_CONNECTIONS=97` passed
 25/25 integration tests with zero failures or skips; production and Railway
-were not used. Local runtime was Node 24 and PostgreSQL 18. Gate A is now
-configured to read Node 20 from `.nvmrc` and use PostgreSQL 16, but an
-exact-source CI run remains open until a reviewed candidate is pushed. The
-provider-safety follow-up is committed and independently reviewed locally;
-the formal exact-source security scan is sealed with zero reportable findings;
-push/merge, exact-runtime CI, deployment, and exact-source
-acceptance remain mandatory. No production data, provider configuration, paid resource, or live
-application changed. The missing Stripe `Connected accounts` event destination
-is a launch blocker independent of these passing source gates. The broader
+were not used. Local runtime was Node 24 and PostgreSQL 18. Candidate
+`72e7ad7907d3725ff1232cce9af730e7e577dcfe` is pushed to draft PR #14.
+GitHub Actions run `30678574155`, job `91310753926`, used Node 20 and
+PostgreSQL 16 and passed build, lint, 252/252 unit/frontend checks, and 25/25
+database integration tests. Launch readiness then failed intentionally on
+`ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`; hosted E2E and audit
+were skipped after that fail-closed gate, while the equivalent local E2E and
+audit gates remain passed. The packet source is not merged or deployed.
+
+Production-provider containment changed without deploying the candidate.
+Railway automatic deployments are off and Wait for CI is on. A live Stripe
+`Connected accounts` destination with the nine snapshot money-state events
+used by RIVT was created and its dedicated signing secret installed without
+recording the value. Public health at `2026-08-01T02:12:38Z` unexpectedly
+reported ACH enabled; the start time of that state is unknown. The flag was
+immediately set false and corrective Railway deployment
+`3d53eb50-7317-499f-950b-845ee536074c` retained production source
+`29e3c613f2eb95a6583b52c671275e5046dde0d3`. Health at
+`2026-08-01T02:21:47.8089240Z` proves `enabled:false`, `configured:false`,
+`webhookConfigured:true`, and `mode:setup_required`. A count-only read-only
+transaction found zero project or tool invoice payment-request rows. No
+database-backed RIVT payment request was available to reconcile or expire;
+provider-side sessions without a durable row were not enumerated. Signed
+connected-account delivery and a durable matching state transition remain
+unproven; scope attestation remains unset. The old `Your account` destination
+is retained only as provider inventory/rollback reference; RIVT no longer
+holds its signing secret, so it is not an operational fallback. The broader
 incident and `ACTIVE_LAUNCH_HOLD` remain in force.
 
 ## Railway Stage 1 source-safety re-review - combined local candidate only
 
 - The committed Stage 1 sequence has been replayed onto the Packet 87 line in
   `codex/railway-stage1-packet87-integration`. The committed integration base
-  is `9490c860736fbbf3ab916e488bfc994cca60753e`; the provider-safety follow-up
-  is committed locally as `0b78de26aa7c7ee60e8cc5b3cdb608be6c7c2c3f`.
+  is `9490c860736fbbf3ab916e488bfc994cca60753e`; the reviewed candidate is
+  pushed as `72e7ad7907d3725ff1232cce9af730e7e577dcfe` in draft PR #14.
   The sequence includes explicit hosted process roles, one migration owner,
   bounded shutdown/drain behavior, role-specific database budgets, required
   Web Push startup, and strict activation review.
@@ -106,16 +128,18 @@ incident and `ACTIVE_LAUNCH_HOLD` remain in force.
   database integration tests described above.
 - `npm run launch:readiness -- --require-ready` fails closed on the intentional
   `ACTIVE_LAUNCH_HOLD` and the unapproved payment-provider readiness record.
-  Local database integration is complete; exact Node 20/PostgreSQL 16 CI and
-  launch readiness still remain required after the final candidate is pushed
-  and reviewed.
-- No Railway setting, service, database, bucket, variable, deployment,
-  billing limit, production row, or backup was changed. No cost was incurred,
-  the expired earlier approval was not reused, no Stage 1 activation was
-  performed, and no redundancy/high-availability or launch-ready claim is
-  made. Packet 87, credential-incident exit, `ACTIVE_LAUNCH_HOLD`, Stripe
-  connected-account event delivery, formal exact-source security scan, and
-  owner activation remain separate open boundaries.
+  Hosted Node 20/PostgreSQL 16 source and database checks are complete; the
+  hosted E2E/audit steps were skipped only because readiness intentionally
+  stopped the job. Launch readiness remains blocked.
+- Railway automatic deployments were disabled and Wait for CI was enabled.
+  Payment-provider configuration was contained as described above. No worker,
+  new service, database, bucket, production row, or backup was created; no
+  Stage 1 activation occurred. The last conservative worker estimate of about
+  $10.05 per month exceeds the current $2 authorization and is not approved.
+  No redundancy/high-availability or launch-ready claim is made. Packet 87,
+  credential-incident exit, `ACTIVE_LAUNCH_HOLD`, signed Stripe
+  connected-account delivery, fresh exact-plan approval/preflight, and owner
+  activation remain separate open boundaries.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
