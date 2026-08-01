@@ -5,9 +5,11 @@ Current gate: Gate B controlled engagement
 Current phase: Packet 87 money-integrity containment and Railway Stage 1
 source-safety are integrated through runtime/gate evidence commit
 `2253bca16883e736cd06b9b47d4539ffa4a86e32`, pushed to draft PR #14. The
-current branch adds only this current-state closeout after that commit. The
-packet is not merged or deployed. Launch, incident exit, payment activation,
-and Railway Stage 1 worker activation remain paused.
+current branch adds the exact disabled-mode approval record, evidence-content
+binding, provider-inventory/runtime-scope separation, regression coverage, and
+status closeout after that commit. It does not change application runtime
+behavior. The packet is not merged or deployed. Launch, incident exit, payment
+activation, and Railway Stage 1 worker activation remain paused.
 Active packet: `docs/delivery/packets/87_MONEY_INTEGRITY_CONTAINMENT.md`
 Repository branch: `codex/railway-stage1-packet87-integration`
 Integration base before the provider-safety follow-up:
@@ -19,9 +21,11 @@ Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
 Operational status: launch remains held. The sealed security review and hosted
-source/database CI prerequisites pass, but the workflow correctly stops on
-`ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`. Production ACH is
-disabled and setup-required. Connected-account signed delivery, fresh Stage 1
+source/database CI prerequisites pass. Michael approved the exact disabled
+production bank-payment configuration at `2026-08-01T03:26:10.3842506Z`, so
+the payment-provider approval prerequisite is complete without enabling ACH.
+The workflow still stops on `ACTIVE_LAUNCH_HOLD`. Production ACH is disabled
+and setup-required. Connected-account signed delivery, fresh Stage 1
 evidence/approval/preflight, merge, packet deployment, worker activation,
 incident exit, and launch remain open. The former Stage 1 approval is expired
 and unusable.
@@ -53,8 +57,8 @@ draft label without sending again. Browser writes cannot forge paid/sent
 state, delivery evidence, or bank-payment metadata; provider email requires
 an active verified account; void, external-payment, processing, settlement,
 refund, and dispute truth cannot be manually erased; and consequential
-out-of-order Stripe events remain monotonic. The combined candidate passes the
-production build, application/security lint, 252/252 unit/frontend checks, all
+out-of-order Stripe events remain monotonic. The current combined candidate passes the
+production build, application/security lint, 258/258 unit/frontend checks, all
 three browser E2E journeys, Tools, Shop Talk/Trade News, mobile-actions, and
 Work-lifecycle UI smoke,
 dependency audit with zero vulnerabilities, and diff integrity. A disposable
@@ -87,7 +91,11 @@ connected-account delivery and a durable matching state transition remain
 unproven; scope attestation remains unset. The old `Your account` destination
 is retained only as provider inventory/rollback reference; RIVT no longer
 holds its signing secret, so it is not an operational fallback. The broader
-incident and `ACTIVE_LAUNCH_HOLD` remain in force.
+incident and `ACTIVE_LAUNCH_HOLD` remain in force. Michael's disabled-mode
+approval is recorded with a matching configuration digest in
+`docs/operations/payment-provider-readiness.json` and the nonsecret provider
+receipt. It does not enable ACH, approve deployment or a worker, clear the
+incident, or authorize launch.
 
 ## Railway Stage 1 source-safety re-review - combined local candidate only
 
@@ -120,18 +128,20 @@ incident and `ACTIVE_LAUNCH_HOLD` remain in force.
   not an activation gate.
 - Packets 93 and 94, the Railway activation runbook, cost brief, blank strict
   templates, and evidence-boundary README document the future manual process.
-  They contain no live inventory, credentials, completed approval, provider
-  receipt, or activation evidence.
+  They contain no live Stage 1 inventory, credentials, completed Stage 1
+  activation approval, provider activation receipt, or activation evidence.
+  Packet 94 now cross-references the separately completed disabled-mode
+  payment-provider approval; that approval does not authorize Stage 1.
 - Focused Railway/runtime/push/security coverage and all 22 strict
   activation-preflight checks pass. The complete combined evidence is the
-  build, application/security lint, 252/252 unit/frontend checks, all three
+  build, application/security lint, 258/258 unit/frontend checks, all three
   browser E2E journeys, Tools/Shop Talk/Trade News/mobile-actions/Work-lifecycle
   UI smoke, zero-
   vulnerability dependency audit, diff integrity, and 25/25 disposable-
   database integration tests described above.
-- `npm run launch:readiness -- --require-ready` fails closed on the intentional
-  `ACTIVE_LAUNCH_HOLD` and the unapproved payment-provider readiness record.
-  Hosted Node 20/PostgreSQL 16 source and database checks are complete; the
+- `npm run launch:readiness -- --require-ready` now recognizes the exact
+  disabled-mode approval and fails closed only on the intentional
+  `ACTIVE_LAUNCH_HOLD`. Hosted Node 20/PostgreSQL 16 source and database checks are complete; the
   hosted E2E/audit steps were skipped only because readiness intentionally
   stopped the job. Launch readiness remains blocked.
 - Railway automatic deployments were disabled and Wait for CI was enabled.
@@ -140,9 +150,11 @@ incident and `ACTIVE_LAUNCH_HOLD` remain in force.
   Stage 1 activation occurred. The last conservative worker estimate of about
   $10.05 per month exceeds the current $2 authorization and is not approved.
   No redundancy/high-availability or launch-ready claim is made. Packet 87,
-  credential-incident exit, `ACTIVE_LAUNCH_HOLD`, signed Stripe
-  connected-account delivery, fresh exact-plan approval/preflight, and owner
-  activation remain separate open boundaries.
+  credential-incident exit, `ACTIVE_LAUNCH_HOLD`, fresh exact-plan
+  approval/preflight, and owner activation remain separate open boundaries.
+  Signed Stripe Connected-accounts delivery remains mandatory before any
+  future ACH enablement, but it is not a prerequisite for the currently
+  approved disabled mode.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source

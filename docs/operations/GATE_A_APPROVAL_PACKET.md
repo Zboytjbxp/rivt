@@ -7,8 +7,8 @@ This packet is the final signoff aid for the first named Gate A customer cohort.
 ## Historical Gate Status (2026-06-22; superseded)
 
 This section records the June 22 checkpoint and is not current launch
-authority. The 2026-07-31 machine gate now fails closed on
-`ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`; use
+authority. The 2026-08-01 machine gate recognizes the exact disabled-mode
+payment approval and now fails closed only on `ACTIVE_LAUNCH_HOLD`; use
 `docs/delivery/BUILD_STATE.md` and `npm run launch:readiness -- --require-ready`
 for current status.
 

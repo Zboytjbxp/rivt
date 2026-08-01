@@ -1,6 +1,6 @@
 # Production Credential Exposure - 2026-07-29
 
-- Status: contained; closure, payment-provider closure, reviewed deployment, final approval, and strict Stage 1 preflight remain open
+- Status: contained; exact disabled-mode payment-provider closure is complete; incident closure, reviewed deployment, final approval, and strict Stage 1 preflight remain open
 - Severity: critical
 - Environment: Railway production
 - Incident owner: Michael
@@ -14,8 +14,9 @@
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
   followed by authorization to continue the remaining incident work unless
-  incremental cost would exceed $2 total. Completed actions remained below
-  that ceiling; no exact measured provider cost is claimed.
+  expected incremental cost would exceed $2 total. Actions were selected on
+  expected usage below that ceiling; actual corrective-deployment compute
+  usage remains unreconciled and no exact measured provider cost is claimed.
 
 ## Summary
 
@@ -620,10 +621,12 @@ state; it is not proof that an action absent from those tables never occurred.
   decision requirements. It does not reconstruct missing evidence, prove that
   no misuse occurred, close the incident, clear `ACTIVE_LAUNCH_HOLD`, authorize
   deployment, or approve cost.
-- Combined local source review is complete. Formal exact-source security scan,
-  exact-runtime CI, Stripe delivery remediation, fresh Stage 1 evidence and
-  approval, and a passing strict preflight remain required before incident
-  closure.
+- Combined local source review, formal exact-source security scan,
+  exact-runtime CI, and exact disabled-mode payment-provider closure are
+  complete. Fresh Stage 1 evidence and approval, a passing strict preflight,
+  reviewed deployment, and the remaining exit decisions are still required
+  before incident closure. Stripe signed-delivery proof remains required only
+  before any future ACH enablement.
 
 ## Exact-source review and provider containment - 2026-08-01
 
@@ -643,7 +646,8 @@ state; it is not proof that an action absent from those tables never occurred.
   was a fail-closed policy result, not a source or database-CI defect.
 - Railway automatic deploys remain disabled and Wait for CI remains enabled.
   The runtime/gate evidence commit is pushed only to draft pull request #14;
-  the current branch adds only this state closeout after it. Nothing has been
+  the current branch adds disabled-mode approval/evidence binding and tests
+  after it, without changing application runtime behavior. Nothing has been
   merged or deployed.
 - Production invoice bank payments were found unexpectedly enabled and were
   immediately disabled. Public health then reported `enabled:false`,
@@ -656,12 +660,18 @@ state; it is not proof that an action absent from those tables never occurred.
 - A dedicated Stripe `Connected accounts` destination and signing secret now
   exist, but a real Stripe-signed delivery that causes a matching durable
   payment-state transition has not been proved. Scope attestation remains
-  unset, ACH remains disabled, and payment-provider approval remains pending.
+  unset and ACH remains disabled. At `2026-08-01T03:26:10.3842506Z`, Michael
+  approved only the exact disabled production configuration; the approval is
+  bound to its machine-readable digest and does not enable ACH, authorize
+  deployment or a worker, clear this incident, or authorize launch.
   The nonsecret receipt is
   `docs/delivery/evidence/railway-stage1/PROVIDER_CONTAINMENT_2026-08-01.md`.
 - The exact-source security-review and hosted source/database-CI exit criteria
-  are complete. The incident remains open for payment-provider closure,
-  reviewed deployment, final approval, and the remaining exit criteria below.
+  are complete, and disabled-mode payment-provider approval is complete. The
+  incident remains open for reviewed deployment, final incident/launch
+  decisions, and the remaining exit criteria below. Any future ACH enablement
+  separately requires signed-delivery proof, scope attestation, and new
+  approval.
 
 ## Recovery plan
 

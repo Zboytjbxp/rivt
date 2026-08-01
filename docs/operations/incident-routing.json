@@ -9,7 +9,7 @@
   },
   "launchHold": {
     "active": true,
-    "reason": "Production credential containment, bounded provider review, exact-source security review, and hosted source/database CI are complete, but incident exit, Stripe connected-account signed-delivery or approved-disabled-mode closure, final approval, and reviewed deployment remain open. Clear only after every exit criterion in the 2026-07-29 incident record is verified.",
+    "reason": "Production credential containment, bounded provider review, exact-source security review, hosted source/database CI, and exact disabled-mode payment approval are complete. Incident exit, final approval, and reviewed deployment remain open; any future ACH enablement separately requires signed-delivery proof and new approval. Clear only after every exit criterion in the 2026-07-29 incident record is verified.",
     "incident": "docs/operations/incidents/2026-07-29-production-credential-exposure.md",
     "setAt": "2026-07-30T04:39:06.4424071Z"
   },

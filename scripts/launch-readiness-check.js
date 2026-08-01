@@ -1,6 +1,7 @@
 import "dotenv/config";
 import crypto from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { evaluateIncidentReadiness, loadIncidentRoutingConfig } from "./incident-readiness-check.js";
 
@@ -23,17 +24,49 @@ function dateValue(value) {
 }
 
 export function paymentProviderConfigurationDigest(policy = {}) {
+  const state = policy.verifiedProductionState ?? {};
+  const approval = policy.approval ?? {};
   const reviewedConfiguration = {
     version: policy.version ?? null,
     status: policy.status ?? null,
     mode: policy.mode ?? null,
     featureFlagVerifiedOff: policy.featureFlagVerifiedOff === true,
-    webhookDestinationScope: policy.webhookDestinationScope ?? null,
+    providerDestinationScope: policy.providerDestinationScope ?? null,
+    runtimeScopeAttestation: policy.runtimeScopeAttestation ?? null,
     signedDeliveryVerified: policy.signedDeliveryVerified === true,
     verifiedAt: policy.verifiedAt ?? null,
     evidence: policy.evidence ?? null,
+    evidenceSha256: policy.evidenceSha256 ?? null,
+    verifiedProductionState: {
+      sourceCommit: state.sourceCommit ?? null,
+      enabled: state.enabled ?? null,
+      configured: state.configured ?? null,
+      webhookConfigured: state.webhookConfigured ?? null,
+      mode: state.mode ?? null,
+    },
+    approval: {
+      status: approval.status ?? null,
+      approvedBy: approval.approvedBy ?? null,
+      approvedAt: approval.approvedAt ?? null,
+    },
   };
   return crypto.createHash("sha256").update(JSON.stringify(reviewedConfiguration)).digest("hex");
+}
+
+export function readPaymentProviderEvidenceSha256(policy = {}, { rootDir = process.cwd() } = {}) {
+  if (!hasValue(policy.evidence) || path.isAbsolute(policy.evidence)) return null;
+  const resolvedRoot = path.resolve(rootDir);
+  const resolvedEvidence = path.resolve(resolvedRoot, policy.evidence);
+  const relativeEvidence = path.relative(resolvedRoot, resolvedEvidence);
+  if (relativeEvidence.startsWith("..") || path.isAbsolute(relativeEvidence)) return null;
+  try {
+    const canonicalEvidence = fs
+      .readFileSync(resolvedEvidence, "utf8")
+      .replace(/\r\n?/g, "\n");
+    return crypto.createHash("sha256").update(canonicalEvidence).digest("hex");
+  } catch {
+    return null;
+  }
 }
 
 function positiveNumber(value) {
@@ -133,7 +166,10 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
   };
 }
 
-function evaluatePaymentProviderPolicy(policy, { now = new Date() } = {}) {
+function evaluatePaymentProviderPolicy(
+  policy,
+  { now = new Date(), paymentProviderEvidenceSha256 = null } = {},
+) {
   if (policy?.status !== "approved") {
     return {
       ok: false,
@@ -146,23 +182,47 @@ function evaluatePaymentProviderPolicy(policy, { now = new Date() } = {}) {
   }
 
   const findings = [];
+  if (
+    !/^[a-f0-9]{64}$/i.test(policy.evidenceSha256 ?? "")
+    || policy.evidenceSha256 !== paymentProviderEvidenceSha256
+  ) {
+    findings.push({
+      code: "PAYMENT_PROVIDER_EVIDENCE_CONTENT_MISMATCH",
+      message: "Bank-payment approval must bind the current contents of its reviewed evidence file.",
+    });
+  }
+
+  const verifiedState = policy.verifiedProductionState ?? {};
   if (policy.mode === "disabled") {
     if (
       policy.featureFlagVerifiedOff !== true
       || !withinDays(policy.verifiedAt, maxEvidenceAgeDays, now)
       || !hasValue(policy.evidence)
+      || !/^[a-f0-9]{40}$/i.test(verifiedState.sourceCommit ?? "")
+      || verifiedState.enabled !== false
+      || verifiedState.configured !== false
+      || verifiedState.webhookConfigured !== true
+      || verifiedState.mode !== "setup_required"
+      || !["unset", "connected_accounts"].includes(policy.runtimeScopeAttestation)
     ) {
       findings.push({
         code: "BANK_PAYMENTS_DISABLEMENT_UNVERIFIED",
-        message: "Disabled bank payments require recent evidence that the production feature flag is off.",
+        message: "Disabled bank payments require recent bound evidence of the exact fail-closed production state.",
       });
     }
   } else if (policy.mode === "enabled") {
     if (
-      policy.webhookDestinationScope !== "connected_accounts"
+      policy.featureFlagVerifiedOff !== false
+      || policy.providerDestinationScope !== "connected_accounts"
+      || policy.runtimeScopeAttestation !== "connected_accounts"
       || policy.signedDeliveryVerified !== true
       || !withinDays(policy.verifiedAt, maxEvidenceAgeDays, now)
       || !hasValue(policy.evidence)
+      || !/^[a-f0-9]{40}$/i.test(verifiedState.sourceCommit ?? "")
+      || verifiedState.enabled !== true
+      || verifiedState.configured !== true
+      || verifiedState.webhookConfigured !== true
+      || verifiedState.mode !== "configured"
     ) {
       findings.push({
         code: "CONNECTED_ACCOUNT_WEBHOOK_UNVERIFIED",
@@ -215,10 +275,16 @@ function evaluatePaymentProviderPolicy(policy, { now = new Date() } = {}) {
   };
 }
 
-export function evaluateLaunchReadiness({ incidentConfig, recoveryPolicy, paymentProviderPolicy }, { now = new Date() } = {}) {
+export function evaluateLaunchReadiness(
+  { incidentConfig, recoveryPolicy, paymentProviderPolicy },
+  { now = new Date(), paymentProviderEvidenceSha256 = null } = {},
+) {
   const incident = evaluateIncidentReadiness(incidentConfig, { now });
   const recovery = evaluateRecoveryPolicy(recoveryPolicy, { now });
-  const paymentProvider = evaluatePaymentProviderPolicy(paymentProviderPolicy, { now });
+  const paymentProvider = evaluatePaymentProviderPolicy(paymentProviderPolicy, {
+    now,
+    paymentProviderEvidenceSha256,
+  });
   const findings = [
     ...(incidentConfig.launchHold?.active
       ? [{
@@ -266,10 +332,13 @@ export async function main(argv = process.argv.slice(2)) {
   const incidentPath = argValue(argv, "--incident-file", defaultIncidentPath);
   const recoveryPath = argValue(argv, "--recovery-file", defaultRecoveryPath);
   const paymentProviderPath = argValue(argv, "--payment-provider-file", defaultPaymentProviderPath);
+  const paymentProviderPolicy = loadPaymentProviderPolicy(paymentProviderPath);
   const result = evaluateLaunchReadiness({
     incidentConfig: loadIncidentRoutingConfig(incidentPath),
     recoveryPolicy: loadRecoveryPolicy(recoveryPath),
-    paymentProviderPolicy: loadPaymentProviderPolicy(paymentProviderPath),
+    paymentProviderPolicy,
+  }, {
+    paymentProviderEvidenceSha256: readPaymentProviderEvidenceSha256(paymentProviderPolicy),
   });
 
   if (jsonOnly || !result.ok) {

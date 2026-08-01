@@ -1,17 +1,26 @@
 {
   "version": 1,
-  "status": "blocked",
+  "status": "approved",
   "mode": "disabled",
   "featureFlagVerifiedOff": true,
-  "webhookDestinationScope": "connected_accounts",
+  "providerDestinationScope": "connected_accounts",
+  "runtimeScopeAttestation": "unset",
   "signedDeliveryVerified": false,
   "verifiedAt": "2026-08-01T02:21:47.8089240Z",
   "evidence": "docs/delivery/evidence/railway-stage1/PROVIDER_CONTAINMENT_2026-08-01.md",
-  "approval": {
-    "status": "pending",
-    "approvedBy": "",
-    "approvedAt": null,
-    "configurationDigest": ""
+  "evidenceSha256": "4aeb78c0d7688a5cbd8a2bd2fb8d436c6f0413590df1d9f1060110b750e4fcbd",
+  "verifiedProductionState": {
+    "sourceCommit": "29e3c613f2eb95a6583b52c671275e5046dde0d3",
+    "enabled": false,
+    "configured": false,
+    "webhookConfigured": true,
+    "mode": "setup_required"
   },
-  "notes": "Production ACH is verified disabled and setup-required, and a read-only inventory found zero payment-request rows. Provider inventory confirms a Connected accounts destination and dedicated secret, but runtime scope attestation remains unset and signed delivery plus a matching durable transition remain unproven. Disabled mode still requires named approval; enabled mode additionally requires signed-delivery proof and exact runtime scope attestation."
+  "approval": {
+    "status": "approved",
+    "approvedBy": "Michael",
+    "approvedAt": "2026-08-01T03:26:10.3842506Z",
+    "configurationDigest": "d46ca8a7227ac9058dd86825d441fe6079ded5762002b21dcca6cf8fc4644d9b"
+  },
+  "notes": "Michael approved the exact disabled production bank-payment configuration on 2026-08-01. Production ACH remains verified disabled and setup-required, and a read-only inventory found zero payment-request rows. Provider inventory confirms a Connected accounts destination and dedicated secret, but runtime scope attestation remains unset and signed delivery plus a matching durable transition remain unproven. This approval does not enable ACH, clear the incident hold, authorize deployment, approve a worker, or authorize launch. Enabled mode still requires new signed-delivery proof, exact runtime scope attestation, and a separate current approval."
 }

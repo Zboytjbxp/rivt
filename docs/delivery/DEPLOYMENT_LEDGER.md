@@ -5,8 +5,10 @@
 - Runtime/gate evidence commit:
   `2253bca16883e736cd06b9b47d4539ffa4a86e32` on
   `codex/railway-stage1-packet87-integration`, pushed in draft PR #14. The
-  current branch adds only this state closeout after that commit. The branch
-  is not merged and none of its packet source is deployed.
+  current branch adds disabled-mode approval/evidence binding and its tests
+  after that commit. It changes launch tooling and records only, not
+  application runtime behavior. The branch is not merged and none of its
+  packet source is deployed.
 - Security/source evidence: Codex Security scan
   `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed exact range
   `29e3c613f2eb95a6583b52c671275e5046dde0d3` through
@@ -43,11 +45,23 @@
   zero project and zero tool invoice payment-request rows. No database-backed
   RIVT payment request was available to reconcile or expire; provider-side
   sessions without a durable row were not enumerated.
+- Approval result: at `2026-08-01T03:26:10.3842506Z`, Michael approved only
+  the exact disabled production bank-payment configuration. The approval is
+  bound to configuration digest
+  `d46ca8a7227ac9058dd86825d441fe6079ded5762002b21dcca6cf8fc4644d9b`.
+  Independent review strengthened the machine binding without changing the
+  approved production state: provider destination inventory and runtime scope
+  attestation are distinct, and the digest now covers the receipt SHA-256 plus
+  the complete verified public-health state.
+  A fresh public-health read immediately beforehand still showed the unchanged
+  production source and disabled/setup-required state. The readiness check now
+  clears the payment-provider prerequisite and stops only on
+  `ACTIVE_LAUNCH_HOLD`.
 - Remaining boundary: health and the unsigned rejection do not prove the
   replacement secret accepts a Stripe-signed Connected-accounts event. No
   signed delivery, matching durable payment transition, scope attestation,
-  payment-provider approval, incident exit, merge, packet deployment, or
-  launch occurred. No new recurring resource was added; ordinary usage from
+  incident exit, merge, packet deployment, or launch occurred. Disabled-mode
+  approval does not authorize any of those actions or enable ACH. No new recurring resource was added; ordinary usage from
   the corrective deployment was not independently reconciled and is not
   represented as zero cost.
 

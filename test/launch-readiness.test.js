@@ -1,9 +1,24 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import {
-  evaluateLaunchReadiness,
+  evaluateLaunchReadiness as evaluateLaunchReadinessBase,
   paymentProviderConfigurationDigest,
+  readPaymentProviderEvidenceSha256,
 } from "../scripts/launch-readiness-check.js";
+
+const readyEvidenceBody = "Production feature flag read-only snapshot.";
+const readyEvidenceSha256 = crypto.createHash("sha256").update(readyEvidenceBody).digest("hex");
+
+function evaluateLaunchReadiness(input, options = {}) {
+  return evaluateLaunchReadinessBase(input, {
+    paymentProviderEvidenceSha256: readyEvidenceSha256,
+    ...options,
+  });
+}
 
 const readyIncidentConfig = {
   status: "approved",
@@ -69,18 +84,39 @@ const readyPaymentProviderConfiguration = {
   status: "approved",
   mode: "disabled",
   featureFlagVerifiedOff: true,
+  providerDestinationScope: "connected_accounts",
+  runtimeScopeAttestation: "unset",
+  signedDeliveryVerified: false,
   verifiedAt: "2026-06-21T12:00:00.000Z",
-  evidence: "Production feature flag read-only snapshot.",
-};
-const readyPaymentProviderPolicy = {
-  ...readyPaymentProviderConfiguration,
-  approval: {
-    status: "approved",
-    approvedBy: "Michael",
-    approvedAt: "2026-06-21T12:00:00.000Z",
-    configurationDigest: paymentProviderConfigurationDigest(readyPaymentProviderConfiguration),
+  evidence: "docs/evidence/provider-snapshot.md",
+  evidenceSha256: readyEvidenceSha256,
+  verifiedProductionState: {
+    sourceCommit: "a".repeat(40),
+    enabled: false,
+    configured: false,
+    webhookConfigured: true,
+    mode: "setup_required",
   },
 };
+function withPaymentApproval(configuration, approvalOverrides = {}) {
+  const policy = {
+    ...configuration,
+    approval: {
+      status: "approved",
+      approvedBy: "Michael",
+      approvedAt: "2026-06-21T12:00:00.000Z",
+      ...approvalOverrides,
+    },
+  };
+  return {
+    ...policy,
+    approval: {
+      ...policy.approval,
+      configurationDigest: paymentProviderConfigurationDigest(policy),
+    },
+  };
+}
+const readyPaymentProviderPolicy = withPaymentApproval(readyPaymentProviderConfiguration);
 
 test("launch readiness passes only when incident and recovery policy evidence are approved", () => {
   const result = evaluateLaunchReadiness({
@@ -193,21 +229,24 @@ test("enabled bank payments require current Connected accounts signed-delivery p
     version: 1,
     status: "approved",
     mode: "enabled",
-    webhookDestinationScope: "your_account",
+    providerDestinationScope: "your_account",
+    runtimeScopeAttestation: "unset",
     signedDeliveryVerified: false,
     verifiedAt: "2026-06-21T12:00:00.000Z",
-    evidence: "Wrong-scope destination observed.",
+    evidence: readyPaymentProviderConfiguration.evidence,
+    evidenceSha256: readyEvidenceSha256,
+    verifiedProductionState: {
+      sourceCommit: "a".repeat(40),
+      enabled: true,
+      configured: true,
+      webhookConfigured: true,
+      mode: "configured",
+    },
   };
   const result = evaluateLaunchReadiness({
     incidentConfig: readyIncidentConfig,
     recoveryPolicy: readyRecoveryPolicy,
-    paymentProviderPolicy: {
-      ...enabledConfiguration,
-      approval: {
-        ...readyPaymentProviderPolicy.approval,
-        configurationDigest: paymentProviderConfigurationDigest(enabledConfiguration),
-      },
-    },
+    paymentProviderPolicy: withPaymentApproval(enabledConfiguration),
   }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.equal(result.ok, false);
@@ -219,21 +258,25 @@ test("enabled bank payments pass with current Connected accounts signed-delivery
     version: 1,
     status: "approved",
     mode: "enabled",
-    webhookDestinationScope: "connected_accounts",
+    featureFlagVerifiedOff: false,
+    providerDestinationScope: "connected_accounts",
+    runtimeScopeAttestation: "connected_accounts",
     signedDeliveryVerified: true,
     verifiedAt: "2026-06-21T12:00:00.000Z",
-    evidence: "Signed connected-account event delivery recorded.",
+    evidence: readyPaymentProviderConfiguration.evidence,
+    evidenceSha256: readyEvidenceSha256,
+    verifiedProductionState: {
+      sourceCommit: "a".repeat(40),
+      enabled: true,
+      configured: true,
+      webhookConfigured: true,
+      mode: "configured",
+    },
   };
   const result = evaluateLaunchReadiness({
     incidentConfig: readyIncidentConfig,
     recoveryPolicy: readyRecoveryPolicy,
-    paymentProviderPolicy: {
-      ...enabledConfiguration,
-      approval: {
-        ...readyPaymentProviderPolicy.approval,
-        configurationDigest: paymentProviderConfigurationDigest(enabledConfiguration),
-      },
-    },
+    paymentProviderPolicy: withPaymentApproval(enabledConfiguration),
   }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.equal(result.ok, true);
@@ -247,15 +290,9 @@ test("bank-payment approval expires even when the provider evidence remains curr
   const result = evaluateLaunchReadiness({
     incidentConfig: readyIncidentConfig,
     recoveryPolicy: readyRecoveryPolicy,
-    paymentProviderPolicy: {
-      ...policy,
-      approval: {
-        status: "approved",
-        approvedBy: "Michael",
-        approvedAt: "2026-05-20T12:00:00.000Z",
-        configurationDigest: paymentProviderConfigurationDigest(policy),
-      },
-    },
+    paymentProviderPolicy: withPaymentApproval(policy, {
+      approvedAt: "2026-05-20T12:00:00.000Z",
+    }),
   }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.deepEqual(result.findings.map((finding) => finding.code), ["PAYMENT_PROVIDER_APPROVAL_STALE"]);
@@ -269,15 +306,9 @@ test("bank-payment approval cannot predate provider verification", () => {
   const result = evaluateLaunchReadiness({
     incidentConfig: readyIncidentConfig,
     recoveryPolicy: readyRecoveryPolicy,
-    paymentProviderPolicy: {
-      ...policy,
-      approval: {
-        status: "approved",
-        approvedBy: "Michael",
-        approvedAt: "2026-06-21T10:59:59.000Z",
-        configurationDigest: paymentProviderConfigurationDigest(policy),
-      },
-    },
+    paymentProviderPolicy: withPaymentApproval(policy, {
+      approvedAt: "2026-06-21T10:59:59.000Z",
+    }),
   }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.deepEqual(result.findings.map((finding) => finding.code), ["PAYMENT_PROVIDER_APPROVAL_STALE"]);
@@ -287,15 +318,9 @@ test("bank-payment approval cannot be future-dated", () => {
   const result = evaluateLaunchReadiness({
     incidentConfig: readyIncidentConfig,
     recoveryPolicy: readyRecoveryPolicy,
-    paymentProviderPolicy: {
-      ...readyPaymentProviderConfiguration,
-      approval: {
-        status: "approved",
-        approvedBy: "Michael",
-        approvedAt: "2026-06-22T12:00:00.000Z",
-        configurationDigest: paymentProviderConfigurationDigest(readyPaymentProviderConfiguration),
-      },
-    },
+    paymentProviderPolicy: withPaymentApproval(readyPaymentProviderConfiguration, {
+      approvedAt: "2026-06-22T12:00:00.000Z",
+    }),
   }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.deepEqual(result.findings.map((finding) => finding.code), ["PAYMENT_PROVIDER_APPROVAL_STALE"]);
@@ -315,4 +340,145 @@ test("bank-payment approval is invalidated when reviewed evidence changes", () =
     result.findings.map((finding) => finding.code),
     ["PAYMENT_PROVIDER_APPROVAL_EVIDENCE_MISMATCH"],
   );
+});
+
+test("provider destination inventory cannot substitute for runtime scope attestation", () => {
+  const enabledConfiguration = {
+    ...readyPaymentProviderConfiguration,
+    mode: "enabled",
+    featureFlagVerifiedOff: false,
+    providerDestinationScope: "connected_accounts",
+    runtimeScopeAttestation: "unset",
+    signedDeliveryVerified: true,
+    verifiedProductionState: {
+      ...readyPaymentProviderConfiguration.verifiedProductionState,
+      enabled: true,
+      configured: true,
+      mode: "configured",
+    },
+  };
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: withPaymentApproval(enabledConfiguration),
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.deepEqual(result.findings.map((finding) => finding.code), [
+    "CONNECTED_ACCOUNT_WEBHOOK_UNVERIFIED",
+  ]);
+});
+
+test("bank-payment approval is invalidated when evidence content changes in place", () => {
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: readyPaymentProviderPolicy,
+  }, {
+    now: new Date("2026-06-21T12:00:00.000Z"),
+    paymentProviderEvidenceSha256: crypto
+      .createHash("sha256")
+      .update("Edited evidence at the same path.")
+      .digest("hex"),
+  });
+
+  assert.deepEqual(result.findings.map((finding) => finding.code), [
+    "PAYMENT_PROVIDER_EVIDENCE_CONTENT_MISMATCH",
+  ]);
+});
+
+test("payment-provider evidence hashing reads only a repository-relative file", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "rivt-provider-evidence-"));
+  try {
+    fs.mkdirSync(path.join(rootDir, "docs"));
+    fs.writeFileSync(path.join(rootDir, "docs", "receipt.md"), readyEvidenceBody);
+
+    assert.equal(
+      readPaymentProviderEvidenceSha256({ evidence: "docs/receipt.md" }, { rootDir }),
+      readyEvidenceSha256,
+    );
+    assert.equal(
+      readPaymentProviderEvidenceSha256({ evidence: "../outside.md" }, { rootDir }),
+      null,
+    );
+    assert.equal(
+      readPaymentProviderEvidenceSha256(
+        { evidence: path.join(rootDir, "docs", "receipt.md") },
+        { rootDir },
+      ),
+      null,
+    );
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
+});
+
+test("bank-payment approval digest binds approver identity and timestamp", () => {
+  for (const approvalChange of [
+    { approvedBy: "Different Person" },
+    { approvedAt: "2026-06-21T12:00:01.000Z" },
+  ]) {
+    const result = evaluateLaunchReadiness({
+      incidentConfig: readyIncidentConfig,
+      recoveryPolicy: readyRecoveryPolicy,
+      paymentProviderPolicy: {
+        ...readyPaymentProviderPolicy,
+        approval: {
+          ...readyPaymentProviderPolicy.approval,
+          ...approvalChange,
+        },
+      },
+    }, { now: new Date("2026-06-21T13:00:00.000Z") });
+
+    assert.deepEqual(result.findings.map((finding) => finding.code), [
+      "PAYMENT_PROVIDER_APPROVAL_EVIDENCE_MISMATCH",
+    ]);
+  }
+});
+
+test("enabled bank payments reject a contradictory verified-off feature flag", () => {
+  const enabledConfiguration = {
+    ...readyPaymentProviderConfiguration,
+    mode: "enabled",
+    featureFlagVerifiedOff: true,
+    providerDestinationScope: "connected_accounts",
+    runtimeScopeAttestation: "connected_accounts",
+    signedDeliveryVerified: true,
+    verifiedProductionState: {
+      ...readyPaymentProviderConfiguration.verifiedProductionState,
+      enabled: true,
+      configured: true,
+      mode: "configured",
+    },
+  };
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: withPaymentApproval(enabledConfiguration),
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.deepEqual(result.findings.map((finding) => finding.code), [
+    "CONNECTED_ACCOUNT_WEBHOOK_UNVERIFIED",
+  ]);
+});
+
+test("payment-provider evidence hashing is stable across LF and CRLF checkouts", () => {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "rivt-provider-line-endings-"));
+  try {
+    fs.mkdirSync(path.join(rootDir, "docs"));
+    const evidencePath = path.join(rootDir, "docs", "receipt.md");
+    fs.writeFileSync(evidencePath, "First line.\nSecond line.\n");
+    const lfHash = readPaymentProviderEvidenceSha256(
+      { evidence: "docs/receipt.md" },
+      { rootDir },
+    );
+    fs.writeFileSync(evidencePath, "First line.\r\nSecond line.\r\n");
+    const crlfHash = readPaymentProviderEvidenceSha256(
+      { evidence: "docs/receipt.md" },
+      { rootDir },
+    );
+
+    assert.equal(crlfHash, lfHash);
+  } finally {
+    fs.rmSync(rootDir, { recursive: true, force: true });
+  }
 });

@@ -209,7 +209,7 @@ npm run railway:activation:preflight -- --plan <plan.json> --provider-snapshot <
 - preserve only redacted hashes, timestamps, costs, results, and deployment
   evidence in repository documentation after an authorized activation.
 
-The combined candidate passes 252/252 unit/frontend checks, its other local
+The current combined candidate passes 255/255 unit/frontend checks, its other local
 source gates, 25/25 disposable-database integration tests, and all 22 strict
 preflight checks, including negative approval-drift, database overlap,
 failed-Git, and default-exit tests. GitHub Actions run `30680447818`, job
@@ -217,17 +217,29 @@ failed-Git, and default-exit tests. GitHub Actions run `30680447818`, job
 full PostgreSQL 16 integration set before launch readiness correctly stopped
 on `ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`. Hosted E2E and
 audit were skipped after that intentional stop; their local counterparts pass.
+The later approval-binding follow-up adds focused proof that receipt edits and
+runtime-scope substitution invalidate approval; hosted parity for that
+follow-up will be recorded from the next PR-head run.
+
+Michael subsequently approved the exact production bank-payment configuration
+in disabled mode at `2026-08-01T03:26:10.3842506Z`. The approval is bound to
+the reviewed configuration digest and clears only the payment-provider
+approval prerequisite. ACH remains off, and the separate
+`ACTIVE_LAUNCH_HOLD`, Stage 1 evidence/approval/preflight, deployment, worker,
+incident-exit, and launch boundaries remain unchanged.
 
 Railway automatic deployments are now off and Wait for CI is on, satisfying
 the pre-merge provider-control proof. The payment-provider work was containment
 only: a Connected-accounts destination and dedicated secret were configured,
 then production ACH was verified disabled and setup-required on unchanged
 `master` source. Signed delivery, scope attestation, and a durable matching
-payment transition remain unproven. No live Stage 1 plan, fresh provider
-snapshot, operator review, owner approval, worker, or Stage 1 activation
+payment transition remain unproven. The exact disabled mode is now approved;
+any future enabled mode requires new proof and approval. No live Stage 1 plan,
+fresh provider snapshot, operator review, owner approval, worker, or Stage 1 activation
 exists. The previous approval is expired and unusable. Stripe Connected-
-accounts delivery remains a separate fail-closed payment/launch prerequisite
-and is not cleared by Stage 1 preflight alone.
+accounts delivery remains a separate fail-closed prerequisite for enabling ACH
+and is not cleared by Stage 1 preflight alone; it is not a prerequisite for
+launch while bank payments remain in the approved disabled mode.
 
 ## Three-things review
 
