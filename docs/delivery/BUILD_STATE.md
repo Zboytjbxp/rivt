@@ -3,9 +3,11 @@
 Last updated: 2026-07-31 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Packet 87 money-integrity containment and Railway Stage 1
-source-safety are integrated on candidate `72e7ad7907d3725ff1232cce9af730e7e577dcfe`,
-pushed to draft PR #14. The packet is not merged or deployed. Launch, incident
-exit, payment activation, and Railway Stage 1 worker activation remain paused.
+source-safety are integrated through runtime/gate evidence commit
+`2253bca16883e736cd06b9b47d4539ffa4a86e32`, pushed to draft PR #14. The
+current branch adds only this current-state closeout after that commit. The
+packet is not merged or deployed. Launch, incident exit, payment activation,
+and Railway Stage 1 worker activation remain paused.
 Active packet: `docs/delivery/packets/87_MONEY_INTEGRITY_CONTAINMENT.md`
 Repository branch: `codex/railway-stage1-packet87-integration`
 Integration base before the provider-safety follow-up:
@@ -58,11 +60,11 @@ Work-lifecycle UI smoke,
 dependency audit with zero vulnerabilities, and diff integrity. A disposable
 loopback-only PostgreSQL 18 cluster with `RIVT_DB_MAX_CONNECTIONS=97` passed
 25/25 integration tests with zero failures or skips; production and Railway
-were not used. Local runtime was Node 24 and PostgreSQL 18. Candidate
-`72e7ad7907d3725ff1232cce9af730e7e577dcfe` is pushed to draft PR #14.
-GitHub Actions run `30678574155`, job `91310753926`, used Node 20 and
-PostgreSQL 16 and passed build, lint, 252/252 unit/frontend checks, and 25/25
-database integration tests. Launch readiness then failed intentionally on
+were not used. Local runtime was Node 24 and PostgreSQL 18. Runtime/gate
+evidence commit `2253bca16883e736cd06b9b47d4539ffa4a86e32` is pushed to
+draft PR #14. GitHub Actions run `30680447818`, job `91316269376`, used Node
+20 and PostgreSQL 16 and passed build, lint, the full unit/frontend set, and
+the full database integration set. Launch readiness then failed intentionally on
 `ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`; hosted E2E and audit
 were skipped after that fail-closed gate, while the equivalent local E2E and
 audit gates remain passed. The packet source is not merged or deployed.
@@ -91,8 +93,9 @@ incident and `ACTIVE_LAUNCH_HOLD` remain in force.
 
 - The committed Stage 1 sequence has been replayed onto the Packet 87 line in
   `codex/railway-stage1-packet87-integration`. The committed integration base
-  is `9490c860736fbbf3ab916e488bfc994cca60753e`; the reviewed candidate is
-  pushed as `72e7ad7907d3725ff1232cce9af730e7e577dcfe` in draft PR #14.
+  is `9490c860736fbbf3ab916e488bfc994cca60753e`; the runtime/gate evidence
+  candidate is pushed as `2253bca16883e736cd06b9b47d4539ffa4a86e32` in
+  draft PR #14.
   The sequence includes explicit hosted process roles, one migration owner,
   bounded shutdown/drain behavior, role-specific database budgets, required
   Web Push startup, and strict activation review.

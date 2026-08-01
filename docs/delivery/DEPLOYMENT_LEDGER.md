@@ -2,16 +2,19 @@
 
 ## 2026-08-01 - Candidate push/CI and Stripe fail-closed correction (No packet deployment)
 
-- Candidate: `72e7ad7907d3725ff1232cce9af730e7e577dcfe` on
+- Runtime/gate evidence commit:
+  `2253bca16883e736cd06b9b47d4539ffa4a86e32` on
   `codex/railway-stage1-packet87-integration`, pushed in draft PR #14. The
-  branch is not merged and none of its packet source is deployed.
+  current branch adds only this state closeout after that commit. The branch
+  is not merged and none of its packet source is deployed.
 - Security/source evidence: Codex Security scan
   `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed exact range
   `29e3c613f2eb95a6583b52c671275e5046dde0d3` through
   `6c9e803522c3bfd0ff9af1fdd1ba4e02b07e2324` with 25/25 coverage, zero
   reportable findings, and zero deferred findings.
-  GitHub Actions run `30678574155`, job `91310753926`, passed Node 20 build,
-  lint, 252 unit/frontend checks, and 25/25 PostgreSQL 16 integration tests.
+  GitHub Actions run `30680447818`, job `91316269376`, passed Node 20 build,
+  lint, the full unit/frontend set, and the full PostgreSQL 16 integration
+  set.
   Launch readiness then intentionally failed on `ACTIVE_LAUNCH_HOLD` and
   `PAYMENT_PROVIDER_NOT_APPROVED`; hosted E2E and audit were skipped after the
   fail-closed stop. Equivalent local E2E and audit gates pass.

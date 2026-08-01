@@ -15,8 +15,8 @@ availability, prove redundancy, or declare RIVT launch-ready.
 - The Railway sequence was replayed onto the committed Packet 87 line ending
   at `070243f`; the committed integration base before the provider-safety
   follow-up is `9490c860736fbbf3ab916e488bfc994cca60753e`.
-- The reviewed candidate is pushed as
-  `72e7ad7907d3725ff1232cce9af730e7e577dcfe` on
+- The runtime/gate evidence candidate is pushed as
+  `2253bca16883e736cd06b9b47d4539ffa4a86e32` on
   `codex/railway-stage1-packet87-integration` in draft PR #14. It is not merged
   to `master` and the packet source is not deployed.
 - The final prepared implementation and candidate commits must be filled with
@@ -212,9 +212,9 @@ npm run railway:activation:preflight -- --plan <plan.json> --provider-snapshot <
 The combined candidate passes 252/252 unit/frontend checks, its other local
 source gates, 25/25 disposable-database integration tests, and all 22 strict
 preflight checks, including negative approval-drift, database overlap,
-failed-Git, and default-exit tests. GitHub Actions run `30678574155`, job
-`91310753926`, independently passed the Node 20 build/lint/unit checks and all
-25 PostgreSQL 16 integration tests before launch readiness correctly stopped
+failed-Git, and default-exit tests. GitHub Actions run `30680447818`, job
+`91316269376`, independently passed the Node 20 build/lint/unit checks and the
+full PostgreSQL 16 integration set before launch readiness correctly stopped
 on `ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`. Hosted E2E and
 audit were skipped after that intentional stop; their local counterparts pass.
 
@@ -242,11 +242,12 @@ and is not cleared by Stage 1 preflight alone.
    including the app and database. The plan must record that outage mechanism
    and acceptance instead of presenting the limit as risk-free.
 
-Packet status: **Candidate `72e7ad7` is pushed to draft PR #14 and locally
-verified. Codex Security scan `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed
+Packet status: **Runtime/gate evidence commit `2253bca` is pushed to draft PR
+#14 and locally verified. Codex Security scan
+`7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed
 the implementation range `29e3c613..6c9e8035` with zero reportable findings;
 later receipt/documentation commits were not part of that sealed range. The
-candidate passed hosted source/database CI. Launch readiness remains
+runtime/gate evidence commit passed hosted source/database CI. Launch readiness remains
 intentionally blocked. Production ACH is disabled; signed Connected-accounts
 delivery, scope attestation, fresh exact-plan approval, strict preflight,
 incident decision, merge, packet deployment, and separately authorized worker

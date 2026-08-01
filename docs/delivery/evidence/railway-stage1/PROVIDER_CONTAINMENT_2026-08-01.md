@@ -6,7 +6,9 @@ or authorize launch.
 
 ## Source and release boundary
 
-- Reviewed candidate: `72e7ad7907d3725ff1232cce9af730e7e577dcfe`
+- Runtime/gate evidence commit:
+  `2253bca16883e736cd06b9b47d4539ffa4a86e32` (the branch's later state
+  closeout changes documentation only)
 - Branch: `codex/railway-stage1-packet87-integration`
 - Draft pull request: #14
 - Production source remained:

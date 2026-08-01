@@ -632,17 +632,19 @@ state; it is not proof that an action absent from those tables never occurred.
   `25/25` review coverage for exact range
   `29e3c613f2eb95a6583b52c671275e5046dde0d3` through
   `6c9e803522c3bfd0ff9af1fdd1ba4e02b07e2324`. Commit
-  `72e7ad7907d3725ff1232cce9af730e7e577dcfe` records the receipt and is the
-  later draft-PR candidate that passed hosted source/database CI; its
-  receipt/documentation follow-ups were not represented as sealed scan input.
-- GitHub Actions run `30678574155`, job `91310753926`, passed the Node 20
+  `2253bca16883e736cd06b9b47d4539ffa4a86e32` records the later evidence and
+  launch-message follow-up and is the runtime/gate evidence commit that passed
+  hosted source/database CI; its receipt/documentation follow-ups were not
+  represented as sealed scan input.
+- GitHub Actions run `30680447818`, job `91316269376`, passed the Node 20
   production build, lint, `252` unit/frontend checks, and PostgreSQL 16
   integration suite (`25/25`). Its later readiness step correctly stopped on
   the still-active incident hold and unapproved payment-provider state; this
   was a fail-closed policy result, not a source or database-CI defect.
 - Railway automatic deploys remain disabled and Wait for CI remains enabled.
-  The reviewed candidate is pushed only to draft pull request #14 and has not
-  been merged or deployed.
+  The runtime/gate evidence commit is pushed only to draft pull request #14;
+  the current branch adds only this state closeout after it. Nothing has been
+  merged or deployed.
 - Production invoice bank payments were found unexpectedly enabled and were
   immediately disabled. Public health then reported `enabled:false`,
   `configured:false`, `webhookConfigured:true`, and `mode:setup_required` on

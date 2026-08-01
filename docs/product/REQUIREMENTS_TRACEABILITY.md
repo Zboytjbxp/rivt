@@ -2,16 +2,17 @@
 
 ## 2026-08-01 - Candidate CI and payment-provider containment
 
-- Candidate `72e7ad7907d3725ff1232cce9af730e7e577dcfe` is pushed on
+- Runtime/gate evidence commit
+  `2253bca16883e736cd06b9b47d4539ffa4a86e32` is pushed on
   `codex/railway-stage1-packet87-integration` in draft PR #14. It is not merged
   or deployed. Codex Security diff scan
   `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed exact implementation range
   `29e3c613..6c9e8035` with 25/25 review coverage, zero reportable findings,
   and zero deferred findings. Later receipt/documentation commits were not
   part of that sealed range.
-- `GA-OPS-007` and `GA-OPS-008`: GitHub Actions run `30678574155`, job
-  `91310753926`, passed the Node 20 build/lint/252 unit-and-frontend checks and
-  all 25 PostgreSQL 16 integration tests. Launch readiness then failed closed
+- `GA-OPS-007` and `GA-OPS-008`: GitHub Actions run `30680447818`, job
+  `91316269376`, passed the Node 20 build/lint/full unit-and-frontend set and
+  the full PostgreSQL 16 integration set. Launch readiness then failed closed
   on `ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`; hosted E2E and
   audit were skipped after that stop. Their local equivalents remain passed.
 - `GA-OPS-003` and `GA-OPS-008`: Railway automatic deployments are off and
@@ -77,9 +78,10 @@
 - The Stage 1 sequence was replayed onto Packet 87 through integration base
   `9490c860736fbbf3ab916e488bfc994cca60753e` before final follow-up changes;
   Packet 87 files remained intact during replay.
-- The independently reviewed provider-safety follow-up is included in pushed
-  candidate `72e7ad7907d3725ff1232cce9af730e7e577dcfe`; the candidate remains
-  unmerged and undeployed.
+- The independently reviewed provider-safety and launch-message follow-up is
+  included through runtime/gate evidence commit
+  `2253bca16883e736cd06b9b47d4539ffa4a86e32`; the branch remains unmerged and
+  undeployed.
 - `GA-OPS-007` gains the complete combined local evidence above, including
   25/25 disposable-database integration tests rather than skipped suites.
 - Current facts supersede older cumulative table wording below:
