@@ -460,9 +460,13 @@ P0/P1 code blocker.
 `npm audit --omit=dev`, and diff integrity pass. The result includes 467/467
 unit/frontend checks, three passing non-database integration checks, and all
 three browser journeys. Twenty-one PostgreSQL-backed integration checks are
-explicitly skipped because this worktree has no `TEST_DATABASE_URL`; a fresh
-exact-candidate GitHub Node 20/PostgreSQL 16 run remains required. The browser
-coverage proves that delayed Account A checkout, portal, Push enable/test/
+explicitly skipped locally because this worktree has no `TEST_DATABASE_URL`.
+GitHub Gate A Safety run `30758475166` verified exact commit
+`50bbcabf453768220a817de1ad2727ff57783078` on Node 20/PostgreSQL 16: build,
+lint, the complete unit and database-backed integration suite, all three browser
+journeys, and the production dependency audit passed. Its overall result is red
+only because the final launch-hold enforcement correctly refused release. The
+browser coverage proves that delayed Account A checkout, portal, Push enable/test/
 disable, session revocation, onboarding, Shop Talk, and queue completions do not
 redirect, sign out, mutate, or render into Account B.
 

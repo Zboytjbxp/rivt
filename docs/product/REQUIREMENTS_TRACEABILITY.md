@@ -25,9 +25,13 @@
   audit, and diff integrity pass; the unit/frontend count is 467/467.
 - `GA-OPS-008` remains `Partial`. This candidate is unmerged and undeployed.
   Three non-database integration checks pass locally; 21 PostgreSQL-backed
-  checks skip without `TEST_DATABASE_URL`, so exact-candidate GitHub Node 20 /
-  PostgreSQL 16 and browser CI is still required. No production, provider, ACH,
-  resource, launch-hold, or paid state changed.
+  checks skip without `TEST_DATABASE_URL`. GitHub Gate A Safety run
+  `30758475166` verified exact commit
+  `50bbcabf453768220a817de1ad2727ff57783078` on Node 20/PostgreSQL 16; all
+  technical build, lint, complete unit/integration, browser, and dependency
+  audit stages passed. Its only failure is the intentional final launch-hold
+  enforcement. No production, provider, ACH, resource, launch-hold, or paid
+  state changed.
 
 ## 2026-08-02 - Current release-security reconciliation
 

@@ -15,8 +15,13 @@
 - Verification: build, full lint, aggregate tests, all three browser E2E
   journeys, production dependency audit, and diff integrity pass. The
   unit/frontend result is 467/467. Three non-database integration checks pass;
-  21 PostgreSQL-backed checks skip because `TEST_DATABASE_URL` is absent, so
-  exact-candidate hosted PostgreSQL/browser CI remains required after push.
+  21 PostgreSQL-backed checks skip locally because `TEST_DATABASE_URL` is
+  absent. GitHub Gate A Safety run `30758475166` then verified exact commit
+  `50bbcabf453768220a817de1ad2727ff57783078` on Node 20/PostgreSQL 16. Build,
+  lint, the complete unit and database-backed integration suite, all three
+  browser journeys, and the dependency audit passed. The workflow is red only
+  because the final launch-hold enforcement correctly failed while readiness
+  remains blocked.
 - Production boundary: production remains on
   `29e3c613f2eb95a6583b52c671275e5046dde0d3`. No merge, deployment, provider
   mutation, production-data action, ACH enablement, launch-hold change,

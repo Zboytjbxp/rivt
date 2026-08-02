@@ -61,8 +61,13 @@ checks because this isolated worktree has no `TEST_DATABASE_URL`; no local
 database-pass claim is made for this exact tree. The browser journey exercises
 Account A to Account B transitions during checkout, billing portal, device-alert
 enable/test/disable, current-session revocation, onboarding, Shop Talk creation,
-offline queue replay, sign-out, and reconnect. Exact-candidate GitHub Node 20 /
-PostgreSQL 16 and browser CI remains required after the branch-only push.
+offline queue replay, sign-out, and reconnect. GitHub Gate A Safety run
+`30758475166` verified exact commit
+`50bbcabf453768220a817de1ad2727ff57783078` on Node 20/PostgreSQL 16: the
+production build, repository lint, complete unit and database-backed integration
+suite, all three browser journeys, and production dependency audit passed. The
+workflow's overall result is intentionally red only because its final step
+enforced the still-active launch hold; no technical verification stage failed.
 
 This is source and local test evidence only. The branch remains unmerged and
 undeployed; production still serves `29e3c613f2eb95a6583b52c671275e5046dde0d3`.
