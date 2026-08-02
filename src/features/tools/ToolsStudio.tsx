@@ -2528,11 +2528,13 @@ function TaxSummaryTool() {
 }
 
 function TimeCostsTool({
+  accountId,
   activeJob,
   jobs,
   activeView,
   onViewChange,
 }: {
+  accountId: string;
   activeJob: Job | null;
   jobs: Job[];
   activeView: TimeCostsView;
@@ -2548,8 +2550,8 @@ function TimeCostsTool({
   return (
     <div className="v2-time-costs-app">
       <div className="v2-time-costs-content">
-        {activeView === "time" ? <TimeTrackerTool activeJob={activeJob} jobs={jobs} /> : null}
-        {activeView === "expenses" ? <ExpenseLoggerTool activeJob={activeJob} jobs={jobs} /> : null}
+        {activeView === "time" ? <TimeTrackerTool accountId={accountId} activeJob={activeJob} jobs={jobs} /> : null}
+        {activeView === "expenses" ? <ExpenseLoggerTool accountId={accountId} activeJob={activeJob} jobs={jobs} /> : null}
         {activeView === "mileage" ? <MileageLoggerTool activeJob={activeJob} /> : null}
         {activeView === "summary" ? <TaxSummaryTool /> : null}
       </div>
@@ -3502,6 +3504,7 @@ export function ToolsStudio({ accountId, isDemo = false, jobs, paymentRecords, m
         node: (
           <TimeCostsTool
             key={`time-costs:${activeJobScopeKey}`}
+            accountId={accountId}
             activeJob={activeJob}
             jobs={jobs}
             activeView={activeTimeCostsView}
@@ -3511,11 +3514,11 @@ export function ToolsStudio({ accountId, isDemo = false, jobs, paymentRecords, m
       },
       "time-tracker": {
         title: "Time tracker",
-        node: <TimeTrackerTool key={`time-tracker:${activeJobScopeKey}`} activeJob={activeJob} jobs={jobs} />,
+        node: <TimeTrackerTool key={`time-tracker:${activeJobScopeKey}`} accountId={accountId} activeJob={activeJob} jobs={jobs} />,
       },
       "expense-logger": {
         title: "Expense logger",
-        node: <ExpenseLoggerTool key={`expense-logger:${activeJobScopeKey}`} activeJob={activeJob} jobs={jobs} />,
+        node: <ExpenseLoggerTool key={`expense-logger:${activeJobScopeKey}`} accountId={accountId} activeJob={activeJob} jobs={jobs} />,
       },
       earnings: {
         title: "Earnings dashboard",

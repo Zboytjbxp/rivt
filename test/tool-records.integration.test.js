@@ -30,10 +30,11 @@ if (!testDatabaseUrl) {
     return String(response.headers.get("set-cookie") ?? "").split(";", 1)[0];
   }
 
-  async function requestJson(baseUrl, path, { body, cookie, idempotencyKey, method = "GET" } = {}) {
+  async function requestJson(baseUrl, path, { body, cookie, expectedAccountId, idempotencyKey, method = "GET" } = {}) {
     const headers = { Origin: "https://rivt.pro" };
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (cookie) headers.Cookie = cookie;
+    if (expectedAccountId) headers["X-RIVT-Expected-Account-Id"] = expectedAccountId;
     if (idempotencyKey) headers["Idempotency-Key"] = idempotencyKey;
     const response = await fetch(`${baseUrl}${path}`, {
       method,
@@ -113,6 +114,55 @@ if (!testDatabaseUrl) {
       [owner.email],
     );
     assert.equal(ownerAccount.rowCount, 1);
+    const otherAccount = await database.query(
+      "SELECT account_id AS id FROM auth_identities WHERE lower(email) = lower($1) LIMIT 1",
+      [other.email],
+    );
+    assert.equal(otherAccount.rowCount, 1);
+
+    const stalePendingLogout = await requestJson(baseUrl, "/api/v1/auth/logout", {
+      method: "POST",
+      cookie: other.cookie,
+      expectedAccountId: ownerAccount.rows[0].id,
+    });
+    assert.equal(stalePendingLogout.response.status, 409);
+    assert.equal(stalePendingLogout.payload.error.code, "ACCOUNT_CONTEXT_CHANGED");
+    const otherSessionSurvives = await requestJson(baseUrl, "/api/v1/me", { cookie: other.cookie });
+    assert.equal(otherSessionSurvives.response.status, 200);
+    assert.equal(otherSessionSurvives.payload.data.id, otherAccount.rows[0].id);
+
+    const staleOfflineWrite = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: other.cookie,
+      expectedAccountId: ownerAccount.rows[0].id,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "daily_report",
+        localId: "stale-offline-account-write",
+        title: "Account A daily log",
+        status: "active",
+        recordDate: "2026-08-02",
+        payload: { note: "Must never be written under Account B." },
+      },
+    });
+    assert.equal(staleOfflineWrite.response.status, 409);
+    assert.equal(staleOfflineWrite.payload.error.code, "ACCOUNT_CONTEXT_CHANGED");
+
+    const matchingOfflineWrite = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: other.cookie,
+      expectedAccountId: otherAccount.rows[0].id,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "daily_report",
+        localId: "matching-offline-account-write",
+        title: "Account B daily log",
+        status: "active",
+        recordDate: "2026-08-02",
+        payload: { note: "Expected-account header matches the authenticated actor." },
+      },
+    });
+    assert.equal(matchingOfflineWrite.response.status, 200);
     await database.query(
       `UPDATE accounts
        SET status = 'active', updated_at = now()
