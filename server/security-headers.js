@@ -1,13 +1,13 @@
 import helmet from "helmet";
 
 export function createSecurityHeadersMiddleware() {
-  return helmet({
+  const helmetMiddleware = helmet({
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
         baseUri: ["'self'"],
         connectSrc: ["'self'", "https://api.open-meteo.com", "https://*.sentry.io", "wss:"],
-        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+        fontSrc: ["'self'", "data:"],
         formAction: ["'self'"],
         frameAncestors: ["'none'"],
         imgSrc: ["'self'", "data:", "blob:", "https:"],
@@ -15,7 +15,7 @@ export function createSecurityHeadersMiddleware() {
         mediaSrc: ["'self'", "blob:", "https:"],
         objectSrc: ["'none'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
         workerSrc: ["'self'", "blob:"],
       },
     },
@@ -28,4 +28,12 @@ export function createSecurityHeadersMiddleware() {
     },
     referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   });
+
+  return (request, response, next) => {
+    response.setHeader(
+      "Permissions-Policy",
+      "browsing-topics=(), camera=(self), geolocation=(self), microphone=(), payment=(), serial=(), usb=()",
+    );
+    helmetMiddleware(request, response, next);
+  };
 }

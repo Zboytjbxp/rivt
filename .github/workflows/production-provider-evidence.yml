@@ -1,0 +1,73 @@
+name: Production Provider Evidence
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  issues: read
+
+concurrency:
+  group: production-provider-evidence
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: >-
+      github.repository == 'Zboytjbxp/rivt' &&
+      github.ref == 'refs/heads/master' &&
+      github.event.repository.default_branch == 'master' &&
+      github.ref_protected == true &&
+      github.ref_name == 'master'
+    # Temporary combined provider verification is permitted only behind the
+    # production-evidence environment's required human approval. Keep this job
+    # read-only and limit credentials to the adapters compiled below until each
+    # provider can be split into an independently approved job.
+    environment: production-evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out protected source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Verify production provider evidence without mutation
+        shell: bash
+        env:
+          RIVT_EVIDENCE_GITHUB_TOKEN: ${{ github.token }}
+          RIVT_EVIDENCE_RAILWAY_TOKEN: ${{ secrets.RIVT_EVIDENCE_RAILWAY_TOKEN }}
+          RIVT_EVIDENCE_SENTRY_TOKEN: ${{ secrets.RIVT_EVIDENCE_SENTRY_TOKEN }}
+          RIVT_PRODUCTION_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
+          RIVT_PROVIDER_EVIDENCE_PLAN_JSON: ${{ secrets.RIVT_PROVIDER_EVIDENCE_PLAN_JSON }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "Protected source commit is missing or invalid."
+            exit 1
+          fi
+          if [[ ! "$RIVT_PRODUCTION_SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "Trusted production source commit is missing or invalid."
+            exit 1
+          fi
+          if [[ -z "$RIVT_PROVIDER_EVIDENCE_PLAN_JSON" ]]; then
+            echo "Protected provider evidence plan is not configured."
+            exit 1
+          fi
+          node scripts/provider-evidence-runner.js \
+            --read-only \
+            --require-ready \
+            --json \
+            --source-commit "$GITHUB_SHA" \
+            --expected-live-commit "$RIVT_PRODUCTION_SOURCE_COMMIT"

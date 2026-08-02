@@ -67,7 +67,13 @@ test("security middleware denies framing and sends a restrictive CSP", async (t)
   assert.equal(response.headers.get("x-frame-options"), "DENY");
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=31536000/i);
-  assert.match(response.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+  const contentSecurityPolicy = response.headers.get("content-security-policy") ?? "";
+  assert.match(contentSecurityPolicy, /frame-ancestors 'none'/);
+  assert.doesNotMatch(contentSecurityPolicy, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
+  assert.equal(
+    response.headers.get("permissions-policy"),
+    "browsing-topics=(), camera=(self), geolocation=(self), microphone=(), payment=(), serial=(), usb=()",
+  );
 });
 
 test("server-owned expense export preserves cents and escapes CSV fields", () => {

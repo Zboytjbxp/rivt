@@ -1,6 +1,76 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { stripeConnectInternals, stripeConnectProviderStatus } from "../server/stripe-connect.js";
+import {
+  stripeConnectInternals,
+  stripeConnectProviderStatus,
+  stripeConnectRuntimeProof,
+  verifyStripeConnectRuntimeProof,
+} from "../server/stripe-connect.js";
+
+test("Stripe runtime proof binds live secrets to a short-lived nonce without publishing a stable fingerprint", () => {
+  const input = {
+    secretKey: "sk_live_private_value",
+    webhookSecret: "whsec_private_value",
+    enabled: false,
+    webhookScope: undefined,
+    sourceCommit: "a".repeat(40),
+    timestamp: "1785600000",
+    nonce: "A".repeat(43),
+  };
+  const proof = stripeConnectRuntimeProof(input);
+  assert.match(proof, /^[a-f0-9]{64}$/);
+  assert.equal(proof.includes(input.secretKey), false);
+  assert.notEqual(stripeConnectRuntimeProof({ ...input, secretKey: `${input.secretKey}_rotated` }), proof);
+  assert.notEqual(stripeConnectRuntimeProof({ ...input, webhookSecret: `${input.webhookSecret}_rotated` }), proof);
+  assert.notEqual(stripeConnectRuntimeProof({ ...input, nonce: "B".repeat(43) }), proof);
+  assert.notEqual(stripeConnectRuntimeProof({ ...input, timestamp: "1785600001" }), proof);
+});
+
+test("Stripe runtime proof verifier rejects stale, malformed, and mismatched evidence", () => {
+  const previous = {
+    key: process.env.STRIPE_SECRET_KEY,
+    webhook: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
+    enabled: process.env.STRIPE_CONNECT_ACH_ENABLED,
+    scope: process.env.STRIPE_CONNECT_WEBHOOK_SCOPE,
+  };
+  const input = {
+    secretKey: "sk_live_runtime_value",
+    webhookSecret: "whsec_runtime_value",
+    enabled: false,
+    webhookScope: undefined,
+    sourceCommit: "b".repeat(40),
+    timestamp: "1785600000",
+    nonce: "C".repeat(43),
+  };
+  process.env.STRIPE_SECRET_KEY = input.secretKey;
+  process.env.STRIPE_CONNECT_WEBHOOK_SECRET = input.webhookSecret;
+  process.env.STRIPE_CONNECT_ACH_ENABLED = "false";
+  delete process.env.STRIPE_CONNECT_WEBHOOK_SCOPE;
+  try {
+    const proof = stripeConnectRuntimeProof(input);
+    const request = {
+      authorization: `RIVT-HMAC ${proof}`,
+      nonce: input.nonce,
+      sourceCommit: input.sourceCommit,
+      timestamp: input.timestamp,
+      now: Number(input.timestamp) * 1000,
+    };
+    assert.equal(verifyStripeConnectRuntimeProof(request), true);
+    assert.equal(verifyStripeConnectRuntimeProof({ ...request, nonce: "D".repeat(43) }), false);
+    assert.equal(verifyStripeConnectRuntimeProof({ ...request, now: request.now + 121_000 }), false);
+    assert.equal(verifyStripeConnectRuntimeProof({ ...request, authorization: "RIVT-HMAC invalid" }), false);
+  } finally {
+    for (const [name, value] of Object.entries({
+      STRIPE_SECRET_KEY: previous.key,
+      STRIPE_CONNECT_WEBHOOK_SECRET: previous.webhook,
+      STRIPE_CONNECT_ACH_ENABLED: previous.enabled,
+      STRIPE_CONNECT_WEBHOOK_SCOPE: previous.scope,
+    })) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
+});
 
 test("Stripe Connect ACH stays fail-closed until explicitly enabled and signed", () => {
   const previous = {

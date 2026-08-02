@@ -6428,6 +6428,7 @@ registerStripeConnectRoutes({
   requireV1Actor,
   writeRateLimit,
   publicPaymentRateLimit,
+  sourceCommit,
   runIdempotentMutation,
   sendIdempotentResult,
 });

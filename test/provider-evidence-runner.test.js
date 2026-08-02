@@ -1,0 +1,920 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import {
+  compiledProviderAdapters,
+  evidenceRunnerExitCode,
+  parseEvidencePlanSecret,
+  runEvidenceVerification,
+  runProviderEvidenceGate,
+  validateEvidencePlan,
+  validateEvidenceRunnerArguments,
+  verifyGitHubProductionSyntheticEvidence,
+  verifyRailwayStripeDisabledPaymentEvidence,
+  verifySentryErrorIngestionEvidence,
+} from "../scripts/provider-evidence-runner.js";
+import {
+  providerEvidenceIdentity,
+  repositoryEvidenceSha256,
+} from "../scripts/repository-evidence.js";
+import { stripeConnectRuntimeProof } from "../server/stripe-connect.js";
+
+const now = new Date("2026-08-01T12:00:00.000Z");
+const sourceCommit = "a".repeat(40);
+const scope = Object.freeze({
+  account: "rivt-account",
+  environment: "production",
+  project: "rivt-project",
+  resource: "production-synthetic-workflow",
+});
+
+function createFixture({
+  controlId = "github-production-synthetic",
+  provider = "github-actions",
+  timestamp = "2026-08-01T11:59:00.000Z",
+} = {}) {
+  const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), "rivt-evidence-runner-"));
+  const evidencePath = `evidence/${controlId}.json`;
+  fs.mkdirSync(path.join(rootDir, "evidence"));
+  const receipt = {
+    schemaVersion: 1,
+    controlId,
+    type: "synthetic-monitor-delivery-test",
+    provider,
+    status: "passed",
+    timestamp,
+    category: "synthetic_monitor",
+    configuredProvider: "GitHub Actions",
+    route: "Production synthetic incident route",
+    frequency: "30 minutes",
+  };
+  const serializedReceipt = `${JSON.stringify(receipt, null, 2)}\n`;
+  fs.writeFileSync(path.join(rootDir, evidencePath), serializedReceipt, "utf8");
+  const evidenceSha256 = repositoryEvidenceSha256(serializedReceipt);
+  const claim = {
+    adapterId: "github-production-synthetic",
+    controlId,
+    evidencePath,
+    evidenceSha256,
+    expectedReceipt: receipt,
+    provider,
+    scope: { ...scope },
+    type: receipt.type,
+  };
+  const plan = { schemaVersion: 1, claims: [claim] };
+  return { claim, evidenceSha256, plan, receipt, rootDir };
+}
+
+function verifiedAdapter(proofId = "b".repeat(64)) {
+  return {
+    allowedProviders: ["github-actions"],
+    allowedReceiptTypes: ["synthetic-monitor-delivery-test"],
+    requiredCredentials: ["RIVT_EVIDENCE_GITHUB_TOKEN"],
+    async verify({ claim }) {
+      return {
+        observedAt: "2026-08-01T11:59:30.000Z",
+        proofId,
+        provider: claim.provider,
+        receiptSha256: claim.evidenceSha256,
+        scope: { ...claim.scope },
+        status: "verified",
+      };
+    },
+  };
+}
+
+function runFixture(fixture, overrides = {}) {
+  return runEvidenceVerification({
+    adapters: { "github-production-synthetic": verifiedAdapter() },
+    credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+    expectedLiveCommit: sourceCommit,
+    now,
+    plan: fixture.plan,
+    rootDir: fixture.rootDir,
+    sourceCommit,
+    ...overrides,
+  });
+}
+
+function jsonResponse(payload, { ok = true, status = ok ? 200 : 500 } = {}) {
+  const serialized = JSON.stringify(payload);
+  return {
+    headers: { get: (name) => (name.toLowerCase() === "content-length" ? String(serialized.length) : null) },
+    ok,
+    status,
+    async text() { return serialized; },
+  };
+}
+
+function routedFetch(routes, calls = []) {
+  return async (input, init = {}) => {
+    const url = input instanceof URL ? input : new URL(input);
+    calls.push({ url, init });
+    const route = routes.find((candidate) => (
+      candidate.method === (init.method ?? "GET")
+      && candidate.match(url, init)
+    ));
+    if (!route) return jsonResponse({ error: "not found" }, { ok: false, status: 404 });
+    return jsonResponse(typeof route.payload === "function" ? route.payload(url, init) : route.payload);
+  };
+}
+
+function providerContext({ claim, credentials, receipt, observedNow = now } = {}) {
+  return {
+    claim,
+    credentials,
+    now: observedNow,
+    receipt,
+    sourceCommit,
+  };
+}
+
+test("evidence verification authorizes one exact in-memory identity", async () => {
+  const fixture = createFixture();
+  try {
+    const originalPlan = structuredClone(fixture.plan);
+    const result = await runFixture(fixture);
+    assert.equal(result.ok, true);
+    assert.deepEqual(fixture.plan, originalPlan);
+    assert.equal(result.report.controls[0].status, "verified");
+    assert.equal(result.externallyVerifiedEvidence.size, 1);
+    assert.equal(result.externallyVerifiedEvidence.has(providerEvidenceIdentity({
+      controlId: fixture.claim.controlId,
+      provider: fixture.claim.provider,
+      sha256: fixture.evidenceSha256,
+    })), true);
+    assert.equal(JSON.stringify(result.report).includes("\u0000"), false);
+    assert.equal(Object.hasOwn(result.report, "externallyVerifiedEvidence"), false);
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("the compiled registry supports only adapters with provider-verifiable contracts", async () => {
+  for (const adapterId of [
+    "github-production-synthetic",
+    "sentry-error-ingestion",
+    "railway-stripe-disabled-payment",
+  ]) {
+    assert.equal(typeof compiledProviderAdapters[adapterId].verify, "function", adapterId);
+  }
+  for (const adapterId of [
+    "sentry-paging-delivery",
+    "backup-completion",
+    "backup-retention",
+    "backup-failure-domain",
+  ]) {
+    const result = await compiledProviderAdapters[adapterId].verify({});
+    assert.deepEqual(result, {
+      status: "unsupported",
+      reasonCode: "ADAPTER_NOT_IMPLEMENTED",
+    }, adapterId);
+  }
+});
+
+test("GitHub adapter binds a protected default-branch run to one bot-owned recovery delivery", async () => {
+  const receipt = {
+    schemaVersion: 1,
+    controlId: "github-production-synthetic",
+    type: "synthetic-monitor-delivery-test",
+    provider: "github-actions",
+    status: "passed",
+    timestamp: "2026-08-01T11:59:00.000Z",
+    category: "synthetic_monitor",
+    configuredProvider: "GitHub Actions",
+    route: "GitHub issue: Production synthetic check failing",
+    frequency: "30 minutes",
+  };
+  const claim = {
+    provider: receipt.provider,
+    evidenceSha256: "1".repeat(64),
+    scope: {
+      account: "rivt-owner",
+      environment: "master",
+      project: "rivt",
+      resource: "workflow:1234:issue:77",
+    },
+  };
+  const runUrl = "https://github.com/rivt-owner/rivt/actions/runs/9001";
+  const github = {
+    repository: { full_name: "rivt-owner/rivt", default_branch: "master" },
+    branch: { name: "master", protected: true },
+    workflow: {
+      id: 1234,
+      name: "Production Synthetic Check",
+      path: ".github/workflows/production-synthetic.yml",
+      state: "active",
+    },
+    runs: {
+      workflow_runs: [{
+        id: 9001,
+        workflow_id: 1234,
+        conclusion: "success",
+        status: "completed",
+        event: "workflow_dispatch",
+        head_sha: sourceCommit,
+        head_branch: "master",
+        created_at: "2026-08-01T11:58:00.000Z",
+        updated_at: "2026-08-01T11:59:30.000Z",
+        head_repository: { full_name: "rivt-owner/rivt" },
+      }],
+    },
+    issue: {
+      number: 77,
+      title: "Production synthetic check failing",
+      state: "closed",
+      state_reason: "completed",
+      body: "<!-- rivt-production-synthetic-incident -->\nSanitized incident.",
+      user: { login: "github-actions[bot]", type: "Bot" },
+    },
+    comments: [{
+      id: 501,
+      body: `Synthetic check recovered and passed: ${runUrl}`,
+      created_at: receipt.timestamp,
+      user: { login: "github-actions[bot]", type: "Bot" },
+    }],
+  };
+  const calls = [];
+  const fetchFunction = routedFetch([
+    { method: "GET", match: (url) => url.pathname === "/repos/rivt-owner/rivt", payload: github.repository },
+    { method: "GET", match: (url) => url.pathname.endsWith("/branches/master"), payload: github.branch },
+    { method: "GET", match: (url) => url.pathname.endsWith("/actions/workflows/1234"), payload: github.workflow },
+    { method: "GET", match: (url) => url.pathname.endsWith("/actions/workflows/1234/runs"), payload: github.runs },
+    { method: "GET", match: (url) => url.pathname.endsWith("/issues/77"), payload: github.issue },
+    { method: "GET", match: (url) => url.pathname.endsWith("/issues/77/comments"), payload: github.comments },
+    { method: "GET", match: (url) => url.pathname.endsWith("/issues"), payload: [] },
+  ], calls);
+  const context = providerContext({
+    claim,
+    credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "github-secret" },
+    receipt,
+  });
+  const result = await verifyGitHubProductionSyntheticEvidence(context, { fetchFunction });
+  assert.equal(result.status, "verified", JSON.stringify(result));
+  assert.equal(calls.length, 7);
+  assert.equal(calls.every(({ url }) => url.origin === "https://api.github.com"), true);
+  assert.equal(calls.every(({ init }) => init.redirect === "error"), true);
+  assert.equal(JSON.stringify(result).includes("github-secret"), false);
+
+  github.branch.protected = false;
+  const unprotected = await verifyGitHubProductionSyntheticEvidence(context, { fetchFunction });
+  assert.deepEqual(unprotected, {
+    status: "failed",
+    reasonCode: "PROVIDER_BINDING_MISMATCH",
+  });
+  github.branch.protected = true;
+  github.runs.workflow_runs[0].event = "pull_request";
+  const pullRequestRun = await verifyGitHubProductionSyntheticEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(pullRequestRun.reasonCode, "PROVIDER_OBSERVATION_MISMATCH");
+
+  github.runs.workflow_runs[0].event = "workflow_dispatch";
+  github.issue.body = `lookalike\n<!-- rivt-production-synthetic-incident -->`;
+  const lookalikeMarker = await verifyGitHubProductionSyntheticEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(lookalikeMarker.reasonCode, "PROVIDER_BINDING_MISMATCH");
+});
+
+test("GitHub adapter rejects stale or superseded synthetic state and an open owned incident", async () => {
+  const receipt = {
+    schemaVersion: 1,
+    controlId: "github-production-synthetic",
+    type: "synthetic-monitor-delivery-test",
+    provider: "github-actions",
+    status: "passed",
+    timestamp: "2026-08-01T11:40:00.000Z",
+    category: "synthetic_monitor",
+    configuredProvider: "GitHub Actions",
+    route: "GitHub issue: Production synthetic check failing",
+    frequency: "30 minutes",
+  };
+  const claim = {
+    provider: receipt.provider,
+    evidenceSha256: "1".repeat(64),
+    scope: {
+      account: "rivt-owner",
+      environment: "master",
+      project: "rivt",
+      resource: "workflow:1234:issue:77",
+    },
+  };
+  const successfulRun = {
+    id: 9001,
+    workflow_id: 1234,
+    conclusion: "success",
+    status: "completed",
+    event: "schedule",
+    head_sha: sourceCommit,
+    head_branch: "master",
+    created_at: "2026-08-01T11:39:00.000Z",
+    updated_at: "2026-08-01T11:41:00.000Z",
+    head_repository: { full_name: "rivt-owner/rivt" },
+  };
+  const latestRun = {
+    ...successfulRun,
+    id: 9002,
+    conclusion: "failure",
+    created_at: "2026-08-01T11:50:00.000Z",
+    updated_at: "2026-08-01T11:51:00.000Z",
+  };
+  const repository = { full_name: "rivt-owner/rivt", default_branch: "master" };
+  const branch = { name: "master", protected: true };
+  const workflow = {
+    id: 1234,
+    name: "Production Synthetic Check",
+    path: ".github/workflows/production-synthetic.yml",
+    state: "active",
+  };
+  const issue = {
+    number: 77,
+    title: "Production synthetic check failing",
+    state: "closed",
+    state_reason: "completed",
+    body: "<!-- rivt-production-synthetic-incident -->",
+    user: { login: "github-actions[bot]", type: "Bot" },
+  };
+  const comments = [{
+    id: 501,
+    body: "Synthetic check recovered and passed: https://github.com/rivt-owner/rivt/actions/runs/9001",
+    created_at: receipt.timestamp,
+    user: { login: "github-actions[bot]", type: "Bot" },
+  }];
+  const openIncidents = [];
+  const fetchFunction = routedFetch([
+    { method: "GET", match: (url) => url.pathname === "/repos/rivt-owner/rivt", payload: repository },
+    { method: "GET", match: (url) => url.pathname.endsWith("/branches/master"), payload: branch },
+    { method: "GET", match: (url) => url.pathname.endsWith("/actions/workflows/1234"), payload: workflow },
+    { method: "GET", match: (url) => url.pathname.endsWith("/actions/workflows/1234/runs"), payload: () => ({ workflow_runs: [latestRun, successfulRun] }) },
+    { method: "GET", match: (url) => url.pathname.endsWith("/issues/77"), payload: issue },
+    { method: "GET", match: (url) => url.pathname.endsWith("/issues/77/comments"), payload: comments },
+    { method: "GET", match: (url) => url.pathname.endsWith("/issues"), payload: () => openIncidents },
+  ]);
+  const context = providerContext({
+    claim,
+    credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "github-secret" },
+    receipt,
+  });
+
+  const newerFailure = await verifyGitHubProductionSyntheticEvidence(context, { fetchFunction });
+  assert.equal(newerFailure.reasonCode, "PROVIDER_OBSERVATION_MISMATCH");
+
+  latestRun.conclusion = "success";
+  latestRun.updated_at = "2026-08-01T10:00:00.000Z";
+  latestRun.created_at = "2026-08-01T09:59:00.000Z";
+  successfulRun.updated_at = "2026-08-01T10:01:00.000Z";
+  successfulRun.created_at = "2026-08-01T10:00:00.000Z";
+  const stale = await verifyGitHubProductionSyntheticEvidence(context, { fetchFunction });
+  assert.equal(stale.reasonCode, "PROVIDER_OBSERVATION_MISMATCH");
+
+  latestRun.created_at = "2026-08-01T11:50:00.000Z";
+  latestRun.updated_at = "2026-08-01T11:51:00.000Z";
+  successfulRun.created_at = "2026-08-01T11:39:00.000Z";
+  successfulRun.updated_at = "2026-08-01T11:41:00.000Z";
+  openIncidents.push({
+    ...issue,
+    number: 88,
+    state: "open",
+  });
+  const openIncident = await verifyGitHubProductionSyntheticEvidence(context, { fetchFunction });
+  assert.equal(openIncident.reasonCode, "PROVIDER_OBSERVATION_MISMATCH");
+});
+
+test("Sentry adapter binds one indexed RIVT error event to project, environment, release, and timestamp", async () => {
+  const receipt = {
+    schemaVersion: 1,
+    controlId: "dedicated-error-monitoring",
+    type: "error-monitoring-ingestion-test",
+    provider: "sentry",
+    status: "ingested",
+    timestamp: "2026-08-01T11:58:00.000Z",
+    category: "error_monitoring",
+    configuredProvider: "Sentry Cloud",
+    route: "Sentry project for production API errors",
+    frequency: null,
+  };
+  const eventId = "a".repeat(32);
+  const claim = {
+    provider: receipt.provider,
+    evidenceSha256: "2".repeat(64),
+    scope: {
+      account: "rivt-org",
+      environment: "production",
+      project: "node-express",
+      resource: eventId,
+    },
+  };
+  const project = { id: "456", slug: "node-express", organization: { slug: "rivt-org" } };
+  const event = {
+    eventID: eventId,
+    projectID: project.id,
+    dateReceived: receipt.timestamp,
+    platform: "node",
+    type: "error",
+    release: { version: sourceCommit },
+    tags: [
+      { key: "environment", value: "production" },
+      { key: "service", value: "rivt-api" },
+    ],
+  };
+  const calls = [];
+  const fetchFunction = routedFetch([
+    { method: "GET", match: (url) => url.pathname === "/api/0/projects/rivt-org/node-express/", payload: project },
+    { method: "GET", match: (url) => url.pathname.endsWith(`/events/${eventId}/`), payload: event },
+  ], calls);
+  const context = providerContext({
+    claim,
+    credentials: { RIVT_EVIDENCE_SENTRY_TOKEN: "sentry-secret" },
+    receipt,
+  });
+  const result = await verifySentryErrorIngestionEvidence(context, { fetchFunction });
+  assert.equal(result.status, "verified");
+  assert.equal(calls[1].url.searchParams.get("environment"), "production");
+  assert.equal(JSON.stringify(result).includes("sentry-secret"), false);
+
+  event.release.version = "f".repeat(40);
+  const wrongRelease = await verifySentryErrorIngestionEvidence(context, { fetchFunction });
+  assert.equal(wrongRelease.reasonCode, "PROVIDER_BINDING_MISMATCH");
+
+  event.release.version = sourceCommit;
+  event.dateReceived = "2026-08-01T10:00:00.000Z";
+  receipt.timestamp = event.dateReceived;
+  const staleEvent = await verifySentryErrorIngestionEvidence(context, { fetchFunction });
+  assert.equal(staleEvent.reasonCode, "PROVIDER_BINDING_MISMATCH");
+});
+
+test("disabled-payment adapter uses read-only Railway and Stripe queries and rejects onboarding drift", async () => {
+  const receipt = {
+    schemaVersion: 1,
+    controlId: "bank-payment-provider-state",
+    type: "provider-payment-state-verification",
+    provider: "railway-stripe",
+    status: "verified",
+    timestamp: "2026-08-01T11:57:00.000Z",
+    mode: "disabled",
+    featureFlagVerifiedOff: true,
+    providerDestinationScope: "connected_accounts",
+    runtimeScopeAttestation: "unset",
+    signedDeliveryVerified: false,
+    enabled: false,
+    configured: false,
+    webhookConfigured: true,
+    providerMode: "setup_required",
+  };
+  const claim = {
+    provider: receipt.provider,
+    evidenceSha256: "3".repeat(64),
+    scope: {
+      account: "acct_platform",
+      environment: "env_prod",
+      project: "project_rivt",
+      resource: "service:svc_rivt:webhook:we_rivt",
+    },
+  };
+  const railwayVariables = {
+    RAILWAY_PROJECT_ID: claim.scope.project,
+    RAILWAY_ENVIRONMENT_ID: claim.scope.environment,
+    RAILWAY_SERVICE_ID: "svc_rivt",
+    RAILWAY_ENVIRONMENT_NAME: "production",
+    RAILWAY_GIT_COMMIT_SHA: sourceCommit,
+    STRIPE_CONNECT_ACH_ENABLED: "false",
+    STRIPE_SECRET_KEY: "sk_live_never-output",
+    STRIPE_CONNECT_WEBHOOK_SECRET: "whsec_never-output",
+  };
+  const runningStripeConfig = {
+    secretKey: railwayVariables.STRIPE_SECRET_KEY,
+    webhookSecret: railwayVariables.STRIPE_CONNECT_WEBHOOK_SECRET,
+  };
+  const v1Accounts = { object: "list", has_more: false, data: [] };
+  const v2Accounts = { data: [], next_page_url: null };
+  const railwayDeployment = {
+    id: "deployment_rivt",
+    status: "SUCCESS",
+    createdAt: "2026-08-01T11:45:00.000Z",
+    meta: { commitHash: sourceCommit },
+  };
+  const healthPayload = {
+    ok: true,
+    build: { commit: sourceCommit },
+    observability: {
+      invoiceBankPayments: {
+        provider: "stripe_connect",
+        accountsApi: "v2",
+        enabled: false,
+        configured: false,
+        webhookConfigured: true,
+        webhookScopeConfigured: false,
+        mode: "setup_required",
+      },
+    },
+  };
+  const calls = [];
+  const fetchFunction = routedFetch([
+    {
+      method: "POST",
+      match(url, init) {
+        if (url.pathname !== "/graphql/v2") return false;
+        const body = JSON.parse(init.body);
+        assert.equal(body.query.includes("mutation"), false);
+        assert.deepEqual(body.variables, {
+          deploymentInput: {
+            environmentId: claim.scope.environment,
+            projectId: claim.scope.project,
+            serviceId: "svc_rivt",
+            status: { successfulOnly: true },
+          },
+          projectId: claim.scope.project,
+          environmentId: claim.scope.environment,
+          serviceId: "svc_rivt",
+        });
+        return true;
+      },
+      payload: {
+        data: {
+          variablesForServiceDeployment: railwayVariables,
+          deployments: {
+            edges: [{ node: railwayDeployment }],
+          },
+        },
+      },
+    },
+    {
+      method: "GET",
+      match: (url) => url.origin === "https://rivt.pro" && url.pathname === "/api/health",
+      payload: healthPayload,
+    },
+    {
+      method: "POST",
+      match: (url) => (
+        url.origin === "https://rivt.pro"
+        && url.pathname === "/api/provider-evidence/stripe-connect/runtime"
+      ),
+      payload(_url, init) {
+        const nonce = init.headers["X-RIVT-Evidence-Nonce"];
+        const timestamp = init.headers["X-RIVT-Evidence-Timestamp"];
+        const expected = stripeConnectRuntimeProof({
+          ...runningStripeConfig,
+          enabled: false,
+          webhookScope: undefined,
+          sourceCommit,
+          timestamp,
+          nonce,
+        });
+        return {
+          data: {
+            provider: init.headers.Authorization === `RIVT-HMAC ${expected}`
+              ? "stripe_connect"
+              : "unauthorized",
+            sourceCommit,
+          },
+        };
+      },
+    },
+    { method: "GET", match: (url) => url.pathname === "/v1/account", payload: { id: claim.scope.account } },
+    {
+      method: "GET",
+      match: (url) => url.pathname === "/v1/webhook_endpoints/we_rivt",
+      payload: {
+        id: "we_rivt",
+        object: "webhook_endpoint",
+        connect: true,
+        status: "enabled",
+        livemode: true,
+        url: "https://rivt.pro/api/stripe/connect/webhook",
+        enabled_events: ["checkout.session.completed"],
+      },
+    },
+    { method: "GET", match: (url) => url.pathname === "/v1/accounts", payload: v1Accounts },
+    {
+      method: "GET",
+      match: (url) => (
+        url.pathname === "/v2/core/accounts"
+        && url.searchParams.get("applied_configurations[0]") === "merchant"
+      ),
+      payload: v2Accounts,
+    },
+  ], calls);
+  const context = providerContext({
+    claim,
+    credentials: {
+      RIVT_EVIDENCE_RAILWAY_TOKEN: "railway-secret",
+    },
+    receipt,
+  });
+  const result = await verifyRailwayStripeDisabledPaymentEvidence(context, { fetchFunction });
+  assert.equal(result.status, "verified");
+  assert.equal(calls.filter(({ init }) => init.method === "POST").length, 2);
+  assert.equal(calls.filter(({ url }) => url.origin === "https://api.stripe.com")
+    .every(({ init }) => init.method === "GET"), true);
+  assert.equal(calls.filter(({ url }) => url.origin === "https://api.stripe.com")
+    .every(({ init }) => init.headers.Authorization === "Bearer sk_live_never-output"), true);
+  const serialized = JSON.stringify(result);
+  for (const forbidden of [
+    "railway-secret",
+    "sk_live_never-output",
+    "whsec_never-output",
+  ]) assert.equal(serialized.includes(forbidden), false);
+
+  v2Accounts.data.push({ id: "acct_unexpected", applied_configurations: ["merchant"] });
+  const drift = await verifyRailwayStripeDisabledPaymentEvidence(context, { fetchFunction });
+  assert.equal(drift.reasonCode, "PROVIDER_BINDING_MISMATCH");
+
+  v2Accounts.data.length = 0;
+  railwayDeployment.meta.commitHash = "f".repeat(40);
+  const staleDeployment = await verifyRailwayStripeDisabledPaymentEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(staleDeployment.reasonCode, "PROVIDER_BINDING_MISMATCH");
+
+  railwayDeployment.meta.commitHash = sourceCommit;
+  healthPayload.build.commit = "f".repeat(40);
+  const staleLiveHealth = await verifyRailwayStripeDisabledPaymentEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(staleLiveHealth.reasonCode, "PROVIDER_BINDING_MISMATCH");
+
+  healthPayload.build.commit = sourceCommit;
+  railwayVariables.STRIPE_SECRET_KEY = "sk_live_staged_but_not_running";
+  const stagedRuntimeDrift = await verifyRailwayStripeDisabledPaymentEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(stagedRuntimeDrift.reasonCode, "PROVIDER_BINDING_MISMATCH");
+});
+
+test("paging and B2 backup claims stay unsupported without provider delivery/version/digest fields", async () => {
+  for (const adapterId of [
+    "sentry-paging-delivery",
+    "backup-schedule",
+    "backup-completion",
+    "backup-retention",
+    "backup-failure-domain",
+  ]) {
+    const result = await compiledProviderAdapters[adapterId].verify({});
+    assert.equal(result.status, "unsupported", adapterId);
+    assert.equal(result.reasonCode, "ADAPTER_NOT_IMPLEMENTED", adapterId);
+  }
+});
+
+test("missing credentials fail before the adapter is called", async () => {
+  const fixture = createFixture();
+  let calls = 0;
+  try {
+    const adapter = verifiedAdapter();
+    adapter.verify = async () => {
+      calls += 1;
+      return { status: "failed", reasonCode: "SHOULD_NOT_RUN" };
+    };
+    const result = await runFixture(fixture, {
+      adapters: { "github-production-synthetic": adapter },
+      credentials: {},
+    });
+    assert.equal(calls, 0);
+    assert.equal(result.report.controls[0].reasonCode, "PROVIDER_CREDENTIAL_MISSING");
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("source, provider, receipt, freshness, and scope mismatches fail closed", async (context) => {
+  const cases = [
+    {
+      name: "source",
+      overrides: { expectedLiveCommit: "c".repeat(40) },
+      reasonCode: "SOURCE_COMMIT_MISMATCH",
+    },
+    {
+      name: "provider",
+      mutatePlan(plan) { plan.claims[0].provider = "untrusted-provider"; },
+      reasonCode: "PLAN_CLAIM_INVALID",
+    },
+    {
+      name: "receipt",
+      mutateReceipt(receipt) { receipt.status = "failed"; },
+      reasonCode: "EVIDENCE_BINDING_MISMATCH",
+    },
+    {
+      name: "future timestamp",
+      recreate: { timestamp: "2026-08-01T12:01:00.000Z" },
+      reasonCode: "EVIDENCE_STALE_OR_FUTURE",
+    },
+    {
+      name: "scope",
+      adapter: {
+        ...verifiedAdapter(),
+        async verify({ claim }) {
+          return {
+            observedAt: "2026-08-01T11:59:30.000Z",
+            proofId: "d".repeat(64),
+            provider: claim.provider,
+            receiptSha256: claim.evidenceSha256,
+            scope: { ...claim.scope, resource: "other-resource" },
+            status: "verified",
+          };
+        },
+      },
+      reasonCode: "ADAPTER_BINDING_MISMATCH",
+    },
+  ];
+  for (const fixtureCase of cases) {
+    await context.test(fixtureCase.name, async () => {
+      const fixture = createFixture(fixtureCase.recreate);
+      try {
+        if (fixtureCase.mutatePlan) fixtureCase.mutatePlan(fixture.plan);
+        if (fixtureCase.mutateReceipt) {
+          const changedReceipt = structuredClone(fixture.receipt);
+          fixtureCase.mutateReceipt(changedReceipt);
+          fs.writeFileSync(
+            path.join(fixture.rootDir, fixture.claim.evidencePath),
+            JSON.stringify(changedReceipt),
+            "utf8",
+          );
+        }
+        const result = await runFixture(fixture, {
+          ...(fixtureCase.overrides ?? {}),
+          ...(fixtureCase.adapter
+            ? { adapters: { "github-production-synthetic": fixtureCase.adapter } }
+            : {}),
+        });
+        const reasonCodes = result.report.controls.length > 0
+          ? result.report.controls.map((control) => control.reasonCode)
+          : result.report.findingCodes;
+        assert.ok(reasonCodes.includes(fixtureCase.reasonCode));
+        assert.equal(result.externallyVerifiedEvidence.size, 0);
+      } finally {
+        fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+      }
+    });
+  }
+});
+
+test("adapter exceptions and secret-like error text are reduced to a fixed code", async () => {
+  const fixture = createFixture();
+  try {
+    const result = await runFixture(fixture, {
+      adapters: {
+        "github-production-synthetic": {
+          ...verifiedAdapter(),
+          async verify() {
+            throw new Error("token=super-secret user@example.com private-route-url");
+          },
+        },
+      },
+    });
+    const serialized = JSON.stringify(result.report);
+    assert.equal(result.report.controls[0].reasonCode, "ADAPTER_EXECUTION_FAILED");
+    assert.equal(serialized.includes("super-secret"), false);
+    assert.equal(serialized.includes("user@example.com"), false);
+    assert.equal(serialized.includes("private-route-url"), false);
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("provider proof reuse blocks the second independent control", async () => {
+  const fixture = createFixture();
+  try {
+    const second = createFixture({ controlId: "github-production-synthetic-secondary" });
+    try {
+      const secondPath = "evidence/github-production-synthetic-secondary.json";
+      fs.copyFileSync(
+        path.join(second.rootDir, second.claim.evidencePath),
+        path.join(fixture.rootDir, secondPath),
+      );
+      fixture.plan.claims.push({ ...second.claim, evidencePath: secondPath });
+      const result = await runFixture(fixture, {
+        adapters: {
+          "github-production-synthetic": verifiedAdapter("e".repeat(64)),
+        },
+      });
+      assert.equal(result.ok, false);
+      assert.equal(result.report.controls.filter((control) => control.status === "verified").length, 1);
+      assert.equal(result.report.controls.some(
+        (control) => control.reasonCode === "PROVIDER_PROOF_REUSED",
+      ), true);
+    } finally {
+      fs.rmSync(second.rootDir, { recursive: true, force: true });
+    }
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("self-authored verification fields and duplicate evidence are rejected by plan validation", () => {
+  const fixture = createFixture();
+  try {
+    assert.deepEqual(validateEvidencePlan({
+      ...fixture.plan,
+      verifiedIdentities: [],
+    }), { ok: false, findings: ["PLAN_SCHEMA_INVALID"] });
+    assert.deepEqual(validateEvidencePlan({
+      ...fixture.plan,
+      sourceCommit,
+    }), { ok: false, findings: ["PLAN_SCHEMA_INVALID"] });
+    assert.deepEqual(validateEvidencePlan({
+      ...fixture.plan,
+      claims: [fixture.claim, structuredClone(fixture.claim)],
+    }), {
+      ok: false,
+      findings: [
+        "PLAN_CONTROL_REUSED",
+        "PLAN_EVIDENCE_PATH_REUSED",
+        "PLAN_EVIDENCE_DIGEST_REUSED",
+      ],
+    });
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("the gate passes identities in memory and keeps readiness and evidence independent", async () => {
+  const fixture = createFixture();
+  let receivedIdentitySet = null;
+  try {
+    const result = await runProviderEvidenceGate({
+      adapters: { "github-production-synthetic": verifiedAdapter() },
+      credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+      evaluateReadiness({ externallyVerifiedEvidence }) {
+        receivedIdentitySet = externallyVerifiedEvidence;
+        return { ok: false, findings: [{ code: "ACTIVE_LAUNCH_HOLD", source: "incident" }] };
+      },
+      expectedLiveCommit: sourceCommit,
+      now,
+      plan: fixture.plan,
+      rootDir: fixture.rootDir,
+      sourceCommit,
+    });
+    assert.ok(receivedIdentitySet instanceof Set);
+    assert.equal(receivedIdentitySet.size, 1);
+    assert.equal(result.ok, false);
+    assert.equal(result.report.status, "blocked");
+    assert.deepEqual(result.report.readiness.findingCodes, [
+      { code: "ACTIVE_LAUNCH_HOLD", source: "incident" },
+    ]);
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("CLI validation requires an explicit read-only protected-run contract", () => {
+  assert.equal(validateEvidenceRunnerArguments([]).reasonCode, "READ_ONLY_FLAG_REQUIRED");
+  assert.equal(
+    validateEvidenceRunnerArguments(["--read-only"]).reasonCode,
+    "REQUIRE_READY_FLAG_REQUIRED",
+  );
+  assert.equal(validateEvidenceRunnerArguments([
+    "--read-only",
+    "--source-commit", sourceCommit,
+    "--expected-live-commit", sourceCommit,
+    "--token", "secret",
+  ]).reasonCode, "ARGUMENT_UNKNOWN");
+  assert.equal(validateEvidenceRunnerArguments([
+    "--read-only",
+    "--require-ready",
+    "--source-commit", sourceCommit,
+    "--expected-live-commit", sourceCommit,
+  ]).ok, true);
+  assert.equal(validateEvidenceRunnerArguments([
+    "--read-only",
+    "--require-ready",
+    "--plan-file", "plan.json",
+    "--source-commit", sourceCommit,
+    "--expected-live-commit", sourceCommit,
+  ]).reasonCode, "ARGUMENT_UNKNOWN");
+  assert.equal(evidenceRunnerExitCode({ ok: false }), 1);
+  assert.equal(evidenceRunnerExitCode({ ok: true }), 0);
+});
+
+test("the provider plan is accepted only as one bounded protected JSON secret", () => {
+  const fixture = createFixture();
+  try {
+    assert.deepEqual(parseEvidencePlanSecret({}), {
+      ok: false,
+      reasonCode: "PLAN_SECRET_MISSING",
+    });
+    assert.deepEqual(parseEvidencePlanSecret({ RIVT_PROVIDER_EVIDENCE_PLAN_JSON: "{" }), {
+      ok: false,
+      reasonCode: "PLAN_SECRET_INVALID",
+    });
+    assert.deepEqual(parseEvidencePlanSecret({
+      RIVT_PROVIDER_EVIDENCE_PLAN_JSON: "x".repeat(32 * 1024 + 1),
+    }), {
+      ok: false,
+      reasonCode: "PLAN_SECRET_TOO_LARGE",
+    });
+    const parsed = parseEvidencePlanSecret({
+      RIVT_PROVIDER_EVIDENCE_PLAN_JSON: JSON.stringify(fixture.plan),
+    });
+    assert.equal(parsed.ok, true);
+    assert.deepEqual(parsed.plan, fixture.plan);
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
