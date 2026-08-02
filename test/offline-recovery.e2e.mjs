@@ -111,6 +111,15 @@ try {
   });
   const page = await context.newPage();
   let serveApi = true;
+  const browserErrors = [];
+  const failedRequests = [];
+  page.on("pageerror", (error) => browserErrors.push(error.message));
+  page.on("requestfailed", (request) => {
+    failedRequests.push({
+      path: new URL(request.url()).pathname,
+      reason: request.failure()?.errorText ?? "unknown",
+    });
+  });
 
   await page.route("**/api/**", (route) => {
     if (!serveApi) return route.abort("internetdisconnected");
@@ -207,7 +216,18 @@ try {
   serveApi = false;
   await context.setOffline(true);
   await page.reload({ waitUntil: "domcontentloaded", timeout: 20_000 });
-  await page.getByRole("button", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+  try {
+    await page.getByRole("button", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
+  } catch (error) {
+    console.error("Offline workspace did not reopen", {
+      url: page.url(),
+      title: await page.title(),
+      body: (await page.locator("body").innerText()).slice(0, 500),
+      browserErrors,
+      failedRequests,
+    });
+    throw error;
+  }
   await page.getByText("You're offline. Supported field work can be saved on this device.", { exact: true }).waitFor({ timeout: 15_000 });
   assert.equal(await page.getByText(/RIVT is having trouble connecting/i).count(), 0, "An explicitly offline device should reopen its limited cached workspace");
 
