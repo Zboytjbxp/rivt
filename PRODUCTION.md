@@ -92,7 +92,7 @@ APPLE_PRIVATE_KEY=
 APPLE_REDIRECT_URI=https://rivt.pro/api/auth/apple/callback
 ```
 
-Verify `rivt.pro` with the email provider before inviting users. Never use capture delivery in production. Generate invitation codes from an authorized operations terminal with `npm run invite:create -- --email=user@example.com --role=contractor`; only the one-time raw code is printed.
+Verify `rivt.pro` with the email provider before inviting users. Never use capture delivery in production. Generate invitation codes from an authorized operations terminal with `npm run invite:create -- --create --email=user@example.com --role=contractor`; only the newly generated raw code is printed once. Later inspection, capacity changes, and revocation use the non-secret record ID: `npm run invite:create -- --status --invite-id=<uuid>`, `npm run invite:create -- --update --invite-id=<uuid> --update-max-uses=25`, or `npm run invite:create -- --revoke --invite-id=<uuid>`. Revocation only succeeds for an active invite and does not print the invite code or its hashes. Generated codes are preferred. If an exceptional operator-selected code is required, run `npm run invite:create -- --create --allow-manual-code` from an interactive terminal and enter the value at the hidden prompt, or provide it through protected standard input from an approved secret-handling tool. Never place a raw invite in argv, an environment variable, a literal shell pipeline, or retained command history; manual values are not echoed by the CLI.
 
 Production sender verification was completed on 2026-06-19. The Resend API key is sending-only and restricted to `rivt.pro`; the verified sender remains `RIVT <support@rivt.pro>`. Keep the existing Google Workspace root MX record intact. Resend uses only the `send.rivt.pro` return-path MX/SPF records.
 
@@ -158,6 +158,17 @@ Legacy `account.updated` is not part of this Accounts v2 snapshot money-state co
 
 Keep the feature disabled if the Connected-accounts destination, signed-delivery proof, support ownership, or merchant onboarding review is incomplete. A Connected-accounts destination and dedicated secret were installed on 2026-08-01, but no Stripe-signed matching durable transition has been proved and scope attestation remains unset. Production ACH is therefore disabled and setup-required. Disabling new links must not hide existing payment status records or stop signed webhook processing for already-submitted payments.
 
+The current source prepares a protected, manually dispatched
+`Production Provider Evidence` workflow for read-only verification. Its compiled
+disabled-payment adapter compares protected Railway variables, the live RIVT
+health response, and Stripe Accounts v2 in one process. A one-way runtime
+configuration fingerprint binds the live process to the Railway values without
+exposing the credentials. This workflow is candidate code, not existing
+production evidence: it must run from reviewed protected `master` behind the
+`production-evidence` environment approval. Its unsupported private-route,
+paging, rehearsal, and recovery adapters fail closed and cannot clear those
+separate launch blockers.
+
 Uploads use private S3-compatible object storage and signed download URLs. RIVT production currently targets Railway Object Storage, which exposes an S3-compatible endpoint (`https://t3.storageapi.dev` in Railway's current storage service). Cloudflare R2, AWS S3, Backblaze B2, Supabase Storage S3 compatibility, or another managed S3-compatible provider can be used only if the same private-bucket and signed-URL behavior is preserved.
 
 ```bash
@@ -173,6 +184,77 @@ MAX_UPLOAD_MB=10
 ```
 
 For Railway Object Storage, copy the bucket name, endpoint, access key, and secret key from the Railway storage service into the web service variables. Keep `S3_REGION=auto` when Railway reports `auto`, keep `S3_FORCE_PATH_STYLE=false` unless the provider explicitly requires path-style requests, and leave `S3_PUBLIC_BASE_URL` blank for private customer files. The API intentionally fails closed with `503 OBJECT_STORAGE_UNAVAILABLE` / setup-required health output when object storage is missing; there is no local upload fallback.
+
+## Independent encrypted database backups
+
+The application bucket is not the disaster-recovery copy. RIVT's prepared
+backup path writes an encrypted PostgreSQL logical snapshot to a separate
+S3-compatible provider and refuses to run unless all of these controls are
+present:
+
+- a dedicated `BACKUP_DATABASE_URL` role with no database, schema, table, or
+  sequence write privileges;
+- dedicated `BACKUP_DESTINATION_S3_*` credentials and a bucket/prefix separate
+  from the application `S3_*` values;
+- HTTPS storage, bucket versioning, COMPLIANCE Object Lock, at least 30 days of
+  default retention, and an exact enabled lifecycle rule for the backup prefix;
+- a unique object version with an exact digest and full 40-character
+  `SOURCE_COMMIT`; and
+- a random 32-byte `BACKUP_ENCRYPTION_KEY`. New backups use the lossless v2
+  PostgreSQL-text format and do not accept a weak
+  passphrase. `BACKUP_ENCRYPTION_KEY_PREVIOUS` exists only to read older
+  artifacts while a key rotation is being completed.
+
+The code supports Backblaze B2's S3-compatible private buckets and Object Lock;
+B2 is the current recommended independent destination because the estimated
+RIVT backup set is within its free storage allowance. That is a recommendation,
+not a configured production claim. Creating the bucket, credentials, or a
+scheduled Railway job is a separate provider change that requires founder cost
+approval.
+
+After at least one artifact exists, run the read-only policy/freshness verifier
+with:
+
+```bash
+npm run backup:verify
+```
+
+For the first artifact, review the provider policy before starting the job; the
+backup command independently re-checks the same protection controls and fails
+before writing if they do not match.
+
+The verifier requires the protected `BACKUP_ENCRYPTION_KEY` and, during an
+approved rotation, `BACKUP_ENCRYPTION_KEY_PREVIOUS`. It validates the provider
+upload time, exact immutable version, digest, retention, and envelope, then
+AEAD-authenticates, decrypts, and validates that the payload is structurally
+restore-usable and bound to the protected creation time and source commit. The
+GitHub workflow publishes only the bounded sanitized receipt.
+
+Run backup creation only from the dedicated scheduled job:
+
+```bash
+npm run backup:logical-artifact
+```
+
+Restore is deliberately separate. Select one exact object key, immutable
+version ID, and SHA-256 digest; use dedicated `RESTORE_SOURCE_S3_*` read
+credentials; point `RESTORE_DATABASE_URL` at a temporary isolated database;
+and set `CONFIRM_RESTORE_TARGET_ISOLATED=true` only after checking that target.
+The artifact is downloaded and its COMPLIANCE lock, metadata, digest, envelope,
+and encryption authentication are verified before the target database is
+opened. The evidentiary drill performs the restore and then compares every
+supported public table, row count, content digest, and sequence in the same
+measured process. Run it once:
+
+```bash
+npm run restore:drill -- --apply-migrations
+```
+
+The restore and verification report separate measured durations and must stay
+within the combined 240-minute RTO. A successful local test does not satisfy
+launch readiness; production requires a real scheduled backup within 14 hours,
+the hourly external freshness alarm, a physically received alert test, and a
+fresh named-version restore drill.
 
 ## Railway Setup
 

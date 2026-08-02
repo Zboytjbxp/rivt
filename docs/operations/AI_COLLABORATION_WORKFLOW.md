@@ -15,7 +15,7 @@ The goal is simple:
 2. Default work happens on AI-specific branches, not directly on `master`.
 3. One branch has one owner.
 4. Only the branch owner may amend, squash, rebase, or force-push that branch.
-5. No one rewrites already-public `master` history unless Michael explicitly asks for it.
+5. No one rewrites already-public `master` history unless the product owner explicitly asks for it.
 
 ## Branch Naming
 
@@ -124,7 +124,7 @@ Preferred path:
 
 1. AI works on its own branch
 2. AI pushes that branch
-3. other AI or Michael reviews from that branch
+3. another AI or the product owner reviews from that branch
 4. branch is merged to `master`
 5. Railway deploys from `master`
 
@@ -220,7 +220,7 @@ For this repo, use this default:
 - all non-trivial Claude work should start from fresh `origin/master`
 - all handoffs must point to a pushed commit, not just local files
 
-If Michael wants one AI to finish the other's work fast, the safe rule is:
+If the product owner wants one AI to finish the other's work fast, the safe rule is:
 
 - continue forward with a new commit
 - never rewrite backward

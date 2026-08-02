@@ -1,9 +1,11 @@
 # Provider containment receipt - 2026-08-01
 
-This receipt records non-secret evidence and the owner's exact disabled-mode
-approval. It does not enable Stripe invoice bank payments, close the
-credential incident, approve Railway Stage 1, authorize deployment, or
-authorize launch.
+This receipt preserves non-secret historical evidence and the owner's exact
+disabled-mode approval at that checkpoint. It does not enable Stripe invoice
+bank payments, close the credential incident, approve Railway Stage 1,
+authorize deployment, or authorize launch. The stricter current readiness gate
+does not treat this checked-in receipt or its checked-in policy as
+provider-authenticated evidence.
 
 ## Source and release boundary
 
@@ -72,9 +74,10 @@ RIVT row were not enumerated during this containment action.
 
 ## Exact disabled-mode approval
 
-- At `2026-08-01T03:26:10.3842506Z`, Michael supplied this approval (punctuation
-  normalized to ASCII in the repository record):
-  "I, Michael, approve RIVT's production bank-payment configuration in
+- At `2026-08-01T03:26:10.3842506Z`, the founder role supplied this approval.
+  Personal attribution is intentionally omitted from the public record while
+  the approved scope is preserved in role-only form:
+  "The RIVT founder approves RIVT's production bank-payment configuration in
   disabled mode as recorded on August 1, 2026. This does not enable ACH,
   authorize deployment, approve a worker, or authorize launch."
 - The machine-readable policy records the SHA-256 of this receipt and binds
@@ -100,10 +103,16 @@ RIVT row were not enumerated during this containment action.
 - The actions were selected because their expected incremental usage was below
   the owner's $2 authorization. Actual corrective-deployment compute usage
   remains unreconciled and is not represented as zero cost.
-- Disabled-mode payment-provider approval is complete. Still required before
-  payment activation: Stripe-signed Connected-accounts delivery, a matching
-  durable payment-state transition, scope attestation only after that proof,
-  a new enabled-mode approval, launch readiness, and an explicit activation
-  decision.
+- Historical disabled-mode payment-provider approval is recorded, but the
+  current payment-provider prerequisite remains blocked by
+  `PAYMENT_PROVIDER_EVIDENCE_UNVERIFIED`. A trusted in-process provider verifier
+  must supply the exact control/provider/digest identity for a strict typed
+  payment-state receipt; this repository record cannot authenticate itself.
+  Still required before payment activation: Stripe-signed Connected-accounts
+  delivery, a matching durable payment-state transition, scope attestation
+  only after that proof, a new enabled-mode approval, launch readiness, and an
+  explicit activation decision.
+- This documentation-only hardening performed no provider mutation, production
+  read or write, deployment, resource creation, or paid action.
 - The last conservative Railway Stage 1 worker estimate was about $10.05 per
   month, which exceeds the current $2 authorization. No worker action occurred.

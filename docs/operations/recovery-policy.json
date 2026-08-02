@@ -1,21 +1,66 @@
 {
-  "version": 1,
-  "status": "approved",
+  "version": 3,
+  "status": "blocked",
   "targets": {
     "rpoMinutes": 1440,
     "rpoBasis": "Gate A pilot target: restore from the most recent daily logical backup artifact. RIVT does not process escrow, payroll, or platform-held job payments in Gate A.",
     "rtoMinutes": 240,
     "rtoBasis": "Gate A pilot target: restore application service and managed PostgreSQL/object-storage-backed records within 4 hours using the documented logical backup artifact restore path."
   },
+  "backupSchedule": {
+    "status": "pending_provider_setup",
+    "cadenceMinutes": null,
+    "owner": "backup-operations-owner",
+    "verifiedAt": null,
+    "evidenceProvider": null,
+    "evidence": null,
+    "evidenceSha256": null
+  },
+  "latestSuccessfulBackup": {
+    "status": "missing_continuous_evidence",
+    "completedAt": null,
+    "artifactKey": null,
+    "tableCount": null,
+    "rowCount": null,
+    "evidenceProvider": null,
+    "evidence": null,
+    "evidenceSha256": null
+  },
+  "missedBackupAlert": {
+    "status": "untested",
+    "retryAllowanceMinutes": null,
+    "destination": null,
+    "lastTestedAt": null,
+    "evidenceProvider": null,
+    "evidence": null,
+    "evidenceSha256": null
+  },
   "backupRetention": {
     "days": 30,
     "storage": "private S3-compatible managed object storage",
     "encryption": "AES-256-GCM logical backup artifacts",
-    "owner": "Michael"
+    "owner": "backup-operations-owner",
+    "enforcement": {
+      "status": "unverified",
+      "mode": null,
+      "verifiedAt": null,
+      "evidenceProvider": null,
+      "evidence": null,
+      "evidenceSha256": null
+    }
+  },
+  "failureDomain": {
+    "status": "unverified",
+    "primaryProvider": "Railway",
+    "backupProvider": null,
+    "verifiedAt": null,
+    "evidenceProvider": null,
+    "evidence": null,
+    "evidenceSha256": null
   },
   "restoreDrillCadence": {
     "days": 30,
-    "owner": "Michael",
+    "owner": "backup-operations-owner",
     "nextDueAt": "2026-08-24T15:43:08.361Z"
   },
   "latestNamedArtifactRestore": {
@@ -27,18 +72,22 @@
     "restoreDurationMs": 84798,
     "verificationDurationMs": 10618,
     "target": "isolated Railway PostgreSQL service Postgres-r_TW, deleted after verification",
-    "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-25---launch-readiness-restore-and-incident-rehearsal"
+    "evidenceProvider": null,
+    "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md",
+    "evidenceSha256": "2715d7318b7a98506455cab40897ca216ac015c9626ea7483eed61e2c4acf8c9"
   },
   "approvals": {
     "founder": {
-      "status": "approved",
-      "approvedBy": "Michael",
-      "approvedAt": "2026-06-22T03:02:39.0867156Z"
+      "status": "superseded",
+      "approvedBy": "founder",
+      "approvedAt": "2026-06-22T03:02:39.0867156Z",
+      "configurationDigest": null
     },
     "operations": {
-      "status": "approved",
-      "approvedBy": "Michael",
-      "approvedAt": "2026-06-22T03:02:39.0867156Z"
+      "status": "superseded",
+      "approvedBy": "operations-owner",
+      "approvedAt": "2026-06-22T03:02:39.0867156Z",
+      "configurationDigest": null
     }
   }
 }

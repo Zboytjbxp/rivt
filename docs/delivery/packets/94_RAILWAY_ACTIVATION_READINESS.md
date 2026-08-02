@@ -221,7 +221,7 @@ The later approval-binding follow-up adds focused proof that receipt edits and
 runtime-scope substitution invalidate approval; hosted parity for that
 follow-up will be recorded from the next PR-head run.
 
-Michael subsequently approved the exact production bank-payment configuration
+The founder role subsequently approved the exact production bank-payment configuration
 in disabled mode at `2026-08-01T03:26:10.3842506Z`. The approval is bound to
 the reviewed configuration digest and clears only the payment-provider
 approval prerequisite. ACH remains off, and the separate

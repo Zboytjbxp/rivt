@@ -3,7 +3,7 @@
 - Status: contained; exact disabled-mode payment-provider closure is complete; incident closure, reviewed deployment, final approval, and strict Stage 1 preflight remain open
 - Severity: critical
 - Environment: Railway production
-- Incident owner: Michael
+- Incident owner role: `incident-commander`
 - Source at detection: `92a8451b8190f5119384a4970fb1a324503df995`
 - Detected at: between `2026-07-29T19:01:00-04:00` and
   `2026-07-29T21:42:25-04:00` (repository-bounded; exact operator-observed time
@@ -101,10 +101,11 @@ moment.
   corrected JSON value replay in logical restores. Railway deployment
   prefix `0b020e13` served that exact source and public `/api/health` returned
   `ok: true`.
-- The operational launch checker now fails closed while this incident remains
-  open. `incident:readiness` still passes the standing routing configuration,
-  while `launch:readiness --require-ready` exits nonzero with
-  `ACTIVE_LAUNCH_HOLD`. The hold is recorded in
+- At that containment checkpoint, the operational launch checker failed closed
+  on `ACTIVE_LAUNCH_HOLD` while the earlier incident-routing check still
+  passed. The 2026-08-01 follow-up supersedes that result: incident readiness
+  now also blocks on the unverified private backup route and approvals that do
+  not follow final incident evidence. The hold is recorded in
   `docs/operations/incident-routing.json` and may be cleared only after every
   exit criterion in this incident record is verified.
 - Final local verification passes production build, application and security
@@ -298,7 +299,7 @@ moment.
   transaction that had remained open beyond RIVT's 10-minute lifetime. It
   redirected to the honest authentication error in 10 ms, before a provider
   token exchange, and is not counted as credential proof.
-- A completely fresh journey for `zboytjbxp@gmail.com` then completed at
+- A completely fresh founder-owned account journey then completed at
   14:18:31 UTC. The callback returned its redirect in 131 ms, established the
   server session, and the controlled browser rendered the authenticated RIVT
   Home workspace. No password, token, code, cookie, or secret was recorded.
@@ -553,7 +554,7 @@ application-ledger review continues through the recorded owner-acceptance time
 
 Codex completed the initial read-only review at `2026-07-31T13:07:24.122Z`,
 the Railway follow-up at `2026-07-31T19:10:46.1221413Z`, and the Google Cloud
-follow-up at `2026-07-31T19:32:50.0134267Z` under Michael's incident
+follow-up at `2026-07-31T19:32:50.0134267Z` under the incident-owner role's
 authorization against deployed production source
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`. No provider setting, credential,
 customer record, payment, deployment, or paid resource was changed. Provider
@@ -596,7 +597,7 @@ state; it is not proof that an action absent from those tables never occurred.
 
 ## Incident-owner acceptance of forensic limits
 
-- At `2026-07-31T12:22:03.895Z`, incident owner Michael stated: "I accept that
+- At `2026-07-31T12:22:03.895Z`, the incident-owner role stated: "I accept that
   all available provider evidence was reviewed and no misuse indicator was
   found, but historical successful PostgreSQL access and direct bucket reads
   cannot be reconstructed. RIVT cannot honestly prove that no historical access
@@ -610,7 +611,7 @@ state; it is not proof that an action absent from those tables never occurred.
   pepper blind spots; reconstruct missing history; lower the incident severity;
   close the incident; clear `ACTIVE_LAUNCH_HOLD`; authorize deployment; or
   approve paid infrastructure work.
-- At `2026-07-31T19:39:34.5524830Z`, incident owner Michael stated: "I accept
+- At `2026-07-31T19:39:34.5524830Z`, the incident-owner role stated: "I accept
   these three forensic limits: RIVT cannot prove the retired VAPID private key
   was never used outside RIVT; cannot prove an encrypted backup and retired
   backup key were never copied and used offline; and cannot prove the retired
@@ -660,7 +661,7 @@ state; it is not proof that an action absent from those tables never occurred.
 - A dedicated Stripe `Connected accounts` destination and signing secret now
   exist, but a real Stripe-signed delivery that causes a matching durable
   payment-state transition has not been proved. Scope attestation remains
-  unset and ACH remains disabled. At `2026-08-01T03:26:10.3842506Z`, Michael
+  unset and ACH remains disabled. At `2026-08-01T03:26:10.3842506Z`, the founder role
   approved only the exact disabled production configuration; the approval is
   bound to its machine-readable digest and does not enable ACH, authorize
   deployment or a worker, clear this incident, or authorize launch.
@@ -672,6 +673,14 @@ state; it is not proof that an action absent from those tables never occurred.
   decisions, and the remaining exit criteria below. Any future ACH enablement
   separately requires signed-delivery proof, scope attestation, and new
   approval.
+- A follow-up standard repository security scan completed `160/160` reviewed
+  files with two medium and three low findings. It identified a reusable live
+  pilot invite recorded in public repository evidence, recovery checks that
+  could pass without continuous-backup proof, and public personal incident-
+  contact details. Current-tree remediation removes the disclosed values and
+  fails closed on missing private-route and recovery evidence. The live invite
+  has not been revoked and the previously created hosted synthetic issue has
+  not been edited; both remain explicit live cleanup actions.
 
 ## Recovery plan
 
@@ -709,6 +718,12 @@ This incident remains open until:
   digest, and strict preflight pass; and
 - the Stripe `Connected accounts` destination gap is resolved or invoice bank
   payments are demonstrably disabled before launch-hold clearance.
+- the exposed reusable production pilot invite is revoked or replaced through
+  a separately approved live operation, and its nonsecret record ID is logged;
+- any hosted synthetic issue containing the retired private contact data is
+  cleaned through a separately approved live operation; and
+- the backup incident role points to an access-controlled private route with a
+  recent successful route test and content-bound evidence.
 
 Incident closure alone does not authorize deployment, spending, or Stage 1
 activation.

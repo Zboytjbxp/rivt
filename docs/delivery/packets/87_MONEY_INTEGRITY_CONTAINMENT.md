@@ -212,8 +212,99 @@ outbox/reconciliation requirement for every external side effect.
 No production data, provider configuration, paid resource, deployment, or
 live payment was changed.
 
-Packet status: **Integrated, locally re-verified, independently reviewed with
-Stage 1 source-safety, and covered by sealed exact-range Codex Security scan
-`7e499cf8-be43-4b6d-ace9-e61f0978a27c` with zero reportable findings;
-exact-runtime CI, merge, deployment, provider-scope proof, and exact-source
-acceptance remain pending**.
+Packet status: **Integrated and locally re-verified with Stage 1 source-safety;
+the source candidate has a complete sealed exact-tree security review, while
+merge, deployment, provider-scope proof, and exact-source acceptance remain
+pending**.
+
+## 2026-08-01 local security follow-up
+
+Sealed diff scan `7d0d53ee-e18b-4c94-92fc-08fa324ff3f4` reviewed all 23
+candidate paths and drove local remediation for protected invite entry,
+sanitized synthetic-monitor evidence, public operational-document safety, and
+strict typed receipts for payment state, the private backup route, synthetic
+monitoring, error monitoring, paging, incident rehearsal, and recovery.
+Receipt paths reject symlinks, non-files, repository escapes, canonical aliases,
+and reuse by resolved path or content where independent proof is required.
+Checked-in receipts cannot pass without exact control/provider/digest
+identities from a trusted in-process provider verifier. The ordinary readiness
+CLI does not inject those identities; the later protected runner described
+below is a separate, fail-closed candidate integration. The historical
+disabled-mode payment approval remains preserved but
+does not authenticate its own receipt for the stricter current gate. Build,
+full lint, 327/327
+unit/frontend checks, 88/88 focused security regressions, final browser E2E,
+dependency audit, and diff integrity pass. The aggregate command skipped 21
+database-backed suites because this worktree has no isolated test database;
+that gap remains explicit. Readiness remains blocked on genuine independent
+provider evidence and the active launch hold. This follow-up made no
+production, provider, deployment, Git publication, resource, data, or paid
+change.
+
+## 2026-08-01 working-tree security checkpoint
+
+Codex Security scan `65a8c581-8136-459c-9926-58220a85430d` recorded a
+pre-latest-candidate no-cost working-tree review with one medium and three low
+findings. It is not final exact-tree evidence for the current candidate. The local
+candidate now binds scheduled synthetic checks to an independently maintained
+full production revision, limits incident issue reuse and closure to the exact
+GitHub Actions bot-owned issue, detects quoted invite JSON in public documents,
+and enforces the receipt-bound restore-plus-verification duration against the
+approved RTO. The separate future enabled-payment verifier contract remains
+deferred; bank payments remain disabled and no payment readiness is inferred.
+
+Focused security regressions pass 91/91. The combined candidate passes build,
+full application/security/public-document lint, the aggregate test command,
+browser E2E, the production dependency audit with zero known vulnerabilities,
+and diff integrity. The aggregate run passed 352 unit/frontend checks and
+three non-database integration checks; its PostgreSQL-backed suites skipped at
+that time because no isolated `TEST_DATABASE_URL` was configured. A later
+fresh, loopback-only PostgreSQL 18 run closed that local gap: the database was
+reset through migration 42 and `npm run test:integration` passed 25/25 tests
+with zero failures, cancellations, or skips before the disposable server was
+stopped. Exact GitHub Node 20/PostgreSQL 16 CI for the final published
+candidate remains pending. Strict launch
+readiness remains blocked on the active hold and genuine provider, monitoring,
+incident, approval, backup, and recovery proof. The protected GitHub
+`production` Environment variable `RIVT_PRODUCTION_SOURCE_COMMIT` must be set
+to the independently verified live 40-character commit before the scheduled
+monitor can run successfully. This closure made no commit, push, merge,
+deployment, provider mutation, production request, data change, resource
+creation, or paid change.
+
+## 2026-08-01 release-candidate evidence hardening (unpublished)
+
+The current working tree prepares a protected, read-only provider-evidence
+workflow. Its compiled disabled-payment adapter compares the protected Railway
+configuration, live RIVT health, and Stripe Accounts v2 in the same process.
+It now uses a short-lived nonce-, timestamp-, and source-commit-bound HMAC,
+derived from both Stripe secrets and exact enabled/scope values, to prove the
+running service loaded the same configuration without publishing a reusable
+secret-derived value. The candidate public stable fingerprint was removed and
+independent follow-up suppressed that candidate as remediated. The same runner
+has compiled adapters for the GitHub synthetic check and Sentry ingestion;
+private-route, paging, rehearsal, and recovery adapters remain unsupported and
+fail closed.
+
+Backup freshness now AEAD-decrypts the newest protected artifact and validates
+its snapshot structure as restore-usable before accepting freshness. The
+backup-role preflight rejects sequence `USAGE` or `UPDATE` privileges and
+recursively reachable `SET`-able roles. Fresh local verification passes build,
+application/security/public-document lint, 425/425 unit/frontend checks, 25/25
+disposable loopback PostgreSQL integration tests, all three browser E2E
+journeys, all five required UI smoke suites, and the production dependency audit
+with zero vulnerabilities. Final source-candidate scan
+`scan_696c3b127e03_20260802T024900Z` is sealed with 28/28 worklist coverage,
+four closed intermediate-patch candidates, zero reportable findings, and no
+deferred work. The final evidence-only documentation update is separately
+covered by public-document safety and diff-integrity checks.
+
+This source capability is not accepted provider evidence. It has not been
+run from protected `master`, approved through the
+`production-evidence` environment, merged, or deployed. Packet 87 still requires
+an exact-candidate hosted database run and read-only provider verification before
+deployment, and ACH remains disabled/setup-required. No signed connected-account
+delivery or matching durable payment transition is claimed. Strict launch
+readiness remains RED with exactly 19 blockers and incident readiness remains
+blocked with exactly 8 findings. No deployment, provider mutation, ACH
+enablement, production-data action, resource creation, or cost occurred.

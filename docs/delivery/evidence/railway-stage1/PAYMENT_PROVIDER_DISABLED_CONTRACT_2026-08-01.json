@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "controlId": "bank-payment-provider-state",
+  "type": "provider-payment-state-verification",
+  "provider": "railway-stripe",
+  "status": "verified",
+  "timestamp": "2026-08-01T02:21:47.8089240Z",
+  "mode": "disabled",
+  "featureFlagVerifiedOff": true,
+  "providerDestinationScope": "connected_accounts",
+  "runtimeScopeAttestation": "unset",
+  "signedDeliveryVerified": false,
+  "enabled": false,
+  "configured": false,
+  "webhookConfigured": true,
+  "providerMode": "setup_required"
+}

@@ -1,30 +1,45 @@
 {
-  "version": 1,
+  "version": 4,
   "status": "approved",
   "routeApproval": {
     "status": "approved",
-    "approvedBy": "Michael",
+    "approverRoleId": "founder",
     "approvedAt": "2026-06-22T03:09:36.0366141Z",
     "scope": "Gate A pilot incident-routing plan: primary owner, backup owner, support hours, synthetic monitor, Sentry error monitoring, and first pilot escalation route."
   },
   "launchHold": {
     "active": true,
-    "reason": "Production credential containment, bounded provider review, exact-source security review, hosted source/database CI, and exact disabled-mode payment approval are complete. Incident exit, final approval, and reviewed deployment remain open; any future ACH enablement separately requires signed-delivery proof and new approval. Clear only after every exit criterion in the 2026-07-29 incident record is verified.",
+    "reason": "Historical production credential containment, bounded provider review, hosted source/database CI, and exact disabled-mode payment approval are recorded. The current uncommitted hardening candidate still requires final exact-source security review, hosted source/database CI, trusted provider and recovery evidence, incident exit, final approval, and reviewed deployment. Any future ACH enablement separately requires signed-delivery proof and new approval. Clear only after every exit criterion in the 2026-07-29 incident record is verified.",
     "incident": "docs/operations/incidents/2026-07-29-production-credential-exposure.md",
     "setAt": "2026-07-30T04:39:06.4424071Z"
   },
   "primaryOwner": {
-    "name": "Michael",
-    "role": "Founder / incident commander",
-    "email": "support@rivt.pro",
-    "phoneStatus": "not_recorded"
+    "roleId": "incident-commander",
+    "contactRouteId": "primary-support-route"
   },
   "backupOwner": {
-    "name": "Anya Tingle",
-    "role": "Partner / wife",
-    "email": "abota1994@gmail.com",
-    "phoneStatus": "recorded"
+    "roleId": "backup-incident-owner",
+    "contactRouteId": "private-backup-route"
   },
+  "contactRoutes": [
+    {
+      "id": "primary-support-route",
+      "status": "configured",
+      "kind": "organization-support-inbox",
+      "record": "RIVT support route"
+    },
+    {
+      "id": "private-backup-route",
+      "status": "blocked",
+      "kind": "private-incident-roster",
+      "record": "No access-controlled backup route and successful route-test evidence have been recorded yet.",
+      "routeRef": null,
+      "evidenceProvider": null,
+      "lastVerifiedAt": null,
+      "evidencePath": null,
+      "evidenceSha256": null
+    }
+  ],
   "supportHours": {
     "timezone": "America/New_York",
     "coverage": "Monday-Saturday, 9:00 AM-5:00 PM",
@@ -35,8 +50,13 @@
       "id": "github-production-synthetic",
       "category": "synthetic_monitor",
       "status": "configured",
+      "provider": "GitHub Actions",
       "route": "GitHub issue: Production synthetic check failing",
-      "frequency": "30 minutes"
+      "frequency": "30 minutes",
+      "evidenceProvider": null,
+      "lastVerifiedAt": null,
+      "evidencePath": null,
+      "evidenceSha256": null
     },
     {
       "id": "dedicated-error-monitoring",
@@ -45,7 +65,11 @@
       "provider": "Sentry Cloud",
       "route": "Sentry project for RIVT production API errors; Railway RIVT service has SENTRY_DSN configured.",
       "implementationStatus": "code_ready",
-      "evidence": "server/monitoring.js captures HTTP 500/startup/unhandled process errors through the final redaction boundary without exposing DSNs. Railway deployment c6ddf9c8-91a3-4953-a47c-70c72deb154e serves exact source f505e5fcdd9874a172bb61b59ab083a2ff86e6d0 with error monitoring configured. Replacement-key event 52d1e8add9f7492eb440de033209da0e and post-retirement event 7ed1315e474448ce9807dbb4bd6bf420 were accepted and indexed in production; the prior Default key is disabled."
+      "historicalEvidence": "server/monitoring.js captures HTTP 500/startup/unhandled process errors through the final redaction boundary without exposing DSNs. Railway deployment c6ddf9c8-91a3-4953-a47c-70c72deb154e serves exact source f505e5fcdd9874a172bb61b59ab083a2ff86e6d0 with error monitoring configured. Replacement-key event 52d1e8add9f7492eb440de033209da0e and post-retirement event 7ed1315e474448ce9807dbb4bd6bf420 were accepted and indexed in production; the prior Default key is disabled.",
+      "evidenceProvider": null,
+      "lastVerifiedAt": null,
+      "evidencePath": null,
+      "evidenceSha256": null
     },
     {
       "id": "paging",
@@ -54,50 +78,69 @@
       "provider": "Sentry Cloud issue alert",
       "route": "Sentry high-priority issue alert: notify suggested assignees and, if none found, recently active members for project node-express.",
       "frequency": "Notify on every trigger",
-      "evidence": "Sentry alert rule 'Send a notification for high priority issues' is connected to project node-express, notifies suggested assignees or recently active members on every qualifying trigger, and recorded the exact replacement-key verification issue at 2026-07-31 04:13 UTC. This is the first pilot escalation route; dedicated phone/SMS paging should be added before broader scale."
+      "historicalEvidence": "Sentry alert rule 'Send a notification for high priority issues' is connected to project node-express, notifies suggested assignees or recently active members on every qualifying trigger, and recorded the exact replacement-key verification issue at 2026-07-31 04:13 UTC. This is the first pilot escalation route; dedicated phone/SMS paging should be added before broader scale.",
+      "evidenceProvider": null,
+      "lastVerifiedAt": null,
+      "evidencePath": null,
+      "evidenceSha256": null
     }
   ],
   "rehearsals": [
     {
+      "id": "rehearsal-2026-07-25",
       "status": "passed",
       "completedAt": "2026-07-25T15:46:39.951Z",
       "scenario": "public-health-provider-failure-with-stale-smoke-residue",
-      "commander": "Michael",
-      "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-25---launch-readiness-restore-and-incident-rehearsal",
+      "commanderRoleId": "incident-commander",
+      "historicalEvidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-25---launch-readiness-restore-and-incident-rehearsal",
+      "evidenceProvider": null,
+      "evidencePath": null,
+      "evidenceSha256": null,
       "summary": "Production monitoring passed. The first live Gate A hardening attempt correctly stopped on 17 stale smoke organizations; the guarded transactional cleanup closed only those matched records, the rerun passed with zero public demo findings, and Sentry accepted rehearsal event 97f435d5952c4d8885a0fc6c63e64500 with HTTP 200."
     },
     {
+      "id": "rehearsal-2026-06-22",
       "status": "passed",
       "completedAt": "2026-06-22T03:31:05.8720277Z",
       "scenario": "public-health-provider-failure",
-      "commander": "Michael",
-      "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#incident-rehearsal---2026-06-22",
+      "commanderRoleId": "incident-commander",
+      "historicalEvidence": "docs/delivery/DEPLOYMENT_LEDGER.md#incident-rehearsal---2026-06-22",
+      "evidenceProvider": null,
+      "evidencePath": null,
+      "evidenceSha256": null,
       "summary": "Production monitor passed, live Gate A smoke passed inside the Railway RIVT service, and Sentry accepted rehearsal event 43fc7567f458490582db1f6642e2e0ea with HTTP 200."
     },
     {
+      "id": "rehearsal-attempt-2026-06-22",
       "status": "blocked",
       "completedAt": "2026-06-22T03:20:29.5545352Z",
       "scenario": "public-health-provider-failure",
-      "commander": "Michael",
-      "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#incident-rehearsal-attempt---2026-06-22",
+      "commanderRoleId": "incident-commander",
+      "historicalEvidence": "docs/delivery/DEPLOYMENT_LEDGER.md#incident-rehearsal-attempt---2026-06-22",
+      "evidenceProvider": null,
+      "evidencePath": null,
+      "evidenceSha256": null,
       "summary": "Production synthetic monitor passed, but the required live Gate A smoke could not run because local DATABASE_URL is blank and Railway CLI token refresh is unauthorized. This does not satisfy the Gate A passed-rehearsal requirement."
     }
   ],
   "approvals": {
     "founder": {
       "status": "approved",
-      "approvedBy": "Michael",
-      "approvedAt": "2026-06-22T03:48:04.1166525Z"
+      "approverRoleId": "founder",
+      "approvedAt": "2026-06-22T03:48:04.1166525Z",
+      "configurationDigest": null
     },
     "support": {
       "status": "approved",
-      "approvedBy": "Michael",
-      "approvedAt": "2026-06-22T03:48:04.1166525Z"
+      "approverRoleId": "support-owner",
+      "approvedAt": "2026-06-22T03:48:04.1166525Z",
+      "configurationDigest": null
     },
     "legalSafety": {
       "status": "approved",
-      "approvedBy": "Michael",
-      "approvedAt": "2026-06-22T03:48:04.1166525Z"
+      "approverRoleId": "legal-safety-owner",
+      "approvedAt": "2026-06-22T03:48:04.1166525Z",
+      "configurationDigest": null
     }
   }
 }
