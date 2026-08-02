@@ -1,5 +1,6 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
+import { assertProductionAuthProviders } from "./production-monitor-contract.js";
 
 const baseUrl = (process.env.RIVT_MONITOR_BASE_URL ?? "https://rivt.pro").replace(/\/+$/, "");
 const expectedCommit = process.env.EXPECTED_SOURCE_COMMIT?.trim();
@@ -74,13 +75,8 @@ if (expectedMatchingJobAlerts) {
 
 const providers = await request("/api/auth/providers");
 assert.equal(providers.payload?.inviteRequired, true, "Pilot invitation gating must remain enabled.");
-assert.equal(providers.payload?.providers?.email?.ok, true, "Email/password auth provider must remain configured.");
+assertProductionAuthProviders(providers.payload);
 assert.equal(providers.payload?.providers?.google?.ok, true, "Google OAuth provider must remain configured.");
-assert.equal(
-  providers.payload?.providers?.sessionSecurity?.ok,
-  true,
-  "Server-side session security must remain configured.",
-);
 assert.ok(providers.payload?.controls, "Provider status must expose operational controls.");
 if (!allowOperationalLockout) {
   assert.equal(providers.payload.controls.signupsDisabled, false, "Signups are disabled unexpectedly.");
