@@ -7,6 +7,7 @@ const DELIVERY_BATCH_SIZE = 20;
 const MAX_DELIVERY_ATTEMPTS = 5;
 const WORKER_INTERVAL_MS = 5_000;
 const STALE_CLAIM_MINUTES = 5;
+const PUSH_DELIVERY_TIMEOUT_MS = 8_000;
 
 const pushSubscriptionSchema = z.object({
   endpoint: z.string().trim().min(16).max(4096),
@@ -22,11 +23,57 @@ const pushUnsubscribeSchema = z.object({
   endpoint: z.string().trim().min(16).max(4096),
 });
 
-let workerTimer = null;
-let workerRunning = false;
+let workerController = null;
 
 function envValue(name, environment = process.env) {
-  return String(environment[name] ?? "").trim();
+  return String(environment?.[name] ?? "").trim();
+}
+
+function boundedRuntimeInterval(value, {
+  name,
+  fallback,
+  minimum,
+  maximum,
+}) {
+  const source = value === null || value === undefined || String(value).trim() === ""
+    ? fallback
+    : value;
+  const parsed = Number(source);
+  if (!Number.isSafeInteger(parsed) || parsed < minimum || parsed > maximum) {
+    throw new Error(`${name} must be an integer from ${minimum} through ${maximum} milliseconds.`);
+  }
+  return parsed;
+}
+
+function pushDeliveryRequired(environment = process.env) {
+  const configured = String(environment?.RIVT_PUSH_REQUIRED ?? "").trim().toLowerCase();
+  if (!configured || configured === "false") return false;
+  if (configured === "true") return true;
+  throw new Error("RIVT_PUSH_REQUIRED must be true or false.");
+}
+
+export function pushDeliveryTimeoutMs(environment = process.env) {
+  return boundedRuntimeInterval(environment?.PUSH_DELIVERY_TIMEOUT_MS, {
+    name: "PUSH_DELIVERY_TIMEOUT_MS",
+    fallback: PUSH_DELIVERY_TIMEOUT_MS,
+    minimum: 1_000,
+    maximum: 10_000,
+  });
+}
+
+export function assertRequiredPushProvider(
+  environment = process.env,
+  status = pushProviderStatus(environment),
+  { required = false } = {},
+) {
+  const configuredAsRequired = pushDeliveryRequired(environment);
+  if (required && !configuredAsRequired) {
+    throw new Error("RIVT_PUSH_REQUIRED=true is required for a hosted worker.");
+  }
+  if (configuredAsRequired && !status.ok) {
+    throw new Error("Push delivery is required, but the VAPID provider is not configured.");
+  }
+  return status;
 }
 
 export function vapidGeneration(publicKey) {
@@ -238,19 +285,35 @@ function retryDelaySeconds(attemptCount) {
 async function markDeliveryFailure(database, delivery, error) {
   const statusCode = Number(error?.statusCode ?? 0);
   if (statusCode === 404 || statusCode === 410) {
-    await database.query("DELETE FROM push_subscriptions WHERE id = $1", [delivery.subscription_id]);
+    const result = await database.query(
+      `WITH current_claim AS (
+         DELETE FROM push_delivery_outbox
+         WHERE id = $1
+           AND status = 'processing'
+           AND attempt_count = $2
+         RETURNING subscription_id
+       ), deleted_subscription AS (
+         DELETE FROM push_subscriptions subscription
+         USING current_claim
+         WHERE subscription.id = current_claim.subscription_id
+         RETURNING subscription.id
+       )
+       SELECT EXISTS (SELECT 1 FROM current_claim) AS updated`,
+      [delivery.id, delivery.attempt_count],
+    );
+    if (result.rows[0]?.updated !== true) return false;
     logInfo("push.subscription_pruned", {
       accountId: delivery.account_id,
       statusCode,
     });
-    return;
+    return true;
   }
 
   const failed = delivery.attempt_count >= MAX_DELIVERY_ATTEMPTS;
   const message = String(error?.message ?? "Web Push delivery failed.")
     .replace(/https?:\/\/\S+/gi, "[push-endpoint]")
     .slice(0, 500);
-  await database.query(
+  const result = await database.query(
     `UPDATE push_delivery_outbox
      SET status = $2,
          next_attempt_at = CASE WHEN $2 = 'pending'
@@ -260,9 +323,18 @@ async function markDeliveryFailure(database, delivery, error) {
          claimed_at = NULL,
          last_error = $4,
          updated_at = now()
-     WHERE id = $1`,
-    [delivery.id, failed ? "failed" : "pending", retryDelaySeconds(delivery.attempt_count), message],
+      WHERE id = $1
+        AND status = 'processing'
+        AND attempt_count = $5`,
+    [
+      delivery.id,
+      failed ? "failed" : "pending",
+      retryDelaySeconds(delivery.attempt_count),
+      message,
+      delivery.attempt_count,
+    ],
   );
+  if (!result.rowCount) return false;
   logWarn("push.delivery_failed", {
     accountId: delivery.account_id,
     notificationId: delivery.notification_id,
@@ -270,24 +342,40 @@ async function markDeliveryFailure(database, delivery, error) {
     statusCode: statusCode || null,
     terminal: failed,
   });
+  return true;
 }
 
-async function markPushDeliverySuccess(database, deliveryId, generation) {
-  await database.query(
+async function markPushDeliverySuccess(database, delivery, generation) {
+  const result = await database.query(
     `WITH delivered AS (
        UPDATE push_delivery_outbox
        SET status = 'sent', sent_at = now(), claimed_at = NULL, last_error = '', updated_at = now()
-       WHERE id = $1
-       RETURNING subscription_id
-     )
-     UPDATE push_subscriptions subscription
-     SET vapid_generation = $2,
-         last_success_at = now(),
-         updated_at = now()
-     FROM delivered
-     WHERE subscription.id = delivered.subscription_id`,
-    [deliveryId, generation],
+      WHERE id = $1
+          AND status = 'processing'
+          AND attempt_count = $2
+        RETURNING subscription_id
+      ), updated_subscription AS (
+        UPDATE push_subscriptions subscription
+        SET vapid_generation = $3,
+            last_success_at = now(),
+            updated_at = now()
+        FROM delivered
+        WHERE subscription.id = delivered.subscription_id
+        RETURNING subscription.id
+      )
+      SELECT EXISTS (SELECT 1 FROM delivered) AS updated`,
+    [delivery.id, delivery.attempt_count, generation],
   );
+  return result.rows[0]?.updated === true;
+}
+
+function deliveryFailureOutcome(delivery, error) {
+  const statusCode = Number(error?.statusCode ?? 0);
+  return statusCode === 404
+    || statusCode === 410
+    || delivery.attempt_count >= MAX_DELIVERY_ATTEMPTS
+    ? "failed"
+    : "retried";
 }
 
 async function deliverClaimed(database, delivery) {
@@ -299,15 +387,19 @@ async function deliverClaimed(database, delivery) {
     }, pushPayload(delivery), {
       TTL: delivery.priority === "high" ? 60 * 60 : 24 * 60 * 60,
       urgency: delivery.priority === "high" ? "high" : "normal",
+      timeout: pushDeliveryTimeoutMs(),
     });
-    await markPushDeliverySuccess(database, delivery.id, deliveryResult.vapidGeneration);
+    const updated = await markPushDeliverySuccess(database, delivery, deliveryResult.vapidGeneration);
+    if (!updated) return "stale";
     logInfo("push.delivery_sent", {
       accountId: delivery.account_id,
       notificationId: delivery.notification_id,
       attemptCount: delivery.attempt_count,
     });
+    return "sent";
   } catch (error) {
-    await markDeliveryFailure(database, delivery, error);
+    const updated = await markDeliveryFailure(database, delivery, error);
+    return updated ? deliveryFailureOutcome(delivery, error) : "stale";
   }
 }
 
@@ -345,36 +437,143 @@ export async function sendNotificationWithVapidFallback(
   throw firstError ?? new Error("Web Push delivery failed.");
 }
 
-export async function processPushDeliveryBatch(database) {
-  if (!database || !configureWebPush().ok || workerRunning) return 0;
-  workerRunning = true;
-  try {
-    const deliveries = await claimDeliveries(database);
-    await Promise.all(deliveries.map((delivery) => deliverClaimed(database, delivery)));
-    return deliveries.length;
-  } finally {
-    workerRunning = false;
+export async function processPushDeliveryBatchMetrics(database) {
+  if (!database || !configureWebPush().ok) {
+    return {
+      claimed: 0,
+      sent: 0,
+      retried: 0,
+      failed: 0,
+      stale: 0,
+    };
   }
+  const deliveries = await claimDeliveries(database);
+  const outcomes = await Promise.all(deliveries.map((delivery) => deliverClaimed(database, delivery)));
+  return {
+    claimed: deliveries.length,
+    sent: outcomes.filter((outcome) => outcome === "sent").length,
+    retried: outcomes.filter((outcome) => outcome === "retried").length,
+    failed: outcomes.filter((outcome) => outcome === "failed").length,
+    stale: outcomes.filter((outcome) => outcome === "stale").length,
+  };
 }
 
-export function startPushDeliveryWorker(database) {
-  const status = configureWebPush();
-  if (!database || !status.ok || workerTimer) return status;
-  const run = () => {
-    void processPushDeliveryBatch(database).catch((error) => {
-      logError("push.worker_failed", { error });
-    });
+export async function processPushDeliveryBatch(database) {
+  const result = await processPushDeliveryBatchMetrics(database);
+  return result.claimed;
+}
+
+export async function readPushDeliveryBacklog(database) {
+  const result = await database.query(
+    `SELECT
+       count(*) FILTER (WHERE status = 'pending')::int AS pending,
+       count(*) FILTER (WHERE status = 'processing')::int AS processing,
+       count(*) FILTER (WHERE status = 'failed')::int AS failed,
+       COALESCE(
+         EXTRACT(EPOCH FROM (now() - min(created_at) FILTER (WHERE status = 'pending'))),
+         0
+       )::bigint AS oldest_pending_age_seconds
+     FROM push_delivery_outbox`,
+  );
+  return {
+    pending: Number(result.rows[0]?.pending ?? 0),
+    processing: Number(result.rows[0]?.processing ?? 0),
+    failed: Number(result.rows[0]?.failed ?? 0),
+    oldestPendingAgeSeconds: Number(result.rows[0]?.oldest_pending_age_seconds ?? 0),
   };
-  run();
-  workerTimer = setInterval(run, WORKER_INTERVAL_MS);
-  workerTimer.unref?.();
-  logInfo("push.worker_started", { intervalMs: WORKER_INTERVAL_MS });
+}
+
+export function createPushDeliveryWorker({
+  runBatch,
+  intervalMs = WORKER_INTERVAL_MS,
+  onError = (error) => logError("push.worker_failed", { error }),
+  onResult = () => {},
+  unref = true,
+} = {}) {
+  if (typeof runBatch !== "function") throw new TypeError("A push delivery batch function is required.");
+  const interval = boundedRuntimeInterval(intervalMs, {
+    name: "push worker interval",
+    fallback: WORKER_INTERVAL_MS,
+    minimum: 100,
+    maximum: 5 * 60 * 1_000,
+  });
+  let timer = null;
+  let inFlight = null;
+  let stopped = false;
+
+  const run = () => {
+    if (stopped || inFlight) return inFlight;
+    const startedAt = Date.now();
+    inFlight = Promise.resolve()
+      .then(runBatch)
+      .then((batchResult) => {
+        const metrics = batchResult && typeof batchResult === "object"
+          ? batchResult
+          : { claimed: Number(batchResult) || 0 };
+        onResult({
+          ...metrics,
+          durationMs: Math.max(0, Date.now() - startedAt),
+        });
+        return batchResult;
+      })
+      .catch((error) => {
+        onError(error);
+        return 0;
+      })
+      .finally(() => {
+        inFlight = null;
+      });
+    return inFlight;
+  };
+
+  return {
+    start() {
+      if (timer || stopped) return;
+      void run();
+      timer = setInterval(() => {
+        void run();
+      }, interval);
+      if (unref) timer.unref?.();
+    },
+    async stop() {
+      stopped = true;
+      if (timer) clearInterval(timer);
+      timer = null;
+      await inFlight;
+    },
+  };
+}
+
+export function startPushDeliveryWorker(database, {
+  intervalMs = WORKER_INTERVAL_MS,
+  onError,
+  onResult,
+  unref = true,
+  environment = process.env,
+  required = false,
+} = {}) {
+  const status = assertRequiredPushProvider(
+    environment,
+    configureWebPush(environment),
+    { required },
+  );
+  if (!database || !status.ok || workerController) return status;
+  workerController = createPushDeliveryWorker({
+    runBatch: () => processPushDeliveryBatchMetrics(database),
+    intervalMs,
+    onError,
+    onResult,
+    unref,
+  });
+  workerController.start();
+  logInfo("push.worker_started", { intervalMs });
   return status;
 }
 
-export function stopPushDeliveryWorker() {
-  if (workerTimer) clearInterval(workerTimer);
-  workerTimer = null;
+export async function stopPushDeliveryWorker() {
+  const controller = workerController;
+  workerController = null;
+  await controller?.stop();
 }
 
 export function registerPushNotificationRoutes({
@@ -506,7 +705,12 @@ export function registerPushNotificationRoutes({
 
 export const pushNotificationInternals = {
   MAX_DELIVERY_ATTEMPTS,
+  claimDeliveries,
+  deliveryFailureOutcome,
+  markDeliveryFailure,
   markPushDeliverySuccess,
+  pushDeliveryRequired,
+  pushDeliveryTimeoutMs,
   pushSubscriptionSchema,
   recognizedVapidGeneration,
   retryDelaySeconds,
