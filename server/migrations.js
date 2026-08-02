@@ -156,6 +156,31 @@ export async function migrationStatus(pool, options = {}) {
   });
 }
 
+export async function assertMigrationsCurrent(pool, options = {}) {
+  const files = await migrationFiles(options.directory);
+  const client = await pool.connect();
+  try {
+    const ledger = await client.query(
+      "SELECT to_regclass('schema_migrations')::text AS ledger",
+    );
+    if (!ledger.rows[0]?.ledger) {
+      throw new Error("The schema migration ledger is missing. Run the migrate process before starting web or worker.");
+    }
+    const applied = await appliedMigrations(client);
+    verifyHistory(files, applied);
+    const status = statusPayload(files, applied);
+    if (status.pending.length > 0) {
+      const pending = status.pending
+        .map(({ version, name }) => `${String(version).padStart(4, "0")}_${name}`)
+        .join(", ");
+      throw new Error(`Pending migrations: ${pending}. Run the migrate process before starting web or worker.`);
+    }
+    return status;
+  } finally {
+    client.release();
+  }
+}
+
 export async function migrateUp(pool, options = {}) {
   const files = await migrationFiles(options.directory);
   const targetVersion = options.targetVersion ?? Number.POSITIVE_INFINITY;

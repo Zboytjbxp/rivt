@@ -107,11 +107,18 @@ separate old-credential revocation step.
 
 ## Backup-encryption transition
 
-- `BACKUP_ENCRYPTION_KEY` (or its existing alias) is the active write key.
+- `BACKUP_ENCRYPTION_KEY` is the only active write-key name accepted by the
+  evidentiary backup path and must encode exactly 32 random bytes.
 - `BACKUP_ENCRYPTION_KEY_PREVIOUS` is decrypt-only during the transition.
-- New artifacts include a nonsecret key identifier but retain the v1 envelope
-  format so the pre-hotfix reader can still decrypt them with the active key.
-- Legacy artifacts without a key identifier try active, then previous.
+- New artifacts use the lossless encrypted v2 envelope and include a nonsecret
+  key identifier. After each approved rotation, update the protected GitHub
+  environment secrets `RIVT_BACKUP_ENCRYPTION_KEY` and
+  `RIVT_BACKUP_ENCRYPTION_KEY_PREVIOUS`; the freshness workflow uses both to
+  authenticate and decrypt current and retained artifacts. `npm run
+  backup:key-id` may produce a nonsecret audit fingerprint, but that fingerprint
+  is not a substitute for payload authentication.
+- The current/previous reader retains legacy v1 decryption only for historical
+  compatibility. New evidence and named restores must be v2.
 - Do not remove the previous key until every retained artifact has a verified
   recovery path or has expired under the approved retention policy.
 

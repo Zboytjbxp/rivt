@@ -15,72 +15,182 @@ concurrency:
 
 jobs:
   monitor:
+    if: >-
+      github.repository == 'Zboytjbxp/rivt' &&
+      github.ref == 'refs/heads/master' &&
+      github.ref_protected == true
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    environment: production
     env:
       RIVT_MONITOR_BASE_URL: https://rivt.pro
+      EXPECTED_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
+      RIVT_MONITOR_OUTPUT_PATH: production-monitor-summary.json
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run production synthetic monitor
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run monitor:production 2>&1 | tee production-monitor.log
+        run: npm run monitor:production
 
       - name: Upload monitor evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: production-monitor-${{ github.run_id }}
-          path: production-monitor.log
+          path: production-monitor-summary.json
           if-no-files-found: warn
 
       - name: Open or update incident issue on failure
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const fs = require("fs");
+            const {
+              SYNTHETIC_INCIDENT_MARKER: marker,
+              SYNTHETIC_INCIDENT_TITLE: title,
+              findOwnedSyntheticIncident,
+            } = require("./.github/scripts/production-synthetic-issue.cjs");
             const { owner, repo } = context.repo;
-            const marker = "<!-- rivt-production-synthetic-incident -->";
-            const title = "Production synthetic check failing";
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const allowedErrorCodes = new Set([
+              "CHECK_FAILED",
+              "INVALID_CONFIGURATION",
+              "NON_JSON_RESPONSE",
+              "OUTPUT_WRITE_FAILED",
+              "REQUEST_FAILED",
+              "REQUEST_TIMEOUT",
+              "UNEXPECTED_MONITOR_FAILURE",
+              "UNEXPECTED_STATUS",
+            ]);
+            const allowedEndpoints = new Set([
+              "/api/health",
+              "/api/auth/providers",
+              "/api/readiness",
+              "/api/storage",
+              "/api/app-state",
+              "/api/v1/me",
+              "/api/v1/jobs",
+              "/api/v1/conversations",
+              "/api/v1/admin/overview",
+            ]);
+            const allowedChecks = new Set([
+              "health",
+              "health-ok",
+              "auth-providers",
+              "base-url",
+              "timeout",
+              "expected-commit",
+              "matching-job-alerts-expectation",
+              "error-monitoring-ok",
+              "error-monitoring-mode",
+              "password-breach-screening",
+              "dependency-status-present",
+              "dependencies-ok",
+              "database-mode",
+              "object-storage-mode",
+              "build-commit",
+              "expected-source-commit",
+              "matching-job-alerts-shape",
+              "matching-job-alerts-state",
+              "pilot-invite-required",
+              "email-provider",
+              "google-provider",
+              "session-security",
+              "signup-control-shape",
+              "mutation-control-shape",
+              "signups-enabled",
+              "mutations-enabled",
+              "summary-output",
+              ...[...allowedEndpoints].map((endpoint) => `anonymous-private:${endpoint}`),
+            ]);
+            const safeStatus = (value) => Number.isInteger(value) && value >= 100 && value <= 599
+              ? value
+              : "not recorded";
+            const readSafeSummary = () => {
+              try {
+                const raw = JSON.parse(fs.readFileSync("production-monitor-summary.json", "utf8"));
+                return {
+                  errorCode: allowedErrorCodes.has(raw.errorCode) ? raw.errorCode : "UNEXPECTED_MONITOR_FAILURE",
+                  check: allowedChecks.has(raw.check) ? raw.check : "not recorded",
+                  endpoint: allowedEndpoints.has(raw.endpoint) ? raw.endpoint : "not recorded",
+                  expectedStatus: safeStatus(raw.expectedStatus),
+                  actualStatus: safeStatus(raw.actualStatus),
+                };
+              } catch {
+                return {
+                  errorCode: "UNEXPECTED_MONITOR_FAILURE",
+                  check: "not recorded",
+                  endpoint: "not recorded",
+                  expectedStatus: "not recorded",
+                  actualStatus: "not recorded",
+                };
+              }
+            };
+            const monitor = readSafeSummary();
             const routing = JSON.parse(fs.readFileSync("docs/operations/incident-routing.json", "utf8"));
-            const primaryOwner = routing.primaryOwner
-              ? `${routing.primaryOwner.name} <${routing.primaryOwner.email}>`
-              : "not configured";
-            const backupOwner = routing.backupOwner && routing.backupOwner.email !== "TBD"
-              ? `${routing.backupOwner.name} <${routing.backupOwner.email}>`
-              : "missing";
-            const errorMonitoring = routing.alertDestinations?.find((destination) => destination.category === "error_monitoring")?.status ?? "missing";
-            const paging = routing.alertDestinations?.find((destination) => destination.category === "paging")?.status ?? "missing";
-            const log = fs.existsSync("production-monitor.log")
-              ? fs.readFileSync("production-monitor.log", "utf8").slice(-6000)
-              : "No monitor log was captured.";
+            const publicId = (value) => typeof value === "string" && /^[a-z0-9_-]{1,64}$/i.test(value)
+              ? value
+              : null;
+            const publicOwnerRoute = (ownerConfig) => {
+              const route = routing.contactRoutes?.find((candidate) => candidate.id === ownerConfig?.contactRouteId);
+              const roleId = publicId(ownerConfig?.roleId);
+              const routeId = publicId(route?.id);
+              return roleId && routeId && route?.status === "configured"
+                ? `${roleId} via ${routeId}`
+                : "not configured";
+            };
+            const primaryOwner = publicOwnerRoute(routing.primaryOwner);
+            const backupOwner = publicOwnerRoute(routing.backupOwner);
+            const allowedRoutingStatuses = new Set(["configured", "blocked", "missing", "disabled"]);
+            const routingStatus = (category) => {
+              const status = routing.alertDestinations?.find((destination) => destination.category === category)?.status;
+              return allowedRoutingStatuses.has(status) ? status : "missing";
+            };
+            const errorMonitoring = routingStatus("error_monitoring");
+            const paging = routingStatus("paging");
+            const workflowName = typeof context.workflow === "string" && /^[a-z0-9 ._-]{1,80}$/i.test(context.workflow)
+              ? context.workflow
+              : "Production Synthetic Check";
+            const workflowRef = typeof context.ref === "string" && /^refs\/[a-z0-9._/-]{1,200}$/i.test(context.ref)
+              ? context.ref
+              : "not recorded";
+            const workflowCommit = typeof context.sha === "string" && /^[0-9a-f]{40}$/i.test(context.sha)
+              ? context.sha
+              : "not recorded";
             const body = [
               marker,
               "",
               "The scheduled production synthetic check is failing.",
               "",
               `Run: ${runUrl}`,
-              `Workflow: ${context.workflow}`,
-              `Ref: ${context.ref}`,
-              `Commit: ${context.sha}`,
+              `Workflow: ${workflowName}`,
+              `Ref: ${workflowRef}`,
+              `Commit: ${workflowCommit}`,
+              "",
+              "Sanitized monitor metadata:",
+              `- Failure code: ${monitor.errorCode}`,
+              `- Check: ${monitor.check}`,
+              `- Endpoint: ${monitor.endpoint}`,
+              `- Expected HTTP status: ${monitor.expectedStatus}`,
+              `- Actual HTTP status: ${monitor.actualStatus}`,
               "",
               "Incident routing:",
-              `- Primary owner: ${primaryOwner}`,
-              `- Backup owner: ${backupOwner}`,
+              `- Primary incident role: ${primaryOwner}`,
+              `- Backup incident role: ${backupOwner}`,
               `- Dedicated error monitoring: ${errorMonitoring}`,
               `- Paging route: ${paging}`,
               "",
@@ -91,12 +201,6 @@ jobs:
               "4. If user impact is plausible, set the appropriate RIVT kill switch and record the reason in the deployment ledger.",
               "5. Restore normal state only after the synthetic check passes again.",
               "",
-              "Latest monitor output:",
-              "",
-              "```text",
-              log,
-              "```",
-              "",
             ].join("\n");
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
@@ -104,7 +208,7 @@ jobs:
               state: "open",
               per_page: 100,
             });
-            const existing = issues.find((issue) => !issue.pull_request && (issue.title === title || issue.body?.includes(marker)));
+            const existing = findOwnedSyntheticIncident(issues);
             if (existing) {
               await github.rest.issues.update({
                 owner,
@@ -129,11 +233,13 @@ jobs:
 
       - name: Close incident issue after recovery
         if: success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
+            const {
+              findOwnedSyntheticIncident,
+            } = require("./.github/scripts/production-synthetic-issue.cjs");
             const { owner, repo } = context.repo;
-            const marker = "<!-- rivt-production-synthetic-incident -->";
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
@@ -141,7 +247,7 @@ jobs:
               state: "open",
               per_page: 100,
             });
-            const existing = issues.find((issue) => !issue.pull_request && (issue.title === "Production synthetic check failing" || issue.body?.includes(marker)));
+            const existing = findOwnedSyntheticIncident(issues);
             if (existing) {
               await github.rest.issues.createComment({
                 owner,

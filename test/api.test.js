@@ -67,7 +67,13 @@ test("security middleware denies framing and sends a restrictive CSP", async (t)
   assert.equal(response.headers.get("x-frame-options"), "DENY");
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=31536000/i);
-  assert.match(response.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+  const contentSecurityPolicy = response.headers.get("content-security-policy") ?? "";
+  assert.match(contentSecurityPolicy, /frame-ancestors 'none'/);
+  assert.doesNotMatch(contentSecurityPolicy, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
+  assert.equal(
+    response.headers.get("permissions-policy"),
+    "browsing-topics=(), camera=(self), geolocation=(self), microphone=(), payment=(), serial=(), usb=()",
+  );
 });
 
 test("server-owned expense export preserves cents and escapes CSV fields", () => {
@@ -129,6 +135,45 @@ test("invoice delivery refuses to advertise bank payment without a current link"
     }, { profile: { displayName: "RIVT Test Electric" } }),
     (error) => error instanceof ApiError && error.code === "INVOICE_PAYMENT_LINK_REQUIRED",
   );
+});
+
+test("invoice provider identity is stable for identical rendered content", () => {
+  const delivery = {
+    to: "Jordan@Example.Test",
+    subject: "Invoice INV-100",
+    text: "Total due: $125.00",
+    html: "<strong>Total due: $125.00</strong>",
+    attachments: [{ filename: "logo.png", content: "base64-logo" }],
+  };
+  const first = toolRecordInternals.stableDeliveryContentHash(delivery);
+  const repeated = toolRecordInternals.stableDeliveryContentHash({
+    ...delivery,
+    to: "jordan@example.test",
+  });
+  const changed = toolRecordInternals.stableDeliveryContentHash({
+    ...delivery,
+    text: "Total due: $126.00",
+  });
+  assert.match(first, /^[a-f0-9]{64}$/);
+  assert.equal(repeated, first);
+  assert.notEqual(changed, first);
+});
+
+test("invoice browser payload cannot supply server-owned delivery or payment truth", () => {
+  const cleaned = toolRecordInternals.stripServerOwnedInvoicePayload({
+    invoiceNumber: "INV-100",
+    delivery: { status: "sent", providerMessageId: "forged" },
+    bankPayment: { status: "paid", amountCents: 12_500 },
+  });
+  assert.deepEqual(cleaned, { invoiceNumber: "INV-100" });
+  assert.equal(toolRecordInternals.equivalentInvoicePayload(
+    { invoiceNumber: "INV-100", delivery: { status: "sent" } },
+    { bankPayment: { status: "paid" }, invoiceNumber: "INV-100" },
+  ), true);
+  assert.equal(toolRecordInternals.equivalentInvoicePayload(
+    { invoiceNumber: "INV-100" },
+    { invoiceNumber: "INV-101" },
+  ), false);
 });
 
 test("message send requires text or a managed staged attachment", () => {

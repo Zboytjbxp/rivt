@@ -56,7 +56,7 @@ If neither is set, `Plan quota` in settings shows `Quota tied to plan`.
 
 Set `ACCOUNT_STORAGE_GB_LIMIT` when you are ready to enforce an account hard cap.
 
-Versioned migrations create and update the account, profile, audit, and legacy-bridge tables on startup. Check status before release:
+Versioned migrations create and update the account, profile, audit, and legacy-bridge tables. In Railway, the predeploy command is the sole migration owner; the web process only verifies that migrations are current before serving traffic. Local combined mode may run migrations for development convenience. Check status before release:
 
 ```bash
 npm run migrate:status
@@ -92,7 +92,7 @@ APPLE_PRIVATE_KEY=
 APPLE_REDIRECT_URI=https://rivt.pro/api/auth/apple/callback
 ```
 
-Verify `rivt.pro` with the email provider before inviting users. Never use capture delivery in production. Generate invitation codes from an authorized operations terminal with `npm run invite:create -- --email=user@example.com --role=contractor`; only the one-time raw code is printed.
+Verify `rivt.pro` with the email provider before inviting users. Never use capture delivery in production. Generate invitation codes from an authorized operations terminal with `npm run invite:create -- --create --email=user@example.com --role=contractor`; only the newly generated raw code is printed once. Later inspection, capacity changes, and revocation use the non-secret record ID: `npm run invite:create -- --status --invite-id=<uuid>`, `npm run invite:create -- --update --invite-id=<uuid> --update-max-uses=25`, or `npm run invite:create -- --revoke --invite-id=<uuid>`. Revocation only succeeds for an active invite and does not print the invite code or its hashes. Generated codes are preferred. If an exceptional operator-selected code is required, run `npm run invite:create -- --create --allow-manual-code` from an interactive terminal and enter the value at the hidden prompt, or provide it through protected standard input from an approved secret-handling tool. Never place a raw invite in argv, an environment variable, a literal shell pipeline, or retained command history; manual values are not echoed by the CLI.
 
 Production sender verification was completed on 2026-06-19. The Resend API key is sending-only and restricted to `rivt.pro`; the verified sender remains `RIVT <support@rivt.pro>`. Keep the existing Google Workspace root MX record intact. Resend uses only the `send.rivt.pro` return-path MX/SPF records.
 
@@ -136,23 +136,38 @@ The first command verifies authenticated billing status and that unsigned Stripe
 
 ## Contractor Invoice Bank Payments
 
-Stripe Connect ACH invoice payments are separate from RIVT Pro billing. Each contractor completes Stripe-hosted Express onboarding and becomes the merchant for direct charges on that connected account. RIVT does not take an application fee at launch and does not receive, escrow, guarantee, or protect job funds.
+Stripe Connect ACH invoice payments are separate from RIVT Pro billing. Each contractor completes Stripe-hosted Accounts v2 onboarding with a Stripe dashboard and becomes the merchant for direct charges on that connected account. RIVT does not take an application fee at launch and does not receive, escrow, guarantee, or protect job funds.
 
 ```bash
 STRIPE_CONNECT_ACH_ENABLED=false
 STRIPE_CONNECT_WEBHOOK_SECRET=
+STRIPE_CONNECT_WEBHOOK_SCOPE=
 ```
 
 Production activation requires:
 
-1. Confirm the platform and every connected merchant can request the `us_bank_account_ach_payments` capability.
-2. Create a Connect webhook endpoint at `https://rivt.pro/api/stripe/connect/webhook` with events from connected accounts enabled.
-3. Subscribe to `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.dispute.created`, and `charge.refunded`.
+1. Confirm the platform and every connected merchant can request the Accounts v2 `ach_debit_payments` capability and the required payout configuration.
+2. Create a Connect webhook endpoint at `https://rivt.pro/api/stripe/connect/webhook` with the destination scope set to **Connected accounts**, not **Your account**.
+3. Subscribe the snapshot money-state destination to `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.dispute.created`, and `charge.refunded`.
 4. Store that endpoint's signing secret in `STRIPE_CONNECT_WEBHOOK_SECRET`. Do not reuse `STRIPE_WEBHOOK_SECRET`.
-5. Exercise onboarding and one ACH lifecycle in Stripe test mode, including asynchronous success and failure, before setting `STRIPE_CONNECT_ACH_ENABLED=true` in production.
-6. After activation, verify the public payment return page discloses processing honestly and that signed events—not the browser redirect—change invoice paid state.
+5. Prove a signed connected-account delivery reaches RIVT and changes the intended durable payment state, then set `STRIPE_CONNECT_WEBHOOK_SCOPE=connected_accounts`. This variable is an operator attestation, not automatic provider discovery; never set it merely to make health appear configured.
+6. Exercise onboarding and one ACH lifecycle in Stripe test mode, including asynchronous success and failure, before setting `STRIPE_CONNECT_ACH_ENABLED=true` in production.
+7. After activation, verify the public payment return page discloses processing honestly and that signed events—not the browser redirect—change invoice paid state.
 
-Keep the feature disabled if the Connect webhook, support ownership, or merchant onboarding review is incomplete. Disabling new links must not hide existing payment status records or stop signed webhook processing for already-submitted payments.
+Legacy `account.updated` is not part of this Accounts v2 snapshot money-state contract. Accounts v2 lifecycle notifications use separate thin events and require a handler that retrieves the versioned event or current account state. RIVT currently re-fetches Accounts v2 readiness before onboarding, status, and payment-link creation; do not add a legacy snapshot event and treat it as Accounts v2 readiness proof. A future thin-event destination/handler is separate hardening work.
+
+Keep the feature disabled if the Connected-accounts destination, signed-delivery proof, support ownership, or merchant onboarding review is incomplete. A Connected-accounts destination and dedicated secret were installed on 2026-08-01, but no Stripe-signed matching durable transition has been proved and scope attestation remains unset. Production ACH is therefore disabled and setup-required. Disabling new links must not hide existing payment status records or stop signed webhook processing for already-submitted payments.
+
+The current source prepares a protected, manually dispatched
+`Production Provider Evidence` workflow for read-only verification. Its compiled
+disabled-payment adapter compares protected Railway variables, the live RIVT
+health response, and Stripe Accounts v2 in one process. A one-way runtime
+configuration fingerprint binds the live process to the Railway values without
+exposing the credentials. This workflow is candidate code, not existing
+production evidence: it must run from reviewed protected `master` behind the
+`production-evidence` environment approval. Its unsupported private-route,
+paging, rehearsal, and recovery adapters fail closed and cannot clear those
+separate launch blockers.
 
 Uploads use private S3-compatible object storage and signed download URLs. RIVT production currently targets Railway Object Storage, which exposes an S3-compatible endpoint (`https://t3.storageapi.dev` in Railway's current storage service). Cloudflare R2, AWS S3, Backblaze B2, Supabase Storage S3 compatibility, or another managed S3-compatible provider can be used only if the same private-bucket and signed-URL behavior is preserved.
 
@@ -170,26 +185,103 @@ MAX_UPLOAD_MB=10
 
 For Railway Object Storage, copy the bucket name, endpoint, access key, and secret key from the Railway storage service into the web service variables. Keep `S3_REGION=auto` when Railway reports `auto`, keep `S3_FORCE_PATH_STYLE=false` unless the provider explicitly requires path-style requests, and leave `S3_PUBLIC_BASE_URL` blank for private customer files. The API intentionally fails closed with `503 OBJECT_STORAGE_UNAVAILABLE` / setup-required health output when object storage is missing; there is no local upload fallback.
 
+## Independent encrypted database backups
+
+The application bucket is not the disaster-recovery copy. RIVT's prepared
+backup path writes an encrypted PostgreSQL logical snapshot to a separate
+S3-compatible provider and refuses to run unless all of these controls are
+present:
+
+- a dedicated `BACKUP_DATABASE_URL` role with no database, schema, table, or
+  sequence write privileges;
+- dedicated `BACKUP_DESTINATION_S3_*` credentials and a bucket/prefix separate
+  from the application `S3_*` values;
+- HTTPS storage, bucket versioning, COMPLIANCE Object Lock, at least 30 days of
+  default retention, and an exact enabled lifecycle rule for the backup prefix;
+- a unique object version with an exact digest and full 40-character
+  `SOURCE_COMMIT`; and
+- a random 32-byte `BACKUP_ENCRYPTION_KEY`. New backups use the lossless v2
+  PostgreSQL-text format and do not accept a weak
+  passphrase. `BACKUP_ENCRYPTION_KEY_PREVIOUS` exists only to read older
+  artifacts while a key rotation is being completed.
+
+The code supports Backblaze B2's S3-compatible private buckets and Object Lock;
+B2 is the current recommended independent destination because the estimated
+RIVT backup set is within its free storage allowance. That is a recommendation,
+not a configured production claim. Creating the bucket, credentials, or a
+scheduled Railway job is a separate provider change that requires founder cost
+approval.
+
+After at least one artifact exists, run the read-only policy/freshness verifier
+with:
+
+```bash
+npm run backup:verify
+```
+
+For the first artifact, review the provider policy before starting the job; the
+backup command independently re-checks the same protection controls and fails
+before writing if they do not match.
+
+The verifier requires the protected `BACKUP_ENCRYPTION_KEY` and, during an
+approved rotation, `BACKUP_ENCRYPTION_KEY_PREVIOUS`. It validates the provider
+upload time, exact immutable version, digest, retention, and envelope, then
+AEAD-authenticates, decrypts, and validates that the payload is structurally
+restore-usable and bound to the protected creation time and source commit. The
+GitHub workflow publishes only the bounded sanitized receipt.
+
+Run backup creation only from the dedicated scheduled job:
+
+```bash
+npm run backup:logical-artifact
+```
+
+Restore is deliberately separate. Select one exact object key, immutable
+version ID, and SHA-256 digest; use dedicated `RESTORE_SOURCE_S3_*` read
+credentials; point `RESTORE_DATABASE_URL` at a temporary isolated database;
+and set `CONFIRM_RESTORE_TARGET_ISOLATED=true` only after checking that target.
+The artifact is downloaded and its COMPLIANCE lock, metadata, digest, envelope,
+and encryption authentication are verified before the target database is
+opened. The evidentiary drill performs the restore and then compares every
+supported public table, row count, content digest, and sequence in the same
+measured process. Run it once:
+
+```bash
+npm run restore:drill -- --apply-migrations
+```
+
+The restore and verification report separate measured durations and must stay
+within the combined 240-minute RTO. A successful local test does not satisfy
+launch readiness; production requires a real scheduled backup within 14 hours,
+the hourly external freshness alarm, a physically received alert test, and a
+fresh named-version restore drill.
+
 ## Railway Setup
 
-The repo includes `railway.json` for a single Railway web service:
+Current production uses the checked-in `railway.json` web-service contract:
 
 - Build command: `npm run build`
-- Start command: `npm start`
-- Process healthcheck: `/`
+- Migration owner / predeploy command: `node server/runtime.js migrate`
+- Start command: `node server/runtime.js web`
+- Process healthcheck: `/api/health`
+- Shutdown drain: 30 seconds
 
-The process healthcheck only proves the site is online. Customer readiness is still controlled by `/api/health` and `/api/storage`.
+The repo also contains `railway.worker.json` for a prepared but inactive Stage 1 worker service. Its non-mutating predeploy check is `node server/runtime.js worker-check`, its start command is `node server/runtime.js worker`, and it intentionally has no HTTP healthcheck. Do not create or activate that service without the separately approved process in [`docs/operations/RAILWAY_ACTIVATION_RUNBOOK.md`](docs/operations/RAILWAY_ACTIVATION_RUNBOOK.md).
+
+The web healthcheck proves only the public readiness contract implemented by `/api/health`. Private storage acceptance and the full launch decision still require the repository readiness commands and operator evidence.
 
 1. Create a Railway project for the web app.
 2. Add a Railway PostgreSQL service.
 3. Set `DATABASE_URL` on the web service from the PostgreSQL service variables.
 4. Add private S3-compatible object storage. For the current RIVT setup, use Railway Object Storage and add its S3 variables to the web service: `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_FORCE_PATH_STYLE`.
-5. Deploy with:
+5. Let Railway apply the checked-in web-service contract. For local combined-process development only, run:
 
 ```bash
 npm run build
 npm start
 ```
+
+Do not use bare `npm start` as the hosted Railway start command. Hosted services must declare the explicit `web` or `worker` process role above.
 
 Do not use Railway volumes for customer records or customer-uploaded files in this app.
 
@@ -216,14 +308,14 @@ Recommended storage behavior:
 
 Do not copy secret values into this document, source control, build logs, or support tickets.
 
-## Production Run
+## Local Production-Bundle Run
 
 ```bash
 npm run build
 npm start
 ```
 
-The Express server serves the built frontend from `dist/` and exposes the `/api/*` routes.
+This local combined process serves the built frontend from `dist/` and exposes the `/api/*` routes. Railway production uses the explicit web contract above instead.
 
 ## Provider Accounts Needed Before Real Customers
 

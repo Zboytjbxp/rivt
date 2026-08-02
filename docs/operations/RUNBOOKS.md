@@ -45,7 +45,7 @@ The check runs outside Railway and verifies:
 
 If `EXPECTED_SOURCE_COMMIT` is set, the monitor also requires production to match that exact source. If the platform is intentionally locked during an incident or maintenance window, set `ALLOW_OPERATIONAL_LOCKOUT=true` for that monitor run and record the reason in incident notes.
 
-Every workflow run uploads `production-monitor.log` as evidence. If the monitor fails, GitHub Actions opens or updates one incident issue titled `Production synthetic check failing` with the workflow run, commit, triage checklist, and latest monitor output. When the synthetic check recovers, the workflow comments on that issue and closes it.
+After the current candidate is reviewed, merged, and deployed, every workflow run will upload `production-monitor-summary.json` as evidence. That file contains only validated, allowlisted monitor metadata; production response bodies and raw error or stack output will not be written to workflow artifacts. On failure, GitHub Actions will open or update the marker-owned incident issue titled `Production synthetic check failing` with the workflow run, commit, triage checklist, and the same allowlisted failure code, check ID, endpoint, and numeric HTTP status metadata. On recovery, the workflow will comment on that marker-owned issue and close it. Until that deployment, treat this paragraph as candidate behavior rather than a claim about the hosted workflow.
 
 This scheduled synthetic check and GitHub issue loop are first external tripwires. They do not replace a dedicated error-monitoring provider, paging policy, or named incident owner.
 
@@ -66,19 +66,38 @@ npm run incident:readiness -- --require-ready
 The gate requires:
 
 - Approved incident-routing status.
-- Primary and backup incident owners with real names and emails.
+- Primary incident role with a configured organizational or private contact route.
+- Backup incident role with an access-controlled private route, a successful test from the last 30 days, and matching content-bound evidence.
 - Founder-approved support coverage hours.
 - External synthetic monitoring.
 - Dedicated error monitoring.
 - Paging/escalation route.
 - A passed incident rehearsal within the last 30 days.
-- Founder, support, and legal/safety approvals.
+- Founder, support, and legal/safety approvals with valid, non-future timestamps recorded after the final incident evidence they approve.
 
-Current state: primary owner is recorded as Michael at `support@rivt.pro`, and GitHub synthetic issue routing is configured. Backup owner, support hours, dedicated error monitoring, paging, rehearsal, and approvals remain missing; therefore Gate A remains blocked.
+A checked-in receipt and matching digest are necessary but cannot authenticate a
+provider event by themselves. The evaluator accepts a private-route receipt only
+when its exact control/provider/digest identity is supplied by a trusted provider
+verifier in the running process. The ordinary readiness CLI supplies no trusted
+identity and deliberately cannot report incident readiness as passed from
+repository evidence alone. The current candidate adds a protected, read-only
+provider-evidence workflow, but its private-route, paging, rehearsal, and recovery
+adapters remain unsupported and fail closed. Do not treat the workflow's presence
+as provider proof; each adapter must query its provider and inject the verified
+identity in the same process. Checked-in files, environment flags, and
+operator-authored allowlists must not be used as that trust source.
+
+Current state: support hours, synthetic monitoring, error monitoring, paging,
+and a recent rehearsal are recorded. Incident readiness is **blocked** because
+the backup role does not yet have an access-controlled route with a recent,
+content-bound successful test. The historical approvals also cannot substitute
+for approval of later evidence. This is separate from the launch hold,
+recovery, and payment-provider gates described below.
 
 ## Launch Readiness Gate
 
-Launch readiness combines incident routing with the approved recovery policy. Run:
+Launch readiness combines incident routing, the approved recovery policy, and
+the machine-readable payment-provider launch state. Run:
 
 ```text
 npm run launch:readiness -- --json
@@ -94,12 +113,43 @@ The gate requires everything from incident readiness plus:
 
 - Approved RPO target in minutes and basis.
 - Approved RTO target in minutes and basis.
-- Backup retention window and owner.
-- Restore-drill cadence, owner, and next due date.
-- A passed named backup-artifact restore from the last 30 days.
-- Founder and operations approvals for the recovery policy.
+- A recently verified recurring backup schedule, cadence, owner, evidence reference, and SHA-256 evidence digest.
+- A non-future latest successful named backup no older than the approved RPO, with object key, table/row counts, evidence reference, and SHA-256 evidence digest.
+- A physically tested missed-backup alert with a named destination, retry allowance, current evidence reference, and SHA-256 evidence digest.
+- Backup cadence plus alert/retry allowance that does not exceed the approved RPO.
+- Provider- or automation-enforced retention with a current evidence reference and SHA-256 evidence digest.
+- A backup copy in a provider-independent failure domain with current evidence and a SHA-256 evidence digest.
+- Restore-drill cadence and owner; the latest restore must be no older than that cadence, and the next due date must fall after the latest restore but no later than its cadence deadline.
+- A passed named backup-artifact restore with positive table/row counts and a repository-relative evidence file whose SHA-256 digest matches the policy.
+- Current, non-future founder and operations approvals recorded after every bound evidence timestamp and bound to the exact recovery configuration and evidence digests.
+- A reviewed `docs/operations/payment-provider-readiness.json` record proving
+  either that invoice bank payments are disabled in production or that fresh,
+  signed `Connected accounts` delivery is working.
+- A strict typed payment-provider receipt that binds the verification timestamp,
+  mode, feature flag, destination and runtime scope, signed-delivery state,
+  source commit, enabled/configured state, and webhook state. Its exact
+  control/provider/digest identity must come from a trusted provider verifier.
+- Named payment-provider approval recorded after verification and bound to the
+  exact reviewed mode/evidence digest.
 
-Current state: the latest named backup-artifact restore is recorded in `docs/operations/recovery-policy.json`, but RPO/RTO targets, retention, cadence, and recovery-policy approvals remain missing; therefore Gate A remains blocked.
+Checked-in payment JSON and a matching digest cannot authenticate provider state.
+The ordinary readiness CLI injects no trusted payment-provider identity and
+therefore fails closed. The current candidate prepares a protected manual
+`Production Provider Evidence` workflow whose compiled disabled-payment adapter
+queries Railway variables, the live RIVT health contract, and Stripe Accounts v2
+in the same read-only process. It also compares a one-way runtime configuration
+fingerprint so staged Railway values cannot be mistaken for the configuration
+served by the live process. The workflow is not deployed, configured, or executed
+evidence until its exact source is reviewed on protected `master`, its
+`production-evidence` environment is approved, and a passing run is recorded.
+
+Current state: recovery readiness is deliberately **blocked**. The latest named-
+artifact restore remains useful restore evidence, but RIVT has not recorded real
+provider evidence for the recurring schedule, a latest successful backup inside
+the RPO, a tested missed-run alert, enforced retention, or an independent backup
+failure domain. Historic recovery approvals are superseded until those exact
+controls and evidence digests are reviewed. The separate `ACTIVE_LAUNCH_HOLD`
+also remains in force. Payment-provider readiness is evaluated independently.
 
 ## Operational Kill Switches
 
@@ -154,51 +204,91 @@ Gate A auth, write, and upload throttles use the PostgreSQL `rate_limit_windows`
 
 ## Backup Restore Drill
 
+A restore drill and continuous backup readiness prove different things:
+
+- The restore drill proves that one named artifact can be decrypted, replayed, and verified.
+- Continuous backup readiness proves backups keep occurring frequently enough, a missed run is detected in time, retention is enforced, and a provider outage does not remove every copy.
+
+Before asking for recovery-policy approval, record all of the following in
+`docs/operations/recovery-policy.json` without secrets:
+
+1. The recurring schedule cadence and owner, plus a current provider evidence reference and its SHA-256 digest.
+2. The latest successful named backup completion time, object key, table/row counts, evidence reference, and SHA-256 digest. Its completion time must be real, non-future, and inside the RPO.
+3. A physical missed-run alert test, including destination, retry allowance, test time, evidence reference, and SHA-256 digest. Cadence plus retry allowance must fit inside the RPO.
+4. Provider- or automation-enforced retention, including enforcement mode, verification time, evidence reference, and SHA-256 digest.
+5. An independently hosted backup copy, including primary and backup providers, verification time, evidence reference, and SHA-256 digest.
+6. A named-artifact restore no older than the approved cadence, with positive table/row counts and a repository-relative evidence file whose SHA-256 digest matches the policy. Its next drill date must be after that restore and no later than the cadence deadline.
+7. New founder and operations approvals created only after the final configuration digest is known and every bound evidence event is complete. Approval timestamps must be parseable, current, non-future, and later than every evidence timestamp. Any evidence or configuration change invalidates those approvals.
+
+Provider setup is a separate, costed operational action and must be explicitly
+approved before it is performed. Repository documentation alone cannot satisfy
+these checks. Run `npm run launch:readiness -- --require-ready`; it must fail
+closed until all real evidence is present and the active launch hold is cleared.
+Each recovery receipt must also match the control's substantive provider facts:
+schedule cadence and owner; backup artifact key and counts; alert destination and
+retry allowance; retention window, owner, and enforcement mode; both failure-
+domain providers; or the restored artifact and measured restore/verification
+metrics. As with private routing, those receipts require identities supplied by
+a trusted in-process provider verifier. The ordinary readiness CLI has no such
+integration, and the current protected provider workflow intentionally leaves
+the recovery adapters unsupported. Recovery therefore remains blocked even if
+matching JSON and hashes are checked in.
+
 1. Restore PostgreSQL and representative private objects into isolated nonproduction.
 2. Verify users, jobs, relationships, messages, project records, and object access.
 3. Measure recovery time and recovery point.
 4. Record missing records, configuration, and repair actions.
 5. A successful backup job without restore proof does not close the requirement.
 
-Use the restore drill verifier after the isolated target has been provisioned and restored:
-
-```text
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://..." npm run restore:drill
-```
-
-When comparing a restored target against a live or snapshot source, set a read-only source URL:
-
-```text
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" npm run restore:drill
-```
-
-The verifier refuses to run without `CONFIRM_RESTORE_TARGET_ISOLATED=true`, checks the migration ledger, requires migration `0009_durable_rate_limits`, verifies critical Gate A tables, counts rows, and measures duration. With `RESTORE_SOURCE_DATABASE_URL` set, row counts must match unless `RESTORE_STRICT_COMPARE=false` is explicitly set for a documented scrubbed/sampled restore.
-
-When native `pg_dump`/`psql` are unavailable to the operator, use the application-level logical copy helper from inside Railway private networking:
-
-```text
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" npm run restore:logical-copy -- --apply-migrations
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" npm run restore:drill
-```
-
-The logical copy helper applies migrations when requested, truncates the isolated target, disables user-defined triggers during the copy to avoid restore side effects, copies all public base tables in foreign-key order with batched inserts, restores sequence positions, and reports table/row counts and duration. It is acceptable evidence for isolated logical restore mechanics. It is not by itself proof that a specific backup artifact can be restored.
-
-Gate A requires proof that a named backup object can be restored. Create the encrypted logical backup artifact directly in managed storage:
+Gate A requires proof that one exact immutable backup object can be restored.
+The old direct database-to-database logical copier is retired because it could
+bypass artifact integrity and retention evidence. Create the encrypted logical
+backup artifact only from the dedicated scheduled job:
 
 ```text
 npm run backup:logical-artifact
 ```
 
-The command reads from `BACKUP_DATABASE_URL` or `DATABASE_URL`, requires `BACKUP_ENCRYPTION_KEY` or `RIVT_BACKUP_ENCRYPTION_KEY`, uses the configured private S3-compatible bucket, writes an AES-256-GCM encrypted gzip JSON object under `backups/postgres/`, and prints only non-secret evidence: bucket, object key, source commit, table count, row count, and duration.
+The command reads only `BACKUP_DATABASE_URL`, requires a strict random 32-byte
+`BACKUP_ENCRYPTION_KEY`, uses only `BACKUP_DESTINATION_S3_*`, and writes a
+lossless v2 PostgreSQL-text snapshot inside AES-256-GCM. It rejects roles that
+can write, roles that cannot see every supported public table/column, RLS,
+application tables outside `public`, inheritance/partition layouts, remote TLS
+downgrades, and incomplete protection. Public output contains only bounded
+receipts and hashed artifact/destination identities, never raw bucket names,
+keys, versions, digests, URLs, or encryption material.
+
+The hourly metadata/content verifier requires the protected active backup key
+and optional previous key so it can AEAD-authenticate, decrypt, and validate
+the newest payload before treating it as fresh. It runs:
+
+```text
+npm run backup:verify
+```
 
 Restore that named artifact into a freshly provisioned isolated target:
 
 ```text
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_BACKUP_S3_KEY="backups/postgres/<object>.json.gz.aes256gcm" npm run restore:logical-artifact -- --apply-migrations
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" npm run restore:drill
+CONFIRM_RESTORE_TARGET_ISOLATED=true \
+RESTORE_DATABASE_URL="postgresql://restore-target" \
+RESTORE_SOURCE_DATABASE_URL="postgresql://read-only-source" \
+RESTORE_BACKUP_S3_KEY="<exact-private-key>" \
+RESTORE_BACKUP_S3_VERSION_ID="<exact-private-version>" \
+RESTORE_BACKUP_SHA256="<exact-private-digest>" \
+npm run restore:drill -- --apply-migrations
 ```
 
-The artifact restore command refuses to run without the isolated-target confirmation, applies migrations when requested, checks table and column parity against the backup artifact, disables user-defined triggers during replay, restores sequences, and fails by default if target counts differ from the backup manifest. Do not persist `RESTORE_DATABASE_URL`, `RESTORE_BACKUP_S3_KEY`, or `CONFIRM_RESTORE_TARGET_ISOLATED` as normal app service variables; pass them only for the one restore command.
+The drill invokes the exact-artifact restore and verification in one measured
+process. Before any migration or destructive statement it compares runtime
+PostgreSQL cluster and database identities and refuses the production/source
+cluster even when connection strings use different aliases. It authenticates
+the v2 artifact, restores inside one rollback-safe transaction, then compares
+the complete supported public schema, every row count, canonical content
+digest, and sequence state. There is no count/compare bypass and no
+operator-supplied duration. The combined measured time must stay inside the
+approved RTO. Do not persist restore URLs, object identity, confirmation, or
+keys as normal app-service variables; pass them only through the approved
+temporary restore environment.
 
 Latest Packet 08 evidence: temporary Railway PostgreSQL target `Postgres-3Ei3` was migrated, populated with 59 public tables and 1,524 rows in 1,421 ms, strictly verified with migration `0009_durable_rate_limits`, zero pending migrations, zero source/target count diffs across critical Gate A tables, and a 220 ms verifier duration, then deleted. A named backup-artifact restore also passed on 2026-06-21: encrypted object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm` restored into isolated Railway target `Postgres-_FQz`, applied nine migrations through `0009_durable_rate_limits`, restored 59 public tables and 1,524 rows, verified strict manifest parity with zero diffs in 13,411 ms, passed `npm run restore:drill` in 1,862 ms, and then the temporary target was deleted.
 

@@ -1,5 +1,252 @@
 # Deployment Ledger
 
+## 2026-08-02 - Offline identity-boundary remediation (No deployment)
+
+- Branch: `codex/railway-stage1-packet87-integration`; candidate based on
+  `e4136a617c983ea353b0128670971b8038246622`, unmerged and undeployed.
+- Sealed review: Codex Security diff scan
+  `fcd23f03-6523-4098-a98f-b14c0f11a73d`, sealed
+  `2026-08-02T15:29:41.451406Z`, reported two low findings. The candidate fixes
+  cross-account active-work survival and sliding offline-snapshot expiry; it
+  also fixes the reproduced offline sign-out correctness defect. Independent
+  follow-up closed delayed-result races in Stripe, Push, profile/session,
+  Inbox, jobs, onboarding, Shop Talk, and reaction state. Final independent
+  review found no P0/P1 blocker.
+- Verification: build, full lint, aggregate tests, all three browser E2E
+  journeys, production dependency audit, and diff integrity pass. The
+  unit/frontend result is 467/467. Three non-database integration checks pass;
+  21 PostgreSQL-backed checks skip locally because `TEST_DATABASE_URL` is
+  absent. GitHub Gate A Safety run `30758475166` then verified exact commit
+  `50bbcabf453768220a817de1ad2727ff57783078` on Node 20/PostgreSQL 16. Build,
+  lint, the complete unit and database-backed integration suite, all three
+  browser journeys, and the dependency audit passed. The workflow is red only
+  because the final launch-hold enforcement correctly failed while readiness
+  remains blocked.
+- Production boundary: production remains on
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`. No merge, deployment, provider
+  mutation, production-data action, ACH enablement, launch-hold change,
+  resource creation, or cost occurred.
+
+## 2026-08-01 - Local security remediation and verification (No deployment)
+
+- Branch: `codex/railway-stage1-packet87-integration`; working source remains
+  uncommitted, unmerged, unpushed, and undeployed.
+- Sealed review: Codex Security diff scan
+  `7d0d53ee-e18b-4c94-92fc-08fa324ff3f4`, completed
+  `2026-08-01T15:34:45.687496Z`, reviewed all 23 candidate paths and identified
+  three low-severity disclosure paths plus five defense-in-depth gaps.
+- Local remediation: manual invite secrets no longer enter argv; synthetic
+  monitor evidence contains only allowlisted metadata; tracked public text
+  assets reject personal operational details and literal invite authority;
+  payment state, the private backup route, synthetic monitoring, error
+  monitoring, paging, incident rehearsal, and recovery gates require strict
+  typed, content-bound provider receipts. Evidence aliases, symlinks,
+  non-files, repository escapes, and reuse by canonical path or content where
+  independent proof is required are rejected. Checked-in receipts cannot
+  self-authenticate: the exact control/provider/digest identity must come from
+  a trusted in-process provider verifier, which the CLI intentionally does not
+  yet provide.
+- Verification: build, application/security/public-doc lint, 327/327
+  unit/frontend checks, 88/88 focused regressions, final complete browser E2E
+  rerun, production dependency audit with zero vulnerabilities, and diff
+  integrity passed. The aggregate test command skipped 21 PostgreSQL suites
+  because no isolated test database is configured in this worktree.
+- Readiness result: intentionally blocked on the active incident hold and
+  provider-authenticated proof for the payment state, private backup route,
+  synthetic monitoring, error monitoring, paging, incident rehearsal,
+  recurring backup/retention/independent-copy controls, current restore, and
+  fresh post-evidence approvals. The historical disabled-mode payment approval
+  remains recorded but does not satisfy the stricter evidence gate by itself.
+- Boundary: no production/provider/data access, invite revocation, Git history
+  rewrite, stage, commit, push, merge, deployment, ACH enablement, launch-hold
+  change, new resource, or cost occurred.
+
+## 2026-08-01 - Candidate push/CI and Stripe fail-closed correction (No packet deployment)
+
+- Runtime/gate evidence commit:
+  `2253bca16883e736cd06b9b47d4539ffa4a86e32` on
+  `codex/railway-stage1-packet87-integration`, pushed in draft PR #14. The
+  current branch adds disabled-mode approval/evidence binding and its tests
+  after that commit. It changes launch tooling and records only, not
+  application runtime behavior. The branch is not merged and none of its
+  packet source is deployed.
+- Security/source evidence: Codex Security scan
+  `7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed exact range
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` through
+  `6c9e803522c3bfd0ff9af1fdd1ba4e02b07e2324` with 25/25 coverage, zero
+  reportable findings, and zero deferred findings.
+  GitHub Actions run `30680447818`, job `91316269376`, passed Node 20 build,
+  lint, the full unit/frontend set, and the full PostgreSQL 16 integration
+  set.
+  Launch readiness then intentionally failed on `ACTIVE_LAUNCH_HOLD` and
+  `PAYMENT_PROVIDER_NOT_APPROVED`; hosted E2E and audit were skipped after the
+  fail-closed stop. Equivalent local E2E and audit gates pass.
+- Railway controls: automatic deployments were disabled and Wait for CI was
+  enabled. No Stage 1 worker, new service, database, bucket, volume, or backup
+  was created. The approximately $10.05/month worker estimate is outside the
+  current $2 authorization and no activation was attempted.
+- Stripe containment: a live Connected-accounts destination was created with
+  the nine snapshot money-state events implemented by RIVT. Its dedicated
+  signing secret was installed without recording the value. The pre-existing
+  Your-account destination remains only as provider inventory/rollback
+  reference; RIVT no longer holds its signing secret, so it is not an
+  operational fallback.
+- Discovery: public health at `2026-08-01T02:12:38Z` unexpectedly reported
+  bank payments enabled and configured. The start time of that state is
+  unknown. No payment was initiated by this work. The flag was immediately
+  set false. Intermediate configuration deployment
+  `b02a245c-67ff-4bc5-9b82-1bc971fc855d` was replaced by corrective deployment
+  `3d53eb50-7317-499f-950b-845ee536074c`.
+- Verified result: at `2026-08-01T02:21:47.8089240Z`, live health served
+  unchanged production source `29e3c613f2eb95a6583b52c671275e5046dde0d3`,
+  migration `0042_push_vapid_generation`, and bank-payment state
+  `enabled:false`, `configured:false`, `webhookConfigured:true`,
+  `mode:setup_required`. An unsigned webhook probe returned HTTP 400 before
+  application writes. A production count-only, read-only transaction returned
+  zero project and zero tool invoice payment-request rows. No database-backed
+  RIVT payment request was available to reconcile or expire; provider-side
+  sessions without a durable row were not enumerated.
+- Historical approval result: at `2026-08-01T03:26:10.3842506Z`, the founder role approved only
+  the exact disabled production bank-payment configuration. The approval is
+  bound to configuration digest
+  `43ef1b40ccc4c7c5cc0ef59f31019f40222a954fa246fa7f8683d040976d6b95`.
+  Independent review strengthened the machine binding without changing the
+  approved production state: provider destination inventory and runtime scope
+  attestation are distinct, and the digest now covers the receipt SHA-256 plus
+  the complete verified public-health state.
+  A fresh public-health read immediately beforehand still showed the unchanged
+  production source and disabled/setup-required state. The gate version at
+  that checkpoint cleared the payment-provider prerequisite and stopped only
+  on `ACTIVE_LAUNCH_HOLD`.
+  Approval-binding commit `b1f3aa2eb80e624a89b34577e35efaab1cefe796`
+  passed hosted build, lint, all 258 unit/frontend checks, and the full
+  PostgreSQL 16 integration suite in GitHub Actions run `30682797549`, job
+  `91322960536`. The hosted launch-readiness step then failed solely on the
+  intentional `ACTIVE_LAUNCH_HOLD`; later hosted browser/audit steps were
+  skipped, while equivalent local gates passed. This historical result is
+  superseded by the stricter current gate, which rejects repository or
+  self-attested payment evidence until a trusted in-process provider verifier
+  supplies the exact strict typed receipt identity.
+- Remaining boundary: health and the unsigned rejection do not prove the
+  replacement secret accepts a Stripe-signed Connected-accounts event. No
+  signed delivery, matching durable payment transition, scope attestation,
+  incident exit, merge, packet deployment, or launch occurred. Disabled-mode
+  approval does not authorize any of those actions or enable ACH. No new recurring resource was added; ordinary usage from
+  the corrective deployment was not independently reconciled and is not
+  represented as zero cost.
+
+## 2026-07-31 - Packet 87 + Railway Stage 1 Combined Candidate (No Deployment)
+
+- Branch: `codex/railway-stage1-packet87-integration`; Packet 87 history
+  through `070243f` is combined with the Stage 1 sequence through the
+  integration base `9490c86`. The provider-safety follow-up was committed and
+  independently reviewed locally at `0b78de2`; it is now included in pushed
+  candidate `72e7ad7` but remains unmerged and undeployed.
+- Source result: Packet 87 files remained intact during replay. Local build,
+  application/security lint, 252/252 unit/frontend checks, all three browser
+  E2E journeys, Tools/Shop Talk/Trade News/mobile-actions/Work-lifecycle UI
+  smoke, dependency audit,
+  and diff integrity passed. A disposable loopback-only PostgreSQL 18 cluster
+  with `RIVT_DB_MAX_CONNECTIONS=97` passed 25/25 integration tests; production
+  and Railway were not used. Gate A now reads Node 20 from `.nvmrc` and runs
+  PostgreSQL 16, but exact-source CI parity remains open until a reviewed
+  candidate is pushed.
+- Payment-safety correction: the recorded production Stripe destination is
+  scoped to `Your account`, while RIVT creates invoice direct charges on
+  connected contractor accounts. The candidate now remains setup-required and
+  refuses new onboarding/payment links unless
+  `STRIPE_CONNECT_WEBHOOK_SCOPE=connected_accounts` explicitly attests a live
+  Connected-accounts destination and signed-delivery proof. Existing signed
+  webhook processing remains available for delayed events.
+- Resilience correction: Stripe and Resend connection plus response-body waits
+  are bounded to eight seconds. This contains an unlimited database-lock/pool
+  wait but does not replace the planned durable provider outbox and
+  reconciliation model.
+- Machine gate correction: `launch:readiness` now reads the checked-in
+  payment-provider readiness record. It fails closed unless bank payments are
+  either proved disabled or approved with fresh signed `Connected accounts`
+  delivery evidence. Approval must be current, occur after verification, and
+  match the SHA-256 digest of the exact reviewed mode and evidence.
+- Boundary: no merge, deployment, provider setting, production row, backup,
+  paid resource, or cost changed. The old Stage 1 approval is expired and was
+  not reused. `ACTIVE_LAUNCH_HOLD`, the formal exact-source security scan, exact-runtime CI,
+  Stripe provider proof, fresh Stage 1 evidence/approval/preflight, incident
+  exit, deployment, and activation remain open.
+
+## 2026-07-31 - Credential-Incident Provider Review Correction (No Deployment)
+
+- Branch/source: `codex/money-integrity-canonical-invoices` at source
+  `b0151bce6f481a4ccf39eb2726ba208066e874b4` before this documentation-only
+  correction.
+- Review completed: `2026-07-31T13:07:24.122Z` by Codex under the incident-owner role's
+  read-only incident authorization, against deployed production source
+  `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`.
+- Environment: read-only review of existing production/provider evidence; no
+  application deployment, provider configuration change, customer-data write,
+  payment, new service, or paid resource.
+- Reviewed/bounded: Stripe Workbench API/event/key/suspicious-activity views;
+  Resend's available 15-day API/email logs and key inventory; Sentry provider
+  audit/usage; Railway deployment history; retained PostgreSQL logs; and
+  aggregate read-only billing, subscription, entitlement, invoice, payment-
+  request, direct-payment, Connect, OAuth-identity, and audit-ledger state.
+- Result: no identified misuse indicator within the named retained bounds.
+  Stripe's platform-account view showed only the controlled replacement-key
+  account read, no `Your account` event in the bounded interval, and zero
+  suspicious-activity cases. Within the named aggregate production queries,
+  the only matching event rows were three documented rotation probes; no
+  additional application-recorded webhook row or nonzero consistency counter
+  was found. Resend showed the expected restriction check, proof delivery, and
+  older sends consistent with documented pre-exposure tests. These tables and
+  provider views cannot reconstruct an action they did not log or retain.
+- Stripe destination follow-up: at `2026-07-31T13:33:28.9236604Z`, the live
+  production destination inventory showed the ACH settlement destination scoped
+  to `Your account`; no `Connected accounts` destination was configured. The
+  selected destination's Event deliveries view reported `No event deliveries
+  found`, and its Overview reported total `0` for `This week`. This bounds the
+  current configured destination view; it does not prove that no Connect-side
+  activity occurred outside evidence Stripe retained or logged.
+- Railway administrator-history follow-up: completed read-only at
+  `2026-07-31T19:10:46.1221413Z` against the existing Pro workspace Audit Logs.
+  The complete `2026-07-29T16:00:00Z` through `2026-07-30T16:00:00Z` filtered
+  view was paged to its oldest entry. In the exact exposure window, the log
+  contained five `SSHSession.authenticated` events and nine
+  `Deployment.created` events, all attributed to the founder-controlled
+  account. No other actor,
+  variable/configuration change, credential regeneration, service/bucket/
+  volume change, or tunnel event appeared in-window. A representative
+  in-window SSH event matched the source IP and SSH-key fingerprint of a
+  controlled July 31 maintenance event, supporting but not proving same-
+  operator attribution. The documented database-password and bucket-
+  credential regenerations appear immediately after the repository upper
+  bound. No unexplained Railway administrator event was identified within the
+  retained reviewed window. Matching account/connection identity does not
+  prove that valid credentials were never compromised, and this review cannot
+  prove an action outside Railway's logged event set.
+- Google Cloud audit/activity follow-up: completed read-only at
+  `2026-07-31T19:32:50.0134267Z` under the founder-controlled support account
+  for project `rivt-499402`. An exact exposure-window Logs Explorer query from
+  `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` returned zero retained
+  entries across the Admin Activity, Data Access, System Event, and Policy
+  Denied log IDs. A separate post-window containment query through
+  `2026-07-30T15:00:00Z` returned nine Client Auth Configuration API events for
+  the same OAuth client: three `AddClientSecret`, three `UpdateClientSecret`,
+  and three `DeleteClientSecret`, all attributed to the founder-controlled
+  support account and consistent with the documented replacement/cleanup
+  sequence. No other actor or method appeared in that query. This bounds only
+  the queried retained audit entries; it does not prove no OAuth code/token
+  exchange, no action outside logged event types, or no historical access, and
+  it does not infer that Data Access logging was complete.
+- Correction: the incident-owner role's exact `2026-07-31T12:22:03.895Z` statement is preserved
+  in the incident record. Later review found its blanket provider-review premise
+  incomplete; only the PostgreSQL/direct-bucket historical limitation remains
+  valid closure evidence from that first statement.
+- Owner-decision follow-up: at `2026-07-31T19:39:34.5524830Z`, the incident-owner role accepted
+  the three unobservable VAPID, offline backup-key, and offline authentication-
+  pepper forensic limits. The exact statement is preserved in the incident
+  record. It does not prove no misuse, authorize deployment, or approve cost.
+- Launch/cost boundary: `ACTIVE_LAUNCH_HOLD` and the Railway Stage 1 pause remain
+  active. No prior cost/configuration approval is reused.
+
 ## 2026-07-31 - Sentry DSN Rotation and Retirement
 
 - Production source commit:
@@ -47,9 +294,11 @@
   preserves final-boundary Sentry redaction. The disabled prior key must never
   be restored; any rollback keeps the replacement DSN.
 - Launch boundary: Sentry credential rotation is closed. The broader incident
-  and `ACTIVE_LAUNCH_HOLD` remain open until the final provider-review
-  synthesis, explicit acceptance of unavailable historical PostgreSQL and
-  object-access evidence, and a fresh Railway Stage 1 re-review and approval.
+  and `ACTIVE_LAUNCH_HOLD` remain open. PostgreSQL/direct-bucket historical
+  limits and the three unobservable-secret decisions are valid owner-accepted
+  closure evidence. Combined local source review is complete; formal security
+  scan, exact-runtime CI, Stripe delivery remediation, and fresh Stage 1
+  approval/preflight remain open.
 
 ## 2026-07-30 - Web Push VAPID Generation Tracking
 
@@ -828,7 +1077,7 @@
   `4637b9a9a79e40d30febad95789f9917ffd0c054`. Keep migrations 0030 and 0029
   after any real account/payment data exists unless an approved export and
   retention plan permits rollback.
-- Activation gate: Michael must complete Stripe-hosted identity/business
+- Activation gate: the founder role must complete Stripe-hosted identity/business
   onboarding. Then create the live connected-account destination, install its
   dedicated signing secret, verify signed delivery, and enable only a
   controlled pilot account before broader release.
@@ -1945,7 +2194,7 @@ Add one entry per staging/production deployment.
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-22 03:48:04 UTC / 2026-06-21 23:48:04 America/New_York
-- Approver: Michael
+- Approver role: `founder`
 - Approval scope: founder, support, and legal/safety Gate A signoffs for the controlled named-cohort pilot readiness package.
 - Evidence: `docs/operations/GATE_A_APPROVAL_PACKET.md`; `docs/operations/incident-routing.json`
 - Source repository/branch: `Zboytjbxp/rivt`, `master`
@@ -1962,9 +2211,9 @@ Add one entry per staging/production deployment.
 - Environment: Production (`https://rivt.pro`)
 - Started at: `2026-06-22T03:14:00Z`
 - Ended at: `2026-06-22T03:31:05.8720277Z`
-- Incident commander: Michael
-- Backup owner: Anya Tingle
-- Support communicator: Michael / `support@rivt.pro`
+- Incident commander role: `incident-commander`
+- Backup owner role: `backup-incident-owner`
+- Support communicator role: `support-owner` via `support@rivt.pro`
 - Production source commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
 - Alert destination tested: Sentry Cloud project `4511606746185728` accepted rehearsal event `43fc7567f458490582db1f6642e2e0ea` with HTTP 200; the high-priority Sentry issue alert rule was previously verified on `RIVT Sentry smoke test` at 2026-06-22 02:38 UTC.
 - Paging destination tested: Sentry high-priority issue alert route remains the first pilot escalation route; dedicated phone/SMS paging is still recommended before broader scale.
@@ -1986,9 +2235,9 @@ Add one entry per staging/production deployment.
 - Environment: Production (`https://rivt.pro`)
 - Started at: `2026-06-22T03:14:00Z`
 - Ended at: `2026-06-22T03:20:29.5545352Z`
-- Incident commander: Michael
-- Backup owner: Anya Tingle
-- Support communicator: Michael / `support@rivt.pro`
+- Incident commander role: `incident-commander`
+- Backup owner role: `backup-incident-owner`
+- Support communicator role: `support-owner` via `support@rivt.pro`
 - Production source commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b` from `npm run monitor:production`
 - Alert destination tested: production synthetic monitor path was exercised locally; Sentry high-priority issue alert was previously verified on smoke issue `RIVT Sentry smoke test` at 2026-06-22 02:38 UTC
 - Paging destination tested: not newly triggered in this attempt
@@ -2019,10 +2268,10 @@ Add one entry per staging/production deployment.
 - Automated gates: `npm run monitor:production` passed after provider configuration; prior source gates for `6d8e276` remain `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`
 - Post-deploy smoke tests: public `/api/health` passed and reported exact source commit `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL/S3-compatible dependencies healthy, and `observability.errorMonitoring.mode=configured`; Sentry accepted smoke event `RIVT Sentry smoke test` with HTTP 200 and showed `Error Received`
 - Escalation evidence: Sentry alert rule `Send a notification for high priority issues` is connected to project `node-express`, notifies suggested assignees or recently active members on every trigger, and triggered once for the smoke issue at 2026-06-22 02:38 UTC.
-- Incident-owner evidence: backup incident owner Anya Tingle is recorded in `docs/operations/incident-routing.json` with email and phone status recorded; the actual phone number is intentionally not stored in the repository.
+- Incident-owner evidence: the `backup-incident-owner` role and its private-roster contact-route ID are recorded in `docs/operations/incident-routing.json`; personal contact details are intentionally not stored in the repository.
 - Support-hours evidence: founder-provided Gate A support coverage is recorded as Monday-Saturday, 9:00 AM-5:00 PM, America/New_York.
-- Recovery-policy evidence: Gate A recovery policy is approved with RPO 1440 minutes, RTO 240 minutes, 30-day backup retention, 30-day restore-drill cadence, next restore drill due `2026-07-21T04:18:59.000Z`, and founder/operations approvals by Michael.
-- Incident-routing approval evidence: `docs/operations/incident-routing.json` is approved for the Gate A pilot scope by Michael at `2026-06-22T03:09:36.0366141Z`.
+- Recovery-policy evidence at this historical checkpoint: Gate A recorded an RPO of 1440 minutes, RTO of 240 minutes, 30-day backup retention, a 30-day restore-drill cadence, a next restore date of `2026-07-21T04:18:59.000Z`, and founder/operations approvals. Those approvals are now superseded; the current policy is blocked pending continuous-backup evidence and fresh evidence-bound approval.
+- Incident-routing approval evidence: `docs/operations/incident-routing.json` is approved for the Gate A pilot scope by the founder role at `2026-06-22T03:09:36.0366141Z`.
 - Health/readiness result: health reports PostgreSQL and S3-compatible storage healthy with exact source commit `6d8e276e036553c5f861f1f8ab97cc3333a3494b`; dedicated error monitoring is configured
 - Known risks: full Gate A remains blocked by incident rehearsal, support/legal/founder signoff, and physical/deeper manual accessibility-device evidence. Sentry alerting is accepted as the first pilot escalation route; dedicated phone/SMS paging should be added before broader scale. RPO/RTO is approved for Gate A pilot and should be tightened before broader scale or platform-held financial workflows.
 - Rollback performed/result: not required
@@ -2463,7 +2712,7 @@ Add one entry per staging/production deployment.
 - Feature-flag/config version: no app runtime flags changed
 - Provider/config changes: no provider credentials changed; no dedicated error-monitoring or paging provider was configured
 - Backup/rollback target: prior pushed source `43117cc Add backup artifact restore tooling`; no deploy
-- Automated gates: `npm run incident:readiness -- --json` returned blocked with primary owner `Michael <support@rivt.pro>` and synthetic monitoring configured; missing findings were backup owner, support hours, dedicated error monitoring, paging route, incident rehearsal, founder approval, support approval, and legal/safety approval. `npm run test:unit` passed with 25 tests including incident-readiness coverage. `npm run lint:security` passed with the new script included. `node --check scripts/incident-readiness-check.js` passed.
+- Automated gates: `npm run incident:readiness -- --json` returned blocked with primary role `incident-commander` via the organizational route `support@rivt.pro` and synthetic monitoring configured; missing findings were backup owner, support hours, dedicated error monitoring, paging route, incident rehearsal, founder approval, support approval, and legal/safety approval. `npm run test:unit` passed with 25 tests including incident-readiness coverage. `npm run lint:security` passed with the new script included. `node --check scripts/incident-readiness-check.js` passed.
 - Post-deploy smoke tests: none; no deployment occurred
 - Health/readiness result: not rechecked because Railway CLI remains unauthorized
 - Known risks: full Gate A remains blocked until `docs/operations/incident-routing.json` is completed with real owner/escalation/provider/approval evidence and `npm run incident:readiness -- --require-ready` passes

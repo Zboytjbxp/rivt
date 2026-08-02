@@ -2,6 +2,17 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 import test from "node:test";
+import {
+  configureHttpServer,
+  createDependencyHealthProbe,
+  createGracefulShutdown,
+  serviceHealthReady,
+} from "../server/http-server-safety.js";
+import {
+  pruneExpiredIdempotencyKeys,
+  runLeasedDatabaseMaintenance,
+  startDatabaseMaintenance,
+} from "../server/database-maintenance.js";
 import { newsInternals } from "../server/news.js";
 import { newsContinuityInternals } from "../server/news-continuity.js";
 import {
@@ -23,6 +34,10 @@ function responseDouble() {
     json(body) { this.body = body; return this; },
     setHeader(name, value) { this.headers[name] = value; },
   };
+}
+
+function flushAsyncWork() {
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
 function executableOperationsFiles(directory) {
@@ -52,6 +67,134 @@ test("operator tooling cannot enumerate an entire Railway service environment", 
     [],
     `Executable tooling must request named Railway values instead of enumerating a full environment: ${offenders.join(", ")}`,
   );
+});
+
+test("database maintenance prunes expired idempotency rows in bounded batches", async () => {
+  const calls = [];
+  const database = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      return { rowCount: 3, rows: [{ id: "1" }, { id: "2" }, { id: "3" }] };
+    },
+  };
+
+  assert.equal(await pruneExpiredIdempotencyKeys(database, 50_000), 3);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].sql, /expires_at <= now\(\)/);
+  assert.match(calls[0].sql, /LIMIT \$1/);
+  assert.deepEqual(calls[0].params, [1_000]);
+});
+
+test("database maintenance starts once and can be stopped", async () => {
+  let calls = 0;
+  const client = {
+    async query(sql) {
+      if (sql === "BEGIN" || sql === "COMMIT") return { rows: [] };
+      if (/pg_try_advisory_xact_lock/i.test(sql)) return { rows: [{ acquired: true }] };
+      calls += 1;
+      return { rowCount: 0, rows: [] };
+    },
+    release() {},
+  };
+  const database = {
+    async connect() {
+      return client;
+    },
+  };
+
+  const stop = startDatabaseMaintenance(database, { intervalMs: 60_000 });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls, 1);
+  await stop();
+});
+
+test("database maintenance uses one cross-process advisory lease per overlapping cycle", async () => {
+  let lockHeld = false;
+  let releasePrune;
+  let firstPruneStarted;
+  const firstPruneReady = new Promise((resolve) => {
+    firstPruneStarted = resolve;
+  });
+  const pruneGate = new Promise((resolve) => {
+    releasePrune = resolve;
+  });
+  const clients = [];
+  const database = {
+    async connect() {
+      const client = {
+        released: false,
+        async query(sql) {
+          if (sql === "BEGIN") return { rows: [] };
+          if (/pg_try_advisory_xact_lock/i.test(sql)) {
+            if (lockHeld) return { rows: [{ acquired: false }] };
+            lockHeld = true;
+            return { rows: [{ acquired: true }] };
+          }
+          if (sql === "COMMIT" || sql === "ROLLBACK") {
+            lockHeld = false;
+            return { rows: [] };
+          }
+          throw new Error(`Unexpected SQL: ${sql}`);
+        },
+        release() {
+          this.released = true;
+        },
+      };
+      clients.push(client);
+      return client;
+    },
+  };
+
+  const first = runLeasedDatabaseMaintenance(database, {
+    prune: async () => {
+      firstPruneStarted();
+      await pruneGate;
+      return 3;
+    },
+  });
+  await firstPruneReady;
+  const second = await runLeasedDatabaseMaintenance(database, {
+    prune: async () => {
+      throw new Error("The second contender must not run maintenance.");
+    },
+  });
+  assert.equal(second.acquired, false);
+  assert.equal(second.pruned, 0);
+  assert.ok(second.durationMs >= 0);
+  releasePrune();
+  const winner = await first;
+  assert.equal(winner.acquired, true);
+  assert.equal(winner.pruned, 3);
+  assert.ok(winner.durationMs >= 0);
+  assert.ok(clients.every((client) => client.released));
+});
+
+test("database maintenance shutdown waits for the active leased cycle", async () => {
+  let resolveCycle;
+  let cycleStarted;
+  const started = new Promise((resolve) => {
+    cycleStarted = resolve;
+  });
+  const cycle = new Promise((resolve) => {
+    resolveCycle = resolve;
+  });
+  const stop = startDatabaseMaintenance({ query() {} }, {
+    intervalMs: 60_000,
+    runCycle: async () => {
+      cycleStarted();
+      return cycle;
+    },
+  });
+  await started;
+  let stopped = false;
+  const stopping = stop().then(() => {
+    stopped = true;
+  });
+  await flushAsyncWork();
+  assert.equal(stopped, false);
+  resolveCycle({ acquired: true, pruned: 0, durationMs: 1 });
+  await stopping;
+  assert.equal(stopped, true);
 });
 
 test("cookie parsing and session validation fail closed", () => {
@@ -720,4 +863,227 @@ test("trade news tidies official resource titles", () => {
     "Florida Building Code Residential Advanced Course",
   );
   assert.equal(newsInternals._tidyResourceTitle("OSHA HVAC AND GFCI REQUIREMENTS"), "OSHA HVAC And GFCI Requirements");
+});
+test("service health requires live dependencies, session security, and completed migrations", () => {
+  assert.equal(serviceHealthReady({
+    dependenciesOk: true,
+    authSecurityOk: true,
+    migrationState: "ready",
+    requiredProviderOk: false,
+  }), false);
+  assert.equal(serviceHealthReady({
+    dependenciesOk: true,
+    authSecurityOk: true,
+    migrationState: "ready",
+  }), true);
+  assert.equal(serviceHealthReady({
+    dependenciesOk: false,
+    authSecurityOk: true,
+    migrationState: "ready",
+  }), false);
+  assert.equal(serviceHealthReady({
+    dependenciesOk: true,
+    authSecurityOk: false,
+    migrationState: "ready",
+  }), false);
+  assert.equal(serviceHealthReady({
+    dependenciesOk: true,
+    authSecurityOk: true,
+    migrationState: "pending",
+  }), false);
+});
+
+test("dependency health uses bounded live probes, coalesces traffic, and redacts failures", async () => {
+  let databaseCalls = 0;
+  let objectStorageCalls = 0;
+  let clock = 1_000;
+  const probeResults = [];
+  const probe = createDependencyHealthProbe({
+    databaseConfigured: true,
+    objectStorageConfigured: true,
+    probeDatabase: async () => {
+      databaseCalls += 1;
+    },
+    probeObjectStorage: async () => {
+      objectStorageCalls += 1;
+    },
+    timeoutMs: 50,
+    successCacheTtlMs: 1_000,
+    failureCacheTtlMs: 100,
+    now: () => clock,
+    onProbe: (result) => probeResults.push(result),
+  });
+
+  const [first, concurrent] = await Promise.all([probe(), probe()]);
+  assert.deepEqual(first, {
+    ok: true,
+    live: true,
+    database: "postgres",
+    objectStorage: "s3-compatible",
+  });
+  assert.deepEqual(concurrent, first);
+  assert.deepEqual(await probe(), first);
+  assert.equal(databaseCalls, 1);
+  assert.equal(objectStorageCalls, 1);
+
+  clock += 1_001;
+  await probe();
+  assert.equal(databaseCalls, 2);
+  assert.equal(objectStorageCalls, 2);
+  assert.deepEqual(probeResults, [
+    { databaseOk: true, objectStorageOk: true, durationMs: 0 },
+    { databaseOk: true, objectStorageOk: true, durationMs: 0 },
+  ]);
+
+  const failedProbe = createDependencyHealthProbe({
+    databaseConfigured: true,
+    objectStorageConfigured: true,
+    probeDatabase: async () => {
+      throw new Error("postgresql://user:secret@internal-db/rivt");
+    },
+    probeObjectStorage: async () => {
+      throw new Error("private-bucket-name");
+    },
+    timeoutMs: 50,
+    successCacheTtlMs: 1_000,
+    failureCacheTtlMs: 100,
+  });
+  const failed = await failedProbe();
+  assert.deepEqual(failed, {
+    ok: false,
+    live: true,
+    database: "unavailable",
+    objectStorage: "unavailable",
+  });
+  assert.doesNotMatch(JSON.stringify(failed), /secret|bucket|internal-db/);
+});
+
+test("dependency health reports missing configuration without provider requests", async () => {
+  let calls = 0;
+  const probe = createDependencyHealthProbe({
+    databaseConfigured: false,
+    objectStorageConfigured: false,
+    probeDatabase: async () => { calls += 1; },
+    probeObjectStorage: async () => { calls += 1; },
+    timeoutMs: 50,
+    successCacheTtlMs: 1_000,
+    failureCacheTtlMs: 100,
+  });
+  assert.deepEqual(await probe(), {
+    ok: false,
+    live: true,
+    database: "missing",
+    objectStorage: "missing",
+  });
+  assert.equal(calls, 0);
+});
+
+test("dependency health returns within its bound when a provider stalls", async () => {
+  let storageAbortObserved = false;
+  const probe = createDependencyHealthProbe({
+    databaseConfigured: true,
+    objectStorageConfigured: true,
+    probeDatabase: async () => {},
+    probeObjectStorage: (signal) => new Promise((resolve) => {
+      signal.addEventListener("abort", () => {
+        storageAbortObserved = true;
+        resolve();
+      }, { once: true });
+    }),
+    timeoutMs: 10,
+    successCacheTtlMs: 1_000,
+    failureCacheTtlMs: 100,
+  });
+
+  const startedAt = Date.now();
+  assert.deepEqual(await probe(), {
+    ok: false,
+    live: true,
+    database: "postgres",
+    objectStorage: "unavailable",
+  });
+  assert.equal(storageAbortObserved, true);
+  assert.ok(Date.now() - startedAt < 500);
+});
+
+test("HTTP server safety applies explicit bounded timeouts", () => {
+  const server = {};
+  assert.equal(configureHttpServer(server, {
+    requestTimeoutMs: 90_000,
+    headersTimeoutMs: 12_000,
+    keepAliveTimeoutMs: 4_000,
+    maxHeadersCount: 80,
+    maxRequestsPerSocket: 500,
+  }), server);
+  assert.equal(server.requestTimeout, 90_000);
+  assert.equal(server.headersTimeout, 12_000);
+  assert.equal(server.keepAliveTimeout, 4_000);
+  assert.equal(server.maxHeadersCount, 80);
+  assert.equal(server.maxRequestsPerSocket, 500);
+  assert.throws(
+    () => configureHttpServer({}, {
+      requestTimeoutMs: 5_000,
+      headersTimeoutMs: 6_000,
+      keepAliveTimeoutMs: 1_000,
+    }),
+    /cannot exceed/,
+  );
+});
+
+test("graceful shutdown is idempotent and closes resources once after draining", async () => {
+  let closeCallback;
+  let closeCalls = 0;
+  let idleCloseCalls = 0;
+  let resourceCloseCalls = 0;
+  const server = {
+    listening: true,
+    close(callback) {
+      closeCalls += 1;
+      closeCallback = callback;
+    },
+    closeIdleConnections() {
+      idleCloseCalls += 1;
+    },
+  };
+  const shutdown = createGracefulShutdown({
+    getServer: () => server,
+    closeResources: async () => {
+      resourceCloseCalls += 1;
+    },
+    timeoutMs: 100,
+  });
+
+  const first = shutdown("SIGTERM");
+  const second = shutdown("SIGINT");
+  assert.equal(first, second);
+  assert.equal(closeCalls, 1);
+  assert.equal(idleCloseCalls, 1);
+
+  closeCallback();
+  assert.deepEqual(await first, { forced: false, signal: "SIGTERM" });
+  assert.equal(resourceCloseCalls, 1);
+});
+
+test("graceful shutdown force-closes remaining sockets after its deadline", async () => {
+  let forceCloseCalls = 0;
+  let resourceCloseCalls = 0;
+  const server = {
+    listening: true,
+    close() {},
+    closeIdleConnections() {},
+    closeAllConnections() {
+      forceCloseCalls += 1;
+    },
+  };
+  const shutdown = createGracefulShutdown({
+    getServer: () => server,
+    closeResources: async () => {
+      resourceCloseCalls += 1;
+    },
+    timeoutMs: 5,
+  });
+
+  assert.deepEqual(await shutdown("SIGTERM"), { forced: true, signal: "SIGTERM" });
+  assert.equal(forceCloseCalls, 1);
+  assert.equal(resourceCloseCalls, 1);
 });

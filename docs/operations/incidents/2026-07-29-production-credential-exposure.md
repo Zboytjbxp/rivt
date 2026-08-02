@@ -1,9 +1,9 @@
 # Production Credential Exposure - 2026-07-29
 
-- Status: containment in progress
+- Status: contained; exact disabled-mode payment-provider closure is complete; incident closure, reviewed deployment, final approval, and strict Stage 1 preflight remain open
 - Severity: critical
 - Environment: Railway production
-- Incident owner: Michael
+- Incident owner role: `incident-commander`
 - Source at detection: `92a8451b8190f5119384a4970fb1a324503df995`
 - Detected at: between `2026-07-29T19:01:00-04:00` and
   `2026-07-29T21:42:25-04:00` (repository-bounded; exact operator-observed time
@@ -14,8 +14,9 @@
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
   followed by authorization to continue the remaining incident work unless
-  incremental cost would exceed $2 total. Completed actions remained below
-  that ceiling; no exact measured provider cost is claimed.
+  expected incremental cost would exceed $2 total. Actions were selected on
+  expected usage below that ceiling; actual corrective-deployment compute
+  usage remains unreconciled and no exact measured provider cost is claimed.
 
 ## Summary
 
@@ -24,10 +25,17 @@ returned production environment-variable values into a restricted automation
 transcript. The temporary local output file was removed. No secret value is
 included in this record.
 
-No unauthorized use is currently known; provider and audit-log review remains
-open. Data-access and exfiltration impact is under investigation, and no
-conclusion has been reached. Because transcript confidentiality cannot be used
-as a security boundary, every exposed credential is treated as compromised.
+No unauthorized use is currently known. The bounded Stripe platform-account
+and configured production destination/delivery views, Resend, Sentry, Google
+Cloud audit/activity, Railway workspace audit/deployment history, application-
+ledger, and retained PostgreSQL evidence reviewed so far contain no identified
+misuse indicator within their named query and retention bounds.
+Historical
+successful PostgreSQL access and direct bucket reads cannot be reconstructed,
+and several application-generated secrets have no provider audit trail. RIVT
+therefore cannot prove that no historical access or exfiltration occurred.
+Because transcript confidentiality cannot be used as a security boundary,
+every exposed credential is treated as compromised.
 
 The detection window is bounded by a documented 19:01 Railway observation that
 explicitly read no credentials or variables and the first formal critical
@@ -56,7 +64,7 @@ moment.
 | PostgreSQL | Rotated; prior credential superseded | RIVT now uses the managed `${{Postgres.DATABASE_URL}}` reference; in-place PostgreSQL password regeneration and final RIVT redeployment succeeded; pre-change, reference-cutover, and post-rotation rolled-back temporary-table transactions passed |
 | Stripe API | Rotated; prior key expired | Railway deployment `54b5dcfc-1a94-4fae-bfca-423fe5ed9a47` succeeded; replacement authenticated to Stripe with a read-only HTTP 200 account response before the superseded key was expired |
 | Stripe billing webhook | Rotated; prior secret retired | Destination `we_1TnpZWIz6JDg8LdahYHPwX0o` at `https://rivt.pro/api/stripe/webhook`; Railway deployment `d44d4449-f13e-477c-8fa6-182d8aa21282` succeeded; harmless probe accepted; provider inventory confirms the prior secret expired |
-| Stripe Connect webhook | Rotated; prior secret retired | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; final no-charge/no-payment probe accepted; provider inventory confirms the prior secret expired |
+| Stripe Connect webhook | Rotated for the existing `Your account` destination; prior secret retired | Final Railway cutover deployment `6eded406-8c0e-4abc-adf4-cbe61408025d` succeeded on commit `ae6cc63321df70d322a63d4c821e721a2ddedf52`; a locally signed no-charge/no-payment probe was accepted and provider inventory confirms the prior secret expired. This did not prove Stripe delivery for connected contractor accounts. |
 | Google OAuth | Rotated; prior secret deleted | Provider UI verifies `support@rivt.pro` owns project `rivt-499402`; the June 13 secret was disabled and then deleted on July 30; final provider inventory contains exactly one enabled July 30 replacement; Railway deployment `0898208b-707f-49c3-b9b9-d0938e157542` serves exact source `04f13e006cae545a33002d2225f90ab0d8b7e9c9`; health, provider-configuration, callback, and production-monitor checks pass |
 | Resend | Rotated; prior key deleted | Replacement sending-only key is restricted to `rivt.pro`; a proof email was delivered; the provider dashboard confirmed deletion of the prior key and shows one replacement key remaining |
 | Object storage | Rotated; prior copied pair invalidated | Railway bucket `rivt-private` (`83403a81-f912-431e-b0fc-40a238f347e8`) retained identical object count and bytes across the one-time reset; both managed references persisted; deployment `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` and an existing-object read passed |
@@ -69,8 +77,9 @@ moment.
 
 - Removed the temporary local output file.
 - Stopped all secret-enumerating Railway commands.
-- Paused the separately approved Railway Stage 1 activation. That approval does
-  not apply to any changed source or configuration.
+- Paused the previously approved Railway Stage 1 activation. That approval is
+  expired and unusable; no changed or current source, configuration, evidence,
+  cost, or activation inherits it.
 - Preserved the existing encrypted production backup artifact. No backup was
   deleted, replaced, or re-encrypted.
 - Created a narrow hotfix from the exact production source. It adds:
@@ -92,10 +101,11 @@ moment.
   corrected JSON value replay in logical restores. Railway deployment
   prefix `0b020e13` served that exact source and public `/api/health` returned
   `ok: true`.
-- The operational launch checker now fails closed while this incident remains
-  open. `incident:readiness` still passes the standing routing configuration,
-  while `launch:readiness --require-ready` exits nonzero with
-  `ACTIVE_LAUNCH_HOLD`. The hold is recorded in
+- At that containment checkpoint, the operational launch checker failed closed
+  on `ACTIVE_LAUNCH_HOLD` while the earlier incident-routing check still
+  passed. The 2026-08-01 follow-up supersedes that result: incident readiness
+  now also blocks on the unverified private backup route and approvals that do
+  not follow final incident evidence. The hold is recorded in
   `docs/operations/incident-routing.json` and may be cleared only after every
   exit criterion in this incident record is verified.
 - Final local verification passes production build, application and security
@@ -198,6 +208,9 @@ moment.
   no-charge/no-payment probes. The final probe returned HTTP 200 with
   `{"received":true,"duplicate":false}`. The checks left two clearly named
   idempotency-ledger records.
+- The rotated signing secret belongs to the existing `Your account`
+  destination. Local signature acceptance proves only RIVT's verifier and does
+  not prove that Stripe will send connected-contractor account events to it.
 - Stripe provider inventory now confirms the prior Connect signing secret is
   expired; only the active replacement remains usable.
 - Stripe live API key rotation is complete.
@@ -271,9 +284,11 @@ moment.
   S3-compatible storage healthy, Sentry, Web Push, and Stripe Connect Accounts
   v2 configured, matching-job alerts enabled, operational controls open, and
   seven anonymous private-route checks closed.
-- VAPID rotation and previous-key retirement are complete. The broader
-  incident remains open for Sentry and the remaining bounded
-  provider/data-access review; Railway Stage 1 remains paused.
+- VAPID rotation and previous-key retirement are complete. At this stage of the
+  response, Sentry and the remaining bounded provider/data-access review were
+  still open. Sentry was completed later; the current open boundaries are
+  listed in the provider-review synthesis below. Railway Stage 1 remains
+  paused.
 
 ## Google OAuth callback evidence
 
@@ -284,7 +299,7 @@ moment.
   transaction that had remained open beyond RIVT's 10-minute lifetime. It
   redirected to the honest authentication error in 10 ms, before a provider
   token exchange, and is not counted as credential proof.
-- A completely fresh journey for `zboytjbxp@gmail.com` then completed at
+- A completely fresh founder-owned account journey then completed at
   14:18:31 UTC. The callback returned its redirect in 131 ms, established the
   server session, and the controlled browser rendered the authenticated RIVT
   Home workspace. No password, token, code, cookie, or secret was recorded.
@@ -384,8 +399,12 @@ moment.
   and fails if a Railway whole-environment enumeration command is introduced.
   The focused security suite passes 27/27.
 - This satisfies the technical-prevention follow-up for operator workflows.
-  It does not clear the incident or launch hold; provider rotations, bounded
-  access-log review, and final Stage 1 re-review remain open.
+  At this stage of the response, provider rotations and bounded access-log
+  review were still open. Rotations were completed later; the current open
+  boundaries are listed in the provider-review synthesis below. This work does
+  not clear the incident or launch hold. Combined local source review is now
+  complete; exact-runtime CI, Stripe delivery remediation, final approval, and
+  strict activation preflight remain open.
 
 ## Structured-log containment evidence
 
@@ -474,9 +493,9 @@ moment.
   the most recent isolated CI run remains the 22/22 PostgreSQL integration
   proof recorded above.
 - Sentry credential rotation is complete. The broader incident and
-  `ACTIVE_LAUNCH_HOLD` remain open for the final provider-review synthesis,
-  explicit incident-owner acceptance of the historical PostgreSQL and object
-  storage forensic limits, and a fresh Railway Stage 1 re-review and approval.
+  `ACTIVE_LAUNCH_HOLD` remain open. Combined local source review is complete;
+  exact-runtime CI, Stripe delivery remediation, fresh Stage 1 evidence and
+  approval, and strict preflight remain required.
 
 ## Bounded access-log review evidence
 
@@ -519,12 +538,149 @@ moment.
   that no-new-service application control from later provider/external
   immutable logging whose cost, privacy, residency, and retention have not
   been approved. No part of that proposed design is represented as implemented.
-- No misuse indicator has been identified in the evidence reviewed so far.
-  The bounded PostgreSQL error review is complete for the repository-backed
-  incident window, subject to the historical auditing limitation above. The
-  review remains open for provider logs and the unavoidable database/object-
-  storage forensic limitations. The incident is not represented as proof of
-  no access or no exfiltration.
+- No misuse indicator has been identified in the bounded evidence reviewed.
+  The PostgreSQL error review is complete for the repository-backed incident
+  window, subject to the historical auditing limitation above. Provider review
+  status and remaining blind spots are enumerated below. The incident is not
+  represented as proof of no access or no exfiltration.
+
+## Provider-review synthesis (bounded review complete; incident open)
+
+The exposure review window begins at the conservative repository bound
+`2026-07-29T23:01:00Z`. The conservative latest repository-evidence upper bound
+for the Stripe credential retirements is `2026-07-30T03:08:57Z`; the wider
+application-ledger review continues through the recorded owner-acceptance time
+`2026-07-31T12:22:03.895Z`.
+
+Codex completed the initial read-only review at `2026-07-31T13:07:24.122Z`,
+the Railway follow-up at `2026-07-31T19:10:46.1221413Z`, and the Google Cloud
+follow-up at `2026-07-31T19:32:50.0134267Z` under the incident-owner role's
+authorization against deployed production source
+`f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`. No provider setting, credential,
+customer record, payment, deployment, or paid resource was changed. Provider
+identifiers used for the review were the live-mode RIVT Stripe account
+`acct_1TnnyAIz6JDg8Lda`, Resend domain `rivt.pro`, Sentry project
+`node-express`, Google Cloud project `rivt-499402`, Railway service `RIVT`, and
+Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
+
+| Credential/provider | Evidence reviewed | Bounded result | Remaining limit/status |
+|---|---|---|---|
+| Stripe API, Billing, and Connect | Live-mode Workbench request and `Your account` event views, active-key and production-destination inventory, the selected ACH destination's Overview and Event deliveries views, suspicious-activity view, and aggregate read-only production billing/invoice/payment reconciliation | The only API request visible in the bounded incident window was the controlled replacement-key `GET /v1/account` at `2026-07-30T02:55:35Z` (July 29 EDT). No `Your account` event was visible from `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z`, and the suspicious-activity view contained zero cases. The production ACH destination is scoped to `Your account`; no `Connected accounts` destination is configured. Its Event deliveries view reported `No event deliveries found`, and its Overview reported total `0` for `This week`. Within the named aggregate database queries, the only matching event rows were one controlled billing rotation probe and two controlled unknown/no-charge Connect rotation probes; no additional webhook row, recorded billing/invoice audit action, or nonzero reconciliation counter was found. | **Reviewed/bounded for the platform account, current production destination inventory, selected-destination delivery view, and retained application tables.** The absence of a separate `Connected accounts` destination means there was no separate configured destination delivery view to inspect; it is not proof that no Connect-side activity occurred outside retained or logged evidence. |
+| Resend | Available 15-day API/email logs and active-key inventory, reviewed through `2026-07-31T13:07:24.122Z` | The retained window fully covers the incident interval. Its incident-window records are the expected sending-only key restriction check (`401`) and controlled delivery proof. Earlier visible sends predate exposure and are consistent with documented verification/UI tests. Exactly one sending-only replacement key remains. | **Reviewed/bounded.** No unexplained provider activity was found in the available log window. |
+| Sentry | Provider audit log, key inventory, event ingestion, alert proof, and 14-day usage | Only expected replacement-key creation/rename and prior-key disable actions were present; usage showed no significant spike and zero filtered, rate-limited, or invalid events. | **Reviewed/bounded.** An ingestion DSN does not provide proof that it was never copied or attempted elsewhere. |
+| Google OAuth | Credential inventory and controlled callbacks from the rotation; aggregate read-only application identity/login/transaction reconciliation; and Google Cloud Logs Explorer queries under the founder-controlled support account for project `rivt-499402` | The application ledger has zero Google identity creation/update or Google login during the exposure window, zero pending OAuth transactions, and one post-retirement login/update matching the controlled physical sign-in. The exact `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` query returned zero retained entries across the Admin Activity, Data Access, System Event, and Policy Denied log IDs. The post-window query through `2026-07-30T15:00:00Z` returned nine Client Auth Configuration API events for the same OAuth client: three `AddClientSecret`, three `UpdateClientSecret`, and three `DeleteClientSecret`, all attributed to the founder-controlled support account and consistent with the documented replacement/cleanup sequence. No other actor or method appeared in that query. | **Reviewed/bounded for the queried retained audit entries.** Zero matching entries does not prove no OAuth authorization-code or token exchange occurred, no action occurred outside the queried/logged event types, or no historical access occurred. The presence or completeness of Data Access logging is not inferred from the query. |
+| Railway | Pro workspace Audit Logs, paged through the complete `2026-07-29T16:00:00Z` through `2026-07-30T16:00:00Z` filtered view; representative event details; and secret-safe deployment evidence | In the exact `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` exposure window, Railway recorded five `SSHSession.authenticated` events and nine `Deployment.created` events. Every event was attributed to the founder-controlled Railway account; no other actor, variable/configuration change, credential regeneration, service/bucket/volume change, or tunnel event appears in-window. A representative in-window SSH event used the same source IP and SSH-key fingerprint as a controlled July 31 maintenance event, supporting but not proving same-operator attribution. Immediately after the repository upper bound, the same account performed the documented database-password and bucket-credential regenerations. | **Reviewed/bounded for retained workspace actions.** Railway documents that Pro workspace audit logs retain 30 days and cover project/service/deployment/variable/workspace changes. The workspace log does not establish the physical human behind a valid account/key/IP, supply a separate dashboard-login history in this view, or prove that an action outside Railway's logged event set did not occur. |
+| PostgreSQL | Retained platform logs plus aggregate read-only application/payment reconciliation | No authentication failure, `FATAL`, or `PANIC` record was found in the retained reviewed windows; canonical billing, invoice, payment-request, direct-payment, and Connect consistency counters were zero. | **Historical evidence unavailable; owner acceptance recorded.** Successful historical connections, reads, and writes cannot be reconstructed. |
+| Railway Bucket/object storage | Rotation continuity, stable object count/bytes, restore evidence, and controlled existing-object read | Rotation and continuity passed with no known customer-data loss. | **Historical evidence unavailable; owner acceptance recorded for direct reads.** Historical per-object direct reads cannot be reconstructed. |
+| Web Push VAPID private key | Rotation, retirement, outbox/readiness state, and three controlled physical-device deliveries | Current registrations and outbox state are clean and all controlled devices delivered through the active generation. | **Unobservable; owner acceptance recorded at `2026-07-31T19:39:34.5524830Z`.** There is no provider audit trail proving the exposed private key was not used outside RIVT. |
+| Backup-encryption key | Rotation, previous-key retirement, and controlled restore proofs | Active and retained artifacts restore successfully; the previous key is absent from runtime. | **Unobservable; owner acceptance recorded at `2026-07-31T19:39:34.5524830Z`.** Existing evidence cannot prove an encrypted artifact and exposed key were never copied or used offline. |
+| Authentication metadata pepper | Rotation and runtime/configuration verification | The replacement is active and the old value has no compatibility fallback. | **Unobservable; owner acceptance recorded at `2026-07-31T19:39:34.5524830Z`.** There is no provider ledger for offline correlation attempts using the exposed value. |
+
+This table completes the bounded provider/forensic review. It does not prove
+that no historical access, exfiltration, token exchange, or offline secret use
+occurred. The Stage 1 sequence has been replayed onto the Packet 87 candidate
+and the combined local gates pass. The incident and launch hold remain open
+pending final exact-source security review, exact-runtime CI, Stripe delivery
+remediation, fresh plan / provider / cost / recovery evidence, a new exact-plan
+approval, and a passing strict preflight. Deployment and Stage 1 activation
+remain separately authorized actions.
+
+The aggregate database review used a repeatable-read, read-only transaction over
+the named billing, subscription, entitlement, invoice, payment-request,
+direct-payment, Connect, OAuth-identity, and audit tables. It selected counts and
+timestamps rather than raw payloads or customer identifiers. `billing_events`
+is an idempotency table rather than an append-only forensic ledger, duplicate
+deliveries may be discarded, and current-state tables cannot reconstruct a
+historical direct database mutation that left no retained row. A zero aggregate
+counter therefore means no inconsistency was present in the queried retained
+state; it is not proof that an action absent from those tables never occurred.
+
+## Incident-owner acceptance of forensic limits
+
+- At `2026-07-31T12:22:03.895Z`, the incident-owner role stated: "I accept that
+  all available provider evidence was reviewed and no misuse indicator was
+  found, but historical successful PostgreSQL access and direct bucket reads
+  cannot be reconstructed. RIVT cannot honestly prove that no historical access
+  or exfiltration occurred."
+- Later reconciliation found the statement's provider-review premise incomplete.
+  Therefore only its PostgreSQL/direct-bucket historical limitation remains
+  valid closure evidence. The overall conclusion also remains: RIVT makes no
+  claim that historical access or exfiltration did not occur.
+- This acceptance closes only the PostgreSQL/direct-bucket forensic-limit
+  requirement. It does not accept the VAPID, backup-key, or authentication-
+  pepper blind spots; reconstruct missing history; lower the incident severity;
+  close the incident; clear `ACTIVE_LAUNCH_HOLD`; authorize deployment; or
+  approve paid infrastructure work.
+- At `2026-07-31T19:39:34.5524830Z`, the incident-owner role stated: "I accept
+  these three forensic limits: RIVT cannot prove the retired VAPID private key
+  was never used outside RIVT; cannot prove an encrypted backup and retired
+  backup key were never copied and used offline; and cannot prove the retired
+  authentication metadata pepper was never used offline. This acceptance does
+  not prove no misuse occurred and does not authorize deployment or added
+  cost."
+- This second acceptance closes only the three named unobservable-secret owner-
+  decision requirements. It does not reconstruct missing evidence, prove that
+  no misuse occurred, close the incident, clear `ACTIVE_LAUNCH_HOLD`, authorize
+  deployment, or approve cost.
+- Combined local source review, formal exact-source security scan,
+  exact-runtime CI, and exact disabled-mode payment-provider closure are
+  complete. Fresh Stage 1 evidence and approval, a passing strict preflight,
+  reviewed deployment, and the remaining exit decisions are still required
+  before incident closure. Stripe signed-delivery proof remains required only
+  before any future ACH enablement.
+
+## Exact-source review and provider containment - 2026-08-01
+
+- The sealed exact-source security scan
+  `7e499cf8-be43-4b6d-ace9-e61f0978a27c` completed with zero findings and
+  `25/25` review coverage for exact range
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` through
+  `6c9e803522c3bfd0ff9af1fdd1ba4e02b07e2324`. Commit
+  `2253bca16883e736cd06b9b47d4539ffa4a86e32` records the later evidence and
+  launch-message follow-up and is the runtime/gate evidence commit that passed
+  hosted source/database CI; its receipt/documentation follow-ups were not
+  represented as sealed scan input.
+- GitHub Actions run `30680447818`, job `91316269376`, passed the Node 20
+  production build, lint, `252` unit/frontend checks, and PostgreSQL 16
+  integration suite (`25/25`). Its later readiness step correctly stopped on
+  the still-active incident hold and unapproved payment-provider state; this
+  was a fail-closed policy result, not a source or database-CI defect.
+- Railway automatic deploys remain disabled and Wait for CI remains enabled.
+  The runtime/gate evidence commit is pushed only to draft pull request #14;
+  the current branch adds disabled-mode approval/evidence binding and tests
+  after it, without changing application runtime behavior. Nothing has been
+  merged or deployed.
+- Production invoice bank payments were found unexpectedly enabled and were
+  immediately disabled. Public health then reported `enabled:false`,
+  `configured:false`, `webhookConfigured:true`, and `mode:setup_required` on
+  unchanged production source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`. A count-only, read-only
+  production transaction found zero project or tool invoice payment-request
+  rows. No database-backed RIVT payment request was available to reconcile or
+  expire; provider-side sessions without a durable row were not enumerated.
+- A dedicated Stripe `Connected accounts` destination and signing secret now
+  exist, but a real Stripe-signed delivery that causes a matching durable
+  payment-state transition has not been proved. Scope attestation remains
+  unset and ACH remains disabled. At `2026-08-01T03:26:10.3842506Z`, the founder role
+  approved only the exact disabled production configuration; the approval is
+  bound to its machine-readable digest and does not enable ACH, authorize
+  deployment or a worker, clear this incident, or authorize launch.
+  The nonsecret receipt is
+  `docs/delivery/evidence/railway-stage1/PROVIDER_CONTAINMENT_2026-08-01.md`.
+- The exact-source security-review and hosted source/database-CI exit criteria
+  are complete, and disabled-mode payment-provider approval is complete. The
+  incident remains open for reviewed deployment, final incident/launch
+  decisions, and the remaining exit criteria below. Any future ACH enablement
+  separately requires signed-delivery proof, scope attestation, and new
+  approval.
+- A follow-up standard repository security scan completed `160/160` reviewed
+  files with two medium and three low findings. It identified a reusable live
+  pilot invite recorded in public repository evidence, recovery checks that
+  could pass without continuous-backup proof, and public personal incident-
+  contact details. Current-tree remediation removes the disclosed values and
+  fails closed on missing private-route and recovery evidence. The live invite
+  has not been revoked and the previously created hosted synthetic issue has
+  not been edited; both remain explicit live cleanup actions.
 
 ## Recovery plan
 
@@ -548,14 +704,29 @@ This incident remains open until:
   incident may be contained but not closed;
 - authentication, database, storage, email, payments/webhooks, OAuth, Web Push,
   monitoring, and backup restore access are verified without printing secrets;
-- the existing backup artifact is still recoverable through the approved
-  previous-key path;
-- provider, PostgreSQL, and object-access logs have been reviewed for
-  unauthorized access or exfiltration;
+- the recorded previous-key restore proof completed before retirement is
+  preserved, and current active-key restore evidence remains valid;
+- every row in the provider-review synthesis is either bounded as reviewed or
+  has a named owner decision, with incident-owner acceptance recorded for each
+  historical limit that cannot be reconstructed;
 - the incident record contains only nonsecret evidence and timestamps;
 - a follow-up prevents secret-bearing environment enumeration in operator
   workflows; and
-- Stage 1 is re-reviewed against its new exact source and configuration.
+- the combined Packet 87 plus Stage 1 exact-source candidate receives final
+  independent review and required exact-runtime CI evidence;
+- fresh provider snapshot, operator review, cost/recovery plan, owner-approved
+  digest, and strict preflight pass; and
+- the Stripe `Connected accounts` destination gap is resolved or invoice bank
+  payments are demonstrably disabled before launch-hold clearance.
+- the exposed reusable production pilot invite is revoked or replaced through
+  a separately approved live operation, and its nonsecret record ID is logged;
+- any hosted synthetic issue containing the retired private contact data is
+  cleaned through a separately approved live operation; and
+- the backup incident role points to an access-controlled private route with a
+  recent successful route test and content-bound evidence.
+
+Incident closure alone does not authorize deployment, spending, or Stage 1
+activation.
 
 ## Evidence rules
 

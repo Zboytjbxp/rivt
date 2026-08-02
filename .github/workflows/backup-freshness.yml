@@ -1,0 +1,239 @@
+name: Production Backup Freshness
+
+on:
+  workflow_dispatch:
+    inputs:
+      alert_test:
+        description: Open the managed backup incident without reading or changing backup objects
+        required: true
+        default: false
+        type: boolean
+  schedule:
+    - cron: "17 * * * *"
+
+concurrency:
+  group: production-backup-freshness
+  cancel-in-progress: false
+
+jobs:
+  execution-context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+    steps:
+      - name: Require the protected production source
+        env:
+          EXPECTED_REPOSITORY: Zboytjbxp/rivt
+          EXPECTED_REF: refs/heads/master
+          REF_IS_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          test "$GITHUB_REPOSITORY" = "$EXPECTED_REPOSITORY"
+          test "$GITHUB_REF" = "$EXPECTED_REF"
+          test "$REF_IS_PROTECTED" = "true"
+
+  monitor:
+    needs: execution-context
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Check out the protected default branch
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Confirm immutable checked-out source
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+
+      - name: Install verifier dependencies
+        id: dependencies
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.alert_test != true }}
+        continue-on-error: true
+        run: npm ci --ignore-scripts
+
+      - name: Run read-only backup freshness verifier
+        id: verify
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.alert_test != true) && steps.dependencies.outcome == 'success' }}
+        continue-on-error: true
+        shell: bash
+        env:
+          BACKUP_DESTINATION_S3_ENDPOINT: ${{ vars.RIVT_BACKUP_S3_ENDPOINT }}
+          BACKUP_DESTINATION_S3_REGION: ${{ vars.RIVT_BACKUP_S3_REGION }}
+          BACKUP_DESTINATION_S3_BUCKET: ${{ vars.RIVT_BACKUP_S3_BUCKET }}
+          BACKUP_DESTINATION_S3_PREFIX: ${{ vars.RIVT_BACKUP_S3_PREFIX }}
+          BACKUP_DESTINATION_S3_ACCESS_KEY_ID: ${{ secrets.RIVT_BACKUP_MONITOR_ACCESS_KEY_ID }}
+          BACKUP_DESTINATION_S3_SECRET_ACCESS_KEY: ${{ secrets.RIVT_BACKUP_MONITOR_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.RIVT_BACKUP_ENCRYPTION_KEY }}
+          BACKUP_ENCRYPTION_KEY_PREVIOUS: ${{ secrets.RIVT_BACKUP_ENCRYPTION_KEY_PREVIOUS }}
+          BACKUP_RETENTION_DAYS: "30"
+          BACKUP_MAX_AGE_HOURS: "14"
+        run: |
+          umask 077
+          raw_stdout_path="backup-freshness-stdout.json"
+          raw_stderr_path="backup-freshness-stderr.json"
+          safe_path="backup-freshness-summary.json"
+          trap 'rm -f "$raw_stdout_path" "$raw_stderr_path"' EXIT
+          status=0
+          node scripts/verify-logical-backup.js --json > "$raw_stdout_path" 2> "$raw_stderr_path" || status=$?
+          if [ "$status" -eq 0 ]; then
+            verifier_receipt="$raw_stdout_path"
+          else
+            verifier_receipt="$raw_stderr_path"
+          fi
+          node .github/scripts/backup-freshness-issue.cjs sanitize "$verifier_receipt" "$safe_path"
+          node -e 'const fs = require("node:fs"); const value = JSON.parse(fs.readFileSync(process.argv[1], "utf8")); if (value.ok !== true) process.exit(1);' "$safe_path" || status=1
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Build a sanitized verifier-startup failure receipt
+        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.alert_test != true) && steps.dependencies.outcome == 'failure' }}
+        run: node .github/scripts/backup-freshness-issue.cjs sanitize backup-freshness-missing.json backup-freshness-summary.json
+
+      - name: Build the no-storage alert test receipt
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.alert_test == true }}
+        run: node .github/scripts/backup-freshness-issue.cjs alert-test backup-freshness-summary.json
+
+      - name: Upload sanitized freshness receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: backup-freshness-${{ github.run_id }}
+          path: backup-freshness-summary.json
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Open or update the owned backup incident
+        if: ${{ always() && ((github.event_name == 'workflow_dispatch' && inputs.alert_test == true) || steps.dependencies.outcome == 'failure' || steps.verify.outcome == 'failure') }}
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const fs = require("fs");
+            const {
+              BACKUP_FRESHNESS_INCIDENT_MARKER: marker,
+              BACKUP_FRESHNESS_INCIDENT_TITLE: title,
+              PRODUCTION_REPOSITORY: expectedRepository,
+              findOwnedBackupFreshnessIncident,
+              sanitizeIncidentSummary,
+            } = require("./.github/scripts/backup-freshness-issue.cjs");
+            const { owner, repo } = context.repo;
+            const repository = `${owner}/${repo}`;
+            if (repository !== expectedRepository) {
+              core.setFailed("Backup incident automation is bound to the production repository.");
+              return;
+            }
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            let parsed = null;
+            try {
+              parsed = JSON.parse(fs.readFileSync("backup-freshness-summary.json", "utf8"));
+            } catch {
+              // A missing or malformed receipt becomes a generic, sanitized failure.
+            }
+            const summary = sanitizeIncidentSummary(parsed);
+            const age = summary.ok ? `${summary.ageHours} hours` : "not recorded";
+            const sourceCommit = summary.ok ? summary.sourceCommit : "not recorded";
+            const recurrenceComment = summary.mode === "backup-freshness-alert-test"
+              ? `Backup alert delivery test requested: ${runUrl}`
+              : `Backup freshness check failed again: ${runUrl}`;
+            const body = [
+              marker,
+              "",
+              summary.mode === "backup-freshness-alert-test"
+                ? "This is a requested delivery test for the production backup alert route. No backup object was read, created, changed, or deleted."
+                : "The read-only production backup freshness check did not pass.",
+              "",
+              `Run: ${runUrl}`,
+              `Mode: ${summary.mode}`,
+              `Failure code: ${summary.ok ? "CHECK_FAILED_WITHOUT_SAFE_CODE" : summary.errorCode}`,
+              `Latest verified backup age: ${age}`,
+              `Latest verified source commit: ${sourceCommit}`,
+              "",
+              "Immediate triage:",
+              "1. Confirm the scheduled backup job completed and its provider logs contain no credential or upload error.",
+              "2. Confirm the private backup bucket, exact prefix, Object Lock, lifecycle rule, and latest retained object version.",
+              "3. Do not weaken retention, replace evidence, or clear readiness blockers to make this check pass.",
+              "4. Close this incident only through a later successful run of this workflow.",
+              "",
+            ].join("\n");
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = findOwnedBackupFreshnessIncident(issues, repository);
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body,
+              });
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: recurrenceComment,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+              });
+            }
+
+      - name: Close the owned backup incident after recovery
+        if: ${{ steps.verify.outcome == 'success' && !(github.event_name == 'workflow_dispatch' && inputs.alert_test == true) }}
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            const {
+              PRODUCTION_REPOSITORY: expectedRepository,
+              findOwnedBackupFreshnessIncident,
+            } = require("./.github/scripts/backup-freshness-issue.cjs");
+            const { owner, repo } = context.repo;
+            const repository = `${owner}/${repo}`;
+            if (repository !== expectedRepository) {
+              core.setFailed("Backup incident automation is bound to the production repository.");
+              return;
+            }
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+            const existing = findOwnedBackupFreshnessIncident(issues, repository);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: `Backup freshness recovered and passed: ${runUrl}`,
+              });
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                state: "closed",
+                state_reason: "completed",
+              });
+            }
+
+      - name: Keep a failed check red after publishing the incident
+        if: ${{ always() && ((github.event_name == 'workflow_dispatch' && inputs.alert_test == true) || steps.dependencies.outcome == 'failure' || steps.verify.outcome == 'failure') }}
+        run: exit 1

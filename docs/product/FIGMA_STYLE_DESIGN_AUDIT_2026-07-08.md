@@ -6,7 +6,7 @@ Method: Figma connector check, live local app screenshots, Playwright viewport p
 
 ## Figma Status
 
-The Figma connector is authenticated as `zboytjbxp@gmail.com`, but the available seat is view-only and no editable Figma design file was supplied. That means Codex cannot create or edit a Figma audit board from this session.
+The Figma connector is authenticated through a founder-owned account whose address is intentionally withheld from the public repository, but the available seat is view-only and no editable Figma design file was supplied. That means Codex cannot create or edit a Figma audit board from this session.
 
 This audit continues without blocking on Figma. The useful work right now is code-backed design QA: compare rendered screens to the intended visual system, then turn the findings into concrete code changes.
 

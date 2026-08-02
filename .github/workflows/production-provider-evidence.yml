@@ -1,0 +1,167 @@
+name: Production Provider Evidence
+
+on:
+  workflow_dispatch:
+    inputs:
+      evidence_commit:
+        description: Full current production-evidence-overlay SHA containing only allowlisted evidence updates
+        required: true
+        type: string
+      mode:
+        description: Verify provider controls only, or require full launch readiness
+        required: true
+        default: providers-only
+        type: choice
+        options:
+          - providers-only
+          - launch-ready
+
+permissions:
+  contents: read
+  actions: read
+  issues: read
+
+concurrency:
+  group: production-provider-evidence
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: >-
+      github.repository == 'Zboytjbxp/rivt' &&
+      github.ref == 'refs/heads/production-evidence-source' &&
+      github.event.repository.default_branch == 'master' &&
+      github.ref_protected == true &&
+      github.ref_name == 'production-evidence-source'
+    # Temporary combined provider verification is permitted only behind the
+    # production-evidence environment's required human approval and deployment-
+    # branch restriction to production-evidence-source. The workflow itself is
+    # therefore loaded from S; E comes from the separately protected,
+    # non-Railway production-evidence-overlay branch and is data only.
+    # Keep this job read-only and limit credentials to the adapters compiled
+    # below until each provider can be split into an independently approved job.
+    environment: production-evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Validate immutable source and evidence revisions
+        shell: bash
+        env:
+          RIVT_EVIDENCE_COMMIT: ${{ inputs.evidence_commit }}
+          RIVT_PRODUCTION_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RIVT_PRODUCTION_SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "Trusted production source commit is missing or invalid."
+            exit 1
+          fi
+          if [[ ! "$RIVT_EVIDENCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "Evidence commit is missing or invalid."
+            exit 1
+          fi
+          if [[ "$RIVT_PRODUCTION_SOURCE_COMMIT" != "$GITHUB_SHA" ]]; then
+            echo "This workflow must run from the protected source branch pinned to the deployed commit."
+            exit 1
+          fi
+          if [[ "$RIVT_EVIDENCE_COMMIT" == "$RIVT_PRODUCTION_SOURCE_COMMIT" ]]; then
+            echo "Evidence commit must follow the deployed source commit."
+            exit 1
+          fi
+
+      - name: Check out immutable deployed source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          path: source
+          persist-credentials: false
+          ref: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
+
+      - name: Check out protected evidence overlay
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          path: evidence
+          persist-credentials: false
+          ref: refs/heads/production-evidence-overlay
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+
+      - name: Validate evidence-only overlay before dependencies or provider credentials
+        shell: bash
+        env:
+          RIVT_EVIDENCE_COMMIT: ${{ inputs.evidence_commit }}
+          RIVT_PRODUCTION_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
+        run: |
+          set -euo pipefail
+          source_root="$GITHUB_WORKSPACE/source"
+          evidence_root="$GITHUB_WORKSPACE/evidence"
+          if [[ "$(git -C "$source_root" rev-parse HEAD)" != "$RIVT_PRODUCTION_SOURCE_COMMIT" ]]; then
+            echo "Checked-out source does not match the deployed source contract."
+            exit 1
+          fi
+          overlay_branch_ref="refs/remotes/origin/production-evidence-overlay"
+          if ! git -C "$evidence_root" show-ref --verify --quiet "$overlay_branch_ref"; then
+            echo "The protected production-evidence-overlay branch was not fetched."
+            exit 1
+          fi
+          if [[ "$(git -C "$evidence_root" rev-parse "$overlay_branch_ref")" != "$RIVT_EVIDENCE_COMMIT" ]]; then
+            echo "Evidence commit must match the protected overlay branch head."
+            exit 1
+          fi
+          if [[ "$(git -C "$evidence_root" rev-parse HEAD)" != "$RIVT_EVIDENCE_COMMIT" ]]; then
+            echo "Evidence commit must be the current production-evidence-overlay head."
+            exit 1
+          fi
+          node "$source_root/scripts/provider-evidence-overlay.js" \
+            --json \
+            --root "$evidence_root" \
+            --source-commit "$RIVT_PRODUCTION_SOURCE_COMMIT" \
+            --evidence-commit "$RIVT_EVIDENCE_COMMIT"
+          echo "RIVT_EVIDENCE_ROOT=$evidence_root" >> "$GITHUB_ENV"
+
+      - name: Install locked dependencies without lifecycle scripts
+        working-directory: source
+        run: npm ci --ignore-scripts
+
+      - name: Verify production provider evidence without persistent mutation
+        shell: bash
+        working-directory: source
+        env:
+          RIVT_EVIDENCE_GITHUB_TOKEN: ${{ github.token }}
+          RIVT_EVIDENCE_RAILWAY_TOKEN: ${{ secrets.RIVT_EVIDENCE_RAILWAY_TOKEN }}
+          RIVT_EVIDENCE_SENTRY_TOKEN: ${{ secrets.RIVT_EVIDENCE_SENTRY_TOKEN }}
+          RIVT_EVIDENCE_COMMIT: ${{ inputs.evidence_commit }}
+          RIVT_PROVIDER_EVIDENCE_MODE: ${{ inputs.mode }}
+          RIVT_PRODUCTION_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
+          RIVT_PROVIDER_EVIDENCE_PLAN_JSON: ${{ secrets.RIVT_PROVIDER_EVIDENCE_PLAN_JSON }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RIVT_PRODUCTION_SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "Trusted production source commit is missing or invalid."
+            exit 1
+          fi
+          if [[ -z "$RIVT_PROVIDER_EVIDENCE_PLAN_JSON" ]]; then
+            echo "Protected provider evidence plan is not configured."
+            exit 1
+          fi
+          case "$RIVT_PROVIDER_EVIDENCE_MODE" in
+            providers-only) verification_mode="--verify-providers-only" ;;
+            launch-ready) verification_mode="--require-ready" ;;
+            *)
+              echo "Provider evidence mode is invalid."
+              exit 1
+              ;;
+          esac
+          node scripts/provider-evidence-runner.js \
+            --read-only \
+            "$verification_mode" \
+            --json \
+            --evidence-commit "$RIVT_EVIDENCE_COMMIT" \
+            --evidence-root "$RIVT_EVIDENCE_ROOT" \
+            --source-commit "$RIVT_PRODUCTION_SOURCE_COMMIT" \
+            --expected-live-commit "$RIVT_PRODUCTION_SOURCE_COMMIT"

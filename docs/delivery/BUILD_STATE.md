@@ -1,16 +1,457 @@
 # RIVT Build State
 
-Last updated: 2026-07-31 America/New_York
+Last updated: 2026-08-02 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Emergency production credential containment; feature activation paused.
-Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
-Repository branch: `master` (source: `codex/customer-documents-contact-import`)
+Current phase: Packet 87 money-integrity containment and Railway Stage 1
+source-safety are integrated on the branch behind open PR #14, which remains
+unmerged and undeployed. Provider-backed readiness,
+lossless independently hosted backup/restore, hourly backup freshness alarms,
+and evidence-safe operational workflows are committed in implementation commit
+`93f1c8829004cb4a4e096adbb0a552792a7c067e`. They are not merged, configured,
+run as provider evidence, or deployed. Launch, incident exit, payment activation,
+and Railway Stage 1 worker activation remain paused.
+Active packet: `docs/delivery/packets/87_MONEY_INTEGRITY_CONTAINMENT.md`
+Repository branch: `codex/railway-stage1-packet87-integration`
+Integration base before the provider-safety follow-up:
+`9490c860736fbbf3ab916e488bfc994cca60753e`
+Provider-safety implementation commit:
+`0b78de26aa7c7ee60e8cc5b3cdb608be6c7c2c3f`
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
-Operational status: launch and Railway Stage 1 are paused while production
-credential-exposure containment is in progress.
+## 2026-08-02 offline identity-boundary remediation (unmerged)
+
+The Packet 87 working tree now treats every browser-held account projection and
+every delayed account-scoped result as belonging to the exact account that
+created it. A central account generation retires jobs, active work, inbox,
+notifications, Shop Talk reactions, profile/session work, billing state, and
+the offline outbox when canonical identity changes. Queued writes and sensitive
+requests carry `X-RIVT-Expected-Account-Id`; the server rejects a request when
+that account does not match the authenticated actor. A pending server-logout
+marker prevents an offline sign-out from restoring the old account before the
+server logout is confirmed.
+
+Offline snapshots now expire 30 days after the immutable
+`lastServerValidatedAt` time. Reading a snapshot offline cannot move that clock.
+A real authenticated server response may renew it; a 401, explicit sign-out,
+session expiration, account replacement, or malformed/expired snapshot retires
+it. Stripe checkout and billing-portal redirects, Web Push subscription work,
+profile/session mutations, Inbox mutations, job transitions, onboarding, and
+Shop Talk callbacks are account-bound and suppress stale completions.
+
+Codex Security diff scan `fcd23f03-6523-4098-a98f-b14c0f11a73d` sealed at
+`2026-08-02T15:29:41.451406Z` for frozen snapshot
+`codex-security-snapshot/v1:sha256:fc2136b967e229cdaba0cc43a50263a851ab7f940f7e7fdb57f1e14935b4b151`.
+It reported two low-severity findings: cross-account active-work survival
+(`csf_a4d5362e0fc95aca92016557`) and sliding offline-snapshot expiry
+(`csf_bf35f40d5cd566c3d54d002f`). Both are remediated in this candidate. The
+same review reproduced offline sign-out resurrection as a correctness defect;
+it was outside the scan's physical-access threat model but is also remediated.
+Independent post-scan review additionally found and closed delayed-result races
+in Stripe redirects, browser-global PushManager work, profile/session actions,
+Inbox actions, job transitions, and reaction pending state. A final independent
+review found no remaining P0/P1 code blocker.
+
+Local candidate evidence is clean: `npm run build`, `npm run lint`,
+`npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and diff integrity
+pass. The unit/frontend result is 467/467. The aggregate integration command
+passes its three non-database checks and explicitly skips 21 PostgreSQL-backed
+checks because this isolated worktree has no `TEST_DATABASE_URL`; no local
+database-pass claim is made for this exact tree. The browser journey exercises
+Account A to Account B transitions during checkout, billing portal, device-alert
+enable/test/disable, current-session revocation, onboarding, Shop Talk creation,
+offline queue replay, sign-out, and reconnect. GitHub Gate A Safety run
+`30758475166` verified exact commit
+`50bbcabf453768220a817de1ad2727ff57783078` on Node 20/PostgreSQL 16: the
+production build, repository lint, complete unit and database-backed integration
+suite, all three browser journeys, and production dependency audit passed. The
+workflow's overall result is intentionally red only because its final step
+enforced the still-active launch hold; no technical verification stage failed.
+
+This is source and local test evidence only. The branch remains unmerged and
+undeployed; production still serves `29e3c613f2eb95a6583b52c671275e5046dde0d3`.
+No provider state, production data, ACH flag, launch hold, resource, or paid
+service changed.
+
+The 2026-08-02 provider-evidence correctness follow-up is source work on the
+PR #14 branch, not provider evidence. The bank-payment verifier now reads Stripe's
+Accounts v2 event-destination resource with API version `2026-06-24.dahlia`
+and requires the exact RIVT contract: an enabled live webhook endpoint, the
+snapshot payload, `@accounts` scope, the RIVT webhook URL, and exactly the nine
+implemented money-state events. It no longer accepts the legacy v1 one-event
+webhook shape. The runtime proof route authenticates the HMAC request before a
+process-local five-request-per-minute limiter; it no longer writes the durable
+`rate_limit_windows` ledger while collecting read-only evidence. Stripe does
+not re-expose a destination's signing secret, so the combination proves only
+that the deployed process has the reviewed runtime values and that the intended
+destination inventory exists. A real Stripe-signed delivery and matching
+durable transition are still required before any future ACH enablement.
+
+The evidence runner now uses a two-revision model. `S` is the exact deployed
+runtime commit. `E` may be a later descendant containing only a tightly
+allowlisted documentation/policy overlay and source-bound, append-only evidence
+receipts. Executable source at `E` must remain byte-for-byte the source from
+`S`, and every live provider query, monitor result, runtime proof, receipt path,
+and expected production revision remains bound to `S`. The overlay rejects
+runtime/workflow changes anywhere in the complete `S..E` history, non-linear or
+merge-side history, deletions, renames, symlinks, submodules, unsafe modes,
+unreferenced receipts, receipt rewrites, digest drift, and any change that would
+move bank payments out of disabled/setup-required mode. A forbidden change
+cannot be hidden by reverting it before `E`. This permits
+honest evidence to be recorded after a deployment without pretending that the
+documentation-only commit `E` was deployed.
+
+The protected workflow executes only from a separately protected
+`production-evidence-source` branch whose head must equal deployed source `S`;
+the `production-evidence` environment must also restrict deployments to that
+branch and require human approval. The input `E` must equal the current head of
+a separately protected `production-evidence-overlay` branch that is not
+connected to Railway and must not open a preview-environment PR. GitHub therefore
+loads the privileged workflow from `S`, not from the evidence commit being
+checked, and an evidence-only push cannot replace the production source being
+proved. The workflow then separates evidence collection from final readiness.
+`providers-only` may exit successfully only when every requested provider claim
+is verified while `ACTIVE_LAUNCH_HOLD` is still present. It does not mean the
+app is launch-ready. `launch-ready` still requires the full incident, paging,
+private-route, recovery, approval, deployment, and payment boundaries to pass.
+These are external controls rather than guarantees created by this source
+change. As of 2026-08-02, hosted `master` is unprotected, no repository ruleset
+exists, both evidence branches are absent, and the `production-evidence`
+environment is absent. Its human reviewer, deployment-branch restriction,
+source variable, plan secret, and read-only provider credentials are therefore
+not configured there, and no protected provider run has been accepted;
+unsupported paging, private-route, rehearsal, and recovery adapters still fail
+closed. No provider mutation, deployment, ACH enablement, production-data
+action, resource creation, or cost occurred in this source follow-up.
+
+Final local verification of the current follow-up passes `npm run build`, `npm
+run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and diff
+integrity. The normal unit/frontend suite includes the overlay boundary tests
+and passes 465/465 checks. Three non-database integration checks pass; 21
+database-backed checks are explicitly skipped because this isolated worktree has
+no `TEST_DATABASE_URL`, so no new exact-candidate database result is claimed.
+The earlier disposable-database and hosted database evidence remains historical
+evidence for its recorded revisions. Strict launch readiness still fails closed
+with exactly 19 blockers, and incident readiness still fails closed with exactly
+8 findings.
+
+Gate A now records that expected launch-readiness failure without terminating
+the job early, completes its browser journeys and production dependency audit,
+and then fails the job at a final enforcement step while the hold remains. This
+preserves a visibly blocked launch without hiding independent CI results.
+Gate A runs once for pull requests and once after a merge to `master`; the
+redundant `codex/**` push trigger was removed so an open PR does not consume two
+identical hosted runs.
+The first hosted runs exposed an email-test process-lifetime race and a real
+offline-startup race. The isolated email-timeout test could end before Node
+delivered its unreferenced timeout; its bounded assertion now keeps the process
+alive and passes 50/50 local stress runs. Hosted run `30739332112` then passed
+the exact Node 20/PostgreSQL 16 application and database suite plus the auth and
+Jobs/discovery browser journeys, but the offline journey waited the same 15
+seconds as the boot-critical identity request and timed out. Chromium may leave
+that request pending for its full timeout after an explicit offline transition.
+RIVT now restores a valid bounded device snapshot before making the identity
+request whenever `navigator.onLine` is already false, then revalidates the
+server session on the next `online` event or immediately if connectivity
+returned before that listener was attached. A stale zero-delay active-work
+refresh also no longer clears work restored during authentication hydration;
+the explicit sign-out/account-reset paths remain responsible for clearing that
+state. The E2E now requires the cached shell to open in under 10 seconds,
+selects the visible Active-work route, and emits non-sensitive shell/cache
+diagnostics on failure. The complete offline open, active-work access,
+reconnect, retry, and sign-out journey passes 10/10 local stress runs. A fresh
+hosted result for this follow-up is pending.
+
+Operational status: launch remains held. The earlier sealed implementation
+review and hosted source/database CI prerequisites pass. The founder role's
+historical approval of the exact disabled production bank-payment configuration
+at `2026-08-01T03:26:10.3842506Z` remains recorded and did not enable ACH.
+However, the stricter current gate no longer treats that repository receipt or
+its checked-in approval policy as provider-authenticated proof. The current
+payment-provider prerequisite is therefore blocked by
+`PAYMENT_PROVIDER_EVIDENCE_UNVERIFIED` until a trusted in-process provider
+verifier supplies the exact strict typed receipt identity. Production ACH is
+disabled and setup-required. Follow-up security review also found that private
+backup-contact, incident monitoring, error-monitoring, paging, rehearsal, and
+continuous-recovery evidence could appear ready from written claims alone, so
+those gates now fail closed. Strict launch readiness stops on
+`ACTIVE_LAUNCH_HOLD`, the unverified provider-backed controls, stale
+founder/support/legal-safety approvals that predate the latest verified
+incident evidence, and the continuous-backup/recovery controls listed below.
+Incident approvals now require parseable, non-future timestamps recorded after
+the latest recent rehearsal and verified private backup-route test, plus the
+same deterministic digest of the exact incident plan. Changing support
+coverage, owners/routes, providers, alert destinations, route approval,
+rehearsals, hold state, or any other incident-plan detail invalidates all three
+prior approvals. Connected-
+account signed delivery, live-invite revocation, fresh Stage 1 evidence and
+approval, strict preflight, merge, packet deployment, worker activation,
+incident exit, and launch remain open. The former Stage 1 approval is expired
+and unusable.
+
+Formal exact-source security review is complete. Codex Security diff scan
+`7e499cf8-be43-4b6d-ace9-e61f0978a27c` sealed on
+`2026-08-01T01:04:18.767332Z` for exact range `29e3c61..6c9e803` with
+complete 25/25 review-row coverage, zero reportable findings, and zero
+deferred findings. One synthetic snapshot-sanitization candidate was
+validated and rejected after attack-path analysis found an operator-only
+local capture path with no realistic lower-privileged attacker route. The
+non-sensitive receipt and sealed artifact hashes are recorded in
+`docs/delivery/evidence/railway-stage1/SECURITY_SCAN_RECEIPT.md`. This closes
+the candidate's formal diff-scan prerequisite only; it does not authorize a
+merge, packet deployment, Stage 1 activation, incident exit, or launch.
+
+Follow-up Codex Security standard scan
+`9f7cc6f0-ff4f-44b0-a58a-814274059f14` sealed on
+`2026-08-01T06:03:44.173054Z` for exact source
+`696c3b127e03c65b9560208505efa35e50d1178f` with complete `160/160` file
+coverage, five findings, and zero deferred files. The two medium findings were
+an exposed reusable production pilot invite in public repository evidence and
+a recovery gate that could accept an unproven 24-hour RPO. Three low findings
+covered public personal-contact/relationship data in incident and delivery
+records. The current local candidate removes those current-tree disclosures,
+adds a public-document safety gate, hardens invite administration, blocks
+incident readiness until a private backup route has bound recent test
+evidence, and blocks recovery readiness until recurring backups, freshness,
+missed-run alerting, enforced retention, an independent copy, a current restore
+drill, and fresh evidence-bound approvals are proved. The exposed live invite
+has not been revoked, historical Git/GitHub copies have not been rewritten,
+and no provider, production, deployment, launch, or paid action occurred.
+
+The subsequent exact-diff remediation scan
+`7d0d53ee-e18b-4c94-92fc-08fa324ff3f4` sealed on
+`2026-08-01T15:34:45.687496Z` for the 23-path local candidate with complete
+23/23 review-row coverage. It validated three low-severity disclosure paths:
+manual invite secrets could enter process arguments, raw synthetic-monitor
+responses could reach durable GitHub evidence, and a private operational-role
+name remained in public delivery records. Five additional false-ready or
+coverage gaps were also hardened. The current local candidate now accepts
+exceptional manual invite secrets only through protected input, publishes only
+allowlisted monitor metadata, scans the full tracked public-document surface,
+and requires strict typed provider receipts for the payment state, private
+incident route, synthetic monitoring, error monitoring, paging, incident
+rehearsal, and recovery controls. It rejects reuse of an evidence artifact by
+content or resolved path where the controls require independent proof, rejects
+symlinks and non-regular or repository-external evidence paths, and
+deduplicates aliases by canonical file identity. Matching repository files are
+still not provider proof: readiness accepts them only when a trusted
+in-process provider verifier supplies the exact control/provider/digest
+identity. The ordinary readiness CLI has no such verifier and therefore remains
+blocked by design. A later addition in the PR candidate prepares a protected,
+read-only provider-evidence runner with compiled adapters for the GitHub
+synthetic check, Sentry ingestion, and the disabled Railway/Stripe payment
+state. The payment adapter compares Railway variables, live health, the exact
+Stripe Accounts v2 event-destination contract, and the deployed runtime proof.
+It uses a short-lived nonce-, timestamp-, and source-commit-bound HMAC derived
+from both Stripe secrets and exact enabled/scope values and publishes no stable
+secret-derived fingerprint. Its authenticated process-local limiter creates no
+durable application row. Independent follow-up suppressed the earlier public-
+fingerprint candidate as remediated. Private-route, paging, rehearsal, and
+recovery adapters remain unsupported and fail closed. The workflow is committed
+to the PR candidate but remains unmerged, unconfigured, and without accepted
+provider evidence.
+
+Local verification for that remediation passes the production build, full
+application/security/public-document lint, 327/327 unit/frontend checks, all
+three browser E2E journeys on the final rerun, a zero-vulnerability production
+dependency audit, 88/88 focused security regressions, and diff integrity. The
+first offline-recovery E2E attempt timed out waiting for the Tools button; the
+isolated retry and the complete suite rerun both passed, so the transient is
+recorded rather than hidden. `npm run test` completed successfully, but 21
+PostgreSQL-backed suites were skipped because this isolated worktree has no
+`TEST_DATABASE_URL`; prior exact-candidate hosted database evidence is not
+relabelled as fresh evidence for these local-only changes. Incident and launch
+readiness remain deliberately blocked on real provider/recovery proof and the
+active launch hold. No merge, push, deployment, provider change, production
+read, production write, or paid action occurred in this remediation.
+
+Prior no-cost working-tree security scan
+`65a8c581-8136-459c-9926-58220a85430d` sealed on
+`2026-08-01T18:07:03.080242Z` with 19 review artifacts, four reportable
+findings (one medium and three low), and partial coverage only for the
+deliberately deferred future enabled-payment verifier contract. All four
+findings are fixed in the local candidate: scheduled production monitoring
+requires an independently maintained full source commit; incident issue reuse
+requires the exact GitHub Actions bot provenance; public-document scanning
+detects quoted invite JSON; and recovery readiness enforces the receipt-bound
+restore plus verification duration against the approved RTO. Focused security
+regressions pass 91/91. At that checkpoint, the candidate also passed `npm run build`,
+`npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`,
+`npm audit --omit=dev` with zero known production vulnerabilities, and
+`git diff --check`. The earlier aggregate test command passed 352 unit/frontend
+checks and three non-database integration checks while its PostgreSQL suites
+skipped for lack of `TEST_DATABASE_URL`. That database gap is now closed
+locally: a freshly initialized, loopback-only PostgreSQL 18 database was reset
+through migration 42 and `npm run test:integration` passed 25/25 tests with
+zero failures, cancellations, or skips. The disposable server was stopped
+after the run. Exact GitHub Node 20/PostgreSQL 16 CI for the final published
+candidate remains pending and is not inferred from this local result.
+
+The immediately preceding pre-follow-up candidate is covered by sealed Codex Security
+working-tree diff scan `scan_696c3b127e03_20260802T024900Z`, completed on
+2026-08-01 America/New_York with 28/28 worklist rows, four fully closed
+intermediate-patch candidates, zero reportable findings, and zero deferred work.
+The scan binds snapshot digest
+`codex-security-snapshot/v1:sha256:3409423b02416d1337b80413b183ddf89feaca1c6f8db64e0576c47629f54ff7`;
+that sealed snapshot does not include the 2026-08-02 executable provider-evidence
+follow-up. The follow-up has local regression coverage and independent review,
+but no new sealed security scan is claimed.
+Backup freshness now AEAD-decrypts the newest protected artifact and validates
+its snapshot structure as restore-usable before freshness can pass. Backup-role
+preflight also rejects sequence `USAGE` or `UPDATE` privileges and recursively
+reachable `SET`-able roles. Fresh local verification passes `npm run build`,
+`npm run lint`, `npm run lint:security`, 425/425 unit/frontend checks, 25/25
+disposable loopback PostgreSQL integration tests, all three browser E2E
+journeys, all five required UI smoke suites, and `npm audit --omit=dev` with
+zero vulnerabilities. Strict launch readiness remains RED with exactly 19
+blockers, and incident readiness remains blocked with exactly 8 findings. This
+reconciliation made no deployment, provider mutation, ACH enablement, production
+data change, resource creation, or cost commitment.
+
+Strict `npm run launch:readiness -- --require-ready` remains blocked as
+intended with exactly 19 blockers; incident readiness remains blocked with 8
+findings. Current blockers include the active launch hold, independently
+verified backup/recovery evidence, production synthetic/error monitoring,
+paging, incident rehearsal and matching approvals, and strict external
+payment-provider evidence. Before the scheduled monitor can be trusted, a
+repository administrator must set the protected GitHub `production`
+Environment variable `RIVT_PRODUCTION_SOURCE_COMMIT` to the independently
+confirmed live 40-character source revision; until then the monitor fails
+closed before contacting production. Bank payments remain disabled. This scan
+and remediation made no commit, push, merge, deployment, provider mutation,
+production request, data change, resource creation, or paid change.
+
+Current product packet: Packet 87 implementation commit `4e95c71` and its
+incident-evidence follow-ups through `070243f` are combined with the Railway
+Stage 1 sequence through `9490c86`. Packet 87 files remained intact during the
+replay. It fails closed when an invoice,
+project balance, or bank-payment request disagrees; invalidates payer
+redirects for deleted, void, or mismatched invoices; locks processing,
+settled, refunded, and disputed payment history; retires new manual
+`payment_record` writes while preserving older rows as read-only references;
+and records successful project-invoice email delivery atomically. Exact
+rendered content now supplies a stable provider retry identity, concurrent
+different-key sends serialize, and an identical replay restores a stale
+draft label without sending again. Browser writes cannot forge paid/sent
+state, delivery evidence, or bank-payment metadata; provider email requires
+an active verified account; void, external-payment, processing, settlement,
+refund, and dispute truth cannot be manually erased; and consequential
+out-of-order Stripe events remain monotonic. The current combined candidate passes the
+production build, application/security/public-document lint, 425/425
+unit/frontend checks, all three browser E2E journeys, all five required UI
+smoke suites, dependency audit with zero vulnerabilities, and diff integrity. A disposable
+loopback-only PostgreSQL 18 cluster with `RIVT_DB_MAX_CONNECTIONS=97` passed
+25/25 integration tests with zero failures or skips; production and Railway
+were not used. Local runtime was Node 24 and PostgreSQL 18. Runtime/gate
+evidence commit `2253bca16883e736cd06b9b47d4539ffa4a86e32` is pushed to
+draft PR #14. GitHub Actions run `30680447818`, job `91316269376`, used Node
+20 and PostgreSQL 16 and passed build, lint, the full unit/frontend set, and
+the full database integration set. Launch readiness then failed intentionally on
+`ACTIVE_LAUNCH_HOLD` and `PAYMENT_PROVIDER_NOT_APPROVED`; hosted E2E and audit
+were skipped after that fail-closed gate, while the equivalent local E2E and
+audit gates remain passed. The packet source is not merged or deployed.
+
+Production-provider containment changed without deploying the candidate.
+Railway automatic deployments are off and Wait for CI is on. A live Stripe
+`Connected accounts` destination with the nine snapshot money-state events
+used by RIVT was created and its dedicated signing secret installed without
+recording the value. Public health at `2026-08-01T02:12:38Z` unexpectedly
+reported ACH enabled; the start time of that state is unknown. The flag was
+immediately set false and corrective Railway deployment
+`3d53eb50-7317-499f-950b-845ee536074c` retained production source
+`29e3c613f2eb95a6583b52c671275e5046dde0d3`. Health at
+`2026-08-01T02:21:47.8089240Z` proves `enabled:false`, `configured:false`,
+`webhookConfigured:true`, and `mode:setup_required`. A count-only read-only
+transaction found zero project or tool invoice payment-request rows. No
+database-backed RIVT payment request was available to reconcile or expire;
+provider-side sessions without a durable row were not enumerated. Signed
+connected-account delivery and a durable matching state transition remain
+unproven; scope attestation remains unset. The old `Your account` destination
+is retained only as provider inventory/rollback reference; RIVT no longer
+holds its signing secret, so it is not an operational fallback. The broader
+incident and `ACTIVE_LAUNCH_HOLD` remain in force. The founder role's
+disabled-mode approval is preserved as historical evidence with its
+then-matching configuration digest in
+`docs/operations/payment-provider-readiness.json` and the nonsecret provider
+receipt. It does not enable ACH, approve deployment or a worker, clear the
+incident, or authorize launch. The stricter current local gate treats neither
+checked-in file as provider-authenticated evidence and remains blocked until a
+trusted in-process provider verifier supplies the exact typed receipt identity.
+Approval-binding commit `b1f3aa2eb80e624a89b34577e35efaab1cefe796`
+passed hosted Node/PostgreSQL verification in GitHub Actions run
+`30682797549`, job `91322960536`: build, lint, all 258 unit/frontend checks,
+and the full PostgreSQL 16 integration suite passed. At that historical gate
+version, launch readiness then failed solely on the intentional
+`ACTIVE_LAUNCH_HOLD`; hosted browser/audit steps were skipped after that
+fail-closed stop, while their local equivalents passed. That result is
+superseded by the stricter current payment, incident, and recovery evidence
+requirements above.
+
+## Railway Stage 1 source-safety re-review - combined local candidate only
+
+- The committed Stage 1 sequence has been replayed onto the Packet 87 line in
+  `codex/railway-stage1-packet87-integration`. The committed integration base
+  is `9490c860736fbbf3ab916e488bfc994cca60753e`; the runtime/gate evidence
+  candidate is pushed as `2253bca16883e736cd06b9b47d4539ffa4a86e32` in
+  draft PR #14.
+  The sequence includes explicit hosted process roles, one migration owner,
+  bounded shutdown/drain behavior, role-specific database budgets, required
+  Web Push startup, and strict activation review.
+- The activation preflight now requires three fresh external/ignored
+  artifacts: an allowlisted Railway status snapshot, a named operator review
+  of provider controls, and the exact plan. Snapshot and review hashes, source
+  ancestry, clean `origin/master` equality, billing cycle, monitoring,
+  database ceilings/pool bounds, recovery, rollback, and cost facts all fail
+  closed.
+- Owner authority is no longer represented by an editable plan hash alone.
+  Evaluation requires the separately preserved owner-approved digest through
+  `--approved-plan-digest`; changing authority, cost, source, topology, or
+  evidence cannot accidentally reuse the earlier digest during trusted
+  operation. This is an audit/drift control, not cryptographic authentication:
+  a trusted operator, separately access-controlled approval record,
+  independent comparison, and owner-performed final provider action remain
+  required.
+- Current-cycle incremental cost, one-time cost, retained monthly cost,
+  Railway Agent limit, provider/manual stop, test duration, and worker
+  unavailability have separate approval ceilings. A blocked evaluation exits
+  nonzero by default. `--report-only` is an explicit diagnostic mode and is
+  not an activation gate.
+- Packets 93 and 94, the Railway activation runbook, cost brief, blank strict
+  templates, and evidence-boundary README document the future manual process.
+  They contain no live Stage 1 inventory, credentials, completed Stage 1
+  activation approval, provider activation receipt, or activation evidence.
+  Packet 94 now cross-references the historically recorded disabled-mode
+  payment-provider approval; that approval does not authorize Stage 1 and does
+  not satisfy the stricter current provider-evidence gate by itself.
+- Focused Railway/runtime/push/security coverage and all 22 strict
+  activation-preflight checks pass. The complete combined evidence is the
+  build, application/security lint, 258/258 unit/frontend checks, all three
+  browser E2E journeys, Tools/Shop Talk/Trade News/mobile-actions/Work-lifecycle
+  UI smoke, zero-
+  vulnerability dependency audit, diff integrity, and 25/25 disposable-
+  database integration tests described above.
+- The earlier `npm run launch:readiness -- --require-ready` result recognized
+  the exact disabled-mode approval and stopped on the intentional
+  `ACTIVE_LAUNCH_HOLD`. That checkpoint is historical. Follow-up hardening now
+  also blocks on unauthenticated payment evidence, private backup-contact,
+  synthetic-monitoring, error-monitoring, paging, rehearsal, and continuous-
+  recovery evidence. GitHub Actions run
+  `30682797549`, job `91322960536`,
+  supplies current hosted source/database parity; hosted E2E/audit steps were
+  skipped only because readiness intentionally stopped the job. Launch
+  readiness remains blocked.
+- Railway automatic deployments were disabled and Wait for CI was enabled.
+  Payment-provider configuration was contained as described above. No worker,
+  new service, database, bucket, production row, or backup was created; no
+  Stage 1 activation occurred. The last conservative worker estimate of about
+  $10.05 per month exceeds the current $2 authorization and is not approved.
+  No redundancy/high-availability or launch-ready claim is made. Packet 87,
+  credential-incident exit, `ACTIVE_LAUNCH_HOLD`, fresh exact-plan
+  approval/preflight, and owner activation remain separate open boundaries.
+  Signed Stripe Connected-accounts delivery remains mandatory before any
+  future ACH enablement, but it is not a prerequisite for the currently
+  approved disabled mode.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
@@ -45,9 +486,22 @@ outbox. This closes the Web Push key-retirement acceptance boundary without
 clearing the broader incident or `ACTIVE_LAUNCH_HOLD`. Sentry provider audit
 and usage views now also show only the expected rotation actions, 20 accepted
 errors in 14 days, zero filtered, rate-limited, or invalid events, and no
-significant spike. The remaining exit work is final evidence synthesis,
-explicit acceptance of the known historical database/object-storage forensic
-gaps, and a fresh Railway Stage 1 re-review and approval.
+significant spike. Bounded Stripe platform-account and configured production
+destination/delivery views, Resend provider records, Railway workspace
+audit/deployment history, and aggregate read-only production money ledgers
+were also reviewed with no identified misuse indicator. The incident-owner role's exact
+`2026-07-31T12:22:03.895Z` statement is preserved in the incident record; later
+review found its blanket provider-review premise incomplete, so only its
+PostgreSQL/direct-bucket historical limitation remains valid closure evidence.
+The bounded Google Cloud audit/activity review is complete with no identified
+misuse indicator in the queried retained entries. Direct VAPID misuse, offline
+backup-key use, and offline authentication-pepper use remain unobservable; at
+`2026-07-31T19:39:34.5524830Z`, the incident-owner role explicitly accepted those three
+forensic limits without claiming no misuse and without authorizing deployment
+or cost. The bounded provider review and combined local source review are
+complete. Remaining exit work includes exact-runtime CI, Stripe connected-
+account delivery proof or verified feature disablement, fresh Stage 1 evidence
+and approval, and final incident closure.
 
 ## Active operational incident - Production credential exposure
 
@@ -55,7 +509,7 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   values into a restricted automation transcript on 2026-07-29. No secret is
   recorded in repository evidence, and no unauthorized use is currently known.
   All exposed credential classes are nevertheless treated as compromised.
-- Packet 86 remains the active product packet. The separately approved Railway
+- Packet 87 remains the active product packet. The separately approved Railway
   Stage 1 activation is paused and its approval cannot be reused after this
   incident hotfix or any credential change.
 - A narrow compatibility hotfix was prepared from exact production source
@@ -189,7 +643,7 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   secret-safe provider-configuration probe, and the expected-source production
   monitor pass. Two unused replacement candidates were deleted before
   installation. A fresh production OAuth journey for
-  `zboytjbxp@gmail.com` completed at 14:18:31 UTC on July 30: the callback
+  `[personal account redacted]` completed at 14:18:31 UTC on July 30: the callback
   returned its redirect in 131 ms and the browser rendered the authenticated
   RIVT Home workspace. An earlier callback from a transaction held open longer
   than the 10-minute ticket lifetime failed closed before token exchange and
@@ -203,9 +657,16 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   `/api/health` returned `ok: true`, `/api/auth/providers` reported Google
   configured, and `npm run monitor:production` passed against build
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Google OAuth secret rotation is
-  complete. Final incident evidence synthesis, explicit forensic-limit
-  acceptance, and the fresh Railway Stage 1 review remain open, so the
-  overall incident and launch hold are not cleared.
+  complete. The owner statement is preserved verbatim in the incident record;
+  its PostgreSQL/direct-bucket historical limitation is the only part used as
+  valid closure evidence. The Google Cloud review found no identified misuse
+  indicator within the queried retained audit entries, while explicitly not
+  proving that no OAuth token exchange or unlogged action occurred. The incident-owner role's
+  later exact statement accepts the three named unobservable-secret forensic
+  limits without claiming no misuse or authorizing deployment/cost. The fresh
+  local Railway Stage 1 review is complete. The formal exact-source Codex
+  Security scan, exact-runtime CI, fresh provider/cost evidence, and approval
+  remain open, so the overall incident and launch hold are not cleared.
 - The incident-remediation source was fast-forwarded to `master` and Railway
   deployment `e12e66b2-9701-44d6-b57f-8e12fe436738` succeeded on exact commit
   `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`. This activates the final-boundary
@@ -229,8 +690,10 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   vulnerabilities. GitHub Actions run `30577678020` passed the real
   PostgreSQL 16 test step with 22 database integration tests; the workflow
   then failed closed only at the intentional `ACTIVE_LAUNCH_HOLD`.
-  `npm run incident:readiness -- --require-ready` passes.
-  `npm run launch:readiness -- --require-ready` remains intentionally blocked.
+  At that source checkpoint, `npm run incident:readiness -- --require-ready`
+  passed and `npm run launch:readiness -- --require-ready` remained
+  intentionally blocked. The 2026-08-01 security follow-up at the top of this
+  document supersedes that incident-readiness result.
 - Local hotfix database evidence now includes a clean, isolated run of all 20
   integration files: 22 tests passed with zero failures or skips. The test
   process received no production provider credentials, the guarded
@@ -278,19 +741,54 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   `OA5Z6SQY` delayed its queue. Exact-source public health passed and the
   production monitor passed in 645 ms. A secret-safe production-container
   check found `SENTRY_DSN` present and the legacy `ERROR_MONITORING_DSN` alias
-  absent, but replacement-key creation, ingestion/alert proof, and old-key
-  retirement remain provider-side launch blockers.
+  absent. At that earlier deployment boundary, replacement-key creation,
+  ingestion/alert proof, and old-key retirement were still blockers; those
+  Sentry actions were completed later as recorded in the current incident
+  summary above.
 - Incident timing is now recorded without false precision: repository evidence
   bounds detection between 19:01 and 21:42:25 America/New_York on July 29, and
   the first formal critical declaration occurred at 21:42:25. Containment work
   was already underway by the 21:19:41 hotfix-worktree creation.
-- A first bounded, read-only access review found no identified misuse signal in
+- A bounded, read-only access review found no identified misuse signal in
   the current RIVT HTTP window, current application audit ledger, or
   post-rotation PostgreSQL authentication logs. It also documented the honest
   forensic boundary: historical successful PostgreSQL reads/writes were not
-  audited, and Railway Buckets provide no per-object access history. Earlier
-  provider review stays open; no claim of “no access” or “no exfiltration” is
-  made.
+  audited, and Railway Buckets provide no per-object access history. Available
+  Stripe platform-account and configured production destination/delivery,
+  Resend, Sentry, Railway workspace audit/deployment, and application-ledger
+  evidence has now been reviewed with no identified misuse indicator. The
+  Railway Pro workspace audit log was paged through the complete date-filtered
+  view. In the exact exposure window it recorded five
+  `SSHSession.authenticated` events and nine `Deployment.created` events, all
+  attributed to the founder-controlled account, with no other actor or
+  variable/credential/resource change. One representative in-window SSH audit
+  event used the same source IP and SSH-key fingerprint as a controlled July 31
+  maintenance session. This is bounded retained workspace-action
+  evidence, not proof of the physical human behind valid credentials or of an
+  action Railway did not log.
+  The owner's exact statement is preserved; later review found its blanket
+  provider-review premise incomplete, so only its successful-PostgreSQL/direct-
+  bucket historical limitation remains valid closure evidence. No claim of no
+  access or no exfiltration is made. The bounded Google Cloud audit/activity
+  review is complete with no identified misuse indicator in the queried
+  retained entries; it does not prove no OAuth token exchange or action outside
+  logged event types. VAPID, backup-key, and authentication-pepper offline
+  misuse remain unobservable; the incident-owner role explicitly accepted those three forensic
+  limits at `2026-07-31T19:39:34.5524830Z` without claiming no misuse or
+  authorizing deployment/cost. Local Railway Stage 1 re-review is complete;
+  the formal exact-source Codex Security scan, exact-runtime CI, fresh
+  provider/cost evidence, and approval remain open.
+- Aggregate read-only production money reconciliation from the conservative
+  exposure start through the owner-acceptance timestamp found three matching
+  controlled rotation-probe rows, no additional application-recorded webhook
+  row or billing/invoice audit action, and no nonzero canonical invoice,
+  payment-request, Connect, or entitlement consistency counter. Stripe's
+  platform-account Workbench view showed only the controlled replacement-key
+  account read in the bounded interval, no `Your account` event in the bounded
+  interval, and zero suspicious-activity cases. Resend's available 15-day logs
+  contain the expected restriction check, controlled proof delivery, and older
+  sends consistent with documented pre-exposure tests. These retained tables
+  and views cannot reconstruct an action they did not log or retain.
 - PostgreSQL error classification is now complete across the immediately
   preceding deployment from 23:00 UTC through credential cutover and the
   replacement deployment through 13:04 UTC. Every error-shaped record maps to
@@ -306,11 +804,13 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   no gateway, migration, provider feature, paid resource, or production
   mutation was added. Current stable object-count evidence still cannot prove
   that an exposed credential was never used for a direct read.
-- The operational launch gate now has an explicit active hold for this
-  emergency. `npm run incident:readiness` passes the standing incident-routing
-  configuration, but `npm run launch:readiness -- --require-ready` correctly
-  exits nonzero with `ACTIVE_LAUNCH_HOLD`. Clear the hold only after every exit
-  criterion in the incident record is verified.
+- The operational launch gate gained an explicit active hold for this
+  emergency. At that historical checkpoint, incident readiness passed the
+  then-current routing schema and launch readiness stopped on
+  `ACTIVE_LAUNCH_HOLD`. The 2026-08-01 security follow-up now also blocks
+  incident readiness on the unverified private backup route and stale
+  approvals. Clear the hold only after every exit criterion in the incident
+  record is verified.
 - Earlier containment deployment `4af32f02-fd17-4899-9b62-74ac4c565590`
   succeeded from a clean archive of commit
   `a3be803cc5ad2563d100870663dbf6dc51307126`. The expected-source production
@@ -4582,13 +5082,13 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
 
 ## Latest Packet 08 Pass - Jacksonville Beta Invite Code
 
-- Added support for the named Jacksonville beta access code `JAX26`:
+- Added support for the named Jacksonville beta access code `[WITHHELD]`:
   - signup request validation now accepts 5-character pilot codes while invite consumption remains server-side and hash-backed
   - `scripts/create-pilot-invite.js` can now create a reviewed fixed code with `--code=...` instead of only random one-time strings
-  - `scripts/create-pilot-invite.js` can also raise the capacity of an existing active fixed code with `--update-max-uses=...`, avoiding one-off production SQL for launch-code adjustments
+  - historical behavior allowed code-based capacity changes; the 2026-08-01 hardening supersedes it with explicit `--status`/`--update` modes that use only the non-secret invite record ID
   - integration coverage includes a short-code invite signup path so this does not regress silently
 - Created the production invite through Railway SSH inside the production service network:
-  - code: `JAX26`
+  - code: `[WITHHELD]`
   - invite id: `b6ce645b-bb30-4279-875a-405b85ec5879`
   - email lock: none
   - role lock: none
@@ -4597,8 +5097,8 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   - expires: `2026-10-05T01:09:24.224Z`
 - Live verification:
   - production `/api/health` reported exact build commit `8be08d7768f3796257d7b669a0c9eddd38d38df9`
-  - Railway SSH update returned the active `JAX26` invite with `maxUses: 500`, `useCount: 0`, and `revokedAt: null`
-  - non-consuming signup probe with `JAX26` reached password-policy validation instead of request-shape rejection, proving the short code is accepted by the deployed API without consuming the invite
+  - Railway SSH update returned the active `[WITHHELD]` invite with `maxUses: 500`, `useCount: 0`, and `revokedAt: null`
+  - non-consuming signup probe with `[WITHHELD]` reached password-policy validation instead of request-shape rejection, proving the short code is accepted by the deployed API without consuming the invite
   - `EXPECTED_SOURCE_COMMIT=8be08d7768f3796257d7b669a0c9eddd38d38df9 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 593 ms duration
 - Preserved boundaries:
   - the code remains revocable, expiring, max-use-limited, and stored only as a hash
@@ -6791,7 +7291,7 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 - Rendered QA passed for Tools and Shop Talk/Trade News at desktop and mobile sizes. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
 - The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
-- Production deployment was performed through Railway from `master`. Deployment `97915261-3fc8-499d-bfcd-04a7811990a5` served the new frontend assets, and follow-up deployment `2cf692b0-b88e-45c8-98da-f164d07b2c7d` corrected the reported health commit metadata. Live `/api/health` returned healthy PostgreSQL, S3-compatible object storage, ready migrations, and configured Sentry. Live `/api/news?location=Jacksonville%2C%20FL` returned 30 items with 13 article thumbnails, 9 feed thumbnails, and 8 fallback thumbnails. Authenticated production UI publish testing remains blocked until a valid production test login is available; the provided `rivttesting@gmail.com` credentials returned invalid credentials.
+- Production deployment was performed through Railway from `master`. Deployment `97915261-3fc8-499d-bfcd-04a7811990a5` served the new frontend assets, and follow-up deployment `2cf692b0-b88e-45c8-98da-f164d07b2c7d` corrected the reported health commit metadata. Live `/api/health` returned healthy PostgreSQL, S3-compatible object storage, ready migrations, and configured Sentry. Live `/api/news?location=Jacksonville%2C%20FL` returned 30 items with 13 article thumbnails, 9 feed thumbnails, and 8 fallback thumbnails. Authenticated production UI publish testing remains blocked until a valid production test login is available; the provided `[personal account redacted]` credentials returned invalid credentials.
 
 ## Latest Packet 08 Pass - Improvement Backlog and Truthful Entitlement Cleanup
 
@@ -7091,7 +7591,7 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 
 ## Latest Packet 08 Pass - Final Incident Approvals Recorded
 
-- Recorded Michael's explicit approval for founder, support, and legal/safety Gate A signoffs in `docs/operations/incident-routing.json`.
+- Recorded the founder role's explicit approval for founder, support, and legal/safety Gate A signoffs in `docs/operations/incident-routing.json`.
 - Approval timestamp: `2026-06-22T03:48:04.1166525Z`.
 - `node scripts/incident-readiness-check.js --json` now reports `ready` with zero findings.
 - `node scripts/launch-readiness-check.js --json` now reports `ready` with zero findings.
@@ -7101,11 +7601,11 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 
 - Added `docs/operations/GATE_A_APPROVAL_PACKET.md` as the founder-facing signoff packet for the remaining founder/support/legal-safety approvals.
 - The packet summarizes current evidence, approval scope, support posture, legal/safety posture, known risk acceptance, and the exact fields to update after explicit approval.
-- Remaining honesty boundary: the packet was not approval by itself; Michael's follow-up approval is now recorded in `docs/operations/incident-routing.json`.
+- Remaining honesty boundary: the packet was not approval by itself; the founder role's follow-up approval is now recorded in `docs/operations/incident-routing.json`.
 
 ## Latest Packet 08 Pass - Incident Rehearsal Passed
 
-- Re-authenticated Railway CLI as `zboytjbxp@gmail.com` and verified the linked project/service: project `RIVT`, production environment, service `RIVT`, public URL `https://rivt.pro`.
+- Re-authenticated Railway CLI as `[personal account redacted]` and verified the linked project/service: project `RIVT`, production environment, service `RIVT`, public URL `https://rivt.pro`.
 - `npm run monitor:production` passed against production, confirming exact source `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL and S3-compatible storage healthy, Sentry configured, operational controls off, and seven anonymous private-route checks failing closed.
 - Local live smoke failed against the Railway internal DB hostname, then passed inside the service with `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live`.
 - The service-local live smoke verified migration `0011_shop_talk_reaction_events_immutable`, zero seed/demo findings, seven anonymous private-route checks, operational controls off, five active accounts, zero network profiles, zero open jobs, two open support cases, zero active restrictions, 115 legacy app-state rows, and 111 rate-limit windows.
@@ -7124,16 +7624,16 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 ## Latest Packet 08 Pass - Incident Routing Approved
 
 - Approved the Gate A incident-routing plan in `docs/operations/incident-routing.json`.
-- Recorded route approval by Michael at `2026-06-22T03:09:36.0366141Z` for the Gate A pilot scope: primary owner, backup owner, support hours, synthetic monitor, Sentry error monitoring, and first pilot escalation route.
+- Recorded route approval by the founder role at `2026-06-22T03:09:36.0366141Z` for the Gate A pilot scope: primary owner, backup owner, support hours, synthetic monitor, Sentry error monitoring, and first pilot escalation route.
 - `node scripts/incident-readiness-check.js --json` is expected to stop reporting `INCIDENT_ROUTING_NOT_APPROVED`.
 - Remaining honesty boundary: this approves the route design only. Gate A still needs a passed incident rehearsal and explicit founder/support/legal-safety approvals.
 
 ## Latest Packet 08 Pass - Recovery Policy Approved
 
 - Approved Gate A recovery policy in `docs/operations/recovery-policy.json`: RPO 1440 minutes / 24 hours, RTO 240 minutes / 4 hours, 30-day backup retention, and 30-day restore-drill cadence.
-- Set backup-retention and restore-drill owner to Michael for the Gate A pilot.
+- Set the backup-retention and restore-drill owner role to `backup-operations-owner` for the Gate A pilot.
 - Set next restore drill due date to `2026-07-21T04:18:59.000Z`, 30 days after the last passed named backup-artifact restore.
-- Recorded founder and operations recovery-policy approvals by Michael at `2026-06-22T03:02:39.0867156Z`.
+- Recorded recovery-policy approvals by the founder and operations roles at `2026-06-22T03:02:39.0867156Z`.
 - `node scripts/launch-readiness-check.js --json` stopped reporting recovery-policy blockers. Remaining launch blockers are now incident rehearsal, founder/support/legal-safety approvals, and deeper manual accessibility/device evidence after the follow-up incident-routing approval pass.
 - Remaining honesty boundary: the policy is approved for Gate A pilot only. RPO/RTO should be tightened before broader scale or any platform-held financial workflow.
 
@@ -7145,10 +7645,10 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 
 ## Latest Packet 08 Pass - Backup Incident Owner Recorded
 
-- Recorded backup incident owner in `docs/operations/incident-routing.json`: Anya Tingle, partner / wife, `abota1994@gmail.com`.
+- Recorded the `backup-incident-owner` role in `docs/operations/incident-routing.json`; personal identity, relationship, and contact details are intentionally not tracked in the public repository.
 - Phone status is `recorded`; the actual phone number is intentionally not stored in the repository.
 - `node scripts/incident-readiness-check.js --json` stopped reporting `BACKUP_OWNER_MISSING`; support hours were recorded in the follow-up pass above.
-- Remaining honesty boundary: backup ownership is recorded, but Anya still needs access/runbook orientation before we should treat incident response as operationally rehearsed.
+- Remaining honesty boundary: backup ownership is recorded, but the private `backup-incident-owner` still needs access/runbook orientation before we should treat incident response as operationally rehearsed.
 
 ## Latest Packet 08 Pass - Sentry Error Monitoring Configured
 
@@ -7726,7 +8226,7 @@ Implemented on 2026-06-20:
 - Added `scripts/production-synthetic-monitor.js` and `npm run monitor:production`.
 - Added `.github/workflows/production-synthetic.yml` to run the public production synthetic check every 30 minutes and on manual dispatch.
 - The monitor verifies public health, deployed source presence, managed PostgreSQL/S3-compatible dependency status, invite-gated email/password provider configuration, operational-control state, and seven anonymous private-route 401 boundaries.
-- Hardened the scheduled workflow so it installs dependencies from `package-lock.json`, uploads `production-monitor.log` evidence on every run, opens or updates one GitHub issue titled `Production synthetic check failing` when checks fail, and comments/closes that issue when production recovers.
+- The current undeployed candidate hardens the scheduled workflow so it installs dependencies from `package-lock.json`, uploads a validated allowlisted `production-monitor-summary.json` on every run, opens or updates one GitHub issue titled `Production synthetic check failing` with allowlisted metadata when checks fail, and comments/closes that issue when production recovers. The deployed workflow still uses its prior raw-log behavior until this candidate is separately reviewed, merged, and deployed.
 - Latest local run against `https://rivt.pro` passed with source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, operational controls disabled, seven anonymous private checks, and a 606 ms duration.
 - This is partial monitoring progress only. Dedicated error monitoring, alert routing, paging destination, named incident owner, and rehearsal remain launch blockers.
 
@@ -7738,7 +8238,7 @@ Implemented on 2026-06-20:
 - Added `scripts/incident-readiness-check.js` and `npm run incident:readiness`.
 - Added unit coverage proving incident readiness passes only with owners, support hours, synthetic monitoring, error monitoring, paging, recent rehearsal, and founder/support/legal-safety approvals.
 - Updated the production synthetic GitHub issue workflow so a failing monitor issue includes incident-routing context: primary owner, backup owner, dedicated error-monitoring status, and paging status.
-- Current readiness output is blocked, with primary owner recorded as Michael at `support@rivt.pro`, synthetic monitoring configured, and these missing blockers: backup owner, founder-approved support hours, dedicated error monitoring, paging route, incident rehearsal, founder approval, support approval, and legal/safety approval.
+- Current readiness output is blocked; the primary incident role uses the organizational support route, synthetic monitoring is configured, and the remaining blockers are recorded in the current evidence override rather than this historical snapshot.
 
 ## Packet 08 Restore Drill Tooling Progress
 
@@ -8043,7 +8543,7 @@ Completed on 2026-07-04 on branch `codex/launch-polish-phase-2` as a controllabl
   behavior remain covered by the isolated integration suite; no production
   provider outage was induced for testing.
 
-## Next Exact Task
+## Historical retained task note — Packet 43 (superseded; not current)
 
 ## Packet 43 - Camera Before / After Proof Images
 
@@ -8072,7 +8572,7 @@ capabilities have an explicit destination. In parallel, complete the physical
 accessibility checklist on iOS, Android, desktop keyboard-only, and a screen
 reader before nationwide launch.
 
-## Blocking Founder Decisions
+## Historical founder-decision list (superseded; revalidate before use)
 
 Needed before Gate A recruitment, not before finishing Packet 00:
 
@@ -8098,7 +8598,7 @@ At the end of each packet record:
 7. New risks or decisions.
 8. Exact next packet/task.
 
-## Current Launch Train - Card Subtraction and Visual Hierarchy (2026-07-21)
+## Historical retained launch train — Card Subtraction (superseded)
 
 - Branch: `codex/card-subtraction-pass`
 - Base commit: `edc56e8`

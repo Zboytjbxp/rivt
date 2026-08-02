@@ -1,19 +1,19 @@
 # RIVT Gate A Launch Operations Checklist
 
-This checklist is the go/no-go operating contract for the first named customer cohort. It complements `npm run launch:readiness`; the command checks the machine-readable incident and recovery files, while this document tells the operator what to complete and where evidence belongs.
+This checklist is the go/no-go operating contract for the first named customer cohort. It complements `npm run launch:readiness`; the command checks the machine-readable incident, recovery, and payment-provider files, while this document tells the operator what to complete and where evidence belongs.
 
 Do not mark Gate A approved while any required item is `TBD`, missing an owner, missing evidence, or only verified in a local/dev environment.
 
 ## 1. Incident Ownership
 
-- Primary incident owner recorded in `docs/operations/incident-routing.json`.
-- Backup incident owner recorded with real name and email.
+- Primary incident role recorded with a configured organizational or private contact-route ID in `docs/operations/incident-routing.json`.
+- Backup incident role recorded with an access-controlled private route, a successful route test from the last 30 days, and matching content-bound evidence. Personal contact details stay outside the public repository.
 - Support hours recorded in Eastern time and approved by founder.
 - Paging/escalation destination configured and tested.
 - Dedicated error-monitoring provider configured and tested.
 - Synthetic monitor is running outside Railway and opens a GitHub incident issue on failure.
 - One incident rehearsal passed in the last 30 days.
-- Founder, support, and legal/safety approvals are recorded.
+- Founder, support, and legal/safety approvals have valid, non-future timestamps and follow the final incident evidence they approve.
 
 Evidence:
 
@@ -25,18 +25,27 @@ Evidence:
 
 - RPO target approved in minutes.
 - RTO target approved in minutes.
-- Backup retention window approved in days.
-- Restore-drill cadence approved in days.
-- Latest named backup-artifact restore passed in the last 30 days.
-- Next restore-drill due date recorded.
-- Founder and operations approvals recorded in `docs/operations/recovery-policy.json`.
+- A recurring backup schedule has current, non-secret provider evidence and a named owner.
+- The latest successful named backup is non-future-dated and no older than the approved RPO.
+- Backup cadence plus the tested missed-run alert/retry allowance fits inside the approved RPO.
+- The missed-backup alert has been physically triggered and its destination and result are recorded.
+- Backup retention is provider- or automation-enforced, not only described, with current evidence.
+- At least one backup copy is in a failure domain independent of the primary Railway service, with current evidence.
+- Restore-drill cadence is approved in days; the latest restore is no older than that cadence, and the next drill is after the latest restore but no later than its cadence deadline.
+- Latest named backup-artifact restore has positive table/row counts and a repository-relative evidence file whose SHA-256 digest matches the policy.
+- Founder and operations approvals in `docs/operations/recovery-policy.json` are current, non-future, later than every bound evidence timestamp, and bind the exact recovery configuration and evidence digests.
 
 Evidence:
 
 - `npm run launch:readiness -- --require-ready`
-- Named backup object key.
-- Restore target name and deletion proof.
+- Recurring schedule configuration, cadence, owner, verification date, and SHA-256 evidence digest.
+- Latest successful named backup object key, completion time, table/row counts, and SHA-256 evidence digest.
+- Missed-run alert test result, destination, retry allowance, test date, and SHA-256 evidence digest.
+- Retention-enforcement and independent-failure-domain records with verification dates and SHA-256 evidence digests.
+- Restore target name, deletion proof, repository-relative evidence path, and matching SHA-256 evidence digest.
 - Restore duration and verification duration.
+
+Current recovery state: **blocked**. The July 25 named-artifact restore proves that one artifact was restorable; it does not prove a recurring backup schedule, a current backup inside the 24-hour RPO, missed-run alerting, enforced retention, or an independent backup failure domain. Do not restore `approved` status or record new approvals until those controls have real provider evidence and the exact final configuration digest is reviewed.
 
 ## 3. Customer Support Readiness
 
@@ -59,6 +68,11 @@ Evidence:
 - Google OAuth is configured for production domain and no local fallback is enabled.
 - Twilio/SMS is either configured with compliant sender registration or explicitly deferred from Gate A.
 - Stripe/subscription billing is either configured for production or explicitly deferred from Gate A.
+- Invoice bank payments are either proved disabled in production or have a
+  `Connected accounts` Stripe destination with fresh signed-delivery proof.
+- `docs/operations/payment-provider-readiness.json` is current and approved by
+  a named owner after verification, and its approval digest matches the exact
+  reviewed mode/evidence; a `Your account` destination alone is insufficient.
 - Operational kill switches are known and documented.
 - No temporary `RESTORE_*` or `CONFIRM_*` variables are left on production services.
 
@@ -67,6 +81,7 @@ Evidence:
 - `npm run smoke:gate-a:live`
 - `npm run monitor:production`
 - Redacted provider configuration screenshots or settings export.
+- Approved payment-provider readiness record and nonsecret delivery evidence.
 
 ## 5. Accessibility And Device Readiness
 

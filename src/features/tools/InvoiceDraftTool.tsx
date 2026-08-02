@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Banknote, Check, ChevronLeft, ChevronRight, Copy, ExternalLink, FileText, LoaderCircle, MessageSquare, Plus, Save, Send, Trash2 } from "lucide-react";
 import type { Job } from "../../types";
 import { Panel } from "../../components/ui";
+import { requestKey } from "../../lib/api";
 import { CustomerPicker } from "../clients/CustomerPicker";
 import {
   customerSnapshot as snapshotCustomer,
@@ -11,7 +12,15 @@ import {
 import type { EstimateInvoiceDraft } from "./EstimateTool";
 import { clampNumber, currency, formatQuantity, toCents, centsToDollars } from "./money";
 import { getInvoiceLinePriceSignal } from "./priceGuidance";
-import { deleteToolRecordByLocalId, fetchToolRecords, sendInvoiceByLocalId, upsertToolRecord, type ServerToolRecord, type ToolRecordInput } from "./tool-records-api";
+import {
+  deleteToolRecordByLocalId,
+  fetchToolRecords,
+  sendInvoiceByLocalId,
+  upsertToolRecord,
+  upsertToolRecordOrThrow,
+  type ServerToolRecord,
+  type ToolRecordInput,
+} from "./tool-records-api";
 import {
   cancelInvoiceBankPaymentLink,
   cancelToolInvoiceBankPaymentLink,
@@ -22,6 +31,7 @@ import {
   getStripeConnectStatus,
   getToolInvoiceBankPayment,
   openStripeConnectDashboard,
+  ProjectApiError,
   recordProjectInvoicePayment,
   startStripeConnectOnboarding,
   updateProjectInvoiceStatus,
@@ -304,7 +314,7 @@ export function InvoiceDraftTool({
   const [issueDate, setIssueDate] = useState(initialDraft.issueDate ?? today());
   const [dueDate, setDueDate] = useState(initialDraft.dueDate ?? "");
   const [customerNote, setCustomerNote] = useState(initialDraft.customerNote ?? "");
-  const initialProjectInvoiceNumber = useRef(estimateDraft?.invoiceNumber ?? (activeJob ? `RIVT-${activeJob.id}` : "RIVT-DRAFT"));
+  const initialProjectInvoiceNumber = useRef(invoiceNumber);
   const [billTo, setBillTo] = useState(
     estimateDraft?.billTo
       || initialDraft.billTo
@@ -346,6 +356,11 @@ export function InvoiceDraftTool({
   const [draftSaveState, setDraftSaveState] = useState<"idle" | "saving" | "saved" | "error">(initialRecord ? "saved" : "idle");
   const [removedLine, setRemovedLine] = useState<{ line: InvoiceLine; index: number } | null>(null);
   const [projectInvoice, setProjectInvoice] = useState<ProjectInvoice | null>(null);
+  const projectInvoiceRef = useRef<ProjectInvoice | null>(null);
+  const projectInvoiceCreatePromiseRef = useRef<Promise<ProjectInvoice | null> | null>(null);
+  const [projectInvoiceLoading, setProjectInvoiceLoading] = useState(Boolean(activeWorkId));
+  const [projectInvoiceLoadError, setProjectInvoiceLoadError] = useState("");
+  const [projectInvoiceLoadAttempt, setProjectInvoiceLoadAttempt] = useState(0);
   const [projectInvoiceBusy, setProjectInvoiceBusy] = useState(false);
   const [projectInvoiceNotice, setProjectInvoiceNotice] = useState("");
   const [projectInvoiceError, setProjectInvoiceError] = useState("");
@@ -353,6 +368,8 @@ export function InvoiceDraftTool({
   const [toolPaymentRequest, setToolPaymentRequest] = useState<ProjectInvoiceOnlinePayment | null>(null);
   const [connectBusy, setConnectBusy] = useState(false);
   const [invoiceEmailBusy, setInvoiceEmailBusy] = useState(false);
+  const invoiceSendIdempotencyKeyRef = useRef<string | null>(null);
+  const invoiceSendFingerprintRef = useRef("");
   const [sendOpen, setSendOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentMethodDraft, setPaymentMethodDraft] = useState("");
@@ -368,6 +385,11 @@ export function InvoiceDraftTool({
   const [documentBrand, setDocumentBrand] = useState<DocumentBrand>(() => defaultDocumentBrand());
   const [brandMessage, setBrandMessage] = useState("Document style syncs to your RIVT account.");
   const localDraftStorageKey = invoiceDraftStorageKey(workContext);
+
+  function commitProjectInvoice(invoice: ProjectInvoice | null) {
+    projectInvoiceRef.current = invoice;
+    setProjectInvoice(invoice);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -396,7 +418,80 @@ export function InvoiceDraftTool({
     ?? (toolPaymentRequest && ["created", "open", "processing"].includes(toolPaymentRequest.status)
       ? toolPaymentRequest
       : null);
+  const consequentialPaymentHistory = projectInvoice?.onlinePayments
+    ?.filter((payment) => ["paid", "partially_refunded", "refunded", "disputed"].includes(payment.status))
+    .at(-1)
+    ?? (toolPaymentRequest && ["paid", "partially_refunded", "refunded", "disputed"].includes(toolPaymentRequest.status)
+      ? toolPaymentRequest
+      : null);
   const bankPaymentUrl = activeBankPayment?.paymentUrl ?? activeBankPayment?.checkoutUrl ?? null;
+  const paymentIntegrityIssue = (() => {
+    if (projectInvoiceLoading) {
+      return {
+        kind: "project-loading" as const,
+        message: "RIVT is checking this job's existing invoice and payment history. Wait for that check to finish before saving, copying, or sending.",
+      };
+    }
+    if (projectInvoiceLoadError) {
+      return {
+        kind: "project-load-error" as const,
+        message: projectInvoiceLoadError,
+      };
+    }
+    if (projectInvoice?.status === "paid" || projectInvoice?.status === "void") {
+      return {
+        kind: "project-closed" as const,
+        message: projectInvoice.status === "paid"
+          ? "This job invoice is already paid. Keep it unchanged and start a new invoice for any additional work."
+          : "This job invoice is void. Keep it as a historical record and start a new invoice instead of reusing it.",
+      };
+    }
+    if (consequentialPaymentHistory) {
+      const statusLabel = consequentialPaymentHistory.status === "paid"
+        ? "settled"
+        : consequentialPaymentHistory.status === "partially_refunded"
+          ? "partially refunded"
+          : consequentialPaymentHistory.status === "refunded"
+            ? "refunded"
+            : "disputed";
+      return {
+        kind: "payment-history" as const,
+        message: `This invoice has a ${statusLabel} bank-payment record for ${currency(consequentialPaymentHistory.amountCents / 100)}. Keep this record unchanged and start a new invoice for any new amount or request.`,
+      };
+    }
+    if (activeBankPayment?.status === "processing") {
+      return {
+        kind: "processing" as const,
+        message: `A bank payment for ${currency(activeBankPayment.amountCents / 100)} is already processing. Wait for Stripe to finish before changing, copying, or sending this invoice.`,
+      };
+    }
+    if (projectInvoice && projectInvoice.totalCents !== totalCents) {
+      return {
+        kind: "project-total" as const,
+        message: `The saved job invoice is ${currency(projectInvoice.totalCents / 100)}, but this draft shows ${currency(totalCents / 100)}. Restore the saved total or start a new invoice before saving or sending.`,
+      };
+    }
+    if (projectInvoice && projectInvoice.paidCents > 0 && projectInvoice.balanceCents !== totalCents) {
+      return {
+        kind: "partial-balance" as const,
+        message: `${currency(projectInvoice.paidCents / 100)} is already recorded as paid and ${currency(projectInvoice.balanceCents / 100)} remains. This draft still presents the original total, so RIVT will not copy or send it as a new payment request.`,
+      };
+    }
+    if (projectPaymentRequest && projectInvoice && projectPaymentRequest.amountCents !== projectInvoice.balanceCents) {
+      return {
+        kind: "project-link" as const,
+        message: `The bank-payment link is for ${currency(projectPaymentRequest.amountCents / 100)}, but the verified job balance is ${currency(projectInvoice.balanceCents / 100)}. Cancel the old link before continuing.`,
+      };
+    }
+    if (activeBankPayment && activeBankPayment.amountCents !== totalCents) {
+      return {
+        kind: "link-total" as const,
+        message: `The bank-payment link is for ${currency(activeBankPayment.amountCents / 100)}, but this invoice shows ${currency(totalCents / 100)}. Cancel the old link or restore the invoice total before saving, copying, or sending.`,
+      };
+    }
+    return null;
+  })();
+  const paymentActionsBlocked = Boolean(paymentIntegrityIssue);
   const customerPaymentMethod = [
     paymentOptions.bank ? bankPaymentMethod : "",
     paymentOptions.outside ? paymentMethod.trim() : "",
@@ -487,16 +582,36 @@ export function InvoiceDraftTool({
 
   useEffect(() => {
     let cancelled = false;
+    projectInvoiceCreatePromiseRef.current = null;
+    projectInvoiceRef.current = null;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setProjectInvoice(null);
+      setProjectInvoiceLoading(Boolean(activeWorkId));
+      setProjectInvoiceLoadError("");
+    });
     if (activeWorkId) {
       void getProjectForActiveWork(activeWorkId)
         .then((project) => {
           if (cancelled) return;
           const existing = project.invoices.find((invoice) => invoice.invoiceNumber === initialProjectInvoiceNumber.current) ?? null;
+          projectInvoiceRef.current = existing;
           setProjectInvoice(existing);
           if (existing) setPaymentAmount((existing.balanceCents / 100).toFixed(2));
         })
-        .catch(() => {
-          // A project is created only when the participant intentionally saves a job invoice.
+        .catch((error) => {
+          if (cancelled) return;
+          if (error instanceof ProjectApiError && error.status === 404) {
+            // A newly accepted job may not have a project record until its first
+            // intentional save. That expected absence is safe to create into.
+            projectInvoiceRef.current = null;
+            setProjectInvoice(null);
+            return;
+          }
+          setProjectInvoiceLoadError("RIVT could not verify this job's existing invoices. Money and delivery actions remain paused to prevent a duplicate. Retry the check.");
+        })
+        .finally(() => {
+          if (!cancelled) setProjectInvoiceLoading(false);
         });
     }
     void getStripeConnectStatus()
@@ -519,7 +634,7 @@ export function InvoiceDraftTool({
         if (!cancelled) setToolPaymentRequest(null);
       });
     return () => { cancelled = true; };
-  }, [activeWorkId, recordLocalId]);
+  }, [activeWorkId, projectInvoiceLoadAttempt, recordLocalId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -719,8 +834,10 @@ export function InvoiceDraftTool({
 
   function startBlankInvoice() {
     const latestPrefs = readInvoicePrefs();
+    const nextInvoiceNumber = newInvoiceNumber();
     setRecordLocalId(newInvoiceLocalId(workContext));
-    setInvoiceNumber(newInvoiceNumber());
+    initialProjectInvoiceNumber.current = nextInvoiceNumber;
+    setInvoiceNumber(nextInvoiceNumber);
     setIssueDate(today());
     setDueDate("");
     setCustomerNote("");
@@ -739,12 +856,17 @@ export function InvoiceDraftTool({
     setLines(defaultInvoiceLines(activeJob));
     setConversionNotice("");
     setTemplateNotice("Blank invoice started.");
-    setProjectInvoice(null);
+    commitProjectInvoice(null);
+    projectInvoiceCreatePromiseRef.current = null;
+    setProjectInvoiceLoading(Boolean(activeWorkId));
+    setProjectInvoiceLoadError("");
     setToolPaymentRequest(null);
     setProjectInvoiceNotice("");
     setProjectInvoiceError("");
     setDelivery(null);
     setLastSentFingerprint("");
+    invoiceSendIdempotencyKeyRef.current = null;
+    invoiceSendFingerprintRef.current = "";
     setValidationMessage("");
     setDraftSaveState("idle");
     setDraftSaveMessage("New invoice started. Enter the real amount to bill.");
@@ -773,7 +895,10 @@ export function InvoiceDraftTool({
     };
   }
 
-  function invoiceToolRecordInput(methodOverride = customerPaymentMethod): ToolRecordInput {
+  function invoiceToolRecordInput(
+    methodOverride = customerPaymentMethod,
+    canonicalProjectInvoice: ProjectInvoice | null = projectInvoiceRef.current ?? projectInvoice,
+  ): ToolRecordInput {
     const snapshot: InvoiceDraftSnapshot = {
       localId: recordLocalId,
       invoiceNumber,
@@ -806,7 +931,7 @@ export function InvoiceDraftTool({
         ...snapshot,
         documentFingerprint,
         delivery: delivery ?? undefined,
-        projectInvoiceId: projectInvoice?.id ?? null,
+        projectInvoiceId: canonicalProjectInvoice?.id ?? null,
         recipientName: billTo.trim(),
         workLabel: toolContextLabel(workContext),
         customerLines: lines.map((line) => ({
@@ -820,52 +945,105 @@ export function InvoiceDraftTool({
   }
 
   async function saveInvoiceDraft(methodOverride = customerPaymentMethod): Promise<ServerToolRecord | null> {
-    setDraftSaveState("saving");
-    setDraftSaveMessage("Saving draft...");
-    const record = await upsertToolRecord(invoiceToolRecordInput(methodOverride));
-    if (!record) {
-      setDraftSaveMessage("Draft kept on this device. RIVT account sync failed.");
+    if (paymentIntegrityIssue) {
+      setProjectInvoiceError(paymentIntegrityIssue.message);
+      setDraftSaveMessage(paymentIntegrityIssue.message);
       setDraftSaveState("error");
       return null;
     }
-    if (activeWorkId && !projectInvoice) {
-      const savedToWork = await saveToActiveWork(methodOverride);
-      setDraftSaveMessage(savedToWork ? "Draft saved to this job and your RIVT account." : "Draft saved to your RIVT account. It could not be added to the job workspace.");
-      setDraftSaveState(savedToWork ? "saved" : "error");
-      return record;
+    setDraftSaveState("saving");
+    setDraftSaveMessage("Saving draft...");
+    let canonicalProjectInvoice = projectInvoiceRef.current;
+    if (activeWorkId && !canonicalProjectInvoice) {
+      canonicalProjectInvoice = await ensureProjectInvoice(methodOverride);
+      if (!canonicalProjectInvoice) {
+        setDraftSaveMessage("Draft kept on this device. RIVT could not confirm the job invoice, so account sync was stopped.");
+        setDraftSaveState("error");
+        return null;
+      }
+    }
+    let record: ServerToolRecord;
+    try {
+      record = await upsertToolRecordOrThrow(invoiceToolRecordInput(methodOverride, canonicalProjectInvoice));
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Draft kept on this device. RIVT account sync failed.";
+      setDraftSaveMessage(message);
+      setProjectInvoiceError(message);
+      setDraftSaveState("error");
+      return null;
     }
     setDraftSaveMessage(activeWorkId ? "Draft saved to this job and your RIVT account." : "Draft saved to your RIVT account.");
     setDraftSaveState("saved");
     return record;
   }
 
-  async function saveToActiveWork(methodOverride = customerPaymentMethod) {
-    if (!activeWorkId) return false;
+  async function ensureProjectInvoice(methodOverride = customerPaymentMethod): Promise<ProjectInvoice | null> {
+    if (!activeWorkId) return null;
+    if (projectInvoiceRef.current) return projectInvoiceRef.current;
+    if (projectInvoiceLoading) {
+      setProjectInvoiceError("RIVT is still checking this job for an existing invoice. Wait for that check to finish.");
+      return null;
+    }
+    if (projectInvoiceLoadError) {
+      setProjectInvoiceError(projectInvoiceLoadError);
+      return null;
+    }
+    if (projectInvoiceCreatePromiseRef.current) return projectInvoiceCreatePromiseRef.current;
+
     setProjectInvoiceBusy(true);
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
-    try {
-      const saved = await createProjectInvoice(activeWorkId, projectInvoiceInput(methodOverride));
-      setProjectInvoice(saved);
-      setPaymentAmount((saved.balanceCents / 100).toFixed(2));
-      setProjectInvoiceNotice("Invoice saved to this job workspace.");
-      return true;
-    } catch (error) {
-      setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not save this invoice to the job.");
-      return false;
-    } finally {
-      setProjectInvoiceBusy(false);
-    }
+    const intendedInvoiceNumber = invoiceNumber.trim() || "RIVT-DRAFT";
+    const creation = createProjectInvoice(activeWorkId, projectInvoiceInput(methodOverride))
+      .then((saved) => {
+        commitProjectInvoice(saved);
+        setPaymentAmount((saved.balanceCents / 100).toFixed(2));
+        setProjectInvoiceNotice("Invoice saved to this job workspace.");
+        return saved;
+      })
+      .catch(async (error) => {
+        // The server may have committed the invoice even if the response was
+        // interrupted. Read it back before reporting failure so a retry cannot
+        // create or suggest a second invoice for the same document number.
+        try {
+          const project = await getProjectForActiveWork(activeWorkId);
+          const recovered = project.invoices.find((candidate) => candidate.invoiceNumber === intendedInvoiceNumber) ?? null;
+          if (recovered) {
+            commitProjectInvoice(recovered);
+            setPaymentAmount((recovered.balanceCents / 100).toFixed(2));
+            setProjectInvoiceNotice("Invoice saved to this job workspace.");
+            return recovered;
+          }
+        } catch {
+          // The original error is the most useful message when recovery cannot
+          // confirm a committed invoice.
+        }
+        setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not save this invoice to the job.");
+        return null;
+      })
+      .finally(() => {
+        projectInvoiceCreatePromiseRef.current = null;
+        setProjectInvoiceBusy(false);
+      });
+    projectInvoiceCreatePromiseRef.current = creation;
+    return creation;
+  }
+
+  async function saveToActiveWork(methodOverride = customerPaymentMethod) {
+    return Boolean(await ensureProjectInvoice(methodOverride));
   }
 
   async function markProjectInvoiceSent() {
-    if (!projectInvoice) return;
+    const canonicalProjectInvoice = projectInvoiceRef.current ?? projectInvoice;
+    if (!canonicalProjectInvoice) return;
     setProjectInvoiceBusy(true);
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
     try {
-      const updated = await updateProjectInvoiceStatus(projectInvoice.id, "sent");
-      setProjectInvoice(updated);
+      const updated = await updateProjectInvoiceStatus(canonicalProjectInvoice.id, "sent");
+      commitProjectInvoice(updated);
       setProjectInvoiceNotice("Marked sent in the shared job record.");
     } catch (error) {
       setProjectInvoiceError(error instanceof Error ? error.message : "RIVT could not update this invoice.");
@@ -875,7 +1053,8 @@ export function InvoiceDraftTool({
   }
 
   async function recordExternalPayment() {
-    if (!projectInvoice) return;
+    const canonicalProjectInvoice = projectInvoiceRef.current ?? projectInvoice;
+    if (!canonicalProjectInvoice) return;
     const amountCents = toCents(Math.max(0, Number(paymentAmount) || 0));
     if (!amountCents) {
       setProjectInvoiceError("Enter the amount received before recording an external payment.");
@@ -889,13 +1068,13 @@ export function InvoiceDraftTool({
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
     try {
-      const updated = await recordProjectInvoicePayment(projectInvoice.id, {
+      const updated = await recordProjectInvoicePayment(canonicalProjectInvoice.id, {
         amountCents,
         paymentDate: new Date().toISOString().slice(0, 10),
         method: paymentMethodDraft.trim(),
         note: paymentNote.trim(),
       });
-      setProjectInvoice(updated);
+      commitProjectInvoice(updated);
       setPaymentAmount((updated.balanceCents / 100).toFixed(2));
       setPaymentNote("");
       setProjectInvoiceNotice(updated.balanceCents === 0 ? "Invoice marked paid from the recorded external payments." : "External payment recorded in the shared job record.");
@@ -932,41 +1111,40 @@ export function InvoiceDraftTool({
   }
 
   async function createBankPaymentLink() {
+    if (paymentIntegrityIssue) {
+      setProjectInvoiceError(paymentIntegrityIssue.message);
+      return null;
+    }
     setConnectBusy(true);
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
     try {
       setPaymentOptions((current) => ({ ...current, bank: true }));
-      let savedProjectInvoice = projectInvoice;
+      let savedProjectInvoice = projectInvoiceRef.current ?? projectInvoice;
       if (activeWorkId && !savedProjectInvoice) {
         const offeredMethods = [
           bankPaymentMethod,
           paymentOptions.outside ? paymentMethod.trim() : "",
         ].filter(Boolean).join(" or ");
-        const saved = await createProjectInvoice(activeWorkId, projectInvoiceInput(offeredMethods));
-        setProjectInvoice(saved);
-        setPaymentAmount((saved.balanceCents / 100).toFixed(2));
-        savedProjectInvoice = saved;
+        savedProjectInvoice = await ensureProjectInvoice(offeredMethods);
+        if (!savedProjectInvoice) return null;
       }
       let paymentRequest: ProjectInvoiceOnlinePayment;
       if (savedProjectInvoice) {
         paymentRequest = await createInvoiceBankPaymentLink(savedProjectInvoice.id);
-        setProjectInvoice((current) => current ? {
-          ...current,
+        commitProjectInvoice({
+          ...savedProjectInvoice,
           onlinePayments: [
-            ...(current.onlinePayments ?? []).filter((payment) => payment.id !== paymentRequest.id),
+            ...(savedProjectInvoice.onlinePayments ?? []).filter((payment) => payment.id !== paymentRequest.id),
             paymentRequest,
           ],
-        } : current);
+        });
       } else {
         const offeredMethods = [
           bankPaymentMethod,
           paymentOptions.outside ? paymentMethod.trim() : "",
         ].filter(Boolean).join(" or ");
-        const record = await upsertToolRecord(invoiceToolRecordInput(offeredMethods));
-        if (!record) {
-          throw new Error("Save this invoice to your RIVT account before creating its payment link.");
-        }
+        const record = await upsertToolRecordOrThrow(invoiceToolRecordInput(offeredMethods));
         paymentRequest = await createToolInvoiceBankPaymentLink(record.localId);
         setToolPaymentRequest(paymentRequest);
       }
@@ -991,6 +1169,12 @@ export function InvoiceDraftTool({
   }
 
   async function copyBankPaymentLink(payment: ProjectInvoiceOnlinePayment) {
+    if (paymentIntegrityIssue || payment.amountCents !== totalCents) {
+      const message = paymentIntegrityIssue?.message
+        ?? `This link is for ${currency(payment.amountCents / 100)}, but the invoice shows ${currency(totalCents / 100)}. Cancel the old link or restore the invoice total before copying it.`;
+      setProjectInvoiceError(message);
+      return;
+    }
     const shareUrl = payment.paymentUrl ?? payment.checkoutUrl;
     if (!shareUrl) return;
     try {
@@ -1006,14 +1190,15 @@ export function InvoiceDraftTool({
     setProjectInvoiceError("");
     setProjectInvoiceNotice("");
     try {
-      if (projectInvoice) {
-        const paymentRequest = await cancelInvoiceBankPaymentLink(projectInvoice.id);
-        setProjectInvoice((current) => current ? {
-          ...current,
-          onlinePayments: (current.onlinePayments ?? []).map((payment) => (
+      const canonicalProjectInvoice = projectInvoiceRef.current ?? projectInvoice;
+      if (canonicalProjectInvoice) {
+        const paymentRequest = await cancelInvoiceBankPaymentLink(canonicalProjectInvoice.id);
+        commitProjectInvoice({
+          ...canonicalProjectInvoice,
+          onlinePayments: (canonicalProjectInvoice.onlinePayments ?? []).map((payment) => (
             payment.id === paymentRequest.id ? paymentRequest : payment
           )),
-        } : current);
+        });
       } else {
         const paymentRequest = await cancelToolInvoiceBankPaymentLink(recordLocalId);
         setToolPaymentRequest(paymentRequest);
@@ -1027,6 +1212,11 @@ export function InvoiceDraftTool({
   }
 
   async function copyInvoice() {
+    if (paymentIntegrityIssue) {
+      setProjectInvoiceError(paymentIntegrityIssue.message);
+      setDraftSaveMessage("Invoice copy blocked because its payment amount does not match.");
+      return;
+    }
     try {
       await navigator.clipboard.writeText(invoiceText);
       setDraftSaveMessage("Invoice copied.");
@@ -1100,8 +1290,10 @@ export function InvoiceDraftTool({
       setProjectInvoiceError("Add clear payment instructions so the customer knows how and where to pay.");
       return;
     }
-    if (paymentOptions.bank && !connectStatus?.ready) {
-      setProjectInvoiceError("Finish Stripe bank-payment setup before sending an invoice with a pay button.");
+    if (paymentOptions.bank && !connectStatus?.paymentLinksAvailable) {
+      setProjectInvoiceError(connectStatus && !connectStatus.providerConfigured
+        ? "RIVT bank payments are currently paused. Remove the bank-payment option or try again later."
+        : "Finish Stripe bank-payment setup before sending an invoice with a pay button.");
       return;
     }
     if (paymentOptions.bank && !bankPaymentUrl) {
@@ -1110,6 +1302,10 @@ export function InvoiceDraftTool({
     }
     if (paymentOptions.bank && activeBankPayment?.status === "processing") {
       setProjectInvoiceError("This bank payment is already processing. Do not send a second payment request.");
+      return;
+    }
+    if (paymentIntegrityIssue) {
+      setProjectInvoiceError(paymentIntegrityIssue.message);
       return;
     }
     setProjectInvoiceError("");
@@ -1144,9 +1340,18 @@ export function InvoiceDraftTool({
       setDraftSaveMessage("Payment instructions are still required.");
       return false;
     }
-    if (paymentOptions.bank && !connectStatus?.ready) {
+    if (paymentOptions.bank && !connectStatus?.paymentLinksAvailable) {
       setSendOpen(false);
-      setProjectInvoiceError("Finish Stripe bank-payment setup before emailing this invoice with a pay button.");
+      setProjectInvoiceError(connectStatus && !connectStatus.providerConfigured
+        ? "RIVT bank payments are currently paused. Remove the bank-payment option or try again later."
+        : "Finish Stripe bank-payment setup before emailing this invoice with a pay button.");
+      return false;
+    }
+    if (paymentIntegrityIssue) {
+      setSendOpen(false);
+      setStep("review");
+      setProjectInvoiceError(paymentIntegrityIssue.message);
+      setDraftSaveMessage("Invoice delivery blocked because the displayed and payable amounts do not match.");
       return false;
     }
     setInvoiceEmailBusy(true);
@@ -1165,6 +1370,13 @@ export function InvoiceDraftTool({
       setInvoiceEmailBusy(false);
       return false;
     }
+    if (paymentOptions.bank && preparedBankPayment && preparedBankPayment.amountCents !== totalCents) {
+      setSendOpen(false);
+      setProjectInvoiceError(`The prepared bank-payment link is for ${currency(preparedBankPayment.amountCents / 100)}, but this invoice shows ${currency(totalCents / 100)}. Delivery was blocked.`);
+      setDraftSaveMessage("Invoice delivery blocked because the displayed and payable amounts do not match.");
+      setInvoiceEmailBusy(false);
+      return false;
+    }
     const record = await saveInvoiceDraft(customerPaymentMethod);
     if (!record) {
       setSendOpen(false);
@@ -1172,15 +1384,40 @@ export function InvoiceDraftTool({
       return false;
     }
     try {
-      const sent = await sendInvoiceByLocalId(record.localId);
+      const idempotencyKey = invoiceSendFingerprintRef.current === documentFingerprint
+        ? invoiceSendIdempotencyKeyRef.current ?? requestKey()
+        : requestKey();
+      invoiceSendIdempotencyKeyRef.current = idempotencyKey;
+      invoiceSendFingerprintRef.current = documentFingerprint;
+      const sent = await sendInvoiceByLocalId(record.localId, idempotencyKey);
       const sentDelivery = deliveryFromRecord(sent);
       const recipient = sentDelivery?.recipientEmail ?? recipientEmail.trim();
       setDelivery(sentDelivery);
       setLastSentFingerprint(documentFingerprint);
+      invoiceSendIdempotencyKeyRef.current = null;
+      invoiceSendFingerprintRef.current = "";
       setDraftSaveMessage(`Invoice emailed to ${recipient}.`);
       setDraftSaveState("saved");
+      const canonicalProjectInvoice = projectInvoiceRef.current;
+      if (activeWorkId && canonicalProjectInvoice) {
+        try {
+          const project = await getProjectForActiveWork(activeWorkId);
+          const refreshed = project.invoices.find((invoice) => invoice.id === canonicalProjectInvoice.id);
+          if (refreshed) commitProjectInvoice(refreshed);
+          else commitProjectInvoice({ ...canonicalProjectInvoice, status: "sent" });
+        } catch {
+          // Delivery succeeded; keep the local job record aligned while the next refresh catches up.
+          commitProjectInvoice({ ...canonicalProjectInvoice, status: "sent" });
+        }
+      }
       return true;
     } catch (error) {
+      // The server records a confirmed failed attempt against this request key.
+      // A retry needs a fresh request key; the server's content-derived provider
+      // key remains stable, so an ambiguous provider success still cannot send
+      // the unchanged invoice twice.
+      invoiceSendIdempotencyKeyRef.current = null;
+      invoiceSendFingerprintRef.current = "";
       setSendOpen(false);
       setDraftSaveMessage(error instanceof Error ? error.message : "RIVT could not send the invoice.");
       setDraftSaveState("error");
@@ -1212,6 +1449,14 @@ export function InvoiceDraftTool({
             <small>{invoiceNumber || "RIVT-DRAFT"} / {terms}</small>
           </div>
         </section>
+        {paymentIntegrityIssue ? (
+          <p className="v2-record-error" role="alert">
+            <strong>Payment actions paused.</strong> {paymentIntegrityIssue.message}
+            {paymentIntegrityIssue.kind === "project-load-error" ? (
+              <> <button type="button" onClick={() => setProjectInvoiceLoadAttempt((attempt) => attempt + 1)}>Retry job check</button></>
+            ) : null}
+          </p>
+        ) : null}
 
         {step === "review" ? (
           <section className="v2-invoice-payment-path" aria-labelledby="invoice-payment-path-title">
@@ -1221,7 +1466,7 @@ export function InvoiceDraftTool({
                 <h3 id="invoice-payment-path-title">Payment options to offer</h3>
                 <small>The customer chooses from the options you include.</small>
               </div>
-              {bankPaymentUrl ? <strong><Check size={16} />Pay link ready</strong> : null}
+              {bankPaymentUrl && !paymentIntegrityIssue ? <strong><Check size={16} />Pay link ready</strong> : null}
             </header>
             <div className="v2-invoice-payment-options" aria-label="Invoice payment options">
               <button
@@ -1258,37 +1503,41 @@ export function InvoiceDraftTool({
                   <span>
                     <strong>{bankPaymentUrl
                       ? "Customer payment page is ready"
-                      : connectStatus?.ready
+                      : connectStatus?.paymentLinksAvailable
                         ? "Create the secure payment page"
+                        : connectStatus && !connectStatus.providerConfigured
+                          ? "RIVT bank payments are paused"
                         : connectStatus?.connected
                           ? "Finish Stripe setup"
                           : "Set up bank payments"}</strong>
                     <small>{bankPaymentUrl
                       ? "Email will include a clear Pay securely by bank button."
-                      : connectStatus?.ready
+                      : connectStatus?.paymentLinksAvailable
                         ? "RIVT will create a short customer link and include it when you email."
+                        : connectStatus && !connectStatus.providerConfigured
+                          ? "RIVT cannot safely create new bank-payment links right now. Existing Stripe account access remains available."
                         : "Stripe must verify your payout account before RIVT can add a pay button."}</small>
                     <small>Stripe fees and ACH timing apply. RIVT does not hold job funds.</small>
                   </span>
                 </div>
-                {!connectStatus?.ready ? (
+                {!connectStatus?.paymentLinksAvailable && connectStatus?.providerConfigured ? (
                   <button type="button" className="v2-primary-button" onClick={() => void openBankPaymentSetup()} disabled={connectBusy || !connectStatus?.providerConfigured}>
                     {connectBusy ? "Opening Stripe..." : connectStatus?.connected ? "Continue Stripe setup" : "Set up bank payments"}
                   </button>
-                ) : !bankPaymentUrl ? (
-                  <button type="button" className="v2-primary-button" onClick={() => void createBankPaymentLink()} disabled={connectBusy || totalCents <= 0}>
+                ) : connectStatus?.paymentLinksAvailable && !bankPaymentUrl ? (
+                  <button type="button" className="v2-primary-button" onClick={() => void createBankPaymentLink()} disabled={connectBusy || totalCents <= 0 || paymentActionsBlocked}>
                     {connectBusy ? "Creating pay link..." : "Create secure pay link"}
                   </button>
-                ) : (
+                ) : bankPaymentUrl ? (
                   <div className="v2-tool-action-row">
-                    <button type="button" className="v2-primary-button" onClick={() => void copyBankPaymentLink(activeBankPayment!)}><Copy size={15} />Copy pay link</button>
-                    <a href={bankPaymentUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} />Open customer page</a>
+                    <button type="button" className="v2-primary-button" onClick={() => void copyBankPaymentLink(activeBankPayment!)} disabled={paymentActionsBlocked}><Copy size={15} />Copy pay link</button>
+                    {!paymentActionsBlocked ? <a href={bankPaymentUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} />Open customer page</a> : null}
                     {activeBankPayment?.status !== "processing" ? (
                       <button type="button" onClick={() => void cancelBankPaymentLink()} disabled={connectBusy}>Cancel link</button>
                     ) : null}
                   </div>
-                )}
-                {connectStatus?.ready ? (
+                ) : null}
+                {connectStatus?.managementAvailable ? (
                   <button type="button" className="v2-invoice-manage-stripe" onClick={() => void manageBankPaymentAccount()} disabled={connectBusy}>
                     Manage payout account
                   </button>
@@ -1326,15 +1575,19 @@ export function InvoiceDraftTool({
           <section className="v2-invoice-project-record" aria-label="Job invoice record">
             <div>
               <span>Job invoice record</span>
-              <strong>{projectInvoice ? `${projectInvoice.status} - ${currency(projectInvoice.balanceCents / 100)} remaining` : "Not saved to this job yet"}</strong>
+              <strong>{projectInvoiceLoading
+                ? "Checking this job..."
+                : projectInvoice
+                  ? `${projectInvoice.status} - ${currency(projectInvoice.balanceCents / 100)} remaining`
+                  : "Not saved to this job yet"}</strong>
               <small>External payments are recorded by you. Stripe bank payments remain processing until Stripe confirms settlement.</small>
             </div>
             <div className="v2-tool-action-row">
-              <button type="button" className="v2-primary-button" onClick={() => void saveToActiveWork()} disabled={projectInvoiceBusy || totalCents <= 0 || Boolean(projectInvoice)}>
-                {projectInvoiceBusy ? "Saving..." : projectInvoice ? "Saved to job" : "Save to job"}
+              <button type="button" className="v2-primary-button" onClick={() => void saveToActiveWork()} disabled={paymentActionsBlocked || projectInvoiceBusy || totalCents <= 0 || Boolean(projectInvoice)}>
+                {projectInvoiceLoading ? "Checking..." : projectInvoiceBusy ? "Saving..." : projectInvoice ? "Saved to job" : "Save to job"}
               </button>
               {projectInvoice ? <button type="button" onClick={startBlankInvoice} disabled={projectInvoiceBusy}>New invoice</button> : null}
-              {projectInvoice && projectInvoice.status === "draft" ? <button type="button" onClick={() => void markProjectInvoiceSent()} disabled={projectInvoiceBusy}>Mark sent</button> : null}
+              {projectInvoice && projectInvoice.status === "draft" ? <button type="button" onClick={() => void markProjectInvoiceSent()} disabled={projectInvoiceBusy || paymentActionsBlocked}>Mark sent</button> : null}
             </div>
             {/* Bank-payment setup and link actions now live in the primary payment path above.
             {projectInvoice ? (
@@ -1365,7 +1618,7 @@ export function InvoiceDraftTool({
                     </button>
                   ) : null}
                   {connectStatus?.ready && projectInvoice.balanceCents > 0 && projectInvoice.status !== "void" ? (
-                    <button type="button" className="v2-primary-button" onClick={() => void createBankPaymentLink()} disabled={connectBusy}>
+                    <button type="button" className="v2-primary-button" onClick={() => void createBankPaymentLink()} disabled={connectBusy || paymentActionsBlocked}>
                       {connectBusy ? "Creating..." : "Copy bank-payment link"}
                     </button>
                   ) : null}
@@ -1411,7 +1664,7 @@ export function InvoiceDraftTool({
                     <label>Amount received<input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} aria-label="External payment amount" /></label>
                     <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} placeholder="Check, cash, bank transfer…" /></label>
                     <label>Note<input value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Optional reference" /></label>
-                    <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
+                    <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || paymentActionsBlocked || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
                   </div>
                 </details>
               </>
@@ -1423,7 +1676,7 @@ export function InvoiceDraftTool({
                   <label>Amount received<input inputMode="decimal" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} aria-label="External payment amount" /></label>
                   <label>Method<input value={paymentMethodDraft} onChange={(event) => setPaymentMethodDraft(event.target.value)} placeholder="Check, cash, bank transfer…" /></label>
                   <label>Note<input value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Optional reference" /></label>
-                  <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
+                  <button type="button" onClick={() => void recordExternalPayment()} disabled={projectInvoiceBusy || paymentActionsBlocked || projectInvoice.status === "void" || projectInvoice.balanceCents <= 0}>Record external payment</button>
                 </div>
               </details>
             ) : null}
@@ -1435,7 +1688,7 @@ export function InvoiceDraftTool({
             <p>{conversionNotice}</p>
             <span>
               <button type="button" onClick={() => setConversionNotice("")}>Dismiss</button>
-              <button type="button" onClick={startBlankInvoice}>Start blank invoice</button>
+              <button type="button" onClick={startBlankInvoice} disabled={projectInvoiceBusy || projectInvoiceLoading}>Start blank invoice</button>
             </span>
           </div>
         ) : null}
@@ -1613,8 +1866,10 @@ export function InvoiceDraftTool({
                 {paymentOptions.bank ? (
                   <>
                     <span>Secure bank payment</span>
-                    {bankPaymentUrl ? (
+                    {bankPaymentUrl && !paymentIntegrityIssue ? (
                       <a href={bankPaymentUrl} target="_blank" rel="noreferrer">Pay securely by bank</a>
+                    ) : paymentIntegrityIssue ? (
+                      <strong>Payment link paused until the amounts match.</strong>
                     ) : (
                       <strong>Pay link will be created before email delivery.</strong>
                     )}
@@ -1631,22 +1886,22 @@ export function InvoiceDraftTool({
               </footer>
           </article>
           <div className="v2-invoice-preview-actions" aria-label="Invoice preview actions">
-            <button type="button" className="v2-secondary-button" onClick={() => void copyInvoice()}><Copy size={16} />Copy invoice</button>
+            <button type="button" className="v2-secondary-button" onClick={() => void copyInvoice()} disabled={paymentActionsBlocked}><Copy size={16} />Copy invoice</button>
             <button type="button" className="v2-secondary-button" onClick={printInvoice}><FileText size={16} />Print / save as PDF</button>
-            <button type="button" className="v2-secondary-button" onClick={startBlankInvoice}><Plus size={16} />New invoice</button>
+            <button type="button" className="v2-secondary-button" onClick={startBlankInvoice} disabled={projectInvoiceBusy || projectInvoiceLoading}><Plus size={16} />New invoice</button>
           </div>
         </Panel>
       </aside> : null}
       <div className="v2-tool-action-dock" aria-label="Invoice actions">
         <span aria-live="polite" data-save-state={draftSaveState}><strong>{currency(total)}</strong><small>{draftSaveMessage}</small></span>
         {step !== "items" ? <button type="button" onClick={() => setStep(step === "review" ? "customer" : "items")} aria-label="Previous invoice step"><ChevronLeft size={18} /></button> : null}
-        <button type="button" className="v2-secondary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || invoiceEmailBusy || draftSaveState === "saving"}>
+        <button type="button" className="v2-secondary-button" onClick={() => void saveInvoiceDraft()} disabled={projectInvoiceBusy || invoiceEmailBusy || draftSaveState === "saving" || paymentActionsBlocked}>
           {draftSaveState === "saving" ? <LoaderCircle className="v2-spin" size={18} /> : draftSaveState === "saved" ? <Check size={18} /> : <Save size={18} />}
           {draftSaveState === "saving" ? "Saving" : draftSaveState === "saved" ? "Saved" : draftSaveState === "error" ? "Try again" : "Save draft"}
         </button>
         {step === "items" ? <button type="button" className="v2-primary-button" onClick={() => setStep("customer")} disabled={totalCents <= 0}><span>Customer</span><ChevronRight size={18} /></button> : null}
         {step === "customer" ? <button type="button" className="v2-primary-button" onClick={openInvoiceReview}><span>Review</span><ChevronRight size={18} /></button> : null}
-        {step === "review" ? <button type="button" className="v2-primary-button" onClick={openInvoiceSendOptions} disabled={invoiceEmailBusy || totalCents <= 0}><Send size={18} />Send</button> : null}
+        {step === "review" ? <button type="button" className="v2-primary-button" onClick={openInvoiceSendOptions} disabled={invoiceEmailBusy || totalCents <= 0 || paymentActionsBlocked}><Send size={18} />Send</button> : null}
       </div>
       <DocumentSendSheet
         open={sendOpen}
