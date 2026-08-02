@@ -391,3 +391,81 @@ findings. The earlier sealed scan does not include this follow-up diff.
 The branch behind PR #14 is ready for review but remains unmerged and undeployed. No provider
 mutation, ACH enablement, production-data change, resource creation, or cost
 occurred in this follow-up.
+
+## 2026-08-02 hosted acceptance follow-up (unmerged)
+
+Hosted Gate A run `30739332112` passed the exact Node 20/PostgreSQL 16 full
+application and database suite and the fail-closed authentication and
+Jobs/discovery browser journeys. It then exposed a real slow-offline startup
+path: Chromium can keep the boot identity request pending for its full
+15-second timeout even after entering an explicit offline state. The app now
+restores a valid, age-bounded device snapshot before starting that request when
+`navigator.onLine` is already false and revalidates it when connectivity
+returns, including when the online transition happened just before the event
+listener was attached. A pre-hydration zero-delay active-work refresh can no
+longer erase the newly restored work; explicit sign-out and account-reset paths
+still clear it.
+
+The offline acceptance journey now requires the cached workspace to appear in
+under 10 seconds, opens the visible Active-work stage before checking the
+cached job, and records only non-sensitive state/cache diagnostics if it fails.
+The full offline open, cached active-work access, reconnect, retry, and sign-out
+journey passes 10/10 local stress runs. Final local verification passes build,
+full lint, 465/465 unit/frontend checks, all three browser E2E journeys, the
+production dependency audit with zero known vulnerabilities, and diff
+integrity. Three non-database integration checks pass; 21 PostgreSQL-backed
+checks are explicitly skipped because this worktree has no isolated
+`TEST_DATABASE_URL`. A fresh hosted exact-candidate database and browser run
+remains required. Launch readiness remains deliberately blocked on exactly 19
+findings and incident readiness on exactly 8 findings. The branch remains
+unmerged and undeployed, and this work made no provider, production-data,
+resource, ACH, or paid change.
+
+## 2026-08-02 offline identity-boundary remediation (unmerged)
+
+The combined candidate now has one terminal client account boundary. Changing
+or ending the canonical account increments an account generation, clears every
+account-owned in-memory projection, cancels that account's queued flush, and
+prevents late asynchronous results from entering the next account. Sensitive
+browser requests and offline replays carry the originating account ID in
+`X-RIVT-Expected-Account-Id`; authenticated server middleware returns a bounded
+conflict when it does not match the current actor. Offline sign-out stores a
+bounded pending-logout marker and will not restore the retired snapshot while
+the server outcome is unknown.
+
+The offline snapshot clock is now `lastServerValidatedAt`, advanced only by a
+successful authenticated server response. Offline hydration cannot renew the
+30-day retention window. Invalid, expired, rejected, signed-out, or replaced
+account snapshots are purged. Financial decisions, messaging, publication,
+delivery, and payments remain online-only; this change does not expand offline
+write scope.
+
+Sealed Codex Security diff scan
+`fcd23f03-6523-4098-a98f-b14c0f11a73d` reported and validated two low findings:
+
+- `csf_a4d5362e0fc95aca92016557`: Account A active work could remain visible
+  briefly after Account B became canonical.
+- `csf_bf35f40d5cd566c3d54d002f`: offline reads could renew the intended
+  30-day snapshot expiry.
+
+Both are fixed. Offline sign-out resurrection was reproduced as a correctness
+defect outside the scan's physical-access threat model and fixed as well.
+Independent follow-up review closed account-transition races in Stripe checkout
+and portal redirects, Web Push, profile and session controls, Inbox controls,
+job transitions, onboarding and Shop Talk callbacks, plus a same-account
+reaction pending-state regression. Final independent review found no remaining
+P0/P1 code blocker.
+
+`npm run build`, `npm run lint`, `npm run test`, `npm run test:e2e`,
+`npm audit --omit=dev`, and diff integrity pass. The result includes 467/467
+unit/frontend checks, three passing non-database integration checks, and all
+three browser journeys. Twenty-one PostgreSQL-backed integration checks are
+explicitly skipped because this worktree has no `TEST_DATABASE_URL`; a fresh
+exact-candidate GitHub Node 20/PostgreSQL 16 run remains required. The browser
+coverage proves that delayed Account A checkout, portal, Push enable/test/
+disable, session revocation, onboarding, Shop Talk, and queue completions do not
+redirect, sign out, mutate, or render into Account B.
+
+No merge, deployment, provider mutation, production-data action, ACH enablement,
+launch-hold change, resource creation, or cost occurred. Production remains on
+the previously recorded source until an explicit later approval.

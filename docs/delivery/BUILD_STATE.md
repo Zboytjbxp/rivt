@@ -20,6 +20,55 @@ Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
+## 2026-08-02 offline identity-boundary remediation (unmerged)
+
+The Packet 87 working tree now treats every browser-held account projection and
+every delayed account-scoped result as belonging to the exact account that
+created it. A central account generation retires jobs, active work, inbox,
+notifications, Shop Talk reactions, profile/session work, billing state, and
+the offline outbox when canonical identity changes. Queued writes and sensitive
+requests carry `X-RIVT-Expected-Account-Id`; the server rejects a request when
+that account does not match the authenticated actor. A pending server-logout
+marker prevents an offline sign-out from restoring the old account before the
+server logout is confirmed.
+
+Offline snapshots now expire 30 days after the immutable
+`lastServerValidatedAt` time. Reading a snapshot offline cannot move that clock.
+A real authenticated server response may renew it; a 401, explicit sign-out,
+session expiration, account replacement, or malformed/expired snapshot retires
+it. Stripe checkout and billing-portal redirects, Web Push subscription work,
+profile/session mutations, Inbox mutations, job transitions, onboarding, and
+Shop Talk callbacks are account-bound and suppress stale completions.
+
+Codex Security diff scan `fcd23f03-6523-4098-a98f-b14c0f11a73d` sealed at
+`2026-08-02T15:29:41.451406Z` for frozen snapshot
+`codex-security-snapshot/v1:sha256:fc2136b967e229cdaba0cc43a50263a851ab7f940f7e7fdb57f1e14935b4b151`.
+It reported two low-severity findings: cross-account active-work survival
+(`csf_a4d5362e0fc95aca92016557`) and sliding offline-snapshot expiry
+(`csf_bf35f40d5cd566c3d54d002f`). Both are remediated in this candidate. The
+same review reproduced offline sign-out resurrection as a correctness defect;
+it was outside the scan's physical-access threat model but is also remediated.
+Independent post-scan review additionally found and closed delayed-result races
+in Stripe redirects, browser-global PushManager work, profile/session actions,
+Inbox actions, job transitions, and reaction pending state. A final independent
+review found no remaining P0/P1 code blocker.
+
+Local candidate evidence is clean: `npm run build`, `npm run lint`,
+`npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and diff integrity
+pass. The unit/frontend result is 467/467. The aggregate integration command
+passes its three non-database checks and explicitly skips 21 PostgreSQL-backed
+checks because this isolated worktree has no `TEST_DATABASE_URL`; no local
+database-pass claim is made for this exact tree. The browser journey exercises
+Account A to Account B transitions during checkout, billing portal, device-alert
+enable/test/disable, current-session revocation, onboarding, Shop Talk creation,
+offline queue replay, sign-out, and reconnect. Exact-candidate GitHub Node 20 /
+PostgreSQL 16 and browser CI remains required after the branch-only push.
+
+This is source and local test evidence only. The branch remains unmerged and
+undeployed; production still serves `29e3c613f2eb95a6583b52c671275e5046dde0d3`.
+No provider state, production data, ACH flag, launch hold, resource, or paid
+service changed.
+
 The 2026-08-02 provider-evidence correctness follow-up is source work on the
 PR #14 branch, not provider evidence. The bank-payment verifier now reads Stripe's
 Accounts v2 event-destination resource with API version `2026-06-24.dahlia`
@@ -71,10 +120,10 @@ unsupported paging, private-route, rehearsal, and recovery adapters still fail
 closed. No provider mutation, deployment, ACH enablement, production-data
 action, resource creation, or cost occurred in this source follow-up.
 
-Final local verification of this follow-up passes `npm run build`, `npm run
-lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and diff
-integrity. The normal unit/frontend suite now includes the new overlay boundary
-tests and passes 464/464 checks. Three non-database integration checks pass; 21
+Final local verification of the current follow-up passes `npm run build`, `npm
+run lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and diff
+integrity. The normal unit/frontend suite includes the overlay boundary tests
+and passes 465/465 checks. Three non-database integration checks pass; 21
 database-backed checks are explicitly skipped because this isolated worktree has
 no `TEST_DATABASE_URL`, so no new exact-candidate database result is claimed.
 The earlier disposable-database and hosted database evidence remains historical
@@ -89,13 +138,25 @@ preserves a visibly blocked launch without hiding independent CI results.
 Gate A runs once for pull requests and once after a merge to `master`; the
 redundant `codex/**` push trigger was removed so an open PR does not consume two
 identical hosted runs.
-The first hosted runs exposed two timing races in the acceptance harness rather
-than contradictory product results: an isolated email-timeout test could end
-before Node delivered its unreferenced timeout, and the offline browser journey
-could reload before Chromium reported `navigator.onLine === false`. The tests
-now keep the timeout process alive only for the bounded assertion and await the
-browser's explicit network-state transition. Local stress verification passes
-the email timeout 50/50 times and the offline journey 3/3 times.
+The first hosted runs exposed an email-test process-lifetime race and a real
+offline-startup race. The isolated email-timeout test could end before Node
+delivered its unreferenced timeout; its bounded assertion now keeps the process
+alive and passes 50/50 local stress runs. Hosted run `30739332112` then passed
+the exact Node 20/PostgreSQL 16 application and database suite plus the auth and
+Jobs/discovery browser journeys, but the offline journey waited the same 15
+seconds as the boot-critical identity request and timed out. Chromium may leave
+that request pending for its full timeout after an explicit offline transition.
+RIVT now restores a valid bounded device snapshot before making the identity
+request whenever `navigator.onLine` is already false, then revalidates the
+server session on the next `online` event or immediately if connectivity
+returned before that listener was attached. A stale zero-delay active-work
+refresh also no longer clears work restored during authentication hydration;
+the explicit sign-out/account-reset paths remain responsible for clearing that
+state. The E2E now requires the cached shell to open in under 10 seconds,
+selects the visible Active-work route, and emits non-sensitive shell/cache
+diagnostics on failure. The complete offline open, active-work access,
+reconnect, retry, and sign-out journey passes 10/10 local stress runs. A fresh
+hosted result for this follow-up is pending.
 
 Operational status: launch remains held. The earlier sealed implementation
 review and hosted source/database CI prerequisites pass. The founder role's

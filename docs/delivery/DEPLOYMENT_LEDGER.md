@@ -1,5 +1,27 @@
 # Deployment Ledger
 
+## 2026-08-02 - Offline identity-boundary remediation (No deployment)
+
+- Branch: `codex/railway-stage1-packet87-integration`; candidate based on
+  `e4136a617c983ea353b0128670971b8038246622`, unmerged and undeployed.
+- Sealed review: Codex Security diff scan
+  `fcd23f03-6523-4098-a98f-b14c0f11a73d`, sealed
+  `2026-08-02T15:29:41.451406Z`, reported two low findings. The candidate fixes
+  cross-account active-work survival and sliding offline-snapshot expiry; it
+  also fixes the reproduced offline sign-out correctness defect. Independent
+  follow-up closed delayed-result races in Stripe, Push, profile/session,
+  Inbox, jobs, onboarding, Shop Talk, and reaction state. Final independent
+  review found no P0/P1 blocker.
+- Verification: build, full lint, aggregate tests, all three browser E2E
+  journeys, production dependency audit, and diff integrity pass. The
+  unit/frontend result is 467/467. Three non-database integration checks pass;
+  21 PostgreSQL-backed checks skip because `TEST_DATABASE_URL` is absent, so
+  exact-candidate hosted PostgreSQL/browser CI remains required after push.
+- Production boundary: production remains on
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`. No merge, deployment, provider
+  mutation, production-data action, ACH enablement, launch-hold change,
+  resource creation, or cost occurred.
+
 ## 2026-08-01 - Local security remediation and verification (No deployment)
 
 - Branch: `codex/railway-stage1-packet87-integration`; working source remains

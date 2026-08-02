@@ -1,5 +1,34 @@
 # Gate A Requirements Traceability
 
+## 2026-08-02 - Packet 87 offline identity-boundary remediation
+
+- `GA-AUTH-007` and `GA-AUTH-008` gain a server-enforced expected-account
+  boundary for sensitive browser requests and offline replay. The authenticated
+  actor must match the account that originated the request; client visibility
+  is not treated as authorization.
+- `GA-AUTH-010` gains one terminal client identity transition. Account changes,
+  session expiry, explicit sign-out, pending offline logout, and authenticated
+  401 responses retire account-owned projections and prevent stale asynchronous
+  completions from entering a later account.
+- `GA-UX-005` gains honest offline retention and recovery. The 30-day window is
+  measured from immutable server validation rather than local use; offline reads
+  cannot extend it, and unresolved server logout cannot silently restore the
+  signed-out account.
+- `GA-UX-006` gains deterministic Account A to Account B browser evidence for
+  active work, offline replay, onboarding, Shop Talk, Stripe checkout and portal,
+  device-alert enable/test/disable, and session revocation. Stale responses do
+  not redirect, sign out, mutate, or render into Account B.
+- `GA-OPS-007` gains sealed Codex Security diff scan
+  `fcd23f03-6523-4098-a98f-b14c0f11a73d`: two validated low findings are fixed,
+  a separate correctness defect is fixed, and final independent review found no
+  P0/P1 blocker. Local build, lint, aggregate tests, browser E2E, dependency
+  audit, and diff integrity pass; the unit/frontend count is 467/467.
+- `GA-OPS-008` remains `Partial`. This candidate is unmerged and undeployed.
+  Three non-database integration checks pass locally; 21 PostgreSQL-backed
+  checks skip without `TEST_DATABASE_URL`, so exact-candidate GitHub Node 20 /
+  PostgreSQL 16 and browser CI is still required. No production, provider, ACH,
+  resource, launch-hold, or paid state changed.
+
 ## 2026-08-02 - Current release-security reconciliation
 
 - Codex Security working-tree scan
