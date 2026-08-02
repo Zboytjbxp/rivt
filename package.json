@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22 <25"
   },
   "scripts": {
     "dev": "concurrently \"npm:dev:client\" \"npm:dev:api\"",
@@ -18,7 +18,7 @@
     "test:integration": "node --env-file-if-exists=.env --test --test-concurrency=1 test/server.integration.test.js test/push-notifications.integration.test.js test/server.database.integration.test.js test/auth-lifecycle.integration.test.js test/billing.integration.test.js test/jobs.integration.test.js test/public-discovery.integration.test.js test/match-acceptance.integration.test.js test/messaging-notifications.integration.test.js test/project-completion.integration.test.js test/reviews-admin-safety.integration.test.js test/shop-talk-reactions.integration.test.js test/shop-talk-posts.integration.test.js test/shop-talk-moderation.integration.test.js test/communities.integration.test.js test/tool-records.integration.test.js test/network-records.integration.test.js test/contacts.integration.test.js test/professional-profile.integration.test.js test/migrations.integration.test.js",
     "test:integration:reset": "node --env-file-if-exists=.env scripts/reset-test-database.js --yes",
     "test:integration:fresh": "npm run test:integration:reset && npm run test:integration",
-    "test:e2e": "node test/auth-fail-closed.e2e.mjs && node test/jobs-discovery.e2e.mjs && node test/offline-recovery.e2e.mjs",
+    "test:e2e": "node test/auth-fail-closed.e2e.mjs && node test/jobs-discovery.e2e.mjs && node test/offline-recovery.e2e.mjs && node test/production-csp.e2e.mjs",
     "test:ui:shop-talk-news": "node scripts/shop-talk-news-ui-smoke.mjs",
     "test:ui:guest-preview": "node scripts/guest-preview-ui-smoke.mjs",
     "test:ui:tools": "node scripts/tools-ui-smoke.mjs",

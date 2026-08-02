@@ -12,7 +12,6 @@ import { OfflineQueueProvider } from "./lib/OfflineQueueProvider";
 import { LocalSetupPrompt } from "./components/LocalSetupPrompt";
 import { InstallAppPrompt } from "./components/InstallAppPrompt";
 import { PersonaProvider } from "./features/persona/usePersona";
-import { ReportViewer } from "./features/report/ReportViewer";
 import "./components/OfflineBanner.css";
 import "./components/LocalSetupPrompt.css";
 import { tradeOptions } from "./data";
@@ -2828,12 +2827,6 @@ function App() {
         }}
       />
     );
-  }
-
-  // Check for report share URL — publicly accessible, no auth needed
-  const reportParam = new URLSearchParams(window.location.search).get("report");
-  if (reportParam) {
-    return <ReportViewer encoded={reportParam} />;
   }
 
   const authLinkPath = window.location.pathname;

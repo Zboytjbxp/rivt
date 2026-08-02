@@ -18,6 +18,12 @@
     "owner": "Michael",
     "nextDueAt": "2026-08-24T15:43:08.361Z"
   },
+  "latestBackupArtifact": {
+    "status": "created",
+    "createdAt": "2026-07-29T02:56:41.908Z",
+    "artifactKey": "backups/postgres/2026-07-29T02-56-41.908Z-unknown.json.gz.aes256gcm",
+    "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-28---packet-88-fresh-encrypted-backup-artifact"
+  },
   "latestNamedArtifactRestore": {
     "status": "passed",
     "completedAt": "2026-07-25T15:43:08.361Z",

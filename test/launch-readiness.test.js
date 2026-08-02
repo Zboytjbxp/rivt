@@ -48,6 +48,11 @@ const readyRecoveryPolicy = {
     owner: "Michael",
     nextDueAt: "2026-07-20T12:00:00.000Z",
   },
+  latestBackupArtifact: {
+    status: "created",
+    createdAt: "2026-06-21T11:30:00.000Z",
+    artifactKey: "backups/postgres/2026-06-21T11-30-00.000Z-test.json.gz.aes256gcm",
+  },
   latestNamedArtifactRestore: {
     status: "passed",
     completedAt: "2026-06-21T04:18:59.000Z",
@@ -86,6 +91,7 @@ test("launch readiness reports recovery policy gaps without hiding incident gaps
       targets: { rpoMinutes: null, rpoBasis: "TBD", rtoMinutes: null, rtoBasis: "TBD" },
       backupRetention: { days: null, owner: "TBD" },
       restoreDrillCadence: { days: null, owner: "TBD", nextDueAt: null },
+      latestBackupArtifact: { status: "missing" },
       latestNamedArtifactRestore: { status: "missing" },
       approvals: {},
     },
@@ -99,6 +105,7 @@ test("launch readiness reports recovery policy gaps without hiding incident gaps
     "INCIDENT_REHEARSAL_MISSING",
     "RECOVERY_POLICY_NOT_APPROVED",
     "RPO_TARGET_MISSING",
+    "BACKUP_RPO_EVIDENCE_STALE",
     "RTO_TARGET_MISSING",
     "BACKUP_RETENTION_MISSING",
     "RESTORE_CADENCE_MISSING",
@@ -146,4 +153,20 @@ test("launch readiness fails closed while an explicit incident hold is active", 
     message: "Emergency credential containment remains open.",
     source: "incident",
   }]);
+});
+
+test("launch readiness rejects backup evidence older than the approved RPO", () => {
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: {
+      ...readyRecoveryPolicy,
+      latestBackupArtifact: {
+        ...readyRecoveryPolicy.latestBackupArtifact,
+        createdAt: "2026-06-21T10:59:59.000Z",
+      },
+    },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.findings.map((finding) => finding.code), ["BACKUP_RPO_EVIDENCE_STALE"]);
 });

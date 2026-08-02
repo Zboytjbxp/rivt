@@ -136,6 +136,19 @@ export function requestMetadata(request) {
   };
 }
 
+export function authMetadataPepperStatus({ env = process.env } = {}) {
+  const production = String(env.NODE_ENV ?? "").trim().toLowerCase() === "production";
+  const pepper = String(env.AUTH_METADATA_PEPPER ?? "").trim();
+  const configured = !production || Buffer.byteLength(pepper, "utf8") >= 32;
+  return {
+    ok: configured,
+    provider: "session_security",
+    purpose: "Privacy-safe session metadata",
+    mode: configured ? "configured" : "setup_required",
+    missing: configured ? [] : ["AUTH_METADATA_PEPPER"],
+  };
+}
+
 export function deviceLabelFromUserAgent(userAgent) {
   const value = String(userAgent ?? "");
   const browser = /Edg\//.test(value) ? "Edge"

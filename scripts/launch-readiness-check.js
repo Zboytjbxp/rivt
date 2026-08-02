@@ -27,6 +27,14 @@ function withinDays(value, days, now = new Date()) {
   return ageMs >= 0 && ageMs <= days * 24 * 60 * 60 * 1000;
 }
 
+function withinMinutes(value, minutes, now = new Date()) {
+  if (!value || !positiveNumber(minutes)) return false;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return false;
+  const ageMs = now.getTime() - date.getTime();
+  return ageMs >= 0 && ageMs <= minutes * 60 * 1000;
+}
+
 function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
   const findings = [];
 
@@ -41,6 +49,18 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
     findings.push({
       code: "RPO_TARGET_MISSING",
       message: "Recovery point objective must include an approved numeric minute target and basis.",
+    });
+  }
+
+  const latestBackup = policy.latestBackupArtifact;
+  if (
+    latestBackup?.status !== "created" ||
+    !hasValue(latestBackup.artifactKey) ||
+    !withinMinutes(latestBackup.createdAt, policy.targets?.rpoMinutes, now)
+  ) {
+    findings.push({
+      code: "BACKUP_RPO_EVIDENCE_STALE",
+      message: "The latest named backup artifact must be newer than the approved RPO.",
     });
   }
 
@@ -104,6 +124,11 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
       rtoMinutes: policy.targets?.rtoMinutes ?? null,
       retentionDays: policy.backupRetention?.days ?? null,
       restoreDrillCadenceDays: policy.restoreDrillCadence?.days ?? null,
+      latestBackupWithinRpo: Boolean(
+        latestBackup?.status === "created" &&
+          hasValue(latestBackup.artifactKey) &&
+          withinMinutes(latestBackup.createdAt, policy.targets?.rpoMinutes, now),
+      ),
       recentNamedArtifactRestore: Boolean(
         latestRestore?.status === "passed" &&
           withinDays(latestRestore.completedAt, maxEvidenceAgeDays, now),

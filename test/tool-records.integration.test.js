@@ -703,6 +703,27 @@ if (!testDatabaseUrl) {
     const publicPayRedirect = await fetch(`${baseUrl}/pay/${toolPaymentRequestId}`, { redirect: "manual" });
     assert.equal(publicPayRedirect.status, 303);
     assert.match(publicPayRedirect.headers.get("location") ?? "", /^https:\/\/checkout\.stripe\.com\//);
+    assert.equal(publicPayRedirect.headers.get("cache-control"), "no-store");
+    assert.equal(publicPayRedirect.headers.get("pragma"), "no-cache");
+
+    await database.query(
+      "UPDATE tool_invoice_payment_requests SET status = 'paid' WHERE id = $1",
+      [toolPaymentRequestId],
+    );
+    const publicCompletionRedirect = await fetch(`${baseUrl}/pay/${toolPaymentRequestId}`, { redirect: "manual" });
+    assert.equal(publicCompletionRedirect.status, 303);
+    assert.match(publicCompletionRedirect.headers.get("location") ?? "", /^https:\/\/rivt\.pro\/payment\/complete/);
+    assert.equal(publicCompletionRedirect.headers.get("cache-control"), "no-store");
+    assert.equal(publicCompletionRedirect.headers.get("pragma"), "no-cache");
+    await database.query(
+      "UPDATE tool_invoice_payment_requests SET status = 'open' WHERE id = $1",
+      [toolPaymentRequestId],
+    );
+
+    const missingPublicPayment = await fetch(`${baseUrl}/pay/${randomUUID()}`, { redirect: "manual" });
+    assert.equal(missingPublicPayment.status, 404);
+    assert.equal(missingPublicPayment.headers.get("cache-control"), "no-store");
+    assert.equal(missingPublicPayment.headers.get("pragma"), "no-cache");
 
     const invalidDeliveryInvoice = await requestJson(baseUrl, "/api/v1/tool-records", {
       method: "POST",

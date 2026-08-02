@@ -1,8 +1,19 @@
 import { createHash, createHmac } from "node:crypto";
+import { logWarn } from "./logger.js";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const SESSION_ID_PATTERN = /^[0-9a-f-]{36}$/i;
 const LOCAL_DEV_ORIGIN_PATTERN = /^http:\/\/(?:127\.0\.0\.1|localhost):\d+$/i;
+const DURABLE_RATE_LIMIT_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
+const DURABLE_RATE_LIMIT_CLEANUP_BATCH_SIZE = 250;
+const DURABLE_RATE_LIMIT_CLEANUP_MAX_BATCH_SIZE = 500;
+const DURABLE_RATE_LIMIT_CLEANUP_MAX_BATCHES = 8;
+const DURABLE_RATE_LIMIT_CLEANUP_MAX_BATCHES_CAP = 16;
+const DURABLE_RATE_LIMIT_CLEANUP_TIME_BUDGET_MS = 250;
+const DURABLE_RATE_LIMIT_CLEANUP_TIME_BUDGET_CAP_MS = 2_000;
+const DURABLE_RATE_LIMIT_CLEANUP_BACKLOG_RETRY_MS = 60_000;
+const DEFAULT_IN_MEMORY_RATE_LIMIT_MAX_ENTRIES = 10_000;
+const durableRateLimitCleanupState = new WeakMap();
 
 function requestHeader(request, name) {
   return request.get?.(name)
@@ -122,38 +133,64 @@ export function createOriginGuard(allowedOrigins, { exemptPaths = [] } = {}) {
   };
 }
 
-export function createRateLimiter({ windowMs, max, namespace = "default" }) {
+function positiveSafeInteger(value, name) {
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new TypeError(`${name} must be a positive safe integer.`);
+  }
+  return parsed;
+}
+
+export function createRateLimiter({
+  windowMs,
+  max,
+  namespace = "default",
+  maxEntries = DEFAULT_IN_MEMORY_RATE_LIMIT_MAX_ENTRIES,
+  clock = Date.now,
+}) {
+  const boundedWindowMs = positiveSafeInteger(windowMs, "windowMs");
+  const boundedMax = positiveSafeInteger(max, "max");
+  const boundedMaxEntries = positiveSafeInteger(maxEntries, "maxEntries");
+  if (typeof clock !== "function") {
+    throw new TypeError("clock must be a function.");
+  }
   const entries = new Map();
 
   return function rateLimit(request, response, next) {
-    const now = Date.now();
+    const now = clock();
     const actor = request.authUser?.id ?? request.ip ?? request.socket?.remoteAddress ?? "unknown";
     const key = `${namespace}:${actor}`;
     const current = entries.get(key);
+
+    if (!current && entries.size >= boundedMaxEntries) {
+      for (const [candidateKey, candidate] of entries) {
+        if (candidate.resetAt <= now) entries.delete(candidateKey);
+      }
+      while (entries.size >= boundedMaxEntries) {
+        const oldestKey = entries.keys().next().value;
+        if (oldestKey === undefined) break;
+        entries.delete(oldestKey);
+      }
+    }
+
     const entry = !current || current.resetAt <= now
-      ? { count: 0, resetAt: now + windowMs }
+      ? { count: 0, resetAt: now + boundedWindowMs }
       : current;
 
     entry.count += 1;
     entries.set(key, entry);
 
-    response.setHeader("RateLimit-Limit", String(max));
-    response.setHeader("RateLimit-Remaining", String(Math.max(0, max - entry.count)));
+    response.setHeader("RateLimit-Limit", String(boundedMax));
+    response.setHeader("RateLimit-Remaining", String(Math.max(0, boundedMax - entry.count)));
     response.setHeader("RateLimit-Reset", String(Math.ceil(entry.resetAt / 1000)));
 
-    if (entry.count > max) {
+    if (entry.count > boundedMax) {
       response.setHeader("Retry-After", String(Math.max(1, Math.ceil((entry.resetAt - now) / 1000))));
       response.status(429).json({
         ok: false,
         error: "Too many requests. Try again shortly.",
       });
       return;
-    }
-
-    if (entries.size > 10_000) {
-      for (const [candidateKey, candidate] of entries) {
-        if (candidate.resetAt <= now) entries.delete(candidateKey);
-      }
     }
 
     next();
@@ -166,11 +203,81 @@ function rateLimitSubject(request) {
   return `ip:${request.ip ?? request.socket?.remoteAddress ?? "unknown"}`;
 }
 
+export function loginEmailRateLimitSubject(request) {
+  const rawEmail = typeof request.body?.email === "string" ? request.body.email : "";
+  const normalizedEmail = rawEmail.trim().toLowerCase().slice(0, 320);
+  return `login-email:${normalizedEmail || "missing"}`;
+}
+
 function hashRateLimitSubject(value) {
   const pepper = process.env.RATE_LIMIT_PEPPER?.trim() || process.env.AUTH_METADATA_PEPPER?.trim();
   return pepper
     ? createHmac("sha256", pepper).update(String(value)).digest("hex")
     : createHash("sha256").update(String(value)).digest("hex");
+}
+
+function scheduleExpiredRateLimitWindowCleanup(database, {
+  now,
+  intervalMs,
+  batchSize,
+  maxBatches,
+  timeBudgetMs,
+  cleanupClock,
+}) {
+  let state = durableRateLimitCleanupState.get(database);
+  if (!state) {
+    state = { nextCleanupAt: 0, inFlight: null };
+    durableRateLimitCleanupState.set(database, state);
+  }
+  if (state.inFlight || now < state.nextCleanupAt) return;
+
+  state.nextCleanupAt = now + intervalMs;
+  const cleanupTask = (async () => {
+    const startedAt = cleanupClock();
+    let batches = 0;
+    let backlogLikely = false;
+
+    while (batches < maxBatches) {
+      if (batches > 0 && cleanupClock() - startedAt >= timeBudgetMs) break;
+
+      const result = await database.query(
+        `DELETE FROM rate_limit_windows AS target
+         USING (
+           SELECT namespace, subject_hash, window_start_at
+           FROM rate_limit_windows
+           WHERE expires_at <= now()
+           ORDER BY expires_at ASC
+           LIMIT $1
+         ) AS expired
+         WHERE target.namespace = expired.namespace
+           AND target.subject_hash = expired.subject_hash
+           AND target.window_start_at = expired.window_start_at
+           AND target.expires_at <= now()`,
+        [batchSize],
+      );
+      batches += 1;
+      backlogLikely = Number(result?.rowCount ?? 0) >= batchSize;
+      if (!backlogLikely) break;
+    }
+
+    return { backlogLikely };
+  })();
+  state.inFlight = cleanupTask;
+  void cleanupTask
+    .then((result) => {
+      if (result.backlogLikely) {
+        state.nextCleanupAt = Math.min(
+          state.nextCleanupAt,
+          now + DURABLE_RATE_LIMIT_CLEANUP_BACKLOG_RETRY_MS,
+        );
+      }
+    })
+    .catch((error) => {
+      logWarn("security.rate_limit_cleanup_failed", { error });
+    })
+    .finally(() => {
+      if (state.inFlight === cleanupTask) state.inFlight = null;
+    });
 }
 
 export function createDurableRateLimiter({
@@ -180,8 +287,38 @@ export function createDurableRateLimiter({
   max,
   namespace = "default",
   subject = rateLimitSubject,
+  cleanupIntervalMs = DURABLE_RATE_LIMIT_CLEANUP_INTERVAL_MS,
+  cleanupBatchSize = DURABLE_RATE_LIMIT_CLEANUP_BATCH_SIZE,
+  cleanupMaxBatches = DURABLE_RATE_LIMIT_CLEANUP_MAX_BATCHES,
+  cleanupTimeBudgetMs = DURABLE_RATE_LIMIT_CLEANUP_TIME_BUDGET_MS,
+  cleanupClock = Date.now,
+  clock = Date.now,
 }) {
-  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+  const boundedWindowMs = positiveSafeInteger(windowMs, "windowMs");
+  const boundedMax = positiveSafeInteger(max, "max");
+  if (typeof clock !== "function") {
+    throw new TypeError("clock must be a function.");
+  }
+  if (typeof cleanupClock !== "function") {
+    throw new TypeError("cleanupClock must be a function.");
+  }
+  const windowSeconds = Math.max(1, Math.ceil(boundedWindowMs / 1000));
+  const boundedCleanupIntervalMs = Math.max(
+    60_000,
+    Number(cleanupIntervalMs) || DURABLE_RATE_LIMIT_CLEANUP_INTERVAL_MS,
+  );
+  const boundedCleanupBatchSize = Math.min(
+    DURABLE_RATE_LIMIT_CLEANUP_MAX_BATCH_SIZE,
+    Math.max(1, Math.floor(Number(cleanupBatchSize) || DURABLE_RATE_LIMIT_CLEANUP_BATCH_SIZE)),
+  );
+  const boundedCleanupMaxBatches = Math.min(
+    DURABLE_RATE_LIMIT_CLEANUP_MAX_BATCHES_CAP,
+    positiveSafeInteger(cleanupMaxBatches, "cleanupMaxBatches"),
+  );
+  const boundedCleanupTimeBudgetMs = Math.min(
+    DURABLE_RATE_LIMIT_CLEANUP_TIME_BUDGET_CAP_MS,
+    positiveSafeInteger(cleanupTimeBudgetMs, "cleanupTimeBudgetMs"),
+  );
 
   return async function durableRateLimit(request, response, next) {
     if (!databaseAvailable() || !database) {
@@ -192,10 +329,10 @@ export function createDurableRateLimiter({
       return;
     }
 
-    const now = Date.now();
-    const windowStartMs = Math.floor(now / windowMs) * windowMs;
+    const now = clock();
+    const windowStartMs = Math.floor(now / boundedWindowMs) * boundedWindowMs;
     const windowStartAt = new Date(windowStartMs);
-    const resetAt = new Date(windowStartMs + windowMs);
+    const resetAt = new Date(windowStartMs + boundedWindowMs);
     const subjectHash = hashRateLimitSubject(subject(request));
 
     try {
@@ -210,14 +347,22 @@ export function createDurableRateLimiter({
          RETURNING request_count, expires_at`,
         [namespace, subjectHash, windowStartAt, windowSeconds, resetAt],
       );
+      scheduleExpiredRateLimitWindowCleanup(database, {
+        now,
+        intervalMs: boundedCleanupIntervalMs,
+        batchSize: boundedCleanupBatchSize,
+        maxBatches: boundedCleanupMaxBatches,
+        timeBudgetMs: boundedCleanupTimeBudgetMs,
+        cleanupClock,
+      });
       const count = Number(result.rows[0]?.request_count ?? 0);
       const reset = new Date(result.rows[0]?.expires_at ?? resetAt);
 
-      response.setHeader("RateLimit-Limit", String(max));
-      response.setHeader("RateLimit-Remaining", String(Math.max(0, max - count)));
+      response.setHeader("RateLimit-Limit", String(boundedMax));
+      response.setHeader("RateLimit-Remaining", String(Math.max(0, boundedMax - count)));
       response.setHeader("RateLimit-Reset", String(Math.ceil(reset.getTime() / 1000)));
 
-      if (count > max) {
+      if (count > boundedMax) {
         response.setHeader("Retry-After", String(Math.max(1, Math.ceil((reset.getTime() - now) / 1000))));
         response.status(429).json({
           ok: false,

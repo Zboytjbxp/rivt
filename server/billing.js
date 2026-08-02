@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { ApiError, asyncRoute } from "./api.js";
 import { logInfo, logWarn } from "./logger.js";
 import { emitProductEvent } from "./product-analytics.js";
+import { providerAbortSignal } from "./provider-safety.js";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["active", "trialing"]);
@@ -81,6 +82,7 @@ async function stripeRequest(config, path, params = {}, options = {}) {
   const body = method === "GET" ? undefined : encodeForm(params);
   const response = await fetch(`https://api.stripe.com/v1${path}`, {
     method,
+    signal: providerAbortSignal(),
     headers: {
       Authorization: `Bearer ${config.secretKey}`,
       "Stripe-Version": STRIPE_API_VERSION,
@@ -128,6 +130,30 @@ function publicBillingConfig(config) {
     webhookConfigured: Boolean(config.webhookSecret),
     portalConfigured: Boolean(config.secretKey),
     missing: config.missing,
+  };
+}
+
+function minimizedBillingEventPayload(event) {
+  const object = event?.data?.object ?? {};
+  const customerId = typeof object.customer === "string" ? object.customer : object.customer?.id ?? null;
+  const subscriptionId = typeof object.subscription === "string"
+    ? object.subscription
+    : object.subscription?.id ?? null;
+
+  return {
+    apiVersion: typeof event?.api_version === "string" ? event.api_version : null,
+    created: Number.isFinite(Number(event?.created)) ? Number(event.created) : null,
+    objectId: typeof object.id === "string" ? object.id : null,
+    objectType: typeof object.object === "string" ? object.object : null,
+    accountId: typeof object.metadata?.account_id === "string"
+      ? object.metadata.account_id
+      : typeof object.client_reference_id === "string"
+        ? object.client_reference_id
+        : null,
+    customerId,
+    subscriptionId,
+    status: typeof object.status === "string" ? object.status : null,
+    paymentStatus: typeof object.payment_status === "string" ? object.payment_status : null,
   };
 }
 
@@ -383,7 +409,7 @@ async function processStripeEvent(database, event) {
       `INSERT INTO billing_events (stripe_event_id, event_type, livemode, payload)
        VALUES ($1, $2, $3, $4)
        ON CONFLICT (stripe_event_id) DO NOTHING`,
-      [event.id, event.type, Boolean(event.livemode), JSON.stringify(event)],
+      [event.id, event.type, Boolean(event.livemode), JSON.stringify(minimizedBillingEventPayload(event))],
     );
     if (!inserted.rowCount) {
       await client.query("COMMIT");
@@ -643,6 +669,7 @@ export const billingInternals = {
   billingConfig,
   getLatestMutableSubscription,
   mapBillingStatus,
+  minimizedBillingEventPayload,
   reconcileCheckoutSession,
   subscriptionPeriodEnd,
   verifyStripeSignature,
