@@ -206,6 +206,7 @@ try {
 
   serveApi = false;
   await context.setOffline(true);
+  await page.waitForFunction(() => navigator.onLine === false);
   await page.reload({ waitUntil: "domcontentloaded", timeout: 20_000 });
   await page.getByRole("button", { name: "Tools", exact: true }).waitFor({ timeout: 15_000 });
   await page.getByText("You're offline. Supported field work can be saved on this device.", { exact: true }).waitFor({ timeout: 15_000 });
@@ -215,6 +216,7 @@ try {
   await page.getByText("Riverside Service Upgrade", { exact: true }).first().waitFor({ timeout: 15_000 });
 
   await context.setOffline(false);
+  await page.waitForFunction(() => navigator.onLine === true);
   await page.getByText(/RIVT is having trouble connecting/i).waitFor({ timeout: 15_000 });
   serveApi = true;
   await page.getByRole("button", { name: "Retry", exact: true }).click();

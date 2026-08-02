@@ -86,6 +86,16 @@ Gate A now records that expected launch-readiness failure without terminating
 the job early, completes its browser journeys and production dependency audit,
 and then fails the job at a final enforcement step while the hold remains. This
 preserves a visibly blocked launch without hiding independent CI results.
+Gate A runs once for pull requests and once after a merge to `master`; the
+redundant `codex/**` push trigger was removed so an open PR does not consume two
+identical hosted runs.
+The first hosted runs exposed two timing races in the acceptance harness rather
+than contradictory product results: an isolated email-timeout test could end
+before Node delivered its unreferenced timeout, and the offline browser journey
+could reload before Chromium reported `navigator.onLine === false`. The tests
+now keep the timeout process alive only for the bounded assertion and await the
+browser's explicit network-state transition. Local stress verification passes
+the email timeout 50/50 times and the offline journey 3/3 times.
 
 Operational status: launch remains held. The earlier sealed implementation
 review and hosted source/database CI prerequisites pass. The founder role's

@@ -176,4 +176,5 @@ test("Gate A completes independent checks before enforcing the launch hold", () 
   assert.match(workflow, /id:\s*launch_readiness\s*\n\s*continue-on-error:\s*true/);
   assert.match(workflow, /RIVT_LAUNCH_READINESS_OUTCOME:\s*\$\{\{ steps\.launch_readiness\.outcome \}\}/);
   assert.match(workflow, /if:\s*always\(\)/);
+  assert.doesNotMatch(workflow, /-\s*["']?codex\/\*\*/);
 });
