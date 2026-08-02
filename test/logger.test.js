@@ -168,9 +168,8 @@ test("request logging completes once and exposes safe optional telemetry hooks",
   const { durationMs, ...completion } = completed[0];
   assert.deepEqual(completion, {
     method: "POST",
-    path: "/api/v1/uploads",
+    routeFamily: "uploads_media",
     statusCode: 201,
-    actorId: "account-123",
     aborted: false,
     multipart: true,
     uploadBytes: 42,

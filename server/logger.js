@@ -1,3 +1,5 @@
+import { capacityRouteFamily } from "./capacity-telemetry.js";
+
 const service = "rivt-api";
 const redacted = "[REDACTED]";
 const circular = "[Circular]";
@@ -190,12 +192,14 @@ export function createRequestLogger({ onStart = null, onComplete = null } = {}) 
     const complete = ({ aborted = false } = {}) => {
       if (completed) return;
       completed = true;
+      const routeFamily = capacityRouteFamily(
+        `${String(request.baseUrl ?? "")}${String(request.path ?? "")}`,
+      );
       const record = {
         method: request.method,
-        path: request.path,
+        routeFamily,
         statusCode: response.statusCode,
         durationMs: Date.now() - startedAt,
-        actorId: request.authUser?.id ?? null,
         aborted,
         multipart,
         uploadBytes: Number(request.file?.size ?? 0),
