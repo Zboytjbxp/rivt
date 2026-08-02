@@ -41,7 +41,7 @@ app.get(["/api/v1/storage", "/api/storage"], (_request, response) => {
   });
 });
 app.use(express.static(distPath, { index: false }));
-app.get("*splat", (_request, response) => response.sendFile(indexPath));
+app.get("*splat", (_request, response) => response.sendFile("index.html", { root: distPath }));
 
 const server = app.listen(0, "127.0.0.1");
 await new Promise((resolve, reject) => {
