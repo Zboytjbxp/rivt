@@ -143,7 +143,7 @@ async function runWorkerReadinessRuntime(role, environment, budget) {
     const migrations = await assertMigrationsCurrent(database);
     const pushStatus = assertRequiredPushProvider(
       environment,
-      pushProviderStatus(),
+      pushProviderStatus(environment),
       { required: isHostedRuntime(environment) },
     );
     logInfo("worker.predeploy_ready", {
