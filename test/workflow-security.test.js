@@ -163,3 +163,17 @@ test("provider evidence separates deployed source from a protected evidence-only
   assert.ok(overlayValidation < providerPlanSecret);
   assert.doesNotMatch(workflow, /^\s*(?:contents|actions|issues):\s*write\s*$/m);
 });
+
+test("Gate A completes independent checks before enforcing the launch hold", () => {
+  const workflow = readFileSync(path.join(workflowsRoot, "gate-a.yml"), "utf8");
+  const readiness = workflow.indexOf("id: launch_readiness");
+  const browser = workflow.indexOf("Run fail-closed authentication browser test");
+  const audit = workflow.indexOf("Audit production dependencies");
+  const enforcement = workflow.indexOf("Enforce launch-readiness result after verification");
+
+  assert.ok(readiness >= 0 && readiness < browser);
+  assert.ok(browser < audit && audit < enforcement);
+  assert.match(workflow, /id:\s*launch_readiness\s*\n\s*continue-on-error:\s*true/);
+  assert.match(workflow, /RIVT_LAUNCH_READINESS_OUTCOME:\s*\$\{\{ steps\.launch_readiness\.outcome \}\}/);
+  assert.match(workflow, /if:\s*always\(\)/);
+});

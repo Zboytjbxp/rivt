@@ -68,6 +68,8 @@ jobs:
         run: npm run test
 
       - name: Require current launch-readiness evidence
+        id: launch_readiness
+        continue-on-error: true
         run: npm run launch:readiness -- --require-ready
 
       - name: Run fail-closed authentication browser test
@@ -91,3 +93,15 @@ jobs:
 
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Enforce launch-readiness result after verification
+        if: always()
+        shell: bash
+        env:
+          RIVT_LAUNCH_READINESS_OUTCOME: ${{ steps.launch_readiness.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$RIVT_LAUNCH_READINESS_OUTCOME" != "success" ]]; then
+            echo "Launch readiness remains blocked. Review the earlier readiness step for the exact findings."
+            exit 1
+          fi

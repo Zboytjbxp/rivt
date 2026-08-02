@@ -82,6 +82,11 @@ evidence for its recorded revisions. Strict launch readiness still fails closed
 with exactly 19 blockers, and incident readiness still fails closed with exactly
 8 findings.
 
+Gate A now records that expected launch-readiness failure without terminating
+the job early, completes its browser journeys and production dependency audit,
+and then fails the job at a final enforcement step while the hold remains. This
+preserves a visibly blocked launch without hiding independent CI results.
+
 Operational status: launch remains held. The earlier sealed implementation
 review and hosted source/database CI prerequisites pass. The founder role's
 historical approval of the exact disabled production bank-payment configuration
