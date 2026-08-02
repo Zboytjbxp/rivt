@@ -473,7 +473,7 @@ test("disabled-payment adapter uses read-only Railway and Stripe queries and rej
       account: "acct_platform",
       environment: "env_prod",
       project: "project_rivt",
-      resource: "service:svc_rivt:webhook:we_rivt",
+      resource: "service:svc_rivt:event-destination:ed_rivt",
     },
   };
   const railwayVariables = {
@@ -483,8 +483,8 @@ test("disabled-payment adapter uses read-only Railway and Stripe queries and rej
     RAILWAY_ENVIRONMENT_NAME: "production",
     RAILWAY_GIT_COMMIT_SHA: sourceCommit,
     STRIPE_CONNECT_ACH_ENABLED: "false",
-    STRIPE_SECRET_KEY: "sk_live_never-output",
-    STRIPE_CONNECT_WEBHOOK_SECRET: "whsec_never-output",
+    STRIPE_SECRET_KEY: "test-stripe-secret-never-output",
+    STRIPE_CONNECT_WEBHOOK_SECRET: "test-webhook-secret-never-output",
   };
   const runningStripeConfig = {
     secretKey: railwayVariables.STRIPE_SECRET_KEY,
@@ -492,6 +492,30 @@ test("disabled-payment adapter uses read-only Railway and Stripe queries and rej
   };
   const v1Accounts = { object: "list", has_more: false, data: [] };
   const v2Accounts = { data: [], next_page_url: null };
+  const eventDestination = {
+    id: "ed_rivt",
+    object: "v2.core.event_destination",
+    type: "webhook_endpoint",
+    status: "enabled",
+    livemode: true,
+    event_payload: "snapshot",
+    snapshot_api_version: "2026-06-24.dahlia",
+    events_from: ["@accounts"],
+    webhook_endpoint: {
+      url: "https://rivt.pro/api/stripe/connect/webhook",
+    },
+    enabled_events: [
+      "checkout.session.completed",
+      "checkout.session.async_payment_succeeded",
+      "checkout.session.async_payment_failed",
+      "checkout.session.expired",
+      "payment_intent.processing",
+      "payment_intent.succeeded",
+      "payment_intent.payment_failed",
+      "charge.dispute.created",
+      "charge.refunded",
+    ],
+  };
   const railwayDeployment = {
     id: "deployment_rivt",
     status: "SUCCESS",
@@ -578,16 +602,13 @@ test("disabled-payment adapter uses read-only Railway and Stripe queries and rej
     { method: "GET", match: (url) => url.pathname === "/v1/account", payload: { id: claim.scope.account } },
     {
       method: "GET",
-      match: (url) => url.pathname === "/v1/webhook_endpoints/we_rivt",
-      payload: {
-        id: "we_rivt",
-        object: "webhook_endpoint",
-        connect: true,
-        status: "enabled",
-        livemode: true,
-        url: "https://rivt.pro/api/stripe/connect/webhook",
-        enabled_events: ["checkout.session.completed"],
+      match(url, init) {
+        if (url.pathname !== "/v2/core/event_destinations/ed_rivt") return false;
+        assert.equal(url.searchParams.get("include[0]"), "webhook_endpoint.url");
+        assert.equal(init.headers["Stripe-Version"], "2026-06-24.dahlia");
+        return true;
       },
+      payload: eventDestination,
     },
     { method: "GET", match: (url) => url.pathname === "/v1/accounts", payload: v1Accounts },
     {
@@ -612,13 +633,53 @@ test("disabled-payment adapter uses read-only Railway and Stripe queries and rej
   assert.equal(calls.filter(({ url }) => url.origin === "https://api.stripe.com")
     .every(({ init }) => init.method === "GET"), true);
   assert.equal(calls.filter(({ url }) => url.origin === "https://api.stripe.com")
-    .every(({ init }) => init.headers.Authorization === "Bearer sk_live_never-output"), true);
+    .every(({ init }) => init.headers.Authorization === "Bearer test-stripe-secret-never-output"), true);
   const serialized = JSON.stringify(result);
   for (const forbidden of [
     "railway-secret",
-    "sk_live_never-output",
-    "whsec_never-output",
+    "test-stripe-secret-never-output",
+    "test-webhook-secret-never-output",
   ]) assert.equal(serialized.includes(forbidden), false);
+
+  eventDestination.events_from = ["@self"];
+  const wrongDestinationScope = await verifyRailwayStripeDisabledPaymentEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(wrongDestinationScope.reasonCode, "PROVIDER_BINDING_MISMATCH");
+
+  eventDestination.events_from = ["@accounts"];
+  eventDestination.enabled_events.pop();
+  const incompleteEventContract = await verifyRailwayStripeDisabledPaymentEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(incompleteEventContract.reasonCode, "PROVIDER_BINDING_MISMATCH");
+  eventDestination.enabled_events.push("charge.refunded");
+
+  eventDestination.enabled_events.push("customer.created");
+  const extraEventContract = await verifyRailwayStripeDisabledPaymentEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(extraEventContract.reasonCode, "PROVIDER_BINDING_MISMATCH");
+  eventDestination.enabled_events.pop();
+
+  eventDestination.events_from.push("@self");
+  const extraDestinationScope = await verifyRailwayStripeDisabledPaymentEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(extraDestinationScope.reasonCode, "PROVIDER_BINDING_MISMATCH");
+  eventDestination.events_from.pop();
+
+  eventDestination.snapshot_api_version = "2026-02-25.clover";
+  const wrongSnapshotVersion = await verifyRailwayStripeDisabledPaymentEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(wrongSnapshotVersion.reasonCode, "PROVIDER_BINDING_MISMATCH");
+  eventDestination.snapshot_api_version = "2026-06-24.dahlia";
 
   v2Accounts.data.push({ id: "acct_unexpected", applied_configurations: ["merchant"] });
   const drift = await verifyRailwayStripeDisabledPaymentEvidence(context, { fetchFunction });
@@ -641,7 +702,7 @@ test("disabled-payment adapter uses read-only Railway and Stripe queries and rej
   assert.equal(staleLiveHealth.reasonCode, "PROVIDER_BINDING_MISMATCH");
 
   healthPayload.build.commit = sourceCommit;
-  railwayVariables.STRIPE_SECRET_KEY = "sk_live_staged_but_not_running";
+  railwayVariables.STRIPE_SECRET_KEY = "test-stripe-staged-but-not-running";
   const stagedRuntimeDrift = await verifyRailwayStripeDisabledPaymentEvidence(
     context,
     { fetchFunction },
@@ -863,11 +924,130 @@ test("the gate passes identities in memory and keeps readiness and evidence inde
   }
 });
 
+test("an invalid S/E overlay stops before any provider adapter executes", async () => {
+  const fixture = createFixture();
+  let adapterCalled = false;
+  try {
+    const result = await runEvidenceVerification({
+      adapters: {
+        "github-production-synthetic": {
+          ...verifiedAdapter(),
+          async verify() {
+            adapterCalled = true;
+            return { status: "failed", reasonCode: "SHOULD_NOT_RUN" };
+          },
+        },
+      },
+      credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+      evidenceCommit: "b".repeat(40),
+      evidenceRoot: fixture.rootDir,
+      expectedLiveCommit: sourceCommit,
+      now,
+      overlayValidator: () => ({
+        ok: false,
+        findingCodes: ["OVERLAY_PATH_NOT_ALLOWED"],
+        report: { overlayDigest: "c".repeat(64) },
+      }),
+      plan: fixture.plan,
+      rootDir: fixture.rootDir,
+      sourceCommit,
+      worktreeValidator: () => ({ ok: true, findingCodes: [] }),
+    });
+    assert.equal(adapterCalled, false);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.report.findingCodes, ["OVERLAY_PATH_NOT_ALLOWED"]);
+    assert.equal(result.report.sourceCommit, sourceCommit);
+    assert.equal(result.report.evidenceCommit, "b".repeat(40));
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("an untrusted evidence root is never parsed by readiness evaluation", async () => {
+  const fixture = createFixture();
+  let readinessCalled = false;
+  try {
+    const result = await runProviderEvidenceGate({
+      adapters: { "github-production-synthetic": verifiedAdapter() },
+      credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+      evidenceCommit: "b".repeat(40),
+      evidenceRoot: fixture.rootDir,
+      evaluateReadiness() {
+        readinessCalled = true;
+        return { ok: true, findings: [] };
+      },
+      expectedLiveCommit: sourceCommit,
+      now,
+      overlayValidator: () => ({
+        ok: false,
+        findingCodes: ["OVERLAY_PATH_NOT_ALLOWED"],
+        report: { overlayDigest: null },
+      }),
+      plan: fixture.plan,
+      rootDir: fixture.rootDir,
+      sourceCommit,
+      worktreeValidator: () => ({ ok: true, findingCodes: [] }),
+    });
+    assert.equal(readinessCalled, false);
+    assert.deepEqual(result.report.readiness.findingCodes, [
+      { code: "EVIDENCE_OVERLAY_UNTRUSTED", source: "readiness" },
+    ]);
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("provider adapters stay bound to S while receipts are read from E", async () => {
+  const fixture = createFixture();
+  const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rivt-runtime-source-"));
+  let adapterSourceCommit = null;
+  try {
+    const adapter = verifiedAdapter();
+    const result = await runEvidenceVerification({
+      adapters: {
+        "github-production-synthetic": {
+          ...adapter,
+          async verify(context) {
+            adapterSourceCommit = context.sourceCommit;
+            return adapter.verify(context);
+          },
+        },
+      },
+      credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+      evidenceCommit: "b".repeat(40),
+      evidenceRoot: fixture.rootDir,
+      expectedLiveCommit: sourceCommit,
+      now,
+      overlayValidator: () => ({
+        ok: true,
+        findingCodes: [],
+        report: {
+          evidenceCommit: "b".repeat(40),
+          overlayDigest: "c".repeat(64),
+          sourceCommit,
+        },
+      }),
+      plan: fixture.plan,
+      rootDir: runtimeRoot,
+      sourceCommit,
+      worktreeValidator: () => ({ ok: true, findingCodes: [] }),
+    });
+    assert.equal(result.ok, true);
+    assert.equal(adapterSourceCommit, sourceCommit);
+    assert.equal(result.report.sourceCommit, sourceCommit);
+    assert.equal(result.report.evidenceCommit, "b".repeat(40));
+    assert.equal(result.report.overlayDigest, "c".repeat(64));
+  } finally {
+    fs.rmSync(runtimeRoot, { recursive: true, force: true });
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
 test("CLI validation requires an explicit read-only protected-run contract", () => {
   assert.equal(validateEvidenceRunnerArguments([]).reasonCode, "READ_ONLY_FLAG_REQUIRED");
   assert.equal(
     validateEvidenceRunnerArguments(["--read-only"]).reasonCode,
-    "REQUIRE_READY_FLAG_REQUIRED",
+    "VERIFICATION_MODE_REQUIRED",
   );
   assert.equal(validateEvidenceRunnerArguments([
     "--read-only",
@@ -877,7 +1057,32 @@ test("CLI validation requires an explicit read-only protected-run contract", () 
   ]).reasonCode, "ARGUMENT_UNKNOWN");
   assert.equal(validateEvidenceRunnerArguments([
     "--read-only",
+    "--verify-providers-only",
+    "--source-commit", sourceCommit,
+    "--expected-live-commit", sourceCommit,
+  ]).reasonCode, "ARGUMENT_REQUIRED");
+  assert.equal(validateEvidenceRunnerArguments([
+    "--read-only",
+    "--verify-providers-only",
+    "--evidence-commit", sourceCommit,
+    "--evidence-root", "evidence-root",
+    "--source-commit", sourceCommit,
+    "--expected-live-commit", sourceCommit,
+  ]).ok, true);
+  assert.equal(validateEvidenceRunnerArguments([
+    "--read-only",
     "--require-ready",
+    "--verify-providers-only",
+    "--evidence-commit", sourceCommit,
+    "--evidence-root", "evidence-root",
+    "--source-commit", sourceCommit,
+    "--expected-live-commit", sourceCommit,
+  ]).reasonCode, "VERIFICATION_MODE_CONFLICT");
+  assert.equal(validateEvidenceRunnerArguments([
+    "--read-only",
+    "--require-ready",
+    "--evidence-commit", sourceCommit,
+    "--evidence-root", "evidence-root",
     "--source-commit", sourceCommit,
     "--expected-live-commit", sourceCommit,
   ]).ok, true);
@@ -885,11 +1090,40 @@ test("CLI validation requires an explicit read-only protected-run contract", () 
     "--read-only",
     "--require-ready",
     "--plan-file", "plan.json",
+    "--evidence-commit", sourceCommit,
+    "--evidence-root", "evidence-root",
     "--source-commit", sourceCommit,
     "--expected-live-commit", sourceCommit,
   ]).reasonCode, "ARGUMENT_UNKNOWN");
   assert.equal(evidenceRunnerExitCode({ ok: false }), 1);
   assert.equal(evidenceRunnerExitCode({ ok: true }), 0);
+  assert.equal(evidenceRunnerExitCode({
+    ok: false,
+    report: {
+      providerEvidence: { status: "verified" },
+      readiness: {
+        status: "blocked",
+        findingCodes: [{ code: "ACTIVE_LAUNCH_HOLD", source: "incident" }],
+      },
+    },
+  }, { providersOnly: true }), 0);
+  assert.equal(evidenceRunnerExitCode({
+    ok: false,
+    report: {
+      providerEvidence: { status: "blocked" },
+      readiness: {
+        status: "blocked",
+        findingCodes: [{ code: "ACTIVE_LAUNCH_HOLD", source: "incident" }],
+      },
+    },
+  }, { providersOnly: true }), 1);
+  assert.equal(evidenceRunnerExitCode({
+    ok: true,
+    report: {
+      providerEvidence: { status: "verified" },
+      readiness: { status: "ready", findingCodes: [] },
+    },
+  }, { providersOnly: true }), 1);
 });
 
 test("the provider plan is accepted only as one bounded protected JSON secret", () => {

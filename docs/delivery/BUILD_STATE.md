@@ -1,9 +1,10 @@
 # RIVT Build State
 
-Last updated: 2026-08-01 America/New_York
+Last updated: 2026-08-02 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Packet 87 money-integrity containment and Railway Stage 1
-source-safety are integrated in draft PR #14. Provider-backed readiness,
+source-safety are integrated on the branch behind open PR #14, which remains
+unmerged and undeployed. Provider-backed readiness,
 lossless independently hosted backup/restore, hourly backup freshness alarms,
 and evidence-safe operational workflows are committed in implementation commit
 `93f1c8829004cb4a4e096adbb0a552792a7c067e`. They are not merged, configured,
@@ -18,6 +19,68 @@ Provider-safety implementation commit:
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
+
+The 2026-08-02 provider-evidence correctness follow-up is source work on the
+PR #14 branch, not provider evidence. The bank-payment verifier now reads Stripe's
+Accounts v2 event-destination resource with API version `2026-06-24.dahlia`
+and requires the exact RIVT contract: an enabled live webhook endpoint, the
+snapshot payload, `@accounts` scope, the RIVT webhook URL, and exactly the nine
+implemented money-state events. It no longer accepts the legacy v1 one-event
+webhook shape. The runtime proof route authenticates the HMAC request before a
+process-local five-request-per-minute limiter; it no longer writes the durable
+`rate_limit_windows` ledger while collecting read-only evidence. Stripe does
+not re-expose a destination's signing secret, so the combination proves only
+that the deployed process has the reviewed runtime values and that the intended
+destination inventory exists. A real Stripe-signed delivery and matching
+durable transition are still required before any future ACH enablement.
+
+The evidence runner now uses a two-revision model. `S` is the exact deployed
+runtime commit. `E` may be a later descendant containing only a tightly
+allowlisted documentation/policy overlay and source-bound, append-only evidence
+receipts. Executable source at `E` must remain byte-for-byte the source from
+`S`, and every live provider query, monitor result, runtime proof, receipt path,
+and expected production revision remains bound to `S`. The overlay rejects
+runtime/workflow changes anywhere in the complete `S..E` history, non-linear or
+merge-side history, deletions, renames, symlinks, submodules, unsafe modes,
+unreferenced receipts, receipt rewrites, digest drift, and any change that would
+move bank payments out of disabled/setup-required mode. A forbidden change
+cannot be hidden by reverting it before `E`. This permits
+honest evidence to be recorded after a deployment without pretending that the
+documentation-only commit `E` was deployed.
+
+The protected workflow executes only from a separately protected
+`production-evidence-source` branch whose head must equal deployed source `S`;
+the `production-evidence` environment must also restrict deployments to that
+branch and require human approval. The input `E` must equal the current head of
+a separately protected `production-evidence-overlay` branch that is not
+connected to Railway and must not open a preview-environment PR. GitHub therefore
+loads the privileged workflow from `S`, not from the evidence commit being
+checked, and an evidence-only push cannot replace the production source being
+proved. The workflow then separates evidence collection from final readiness.
+`providers-only` may exit successfully only when every requested provider claim
+is verified while `ACTIVE_LAUNCH_HOLD` is still present. It does not mean the
+app is launch-ready. `launch-ready` still requires the full incident, paging,
+private-route, recovery, approval, deployment, and payment boundaries to pass.
+These are external controls rather than guarantees created by this source
+change. As of 2026-08-02, hosted `master` is unprotected, no repository ruleset
+exists, both evidence branches are absent, and the `production-evidence`
+environment is absent. Its human reviewer, deployment-branch restriction,
+source variable, plan secret, and read-only provider credentials are therefore
+not configured there, and no protected provider run has been accepted;
+unsupported paging, private-route, rehearsal, and recovery adapters still fail
+closed. No provider mutation, deployment, ACH enablement, production-data
+action, resource creation, or cost occurred in this source follow-up.
+
+Final local verification of this follow-up passes `npm run build`, `npm run
+lint`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and diff
+integrity. The normal unit/frontend suite now includes the new overlay boundary
+tests and passes 464/464 checks. Three non-database integration checks pass; 21
+database-backed checks are explicitly skipped because this isolated worktree has
+no `TEST_DATABASE_URL`, so no new exact-candidate database result is claimed.
+The earlier disposable-database and hosted database evidence remains historical
+evidence for its recorded revisions. Strict launch readiness still fails closed
+with exactly 19 blockers, and incident readiness still fails closed with exactly
+8 findings.
 
 Operational status: launch remains held. The earlier sealed implementation
 review and hosted source/database CI prerequisites pass. The founder role's
@@ -94,17 +157,19 @@ deduplicates aliases by canonical file identity. Matching repository files are
 still not provider proof: readiness accepts them only when a trusted
 in-process provider verifier supplies the exact control/provider/digest
 identity. The ordinary readiness CLI has no such verifier and therefore remains
-blocked by design. A later local addition prepares a protected, read-only
-provider-evidence runner with compiled adapters for the GitHub synthetic check,
-Sentry ingestion, and the disabled Railway/Stripe payment state. The payment
-adapter compares Railway variables, live health, and Stripe Accounts v2, then
-uses a short-lived nonce-, timestamp-, and source-commit-bound HMAC to prove the
-running process loaded the same Stripe secrets and exact enabled/scope values.
-It publishes no stable secret-derived fingerprint. Independent follow-up
-suppressed the earlier public-fingerprint candidate as remediated. Private-route,
-paging, rehearsal, and recovery adapters remain unsupported and fail closed.
-The workflow has not been committed, configured, or executed as provider
-evidence.
+blocked by design. A later addition in the PR candidate prepares a protected,
+read-only provider-evidence runner with compiled adapters for the GitHub
+synthetic check, Sentry ingestion, and the disabled Railway/Stripe payment
+state. The payment adapter compares Railway variables, live health, the exact
+Stripe Accounts v2 event-destination contract, and the deployed runtime proof.
+It uses a short-lived nonce-, timestamp-, and source-commit-bound HMAC derived
+from both Stripe secrets and exact enabled/scope values and publishes no stable
+secret-derived fingerprint. Its authenticated process-local limiter creates no
+durable application row. Independent follow-up suppressed the earlier public-
+fingerprint candidate as remediated. Private-route, paging, rehearsal, and
+recovery adapters remain unsupported and fail closed. The workflow is committed
+to the PR candidate but remains unmerged, unconfigured, and without accepted
+provider evidence.
 
 Local verification for that remediation passes the production build, full
 application/security/public-document lint, 327/327 unit/frontend checks, all
@@ -142,15 +207,15 @@ zero failures, cancellations, or skips. The disposable server was stopped
 after the run. Exact GitHub Node 20/PostgreSQL 16 CI for the final published
 candidate remains pending and is not inferred from this local result.
 
-The latest post-remediation source candidate is covered by sealed Codex Security
+The immediately preceding pre-follow-up candidate is covered by sealed Codex Security
 working-tree diff scan `scan_696c3b127e03_20260802T024900Z`, completed on
 2026-08-01 America/New_York with 28/28 worklist rows, four fully closed
 intermediate-patch candidates, zero reportable findings, and zero deferred work.
 The scan binds snapshot digest
 `codex-security-snapshot/v1:sha256:3409423b02416d1337b80413b183ddf89feaca1c6f8db64e0576c47629f54ff7`;
-this final evidence-only documentation update is separately covered by the
-public-document safety check and diff-integrity check rather than relabelled as
-part of that sealed snapshot.
+that sealed snapshot does not include the 2026-08-02 executable provider-evidence
+follow-up. The follow-up has local regression coverage and independent review,
+but no new sealed security scan is claimed.
 Backup freshness now AEAD-decrypts the newest protected artifact and validates
 its snapshot structure as restore-usable before freshness can pass. Backup-role
 preflight also rejects sequence `USAGE` or `UPDATE` privileges and recursively

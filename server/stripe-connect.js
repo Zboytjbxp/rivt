@@ -968,11 +968,12 @@ export function registerStripeConnectRoutes({
   requireV1Actor,
   writeRateLimit,
   publicPaymentRateLimit,
+  providerEvidenceRateLimit,
   sourceCommit,
   runIdempotentMutation,
   sendIdempotentResult,
 }) {
-  app.post("/api/provider-evidence/stripe-connect/runtime", publicPaymentRateLimit, asyncRoute(async (request, response) => {
+  const requireProviderEvidenceProof = (request, _response, next) => {
     const authorized = verifyStripeConnectRuntimeProof({
       authorization: request.get("authorization"),
       nonce: request.get("x-rivt-evidence-nonce"),
@@ -980,8 +981,13 @@ export function registerStripeConnectRoutes({
       timestamp: request.get("x-rivt-evidence-timestamp"),
     });
     if (!authorized) {
-      throw new ApiError(401, "PROVIDER_EVIDENCE_UNAUTHORIZED", "Provider evidence authorization failed.");
+      next(new ApiError(401, "PROVIDER_EVIDENCE_UNAUTHORIZED", "Provider evidence authorization failed."));
+      return;
     }
+    next();
+  };
+
+  app.post("/api/provider-evidence/stripe-connect/runtime", requireProviderEvidenceProof, providerEvidenceRateLimit, asyncRoute(async (request, response) => {
     response.json({
       data: {
         provider: "stripe_connect",

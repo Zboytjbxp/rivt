@@ -180,6 +180,7 @@ import {
 import {
   createOriginGuard,
   createDurableRateLimiter,
+  createRateLimiter,
   createRequireAuthenticatedUser,
   isAllowedOrigin,
   parseCookies,
@@ -801,6 +802,15 @@ const publicPaymentRateLimit = createDurableRateLimiter({
   windowMs: 60 * 1000,
   max: Number(process.env.PUBLIC_PAYMENT_RATE_LIMIT ?? 30),
   namespace: "invoice-payment-public",
+});
+
+// Provider evidence must not write application state. The endpoint is still
+// bounded against public abuse, but its limiter is deliberately process-local
+// so a protected read-only verification cannot mutate rate_limit_windows.
+const providerEvidenceRateLimit = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 5,
+  namespace: "provider-evidence",
 });
 
 const publicDiscoveryRateLimit = createDurableRateLimiter({
@@ -6428,6 +6438,7 @@ registerStripeConnectRoutes({
   requireV1Actor,
   writeRateLimit,
   publicPaymentRateLimit,
+  providerEvidenceRateLimit,
   sourceCommit,
   runIdempotentMutation,
   sendIdempotentResult,

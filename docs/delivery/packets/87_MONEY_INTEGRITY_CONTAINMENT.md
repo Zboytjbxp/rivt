@@ -213,9 +213,10 @@ No production data, provider configuration, paid resource, deployment, or
 live payment was changed.
 
 Packet status: **Integrated and locally re-verified with Stage 1 source-safety;
-the source candidate has a complete sealed exact-tree security review, while
-merge, deployment, provider-scope proof, and exact-source acceptance remain
-pending**.
+the pre-follow-up candidate has a complete sealed exact-tree security review,
+while the executable provider-evidence follow-up has local regression coverage
+and independent review but no new sealed scan; merge, deployment, provider-scope
+proof, and exact-source acceptance remain pending**.
 
 ## 2026-08-01 local security follow-up
 
@@ -272,7 +273,7 @@ monitor can run successfully. This closure made no commit, push, merge,
 deployment, provider mutation, production request, data change, resource
 creation, or paid change.
 
-## 2026-08-01 release-candidate evidence hardening (unpublished)
+## 2026-08-01 release-candidate evidence hardening (PR candidate; unmerged)
 
 The current working tree prepares a protected, read-only provider-evidence
 workflow. Its compiled disabled-payment adapter compares the protected Railway
@@ -293,18 +294,100 @@ recursively reachable `SET`-able roles. Fresh local verification passes build,
 application/security/public-document lint, 425/425 unit/frontend checks, 25/25
 disposable loopback PostgreSQL integration tests, all three browser E2E
 journeys, all five required UI smoke suites, and the production dependency audit
-with zero vulnerabilities. Final source-candidate scan
+with zero vulnerabilities. At that checkpoint, source-candidate scan
 `scan_696c3b127e03_20260802T024900Z` is sealed with 28/28 worklist coverage,
 four closed intermediate-patch candidates, zero reportable findings, and no
-deferred work. The final evidence-only documentation update is separately
-covered by public-document safety and diff-integrity checks.
+deferred work. That checkpoint's evidence-only documentation update is
+separately covered by public-document safety and diff-integrity checks.
 
-This source capability is not accepted provider evidence. It has not been
-run from protected `master`, approved through the
-`production-evidence` environment, merged, or deployed. Packet 87 still requires
+This source capability is not accepted provider evidence. At that checkpoint it
+had not produced an accepted protected run. Its protected-`master` execution
+model is superseded by the 2026-08-02 `production-evidence-source` design below;
+the current workflow must not run from `master`. Packet 87 still requires
 an exact-candidate hosted database run and read-only provider verification before
 deployment, and ACH remains disabled/setup-required. No signed connected-account
 delivery or matching durable payment transition is claimed. Strict launch
 readiness remains RED with exactly 19 blockers and incident readiness remains
 blocked with exactly 8 findings. No deployment, provider mutation, ACH
 enablement, production-data action, resource creation, or cost occurred.
+
+## 2026-08-02 provider-evidence correctness follow-up (unmerged)
+
+The disabled-payment adapter now reads the Stripe Accounts v2 event
+destination with snapshot API version `2026-06-24.dahlia`. It requires an
+enabled live webhook endpoint, `@accounts` scope, the exact RIVT webhook URL,
+and exactly the nine money-state events implemented by Packet 87. It rejects
+the former legacy v1 one-event webhook shape. The runtime evidence route now
+verifies HMAC authorization before applying a process-local five-request-per-
+minute limiter, so a read-only proof attempt cannot insert or update the
+durable `rate_limit_windows` ledger.
+
+The `@accounts` value is the exact contract for the pinned Dahlia API version,
+as documented by Stripe's
+[versioned event-destination reference](https://docs.stripe.com/api/v2/core/event-destinations/object.md?api-version=2026-06-24.dahlia).
+Changing the Stripe API version requires a fresh contract review rather than a
+mechanical enum rename.
+
+This inventory proof cannot establish that the installed signing secret
+belongs to the destination because Stripe does not re-expose that secret. It
+also cannot replace a real Stripe-signed delivery and matching durable payment
+transition. Production ACH therefore remains disabled/setup-required, and the
+signed-delivery boundary remains open.
+
+Provider evidence now has an explicit two-revision trust model. `S` is the
+exact deployed runtime commit and remains the source revision supplied to every
+provider adapter. `E` may be a later descendant used only to add source-bound,
+append-only receipts and tightly allowlisted documentation or readiness-policy
+updates. The overlay rejects executable or workflow drift, deletion, rename,
+unsafe file modes, symlinks, submodules, receipt rewrite/reuse, digest mismatch,
+and any payment-policy change that would leave the approved disabled/setup-
+required state. It enumerates every commit and changed path in `S..E`, requires
+one linear no-merge history, and applies the same path/status/mode policy to
+each commit, so a forbidden intermediate change cannot disappear behind a
+later revert. Because executable files at `E` must be identical to `S`, the
+code being trusted is still the deployed code from `S`; `E` is never described
+as deployed, and all provider observations remain bound to `S`.
+
+The privileged workflow is loaded from a separately protected
+`production-evidence-source` branch pinned to `S`, not from `E`. The
+`production-evidence` environment must restrict deployments to that branch and
+require human review. `E` must be the current head of a separately protected
+`production-evidence-overlay` branch, consumed only as data, never connected to
+Railway, and never used to open a preview-environment PR. Every protected-plan
+claim must reference exactly one exact-case, source-bound, append-only receipt.
+Current hosted state has none of those controls configured: `master` is
+unprotected, no ruleset exists, both evidence branches are absent, and the
+environment is absent. Until the two branches, environment restriction, human
+reviewer, source variable, plan secret, and read-only credentials exist and are
+independently checked, the workflow fails closed and no run is accepted.
+
+Railway documents that a connected GitHub branch deploys automatically when
+autodeploy is enabled and that disabling autodeploy stops those commit-triggered
+deployments. RIVT's repository config does not prove the effective dashboard
+setting and supplies no checked-in watch-pattern safeguard. The dedicated
+non-Railway overlay branch is therefore required even while the recorded current
+production setting says autodeploy is off. See Railway's
+[GitHub autodeploy](https://docs.railway.com/deployments/github-autodeploys) and
+[config-as-code](https://docs.railway.com/config-as-code/reference) references.
+
+The protected workflow exposes two honest modes. `providers-only` may exit
+successfully only when every requested provider claim is verified and
+`ACTIVE_LAUNCH_HOLD` remains active. That result is provider evidence only, not
+launch readiness. `launch-ready` still requires the full readiness evaluation
+and remains blocked by unsupported paging, private-route, rehearsal, and
+recovery adapters plus every other unresolved launch condition. The protected
+environment and plan have not produced an accepted provider run. Focused
+regression coverage now exercises the exact Accounts v2 destination contract,
+the nonpersistent authenticated limiter, the `S`/`E` overlay restrictions, and
+the provider-only active-hold rule. Final local verification passes build, full
+lint, 464/464 unit/frontend checks, all three browser E2E journeys, dependency
+audit with zero known production vulnerabilities, and diff integrity. Three
+non-database integration checks pass; 21 database-backed checks are explicitly
+skipped because this isolated worktree has no `TEST_DATABASE_URL`. Exact-
+candidate hosted database verification remains required. Strict launch
+readiness still reports exactly 19 blockers and incident readiness exactly 8
+findings. The earlier sealed scan does not include this follow-up diff.
+
+The branch behind PR #14 is ready for review but remains unmerged and undeployed. No provider
+mutation, ACH enablement, production-data change, resource creation, or cost
+occurred in this follow-up.

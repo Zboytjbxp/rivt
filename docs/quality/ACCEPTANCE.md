@@ -6,11 +6,12 @@ Gate A is approved only with automated and manual evidence against production-li
 
 - Earlier working-tree scan `65a8c581-8136-459c-9926-58220a85430d` produced 19
   artifacts and reported one medium and three low findings. Its findings were
-  remediated. Final source-candidate scan
+  remediated. The pre-follow-up candidate scan
   `scan_696c3b127e03_20260802T024900Z` is sealed with 28/28 worklist coverage,
   four closed intermediate-patch candidates, zero reportable findings, and no
-  deferred work. The final evidence-only documentation update is covered by
-  the public-document safety and diff-integrity checks.
+  deferred work. It predates the 2026-08-02 executable provider-evidence
+  follow-up. That follow-up has local regression coverage and independent
+  review, but no new sealed scan is claimed.
 - Manual invite values are accepted only through protected input, are stored as
   hashes, and are never echoed; generated 256-bit codes remain the default.
 - Synthetic monitoring writes a fixed-schema summary and neither artifacts nor

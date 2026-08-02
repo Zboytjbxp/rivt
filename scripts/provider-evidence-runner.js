@@ -19,6 +19,10 @@ import {
   repositoryEvidenceSha256,
   resolveRegularRepositoryFile,
 } from "./repository-evidence.js";
+import {
+  validateProviderEvidenceOverlay,
+  validateProviderEvidenceWorktree,
+} from "./provider-evidence-overlay.js";
 import { stripeConnectRuntimeProof } from "../server/stripe-connect.js";
 
 const defaultIncidentPath = "docs/operations/incident-routing.json";
@@ -41,6 +45,7 @@ const railwayApiOrigin = "https://backboard.railway.com";
 const stripeApiOrigin = "https://api.stripe.com";
 const stripeApiVersion = "2026-02-25.clover";
 const stripeAccountsV2ApiVersion = "2026-06-24.preview";
+const stripeEventDestinationsV2ApiVersion = "2026-06-24.dahlia";
 const stripeConnectWebhookUrl = "https://rivt.pro/api/stripe/connect/webhook";
 const rivtProductionOrigin = "https://rivt.pro";
 const githubSyntheticWorkflowName = "Production Synthetic Check";
@@ -48,7 +53,18 @@ const githubSyntheticWorkflowPath = ".github/workflows/production-synthetic.yml"
 const githubSyntheticIncidentMarker = "<!-- rivt-production-synthetic-incident -->";
 const githubSyntheticIncidentTitle = "Production synthetic check failing";
 const githubSyntheticResourcePattern = /^workflow:([1-9][0-9]{0,19}):issue:([1-9][0-9]{0,19})$/;
-const railwayStripeResourcePattern = /^service:([A-Za-z0-9_-]{1,128}):webhook:([A-Za-z0-9_-]{1,128})$/;
+const railwayStripeResourcePattern = /^service:([A-Za-z0-9_-]{1,128}):event-destination:([A-Za-z0-9_-]{1,128})$/;
+const stripeConnectSnapshotEvents = Object.freeze([
+  "charge.dispute.created",
+  "charge.refunded",
+  "checkout.session.async_payment_failed",
+  "checkout.session.async_payment_succeeded",
+  "checkout.session.completed",
+  "checkout.session.expired",
+  "payment_intent.payment_failed",
+  "payment_intent.processing",
+  "payment_intent.succeeded",
+]);
 const sentryEventIdPattern = /^[a-f0-9]{32}$/;
 const scopeKeys = Object.freeze(["account", "environment", "project", "resource"]);
 const planKeys = Object.freeze(["claims", "schemaVersion"]);
@@ -115,6 +131,9 @@ function sameTimestamp(left, right) {
 
 function exactStringSet(actual, required) {
   return Array.isArray(actual)
+    && actual.length === required.length
+    && new Set(actual).size === actual.length
+    && new Set(required).size === required.length
     && required.every((entry) => actual.includes(entry));
 }
 
@@ -558,7 +577,7 @@ export async function verifyRailwayStripeDisabledPaymentEvidence(
   }
   const resource = railwayStripeResourcePattern.exec(context.claim.scope.resource);
   if (!resource) return failedProviderResult("PROVIDER_SCOPE_INVALID");
-  const [, serviceId, webhookId] = resource;
+  const [, serviceId, eventDestinationId] = resource;
   const railwayResult = await railwayRuntimeState(context, serviceId, fetchFunction);
   if (!railwayResult.ok) return failedProviderResult(railwayResult.reasonCode);
 
@@ -608,7 +627,7 @@ export async function verifyRailwayStripeDisabledPaymentEvidence(
     healthResult,
     runtimeProofResult,
     stripeAccountResult,
-    stripeWebhookResult,
+    stripeEventDestinationResult,
     v1AccountsResult,
     v2AccountsResult,
   ] = await Promise.all([
@@ -626,8 +645,10 @@ export async function verifyRailwayStripeDisabledPaymentEvidence(
     stripeJson(runtimeStripeKey, "/v1/account", fetchFunction),
     stripeJson(
       runtimeStripeKey,
-      `/v1/webhook_endpoints/${encodeURIComponent(webhookId)}`,
+      `/v2/core/event_destinations/${encodeURIComponent(eventDestinationId)}`
+        + "?include%5B0%5D=webhook_endpoint.url",
       fetchFunction,
+      { version: stripeEventDestinationsV2ApiVersion },
     ),
     stripeJson(runtimeStripeKey, "/v1/accounts?limit=1", fetchFunction),
     stripeJson(
@@ -641,7 +662,7 @@ export async function verifyRailwayStripeDisabledPaymentEvidence(
     healthResult,
     runtimeProofResult,
     stripeAccountResult,
-    stripeWebhookResult,
+    stripeEventDestinationResult,
     v1AccountsResult,
     v2AccountsResult,
   ];
@@ -652,7 +673,7 @@ export async function verifyRailwayStripeDisabledPaymentEvidence(
   const runtimeProof = runtimeProofResult.payload;
   const healthBankPayments = health.observability?.invoiceBankPayments;
   const stripeAccount = stripeAccountResult.payload;
-  const stripeWebhook = stripeWebhookResult.payload;
+  const stripeEventDestination = stripeEventDestinationResult.payload;
   const v1Accounts = v1AccountsResult.payload;
   const v2Accounts = v2AccountsResult.payload;
   if (
@@ -669,13 +690,16 @@ export async function verifyRailwayStripeDisabledPaymentEvidence(
     || runtimeProof?.data?.provider !== "stripe_connect"
     || runtimeProof?.data?.sourceCommit !== context.sourceCommit
     || stripeAccount.id !== context.claim.scope.account
-    || stripeWebhook.id !== webhookId
-    || stripeWebhook.object !== "webhook_endpoint"
-    || stripeWebhook.connect !== true
-    || stripeWebhook.status !== "enabled"
-    || stripeWebhook.livemode !== true
-    || stripeWebhook.url !== stripeConnectWebhookUrl
-    || !exactStringSet(stripeWebhook.enabled_events, ["checkout.session.completed"])
+    || stripeEventDestination.id !== eventDestinationId
+    || stripeEventDestination.object !== "v2.core.event_destination"
+    || stripeEventDestination.type !== "webhook_endpoint"
+    || stripeEventDestination.status !== "enabled"
+    || stripeEventDestination.livemode !== true
+    || stripeEventDestination.event_payload !== "snapshot"
+    || stripeEventDestination.snapshot_api_version !== stripeEventDestinationsV2ApiVersion
+    || stripeEventDestination.webhook_endpoint?.url !== stripeConnectWebhookUrl
+    || !exactStringSet(stripeEventDestination.events_from, ["@accounts"])
+    || !exactStringSet(stripeEventDestination.enabled_events, stripeConnectSnapshotEvents)
     || v1Accounts.object !== "list"
     || v1Accounts.has_more !== false
     || !Array.isArray(v1Accounts.data)
@@ -693,8 +717,8 @@ export async function verifyRailwayStripeDisabledPaymentEvidence(
     deploymentId: deployment.id,
     featureEnabled: false,
     sourceCommit: health.build.commit,
-    webhookConnectScope: stripeWebhook.connect,
-    webhookId,
+    eventDestinationId,
+    eventDestinationScope: "connected_accounts",
   });
 }
 
@@ -977,15 +1001,20 @@ function adapterRegistryEntry(registry, adapterId) {
 export async function runEvidenceVerification({
   adapters = compiledProviderAdapters,
   credentials = {},
+  evidenceCommit,
   now = new Date(),
+  overlayValidator = validateProviderEvidenceOverlay,
   plan,
   rootDir = process.cwd(),
+  evidenceRoot = rootDir,
   sourceCommit,
   expectedLiveCommit,
+  worktreeValidator = validateProviderEvidenceWorktree,
 } = {}) {
   const externallyVerifiedEvidence = new Set();
   const controls = [];
   const proofIds = new Set();
+  let overlayReport = null;
   const planValidation = validateEvidencePlan(plan);
   if (!planValidation.ok) {
     return {
@@ -993,7 +1022,12 @@ export async function runEvidenceVerification({
       externallyVerifiedEvidence,
       report: {
         controls,
+        evidenceCommit: fullSourceCommitPattern.test(evidenceCommit ?? "")
+          ? evidenceCommit
+          : null,
         findingCodes: planValidation.findings,
+        overlayDigest: null,
+        overlayValidated: false,
         sourceCommit: fullSourceCommitPattern.test(sourceCommit ?? "") ? sourceCommit : null,
         status: "blocked",
       },
@@ -1009,11 +1043,51 @@ export async function runEvidenceVerification({
       externallyVerifiedEvidence,
       report: {
         controls,
+        evidenceCommit: fullSourceCommitPattern.test(evidenceCommit ?? "")
+          ? evidenceCommit
+          : null,
         findingCodes: ["SOURCE_COMMIT_MISMATCH"],
+        overlayDigest: null,
+        overlayValidated: false,
         sourceCommit: fullSourceCommitPattern.test(sourceCommit ?? "") ? sourceCommit : null,
         status: "blocked",
       },
     };
+  }
+  if (evidenceCommit !== undefined) {
+    const overlay = overlayValidator({
+      evidenceCommit,
+      plan,
+      rootDir,
+      sourceCommit,
+    });
+    const evidenceWorktree = worktreeValidator({
+      evidenceCommit,
+      evidenceRoot,
+    });
+    if (!overlay.ok || !evidenceWorktree.ok) {
+      return {
+        ok: false,
+        externallyVerifiedEvidence,
+        report: {
+          controls,
+          evidenceCommit: fullSourceCommitPattern.test(evidenceCommit ?? "")
+            ? evidenceCommit
+            : null,
+          findingCodes: [...new Set([
+            ...(Array.isArray(overlay.findingCodes) ? overlay.findingCodes : []),
+            ...(Array.isArray(evidenceWorktree.findingCodes)
+              ? evidenceWorktree.findingCodes
+              : []),
+          ])].sort(),
+          overlayDigest: overlay.report?.overlayDigest ?? null,
+          overlayValidated: false,
+          sourceCommit,
+          status: "blocked",
+        },
+      };
+    }
+    overlayReport = overlay.report;
   }
 
   for (const claim of [...plan.claims].sort((left, right) => (
@@ -1058,7 +1132,7 @@ export async function runEvidenceVerification({
       continue;
     }
 
-    const evidence = readReceipt(rootDir, claim);
+    const evidence = readReceipt(evidenceRoot, claim);
     if (!evidence.ok) {
       controls.push(invalidControl(
         claim.controlId,
@@ -1160,7 +1234,10 @@ export async function runEvidenceVerification({
     externallyVerifiedEvidence,
     report: {
       controls,
+      evidenceCommit: overlayReport?.evidenceCommit ?? null,
       findingCodes: ok ? [] : ["PROVIDER_EVIDENCE_INCOMPLETE"],
+      overlayDigest: overlayReport?.overlayDigest ?? null,
+      overlayValidated: evidenceCommit === undefined ? null : true,
       sourceCommit,
       status: ok ? "verified" : "blocked",
     },
@@ -1220,21 +1297,28 @@ function readinessSummary(readiness) {
 export async function runProviderEvidenceGate(options = {}) {
   const verification = await runEvidenceVerification(options);
   let readiness;
-  try {
-    const evaluateReadiness = options.evaluateReadiness ?? evaluateRepositoryReadiness;
-    readiness = await evaluateReadiness({
-      externallyVerifiedEvidence: verification.externallyVerifiedEvidence,
-      incidentPath: options.incidentPath,
-      now: options.now,
-      paymentProviderPath: options.paymentProviderPath,
-      recoveryPath: options.recoveryPath,
-      rootDir: options.rootDir,
-    });
-  } catch {
+  if (options.evidenceCommit !== undefined && verification.report.overlayValidated !== true) {
     readiness = {
       ok: false,
-      findings: [{ code: "READINESS_EVALUATION_FAILED", source: "readiness" }],
+      findings: [{ code: "EVIDENCE_OVERLAY_UNTRUSTED", source: "readiness" }],
     };
+  } else {
+    try {
+      const evaluateReadiness = options.evaluateReadiness ?? evaluateRepositoryReadiness;
+      readiness = await evaluateReadiness({
+        externallyVerifiedEvidence: verification.externallyVerifiedEvidence,
+        incidentPath: options.incidentPath,
+        now: options.now,
+        paymentProviderPath: options.paymentProviderPath,
+        recoveryPath: options.recoveryPath,
+        rootDir: options.evidenceRoot ?? options.rootDir,
+      });
+    } catch {
+      readiness = {
+        ok: false,
+        findings: [{ code: "READINESS_EVALUATION_FAILED", source: "readiness" }],
+      };
+    }
   }
   const summarizedReadiness = readinessSummary(readiness);
   const ok = verification.ok && readiness?.ok === true;
@@ -1243,7 +1327,13 @@ export async function runProviderEvidenceGate(options = {}) {
     externallyVerifiedEvidence: verification.externallyVerifiedEvidence,
     report: {
       controls: verification.report.controls,
+      evidenceCommit: verification.report.evidenceCommit,
       findingCodes: verification.report.findingCodes,
+      overlayDigest: verification.report.overlayDigest,
+      overlayValidated: verification.report.overlayValidated,
+      providerEvidence: {
+        status: verification.ok ? "verified" : "blocked",
+      },
       readiness: summarizedReadiness,
       schemaVersion: 1,
       sourceCommit: verification.report.sourceCommit,
@@ -1254,13 +1344,20 @@ export async function runProviderEvidenceGate(options = {}) {
 
 export function validateEvidenceRunnerArguments(argv) {
   const valueFlags = new Set([
+    "--evidence-commit",
+    "--evidence-root",
     "--expected-live-commit",
     "--incident-file",
     "--payment-provider-file",
     "--recovery-file",
     "--source-commit",
   ]);
-  const booleanFlags = new Set(["--json", "--read-only", "--require-ready"]);
+  const booleanFlags = new Set([
+    "--json",
+    "--read-only",
+    "--require-ready",
+    "--verify-providers-only",
+  ]);
   const values = new Map();
   const flags = new Set();
   for (let index = 0; index < argv.length; index += 1) {
@@ -1280,10 +1377,20 @@ export function validateEvidenceRunnerArguments(argv) {
     index += 1;
   }
   if (!flags.has("--read-only")) return { ok: false, reasonCode: "READ_ONLY_FLAG_REQUIRED" };
-  if (!flags.has("--require-ready")) {
-    return { ok: false, reasonCode: "REQUIRE_READY_FLAG_REQUIRED" };
+  const requireReady = flags.has("--require-ready");
+  const providersOnly = flags.has("--verify-providers-only");
+  if (requireReady === providersOnly) {
+    return {
+      ok: false,
+      reasonCode: requireReady ? "VERIFICATION_MODE_CONFLICT" : "VERIFICATION_MODE_REQUIRED",
+    };
   }
-  for (const required of ["--source-commit", "--expected-live-commit"]) {
+  for (const required of [
+    "--evidence-commit",
+    "--evidence-root",
+    "--source-commit",
+    "--expected-live-commit",
+  ]) {
     if (!values.has(required)) return { ok: false, reasonCode: "ARGUMENT_REQUIRED" };
   }
   return { ok: true, flags, values };
@@ -1318,7 +1425,17 @@ function environmentCredentials(environment = process.env) {
   );
 }
 
-export function evidenceRunnerExitCode(result) {
+export function evidenceRunnerExitCode(result, { providersOnly = false } = {}) {
+  if (providersOnly) {
+    const launchHoldRemainsActive = result?.report?.readiness?.status === "blocked"
+      && result.report.readiness.findingCodes?.some(
+        (finding) => finding?.code === "ACTIVE_LAUNCH_HOLD",
+      );
+    return result?.report?.providerEvidence?.status === "verified"
+      && launchHoldRemainsActive
+      ? 0
+      : 1;
+  }
   return result?.ok === true ? 0 : 1;
 }
 
@@ -1328,6 +1445,7 @@ export async function main(argv = process.argv.slice(2), { environment = process
     console.log(JSON.stringify({
       controls: [],
       findingCodes: [parsed.reasonCode],
+      providerEvidence: { status: "blocked" },
       readiness: { findingCodes: [], status: "blocked" },
       schemaVersion: 1,
       sourceCommit: null,
@@ -1341,6 +1459,7 @@ export async function main(argv = process.argv.slice(2), { environment = process
     console.log(JSON.stringify({
       controls: [],
       findingCodes: [parsedPlan.reasonCode],
+      providerEvidence: { status: "blocked" },
       readiness: { findingCodes: [], status: "blocked" },
       schemaVersion: 1,
       sourceCommit: null,
@@ -1351,6 +1470,8 @@ export async function main(argv = process.argv.slice(2), { environment = process
   }
   const result = await runProviderEvidenceGate({
     credentials: environmentCredentials(environment),
+    evidenceCommit: parsed.values.get("--evidence-commit"),
+    evidenceRoot: parsed.values.get("--evidence-root"),
     expectedLiveCommit: parsed.values.get("--expected-live-commit"),
     incidentPath: parsed.values.get("--incident-file") ?? defaultIncidentPath,
     paymentProviderPath:
@@ -1361,7 +1482,9 @@ export async function main(argv = process.argv.slice(2), { environment = process
     sourceCommit: parsed.values.get("--source-commit"),
   });
   console.log(JSON.stringify(result.report, null, 2));
-  process.exitCode = evidenceRunnerExitCode(result);
+  process.exitCode = evidenceRunnerExitCode(result, {
+    providersOnly: parsed.flags.has("--verify-providers-only"),
+  });
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

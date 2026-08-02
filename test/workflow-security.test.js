@@ -69,13 +69,18 @@ test("production workflows are bound to the protected production repository and 
     } else {
       assert.match(workflow, /github\.repository\s*==\s*'Zboytjbxp\/rivt'/);
       assert.match(workflow, /github\.ref_protected\s*==\s*true/);
-      assert.match(
-        workflow,
-        /refs\/heads\/master|github\.ref_name\s*==\s*github\.event\.repository\.default_branch/,
-      );
       if (name === "production-provider-evidence.yml") {
-        assert.match(workflow, /github\.ref\s*==\s*'refs\/heads\/master'/);
+        assert.match(
+          workflow,
+          /github\.ref\s*==\s*'refs\/heads\/production-evidence-source'/,
+        );
+        assert.match(workflow, /github\.ref_name\s*==\s*'production-evidence-source'/);
         assert.match(workflow, /github\.event\.repository\.default_branch\s*==\s*'master'/);
+      } else {
+        assert.match(
+          workflow,
+          /refs\/heads\/master|github\.ref_name\s*==\s*github\.event\.repository\.default_branch/,
+        );
       }
     }
   }
@@ -95,4 +100,66 @@ test("the legacy direct database copy restore path is retired", () => {
   const packageJson = JSON.parse(readFileSync(path.resolve("package.json"), "utf8"));
   assert.equal(packageJson.scripts?.["restore:logical-copy"], undefined);
   assert.equal(existsSync(path.resolve("scripts", "restore-logical-copy.js")), false);
+});
+
+test("provider runtime evidence cannot write the durable rate-limit ledger", () => {
+  const indexSource = readFileSync(path.resolve("server", "index.js"), "utf8");
+  const stripeSource = readFileSync(path.resolve("server", "stripe-connect.js"), "utf8");
+
+  assert.match(indexSource, /const providerEvidenceRateLimit = createRateLimiter\(\{/);
+  assert.match(indexSource, /max: 5,/);
+  assert.match(indexSource, /namespace: "provider-evidence"/);
+  assert.match(stripeSource, /const requireProviderEvidenceProof = \(request, _response, next\) => \{/);
+  assert.match(
+    stripeSource,
+    /app\.post\("\/api\/provider-evidence\/stripe-connect\/runtime", requireProviderEvidenceProof, providerEvidenceRateLimit,/,
+  );
+  assert.doesNotMatch(
+    stripeSource,
+    /app\.post\("\/api\/provider-evidence\/stripe-connect\/runtime", publicPaymentRateLimit,/,
+  );
+});
+
+test("provider evidence separates deployed source from a protected evidence-only overlay", () => {
+  const workflow = readFileSync(
+    path.join(workflowsRoot, "production-provider-evidence.yml"),
+    "utf8",
+  );
+  const overlayValidation = workflow.indexOf("provider-evidence-overlay.js");
+  const nodeSetup = workflow.indexOf("uses: actions/setup-node@");
+  const dependencyInstall = workflow.indexOf("npm ci --ignore-scripts");
+  const providerPlanSecret = workflow.indexOf("RIVT_PROVIDER_EVIDENCE_PLAN_JSON:");
+
+  assert.match(workflow, /evidence_commit:/);
+  assert.equal((workflow.match(/fetch-depth:\s*0/g) ?? []).length, 2);
+  assert.match(workflow, /path:\s*source/);
+  assert.match(workflow, /path:\s*evidence/);
+  assert.match(workflow, /ref:\s*\$\{\{ vars\.RIVT_PRODUCTION_SOURCE_COMMIT \}\}/);
+  assert.match(workflow, /ref:\s*refs\/heads\/production-evidence-overlay/);
+  assert.match(workflow, /--evidence-commit "\$RIVT_EVIDENCE_COMMIT"/);
+  assert.match(workflow, /--evidence-root "\$RIVT_EVIDENCE_ROOT"/);
+  assert.match(workflow, /--source-commit "\$RIVT_PRODUCTION_SOURCE_COMMIT"/);
+  assert.doesNotMatch(workflow, /--source-commit "\$GITHUB_SHA"/);
+  assert.match(workflow, /"\$RIVT_PRODUCTION_SOURCE_COMMIT" != "\$GITHUB_SHA"/);
+  assert.match(workflow, /git -C "\$evidence_root" rev-parse HEAD/);
+  assert.match(
+    workflow,
+    /show-ref --verify --quiet "\$overlay_branch_ref"/,
+  );
+  assert.match(
+    workflow,
+    /refs\/remotes\/origin\/production-evidence-overlay/,
+  );
+  assert.match(
+    workflow,
+    /git -C "\$evidence_root" rev-parse "\$overlay_branch_ref"/,
+  );
+  assert.match(workflow, /current production-evidence-overlay head/);
+  assert.equal((workflow.match(/working-directory:\s*source/g) ?? []).length, 2);
+  assert.doesNotMatch(workflow, /refs\/remotes\/origin\/master/);
+  assert.doesNotMatch(workflow, /git worktree add/);
+  assert.ok(nodeSetup >= 0 && nodeSetup < overlayValidation);
+  assert.ok(overlayValidation >= 0 && overlayValidation < dependencyInstall);
+  assert.ok(overlayValidation < providerPlanSecret);
+  assert.doesNotMatch(workflow, /^\s*(?:contents|actions|issues):\s*write\s*$/m);
 });

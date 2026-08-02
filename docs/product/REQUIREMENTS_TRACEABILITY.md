@@ -1,17 +1,17 @@
 # Gate A Requirements Traceability
 
-## 2026-08-01 - Current release-security reconciliation
+## 2026-08-02 - Current release-security reconciliation
 
 - Codex Security working-tree scan
   `65a8c581-8136-459c-9926-58220a85430d` completed with 19 artifacts and
   reported one medium and three low findings, but it predates the latest
   provider and backup hardening. Its reported findings have local remediations.
   The candidate public stable Stripe configuration fingerprint was also removed
-  and independently suppressed as remediated. Final source-candidate scan
+  and independently suppressed as remediated. The pre-follow-up candidate scan
   `scan_696c3b127e03_20260802T024900Z` is sealed with complete 28/28 worklist
-  coverage, zero reportable findings, and no deferred work. The final
-  evidence-only documentation update is covered by public-document safety and
-  diff-integrity checks.
+  coverage, zero reportable findings, and no deferred work. It predates the
+  2026-08-02 executable provider-evidence follow-up. That follow-up has local
+  regression coverage and independent review, but no new sealed scan is claimed.
 - `GA-OPS-004` and `GA-OPS-005` remain `Partial`. Current source rejects
   self-authenticating repository receipts, canonical aliases, symlinks,
   repository escapes, and impermissible evidence reuse, and it now enforces
@@ -21,7 +21,7 @@
   `SET`-able roles. The required provider-authenticated
   backup, restore, monitoring, paging, private-route, and rehearsal evidence
   has not yet been collected or accepted.
-- `GA-OPS-007` gains final local release verification: build, application and
+- `GA-OPS-007` records the pre-follow-up candidate's local release verification: build, application and
   security lint, 425/425 unit/frontend checks, all three browser E2E journeys,
   all five required UI smoke suites, and the production dependency audit with
   zero vulnerabilities pass. All 25 PostgreSQL 18 integration suites passed
@@ -35,24 +35,69 @@
   remain disabled with runtime mode `setup_required`; their historical
   disabled-mode approval remains preserved but does not authenticate the
   current strict payment-state receipt.
+- `GA-FND-004` and `GA-OPS-005` gain a more exact disabled-payment evidence
+  boundary. The verifier now retrieves the Stripe Accounts v2 event destination
+  with API version `2026-06-24.dahlia` and requires an enabled live webhook,
+  snapshot payload, `@accounts` scope, the exact RIVT webhook URL, and exactly
+  the nine implemented money-state events. It rejects the prior legacy v1
+  one-event webhook shape. The runtime proof authenticates the request before
+  applying a process-local five-request-per-minute limiter, so read-only
+  evidence collection does not persist a durable rate-limit row. Stripe does
+  not re-expose the destination signing secret; this source behavior therefore
+  does not prove that the runtime secret belongs to the destination and does
+  not replace a real signed-delivery and durable-transition test.
+- `GA-OPS-005`, `GA-OPS-007`, and `GA-OPS-008` gain a fail-closed two-revision
+  evidence boundary. The exact deployed runtime commit `S` remains authoritative
+  for every provider query and runtime assertion. A later descendant `E` may
+  add only source-bound, append-only receipts and tightly allowlisted
+  documentation/policy changes; it cannot alter executable source, workflows,
+  payment enablement, or the production revision being proved. The verifier
+  enumerates every commit and path in `S..E`, requires a linear no-merge
+  history, and applies the allowlist to each intermediate change, preventing a
+  forbidden edit from being hidden by a later revert. The verifier code at `E`
+  is therefore byte-for-byte the code from `S`, all provider checks
+  stay bound to `S`, and the overlay cannot be represented as a deployment.
+  This is local source capability, not accepted provider evidence.
+- The privileged workflow itself is also anchored to `S`: it may execute only
+  from a protected `production-evidence-source` branch whose head equals `S`,
+  and the protected environment must allow only that branch. `E` must be the
+  current head of a separately protected `production-evidence-overlay` branch,
+  opened only as evidence data, never connected to Railway, and never used to
+  open a preview-environment PR. Every
+  protected-plan claim must map exactly once, with exact path case, to a new
+  source-bound append-only receipt. These external branch/environment controls
+  are prerequisites and are not claimed configured by this source change. As
+  of 2026-08-02, hosted `master` is unprotected, no repository ruleset exists,
+  both evidence branches are absent, and the protected environment is absent.
 - Strict launch readiness remains RED with exactly 19 blockers, and incident
   readiness remains blocked with exactly 8 findings. They cover the active
   launch hold, production revision proof, trusted payment state, monitoring
   and paging, the private backup route, rehearsal, continuous recovery, and
   fresh evidence-bound approvals. These are evidence and provider-work gaps,
   not permission to deploy, clear the hold, or change provider state.
-- The current working-tree candidate prepares a protected read-only provider
+- The final local follow-up gate passes build, full lint, 464/464 unit/frontend
+  checks, all three browser E2E journeys, dependency audit with zero known
+  production vulnerabilities, and diff integrity. Three non-database integration
+  checks pass; 21 database-backed checks are explicitly skipped because this
+  isolated worktree has no `TEST_DATABASE_URL`. The earlier disposable and hosted
+  database results remain bound to their recorded revisions; an exact-candidate
+  hosted database run is still required before merge or deployment.
+- The current PR candidate prepares a protected read-only provider
   verifier for GitHub synthetic-monitor evidence, Sentry ingestion, and the
   exact disabled Railway/Stripe state. The payment adapter binds Railway
   variables to the live process with a short-lived nonce-, timestamp-, and
   source-commit-bound HMAC derived from both Stripe secrets and exact
-  enabled/scope values before it queries Stripe Accounts v2. It publishes no
-  reusable secret-derived fingerprint. This is source capability, not provider evidence:
-  the workflow is committed but unconfigured, has not produced a passing protected
-  run, and intentionally leaves private-route, paging, rehearsal, and recovery
-  adapters unsupported. Those controls remain blocked. No deployment, provider
-  mutation, ACH enablement, production-data action, resource creation, or cost
-  is claimed.
+  enabled/scope values before it queries the exact Stripe Accounts v2 event-
+  destination contract. It publishes no reusable secret-derived fingerprint.
+  The protected workflow now has separate `providers-only` and `launch-ready`
+  modes. Provider-only mode may pass only if every requested provider claim is
+  verified and `ACTIVE_LAUNCH_HOLD` remains active; that result cannot be
+  presented as launch readiness. Final launch-ready mode remains blocked while
+  private-route, paging, rehearsal, and recovery adapters are unsupported or
+  any other launch requirement fails. The workflow is in PR #14, which is ready
+  for review but unmerged and undeployed; it remains unconfigured and has not
+  produced accepted provider evidence. No deployment, provider mutation, ACH
+  enablement, production-data action, resource creation, or cost is claimed.
 
 ## 2026-08-01 - Earlier diff-scan remediation checkpoint
 

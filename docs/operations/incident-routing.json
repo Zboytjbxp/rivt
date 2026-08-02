@@ -9,7 +9,7 @@
   },
   "launchHold": {
     "active": true,
-    "reason": "Historical production credential containment, bounded provider review, hosted source/database CI, and exact disabled-mode payment approval are recorded. The current uncommitted hardening candidate still requires final exact-source security review, hosted source/database CI, trusted provider and recovery evidence, incident exit, final approval, and reviewed deployment. Any future ACH enablement separately requires signed-delivery proof and new approval. Clear only after every exit criterion in the 2026-07-29 incident record is verified.",
+    "reason": "Historical production credential containment, bounded provider review, hosted source/database CI, and exact disabled-mode payment approval are recorded. The current unmerged and undeployed hardening candidate still requires final exact-source security review, hosted source/database CI, trusted provider and recovery evidence, incident exit, final approval, and reviewed deployment. Any future ACH enablement separately requires signed-delivery proof and new approval. Clear only after every exit criterion in the 2026-07-29 incident record is verified.",
     "incident": "docs/operations/incidents/2026-07-29-production-credential-exposure.md",
     "setAt": "2026-07-30T04:39:06.4424071Z"
   },
