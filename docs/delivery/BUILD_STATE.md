@@ -1,11 +1,29 @@
 # RIVT Build State
 
-Last updated: 2026-07-29 America/New_York
+Last updated: 2026-08-02 America/New_York
 Current gate: Gate B controlled engagement; public launch approval blocked
 Current phase: Railway activation-readiness source and operator controls; live hardening remains blocked.
 Active packet: `docs/delivery/packets/94_RAILWAY_ACTIVATION_READINESS.md`
 Repository branch: `codex/railway-activation-readiness`
 Production feature release commit: `92a8451b8190f5119384a4970fb1a324503df995`
+
+## Approved same-provider backup refresh — not a public-launch recovery claim
+
+- With Michael's explicit US$1-before-tax approval, the existing production
+  RIVT service created one new timestamped AES-256-GCM logical backup object
+  in the existing private Railway bucket:
+  `backups/postgres/2026-08-02T19-41-38.406Z-unknown.json.gz.aes256gcm`.
+  The creator reported 109 tables and 8,811 rows in 1,752 ms. No app deploy,
+  restart, restore, database-record mutation, service/bucket/resource
+  creation, recurring schedule, or deletion occurred.
+- `docs/operations/recovery-policy.json` now records this artifact as the
+  latest 24-hour RPO evidence. Its embedded source commit is honestly
+  `unknown`; no source identity is inferred from that field.
+- This action refreshes only a same-Railway logical database artifact. It does
+  not close `R-051` or `GA-OPS-004`: it is not an independently administered
+  backup, does not capture referenced object bytes, does not prove a restore
+  of the new artifact, and does not prove immutable retention, recurrence, or
+  public-launch recovery readiness.
 
 ## Railway activation-readiness package
 

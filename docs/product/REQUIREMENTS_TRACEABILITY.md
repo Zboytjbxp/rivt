@@ -1,5 +1,24 @@
 # Gate A Requirements Traceability
 
+## Traceability Addendum - 2026-08-02 Same-Provider Backup Refresh
+
+- `GA-OPS-004` remains **Blocker** and `R-051` remains Critical/open. With
+  Michael's explicit US$1-before-tax approval, one timestamped AES-256-GCM
+  logical database object was created in the existing private Railway storage
+  bucket. The creator reported 109 tables and 8,811 rows, with no application
+  deployment, database-record mutation, service/bucket creation, restore, or
+  deletion.
+- The latest-artifact record now satisfies the approved 24-hour RPO freshness
+  input. That narrow result must not be confused with independent recovery:
+  the same Railway provider still hosts the source and destination, referenced
+  photos/attachments/logo bytes are not in the logical database artifact, the
+  new exact object has not been restored, and immutable retention, recurring
+  production creation, and monthly restore proof are still absent.
+- `GA-OPS-008` remains **Partial**. The one approved production-data read and
+  encrypted object write is recorded in the deployment ledger; it is neither
+  a source deployment nor proof of provider topology, HA, failover, PITR,
+  edge, or cost controls.
+
 ## Traceability Addendum - 2026-07-29 Railway Activation Readiness
 
 - `GA-OPS-009` remains **Blocker** with no maturity promotion. Packet 94 adds

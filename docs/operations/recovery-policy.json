@@ -20,9 +20,9 @@
   },
   "latestBackupArtifact": {
     "status": "created",
-    "createdAt": "2026-07-29T02:56:41.908Z",
-    "artifactKey": "backups/postgres/2026-07-29T02-56-41.908Z-unknown.json.gz.aes256gcm",
-    "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-28---packet-88-fresh-encrypted-backup-artifact"
+    "createdAt": "2026-08-02T19:41:38.406Z",
+    "artifactKey": "backups/postgres/2026-08-02T19-41-38.406Z-unknown.json.gz.aes256gcm",
+    "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-08-02---approved-same-provider-logical-backup-refresh"
   },
   "latestNamedArtifactRestore": {
     "status": "passed",

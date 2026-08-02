@@ -1,5 +1,47 @@
 # Deployment Ledger
 
+## 2026-08-02 - Approved Same-Provider Logical Backup Refresh
+
+- Approval: Michael explicitly approved one fresh encrypted production logical
+  backup, retained for 30 days, with a maximum cost of US$1 before tax. The
+  approval excluded deployment, restart, restore, service or bucket creation,
+  database-record changes, and deletion.
+- Scope: `npm run backup:logical-artifact` ran through Railway SSH in the
+  existing production `RIVT` service. It read the public PostgreSQL tables in
+  one repeatable-read, read-only transaction and wrote one timestamped,
+  AES-256-GCM encrypted object to the existing private Railway bucket. It did
+  not overwrite an existing object.
+- Artifact: `backups/postgres/2026-08-02T19-41-38.406Z-unknown.json.gz.aes256gcm`
+  in `rivt-private-66cklzn4qc-f`, created at `2026-08-02T19:41:38.406Z`.
+  The creator reported 109 tables, 8,811 rows, and a 1,752 ms duration. Its
+  embedded source commit is honestly `unknown`; no source metadata was
+  invented or rewritten.
+- Provider/config change: one new private encrypted object only. No deployment,
+  service, replica, database, volume, bucket, variable, DNS, plan, WAF/CDN,
+  or recurring schedule was changed. No restore target was created.
+- Cost boundary: Railway's published bucket storage is US$0.015 per GB-month
+  and service-to-bucket upload egress is US$0.05 per GB. The pre-action bucket
+  observation was 42.6 MB, so the expected incremental usage is well below the
+  authorized US$1 ceiling, but the final provider invoice remains the
+  provider's record.
+- Post-action evidence: a read-only Railway bucket observation reported 93
+  objects and 44.0 MB, compared with 92 objects and 42.6 MB before the action.
+  This corroborates one additional stored object without reading its contents.
+  `npm run build`, `npm run lint`, `npm run test:unit` (222 passing),
+  `npm run test:e2e`, and `npm audit --omit=dev` passed. The aggregate
+  `npm run test` integration stage remains locally blocked by PostgreSQL error
+  `28P01` (the local test account's password was rejected); no production
+  database was accessed to bypass or repair that local configuration.
+- Readiness effect: this refreshes only the narrow 24-hour logical-backup
+  freshness evidence in `recovery-policy.json`. It does **not** prove a
+  restore of this exact object, an independent provider failure domain,
+  backup of referenced object bytes, immutable retention, scheduled
+  recurrence, or public-launch recovery readiness. `R-051` and `GA-OPS-004`
+  remain open.
+- Rollback: no rollback is needed for a new timestamped object. Retention and
+  lifecycle remain the existing 30-day policy; object-lock immutability was
+  not configured or claimed, and no deletion was performed.
+
 ## 2026-07-29 - Packet 92 Railway Production-Posture Decision
 
 - Packet source target:
