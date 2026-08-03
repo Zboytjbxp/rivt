@@ -260,6 +260,18 @@ async function ensureServiceWorkerControl(page) {
   });
 }
 
+async function reopenInstalledAppOffline(page) {
+  // `page.reload()` asks Chromium for a reload navigation. Under DevTools'
+  // emulated-offline mode Chromium can intermittently bypass the controlling
+  // worker for that reload's subresources, even when those exact assets are
+  // present in Cache Storage. A same-URL `goto()` can take that same reload
+  // path, so first close the current document and then model a fresh installed-
+  // app navigation. This keeps the assertion focused on RIVT's cached-shell
+  // behavior instead of Chromium's reload-cache semantics.
+  await page.goto("about:blank", { waitUntil: "domcontentloaded" });
+  await page.goto(`${baseUrl}/app`, { waitUntil: "domcontentloaded", timeout: 20_000 });
+}
+
 async function signOutThroughAccountMenu(page) {
   await page.locator(".v2-account-button").click();
   await page.getByRole("dialog", { name: "Account menu" }).getByRole("button", { name: "Sign out" }).click();
@@ -481,7 +493,7 @@ async function runSnapshotBoundaryRegressions(browserInstance) {
     await page.waitForFunction(() => navigator.onLine === false);
     apiRequests.length = 0;
     recordApiRequests = true;
-    await page.reload({ waitUntil: "domcontentloaded", timeout: 20_000 });
+    await reopenInstalledAppOffline(page);
     await waitForToolsWithDiagnostics(page, 10_000);
     await page.getByRole("button", { name: "Work", exact: true }).click();
     await page.getByRole("navigation", { name: "Work stages" }).getByRole("button", { name: /^Active\b/ }).click();
@@ -503,7 +515,7 @@ async function runSnapshotBoundaryRegressions(browserInstance) {
       localStorage.setItem("rivt.offlineSession.v1", JSON.stringify({ ...snapshot, lastServerValidatedAt }));
     }, expired);
     apiRequests.length = 0;
-    await page.reload({ waitUntil: "domcontentloaded", timeout: 20_000 });
+    await reopenInstalledAppOffline(page);
     await page.getByText(/RIVT is having trouble connecting/i).waitFor({ timeout: 10_000 });
     assert.equal(await page.evaluate(() => localStorage.getItem("rivt.offlineSession.v1")), null, "An expired offline snapshot must be purged");
     assert.equal(await page.getByText(activeWork.job.title, { exact: true }).count(), 0, "Expired private work must not render");
@@ -518,7 +530,7 @@ async function runSnapshotBoundaryRegressions(browserInstance) {
       }));
     }, { sourceAccount: account, sourceWork: activeWork });
     apiRequests.length = 0;
-    await page.reload({ waitUntil: "domcontentloaded", timeout: 20_000 });
+    await reopenInstalledAppOffline(page);
     await page.getByText(/RIVT is having trouble connecting/i).waitFor({ timeout: 10_000 });
     assert.equal(await page.evaluate(() => localStorage.getItem("rivt.offlineSession.v1")), null, "A legacy renewable snapshot must be purged instead of migrated as trusted identity");
     assert.equal(await page.getByText(activeWork.job.title, { exact: true }).count(), 0, "Legacy cached private work must not render");
@@ -551,7 +563,7 @@ async function runUnauthorizedPurgeRegression(browserInstance) {
 
     unauthorized = true;
     recordBoot = true;
-    await page.reload({ waitUntil: "domcontentloaded", timeout: 20_000 });
+    await reopenInstalledAppOffline(page);
     await page.getByRole("button", { name: "Log in", exact: true }).first().waitFor({ timeout: 10_000 });
     assert.equal(await page.evaluate(() => localStorage.getItem("rivt.offlineSession.v1")), null, "A server 401 must purge the offline identity snapshot");
     assert.equal(await page.getByText(activeWork.job.title, { exact: true }).count(), 0, "A server 401 must remove cached private work from the UI");
@@ -1573,12 +1585,34 @@ try {
       navigator.serviceWorker.addEventListener("controllerchange", resolve, { once: true });
     });
   });
-  const cachedPaths = await page.evaluate(async () => {
+  const cacheCoverage = await page.evaluate(async () => {
     const keys = await caches.keys();
     const requests = (await Promise.all(keys.map(async (key) => (await caches.open(key)).keys()))).flat();
-    return requests.map((request) => new URL(request.url).pathname);
+    const cachedPaths = requests.map((request) => new URL(request.url).pathname);
+    const manifest = await fetch('/asset-manifest.json').then((response) => response.json());
+    const manifestPaths = Object.values(manifest).flatMap((entry) => [
+      entry?.file,
+      ...(Array.isArray(entry?.css) ? entry.css : []),
+      ...(Array.isArray(entry?.assets) ? entry.assets : []),
+    ]).filter((value) => typeof value === 'string' && value.startsWith('assets/'))
+      .map((value) => `/${value}`);
+    return {
+      cachedPaths,
+      missingManifestPaths: [...new Set(manifestPaths)].filter((value) => !cachedPaths.includes(value)),
+    };
   });
-  assert.ok(cachedPaths.some((value) => /^\/assets\/index-.*\.js$/.test(value)), `App entry was not precached: ${cachedPaths.join(", ")}`);
+  assert.ok(cacheCoverage.cachedPaths.some((value) => /^\/assets\/index-.*\.js$/.test(value)), `App entry was not precached: ${cacheCoverage.cachedPaths.join(", ")}`);
+  assert.deepEqual(
+    cacheCoverage.missingManifestPaths,
+    [],
+    `The installed shell omitted lazy build assets: ${cacheCoverage.missingManifestPaths.join(", ")}`,
+  );
+  for (const brandAsset of [
+    "/brand/rivt-lockup-light-transparent.png",
+    "/brand/rivt-lockup-dark-transparent.png",
+  ]) {
+    assert.ok(cacheCoverage.cachedPaths.includes(brandAsset), `The installed shell omitted ${brandAsset}`);
+  }
   await page.evaluate(async () => {
     await new Promise((resolve, reject) => {
       const request = indexedDB.open("rivt-offline-recovery", 1);
@@ -1631,7 +1665,7 @@ try {
   await context.setOffline(true);
   await page.waitForFunction(() => navigator.onLine === false);
   const offlineReloadStartedAt = Date.now();
-  await page.reload({ waitUntil: "domcontentloaded", timeout: 20_000 });
+  await reopenInstalledAppOffline(page);
   await waitForToolsWithDiagnostics(page, 10_000, browserEvents);
   assert.ok(
     Date.now() - offlineReloadStartedAt < 10_000,
