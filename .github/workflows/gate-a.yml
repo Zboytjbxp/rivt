@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 45
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
         env:
           POSTGRES_USER: rivt_test
           POSTGRES_PASSWORD: rivt_test
@@ -42,16 +42,18 @@ jobs:
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: ".nvmrc"
           cache: npm
 
       - name: Install locked dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install browser
         run: npx playwright install --with-deps chromium
@@ -90,7 +92,21 @@ jobs:
         run: git diff --check
 
       - name: Require current launch-readiness evidence
+        id: launch_readiness
+        continue-on-error: true
         run: npm run launch:readiness -- --require-ready
 
       - name: Audit production dependencies
-        run: npm audit --omit=dev
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Enforce launch-readiness result after verification
+        if: always()
+        shell: bash
+        env:
+          RIVT_LAUNCH_READINESS_OUTCOME: ${{ steps.launch_readiness.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$RIVT_LAUNCH_READINESS_OUTCOME" != "success" ]]; then
+            echo "Launch readiness remains blocked. Review the earlier readiness step for the exact findings."
+            exit 1
+          fi
