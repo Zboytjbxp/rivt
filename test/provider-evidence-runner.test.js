@@ -31,6 +31,20 @@ const scope = Object.freeze({
   project: "rivt-project",
   resource: "production-synthetic-workflow",
 });
+const incidentRehearsalWorkflow = fs.readFileSync(
+  path.join(process.cwd(), ".github", "workflows", "incident-rehearsal.yml"),
+  "utf8",
+);
+const liveGateASmokeSource = fs.readFileSync(
+  path.join(process.cwd(), "scripts", "live-gate-a-hardening.js"),
+  "utf8",
+);
+
+function countIncidentRehearsalStep(name) {
+  return [...incidentRehearsalWorkflow.matchAll(/^\s{6}- name: (.+)$/gmu)]
+    .filter((match) => match[1] === name)
+    .length;
+}
 
 function createFixture({
   controlId = "github-production-synthetic",
@@ -1688,4 +1702,259 @@ test("the production evidence workflow validates protected S, E, and A before de
   assert.equal(evidenceValidation > approvalCheckout, true);
   assert.equal(approvalValidation > evidenceValidation, true);
   assert.equal(dependencyInstall > approvalValidation, true);
+});
+
+test("incident rehearsal workflow is one manual protected-master job with an exact run identity", () => {
+  assert.match(incidentRehearsalWorkflow, /^name: Production Incident Rehearsal$/mu);
+  assert.match(
+    incidentRehearsalWorkflow,
+    /^run-name: "Incident rehearsal: public-health-provider-failure \/ incident-commander"$/mu,
+  );
+  assert.match(incidentRehearsalWorkflow, /^on:\r?\n  workflow_dispatch:/mu);
+  assert.doesNotMatch(
+    incidentRehearsalWorkflow,
+    /^\s{2}(?:schedule|push|pull_request|workflow_call):/mu,
+  );
+  assert.doesNotMatch(incidentRehearsalWorkflow, /\bcron:/u);
+
+  const jobsBlock = incidentRehearsalWorkflow.slice(
+    incidentRehearsalWorkflow.indexOf("\njobs:\n"),
+  );
+  const jobNames = [...jobsBlock.matchAll(/^\s{2}([A-Za-z0-9_-]+):\s*$/gmu)]
+    .map((match) => match[1]);
+  assert.deepEqual(jobNames, ["rehearsal"]);
+  assert.match(incidentRehearsalWorkflow, /^\s{4}name: rehearsal$/mu);
+  assert.doesNotMatch(incidentRehearsalWorkflow, /\bmatrix:/u);
+  assert.doesNotMatch(incidentRehearsalWorkflow, /\bworkflow_call\b/u);
+  assert.doesNotMatch(incidentRehearsalWorkflow, /\bcontinue-on-error:/u);
+});
+
+test("incident rehearsal workflow fails closed before credentials and binds exact production source", () => {
+  const validateSource = incidentRehearsalWorkflow.indexOf(
+    "name: Validate protected production source",
+  );
+  const dependencyInstall = incidentRehearsalWorkflow.indexOf(
+    "name: Install locked dependencies without lifecycle scripts",
+  );
+  const railwayToken = incidentRehearsalWorkflow.indexOf(
+    "RIVT_REHEARSAL_RAILWAY_TOKEN",
+  );
+
+  assert.match(incidentRehearsalWorkflow, /github\.repository == 'Zboytjbxp\/rivt'/u);
+  assert.match(incidentRehearsalWorkflow, /github\.event_name == 'workflow_dispatch'/u);
+  assert.match(incidentRehearsalWorkflow, /github\.ref == 'refs\/heads\/master'/u);
+  assert.match(
+    incidentRehearsalWorkflow,
+    /github\.event\.repository\.default_branch == 'master'/u,
+  );
+  assert.match(incidentRehearsalWorkflow, /github\.ref_protected == true/u);
+  assert.match(incidentRehearsalWorkflow, /github\.ref_name == 'master'/u);
+  assert.match(incidentRehearsalWorkflow, /^\s{4}environment: production-rehearsal$/mu);
+  assert.match(incidentRehearsalWorkflow, /^\s{4}timeout-minutes: 15$/mu);
+  assert.match(
+    incidentRehearsalWorkflow,
+    /RIVT_PRODUCTION_SOURCE_COMMIT.*vars\.RIVT_PRODUCTION_SOURCE_COMMIT/u,
+  );
+  assert.match(
+    incidentRehearsalWorkflow,
+    /RIVT_PRODUCTION_SOURCE_COMMIT" != "\$GITHUB_SHA/u,
+  );
+  assert.equal(validateSource >= 0, true);
+  assert.equal(dependencyInstall > validateSource, true);
+  assert.equal(railwayToken > dependencyInstall, true);
+});
+
+test("incident rehearsal workflow keeps permissions and dependencies read-only and pinned", () => {
+  const permissionsStart = incidentRehearsalWorkflow.indexOf("permissions:\n");
+  const permissionsEnd = incidentRehearsalWorkflow.indexOf(
+    "\nconcurrency:",
+    permissionsStart,
+  );
+  const permissions = incidentRehearsalWorkflow.slice(
+    permissionsStart,
+    permissionsEnd,
+  );
+
+  assert.equal(permissions.trim(), "permissions:\n  contents: read");
+  assert.match(incidentRehearsalWorkflow, /cancel-in-progress: false/u);
+  assert.match(
+    incidentRehearsalWorkflow,
+    /actions\/checkout@11d5960a326750d5838078e36cf38b85af677262/u,
+  );
+  assert.match(
+    incidentRehearsalWorkflow,
+    /actions\/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020/u,
+  );
+  const actionRefs = [
+    ...incidentRehearsalWorkflow.matchAll(/^\s*uses:\s+([^\s#]+)(?:\s+#.*)?$/gmu),
+  ].map((match) => match[1]);
+  assert.equal(actionRefs.length, 2);
+  for (const actionRef of actionRefs) {
+    assert.match(actionRef, /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+@[a-f0-9]{40}$/u);
+  }
+  assert.match(incidentRehearsalWorkflow, /persist-credentials: false/u);
+  assert.match(incidentRehearsalWorkflow, /npm ci --ignore-scripts/u);
+  assert.match(incidentRehearsalWorkflow, /RAILWAY_CLI_VERSION: 5\.20\.0/u);
+  assert.match(
+    incidentRehearsalWorkflow,
+    /RAILWAY_CLI_ARCHIVE_SHA256: 04669f39998edf6b23644d7c3fbb75bdc53430f981f6bcb4aa1e54e5bfb06471/u,
+  );
+  assert.match(incidentRehearsalWorkflow, /sha256sum --check --strict/u);
+  assert.match(incidentRehearsalWorkflow, /tar -tzf "\$archive"/u);
+  assert.doesNotMatch(incidentRehearsalWorkflow, /npm rebuild @railway\/cli/u);
+  assert.doesNotMatch(
+    incidentRehearsalWorkflow,
+    /(?:curl|wget)[^\r\n]*\|\s*(?:ba)?sh/iu,
+  );
+});
+
+test("incident rehearsal workflow requires complete human scenario attestations", () => {
+  for (const input of [
+    "controlled_failure_exercised",
+    "human_page_received",
+    "incident_roles_assigned",
+    "recovery_confirmed",
+    "kill_switch_decision_recorded",
+    "decision_log_reference",
+  ]) {
+    assert.match(
+      incidentRehearsalWorkflow,
+      new RegExp(`^\\s{6}${input}:$`, "mu"),
+    );
+  }
+  assert.match(
+    incidentRehearsalWorkflow,
+    /name: Validate human rehearsal attestations/u,
+  );
+  assert.match(
+    incidentRehearsalWorkflow,
+    /Every required human rehearsal attestation must be confirmed/u,
+  );
+  assert.match(incidentRehearsalWorkflow, /incident-note:/u);
+  assert.match(
+    incidentRehearsalWorkflow,
+    /github\.com\/Zboytjbxp\/rivt\/issues/u,
+  );
+});
+
+test("incident rehearsal workflow exposes exactly four provider-verifiable critical steps", () => {
+  for (const name of [
+    "Check production health",
+    "Run production monitor",
+    "Run live Gate A smoke",
+    "Verify incident evidence",
+  ]) {
+    assert.equal(countIncidentRehearsalStep(name), 1, name);
+  }
+
+  assert.match(
+    incidentRehearsalWorkflow,
+    /node scripts\/production-synthetic-monitor\.js/u,
+  );
+  assert.match(
+    incidentRehearsalWorkflow,
+    /node scripts\/live-gate-a-hardening\.js/u,
+  );
+  assert.match(
+    incidentRehearsalWorkflow,
+    /providerReceipt: "pending-protected-evidence-revision"/u,
+  );
+  assert.match(incidentRehearsalWorkflow, /launchAuthorized: false/u);
+});
+
+test("incident rehearsal workflow scopes remote execution and withholds raw production output", () => {
+  const liveSmokeStart = incidentRehearsalWorkflow.indexOf(
+    "name: Run live Gate A smoke",
+  );
+  const evidenceStart = incidentRehearsalWorkflow.indexOf(
+    "name: Verify incident evidence",
+  );
+  const liveSmoke = incidentRehearsalWorkflow.slice(liveSmokeStart, evidenceStart);
+
+  assert.match(
+    liveSmoke,
+    /RAILWAY_TOKEN:.*secrets\.RIVT_REHEARSAL_RAILWAY_TOKEN/u,
+  );
+  assert.match(liveSmoke, /--project "\$RIVT_RAILWAY_PROJECT_ID"/u);
+  assert.match(liveSmoke, /--environment "\$RIVT_RAILWAY_ENVIRONMENT_ID"/u);
+  assert.match(liveSmoke, /--service "\$RIVT_RAILWAY_SERVICE_ID"/u);
+  assert.match(
+    liveSmoke,
+    /\^\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{12\}\$/u,
+  );
+  assert.match(liveSmoke, /EXPECTED_SOURCE_COMMIT="\$EXPECTED_SOURCE_COMMIT"/u);
+  assert.doesNotMatch(
+    liveSmoke,
+    /\n\s+SOURCE_COMMIT="\$EXPECTED_SOURCE_COMMIT"/u,
+  );
+  assert.ok(
+    liveSmoke.includes(
+      '${RAILWAY_GIT_COMMIT_SHA:-}" != "${EXPECTED_SOURCE_COMMIT:-}',
+    ),
+  );
+  assert.ok(
+    liveSmoke.includes(
+      '${RAILWAY_PROJECT_ID:-}" != "${EXPECTED_RAILWAY_PROJECT_ID:-}',
+    ),
+  );
+  assert.ok(
+    liveSmoke.includes(
+      '${RAILWAY_ENVIRONMENT_ID:-}" != "${EXPECTED_RAILWAY_ENVIRONMENT_ID:-}',
+    ),
+  );
+  assert.ok(
+    liveSmoke.includes(
+      '${RAILWAY_SERVICE_ID:-}" != "${EXPECTED_RAILWAY_SERVICE_ID:-}',
+    ),
+  );
+  assert.ok(
+    liveSmoke.includes('${RAILWAY_ENVIRONMENT_NAME:-}" != "production"'),
+  );
+  assert.match(
+    liveSmoke,
+    /EXPECTED_RAILWAY_PROJECT_ID="\$RIVT_RAILWAY_PROJECT_ID"/u,
+  );
+  assert.match(
+    liveSmoke,
+    /EXPECTED_RAILWAY_ENVIRONMENT_ID="\$RIVT_RAILWAY_ENVIRONMENT_ID"/u,
+  );
+  assert.match(
+    liveSmoke,
+    /EXPECTED_RAILWAY_SERVICE_ID="\$RIVT_RAILWAY_SERVICE_ID"/u,
+  );
+  assert.match(
+    liveSmoke,
+    /RIVT_SMOKE_BASE_URL="\$RIVT_MONITOR_BASE_URL"/u,
+  );
+  assert.match(liveSmoke, /sh -eu -c "'\$remote_guard'"/u);
+  assert.ok(
+    liveSmoke.indexOf("RAILWAY_GIT_COMMIT_SHA") <
+      liveSmoke.indexOf("exec node scripts/live-gate-a-hardening.js"),
+    "remote identity guards must run before the production smoke",
+  );
+  assert.match(
+    liveSmoke,
+    /payload\?\.build\?\.commit, process\.env\.EXPECTED_SOURCE_COMMIT/u,
+  );
+  assert.match(liveSmoke, /umask 077/u);
+  assert.match(liveSmoke, /trap 'rm -f "\$raw_output"' EXIT/u);
+  assert.match(liveSmoke, />"\$raw_output" 2>&1/u);
+  assert.doesNotMatch(incidentRehearsalWorkflow, /actions\/upload-artifact/u);
+  assert.doesNotMatch(
+    incidentRehearsalWorkflow,
+    /railway\s+(?:up|deploy|variable|variables|delete)/iu,
+  );
+  assert.doesNotMatch(
+    incidentRehearsalWorkflow,
+    /npm run (?:migrate|restore|backup)/iu,
+  );
+});
+
+test("live Gate A smoke checks migrations without creating or repairing the ledger", () => {
+  assert.match(liveGateASmokeSource, /import \{ assertMigrationsCurrent \}/u);
+  assert.match(
+    liveGateASmokeSource,
+    /await assertMigrationsCurrent\(pool\)/u,
+  );
+  assert.doesNotMatch(liveGateASmokeSource, /\bmigrationStatus\b/u);
 });
