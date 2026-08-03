@@ -88,7 +88,7 @@ record does not claim they occurred.
 
 | Credential class | Current status |
 |---|---|
-| PostgreSQL | Pending replacement and verification; current credential remains treated as compromised |
+| PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
 | Stripe API, billing webhook, and Connect webhook | Pending one-at-a-time replacement and no-charge verification; current secrets remain treated as compromised |
 | Resend | Pending sending-only replacement and owner-controlled proof delivery |
 | Google OAuth | Pending same-client replacement and owner-controlled sign-in proof |
@@ -100,6 +100,58 @@ record does not claim they occurred.
 No 2026-08-03 replacement or retirement is complete until its new evidence is
 recorded below this table. Historical evidence from the earlier incident must
 not be read as closure of the recurrence.
+
+### PostgreSQL recurrence rotation evidence — 2026-08-03
+
+- **Provider and scope:** Railway project `8b0be329-5bd6-40df-8bce-7b745c6d36d8`,
+  production environment `b353080f-fb82-46ea-93f8-8eb88a57e009`, PostgreSQL
+  service `518129de-bb84-49df-89a0-4660b4cabd8d`, role `postgres`, attached
+  volume `dbc470a5-8928-4b07-82a7-a468a516326f`, and dependent RIVT service
+  `4e672e30-a351-41a5-91da-c1d07f50f370`.
+- **Operator and authority:** Codex operated the provider UI under Michael's
+  explicit 2026-08-03 emergency approval. The action began at 18:58 EDT
+  (22:58 UTC) and narrow verification completed at 19:06 EDT (23:06 UTC).
+- **Cutover:** Railway's provider-defined no-overlap `Regenerate Password`
+  operation synchronized the managed connection reference and redeployed the
+  existing PostgreSQL service. A replacement password was unintentionally
+  rendered into automation inspection output, was immediately treated as
+  exposed, and was invalidated by a second regeneration before the application
+  cut over. The final replacement was not read, copied, logged, or stored by
+  the operator. Final PostgreSQL deployment
+  `a7e22798-b737-49d7-8b9a-5da4a7197b99` succeeded at
+  `2026-08-03T22:59:59.707Z`.
+- **Exact-source application pickup:** the existing production source was
+  redeployed only to resolve the updated managed database reference. Railway
+  deployment `47f99b41-3f90-47e3-b82a-037d80601244` became active from the same
+  production commit `29e3c613f2eb95a6583b52c671275e5046dde0d3`; no feature
+  release was deployed.
+- **Runtime proof:** immediate and delayed `GET /api/health` checks returned
+  HTTP 200 with `ok: true`, migration `0042_push_vapid_generation` in `ready`
+  state, database `postgres`, object storage `s3-compatible`, and the exact
+  expected source commit. `npm run monitor:production` passed with error
+  monitoring, email, Google OAuth, session security, and web push configured;
+  anonymous private checks remained fail-closed. Invoice bank payments
+  remained `enabled: false`, `configured: false`, and `setup_required`.
+- **Rolled-back database proof:** an application-container validation created
+  one temporary row inside a transaction, read exactly one matching row,
+  rolled back, and confirmed the temporary relation was removed. The sanitized
+  receipt was
+  `{"ok":true,"transaction":"rolled_back","rowsRead":1,"tempRelationRemoved":true}`.
+  No customer table or permanent row was changed.
+- **Retirement and recovery:** Railway's no-overlap regeneration invalidated
+  both the exposed predecessor and the exposed intermediate password. The
+  recovery path was the bound last-known-good RIVT source with the new managed
+  reference; it was not invoked because the normal redeploy and all checks
+  passed. Restoring either retired password is not an allowed rollback.
+- **Interruption and cost:** database-backed operations had a conservative
+  cutover window of approximately 2 minutes 8 seconds while the site remained
+  online on its prior instance. No service, volume, plan, or recurring resource
+  was added. Railway did not quote a separate charge for the two provider
+  regenerations and one application redeploy; only ordinary usage-based compute
+  applies, within the approved `$2` incident ceiling.
+- **Approval boundary:** this action did not enable ACH, attempt a real payment,
+  contact a customer, delete customer data, launch publicly, or deploy the
+  feature release.
 
 ## Historical rotation status before the 2026-08-03 recurrence
 
