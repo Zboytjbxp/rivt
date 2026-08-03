@@ -1,6 +1,9 @@
 # Gate A Execution Packets
 
-Run packets in order. A packet is one AI session or a small number of tightly controlled sessions. Do not combine packets to save time.
+Packet files in this directory are authoritative. Selected milestones are
+summarized below; follow the active-packet pointer in `BUILD_STATE.md` and run
+applicable packets in order. A packet is one AI session or a small number of
+tightly controlled sessions. Do not combine packets to save time.
 
 | Packet | Outcome |
 |---|---|
@@ -19,7 +22,8 @@ Run packets in order. A packet is one AI session or a small number of tightly co
 | 12 | Gate B daily use |
 | 13 | Workflow coherence and subtraction |
 | 14 | Field camera |
-| 87 | Contacts-to-estimate-to-invoice-to-payment acceptance boundary |
+| 87 — customer-payment acceptance (`87_CUSTOMER_PAYMENT_ACCEPTANCE.md`) | Live Contacts → Estimate → Invoice → Payment-path acceptance; physical-device and authorized ACH completion remain human-owned |
+| 87 — money-integrity containment (`87_MONEY_INTEGRITY_CONTAINMENT.md`) | Server-side invoice/payment consistency, retry, delivery, and monotonic provider-state containment |
 | 88 | Security and infrastructure hardening, recovery, and data-governance launch boundary |
 | 89 | Recovery closure design and lossless artifact contract |
 | 90 | Guarded provider-neutral local recovery harness |

@@ -9,8 +9,10 @@ Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
-Operational status: launch and Railway Stage 1 are paused while production
-credential-exposure containment is in progress.
+Operational status: credential rotations and bounded provider reviews are
+complete, but the production incident is not formally closed. Launch and
+Railway Stage 1 remain paused pending final candidate review, exact-source
+provider/recovery evidence, explicit approvals, and launch-hold clearance.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
@@ -61,24 +63,31 @@ decision.
   and Railway activation controls onto current `origin/master`. It deliberately
   preserves the later credential-containment fixes and does not merge an old
   branch wholesale.
-- Provisional implementation checkpoint before the remaining code forward-ports
-  is `1c5e957e3daa3c09617b7f0f06e445bc6649127e`. It is not the final candidate
-  SHA and must not be used for activation, deployment, approval, or exact-source
-  evidence. At that checkpoint, the branch included explicit hosted
+- The final code-only implementation checkpoint before this evidence update is
+  `c936dd00fbe87db493e1ebeca142bbf50599eb9f`. It includes explicit hosted
   web/worker/migrate roles, fail-closed migration ownership, bounded database
   pools, leased maintenance, fenced push attempts, hard delivery/shutdown
-  deadlines, privacy-safe request/capacity telemetry, content-digested logical
-  recovery, a provider-neutral local recovery harness, and activation
-  preflight/config contracts.
-- At that provisional checkpoint, local no-cost verification passed:
-  production build, application lint, security lint, 260/260 unit/frontend
-  tests, all four browser E2E journeys, the guarded local recovery harness,
-  incident readiness, diff integrity, and the production dependency audit with
-  zero known vulnerabilities. Those counts are checkpoint evidence only and
-  must be rerun and replaced after all forward-ports and documentation are
-  complete. The full PostgreSQL integration aggregate is not claimed locally
-  because the saved workstation `TEST_DATABASE_URL` fails authentication with
-  `28P01`; final candidate CI must provide disposable PostgreSQL proof.
+  deadlines, privacy-safe request/capacity telemetry, strict content-digested
+  logical recovery, source-bound provider receipts, and activation
+  preflight/config contracts. It also binds stale browser writes to the rendered
+  account, reserves Stripe payment requests durably before provider calls,
+  converges ambiguous retries, keeps raw Stripe Checkout URLs server-side, and
+  installs a complete version-matched offline bundle rather than only the entry
+  chunk.
+- No-cost local verification on that checkpoint passed: production build,
+  application lint, security lint, 477/477 unit/frontend tests, all four browser
+  E2E journeys, Tools/Trade News/mobile-actions/Work-lifecycle UI smokes, diff
+  integrity, the guarded local recovery harness, and the production dependency
+  audit with zero known vulnerabilities. The offline journey additionally
+  passed three consecutive focused runs after the installed-app reopen harness
+  was corrected, and verifies every manifest chunk plus both theme lockups is
+  cached before a worker activates. The local recovery harness used only three
+  synthetic in-memory objects (81 plaintext bytes), performed no provider I/O,
+  read no production data, and incurred no charge-bearing action.
+- The full PostgreSQL integration aggregate is not claimed locally. This
+  workstation does not provide an authenticated PostgreSQL 16 acceptance
+  target; final candidate pull-request CI must supply disposable PostgreSQL 16
+  proof, including the Stripe ambiguous-retry and account-context routes.
 - The 2026-08-02 approved backup refresh created one new encrypted logical
   artifact in the existing private Railway bucket for 109 tables and 8,811
   rows. It refreshes same-provider RPO evidence only. It does not restore that
@@ -89,12 +98,17 @@ decision.
   DNS, traffic, production record, or payment was changed by consolidation.
   Packet 94's earlier branch CI and dated provider observations remain
   historical evidence, not proof for this candidate.
-- Next acceptance boundary: finish the remaining code and documentation
-  forward-ports, record the final candidate SHA, rerun every required local
-  gate, commit and push the consolidated branch, use the repository's
-  disposable PostgreSQL CI to verify the full aggregate, retain the active
-  incident hold, and obtain a fresh exact-source/cost approval only after the
-  incident is formally closed. A push is not deployment approval.
+- `launch:readiness --require-ready` correctly remains blocked with 21 findings:
+  the active incident hold; missing/untested incident owners, monitoring,
+  paging, rehearsal, and approvals; unproved recurring/retained/independent
+  recovery evidence and current approvals; and an unapproved payment-provider
+  state. This fail-closed result is a safety success, not launch evidence.
+- Next acceptance boundary: commit and push the consolidated branch, use the
+  public repository's disposable PostgreSQL 16 CI to verify the full aggregate,
+  retain the active incident hold, complete a Codex Security diff review, and
+  obtain fresh exact-source provider, recovery, payment, cost, deployment, and
+  incident-closure approvals. A push or draft pull request is not deployment
+  approval.
 
 ## Active operational incident - Production credential exposure
 

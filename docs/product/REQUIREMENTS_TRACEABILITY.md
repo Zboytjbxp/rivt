@@ -2270,17 +2270,47 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 
 ## Traceability Addendum - 2026-08-02 Release-Candidate Consolidation
 
+- The historical `GA-OPS-007` row above records earlier test environments and
+  results. It is not current-candidate PostgreSQL evidence. This workstation
+  does not provide an authenticated PostgreSQL 16 acceptance target; the
+  pull-request Gate A disposable PostgreSQL service remains the current
+  candidate's database acceptance boundary.
+- `GA-FND-004` gains expected-account binding for onboarding profile drafts,
+  onboarding completion, the post-onboarding canonical refresh, and session
+  inventory/revocation. A mismatch fails with `ACCOUNT_CONTEXT_CHANGED`
+  before mutation. Browser assertions and database-backed cases are present
+  in source; the final disposable-PostgreSQL 16 result, deployment, and
+  physical two-account stale-tab check remain pending.
+- `GA-FND-006` and `GA-UX-005` gain a durable payment-request reservation
+  before Stripe Checkout creation, stable row-derived provider identity,
+  convergence across different client retry keys, retained ambiguous outcomes,
+  monotonic early-webhook finalization, and server-only Checkout URLs. This is
+  local candidate source and test coverage, not PostgreSQL 16, provider,
+  deployment, or real-payment evidence.
+- `GA-OPS-004` gains strict nonlocal TLS, read-only-role, encryption-key,
+  source-revision, artifact-version/digest, retention, newest-artifact, and
+  source/target-isolation controls. They do not restore the current provider
+  artifact or independently recover its referenced object corpus.
 - `GA-OPS-005` gains locally verified fixed-schema capacity and request telemetry
   that classifies route families without retaining raw paths, query strings,
   actor identifiers, or free text. The new stream is not deployed and does not
   close the broader semantic-PII risk in `R-057`.
-- `GA-OPS-007` gains local release-candidate evidence: production build,
-  application and security lint, 260/260 unit/frontend checks, all four browser
-  E2E journeys, the guarded local recovery harness, incident readiness, diff
-  integrity, and the production dependency audit passed. A full local
-  PostgreSQL integration pass is not claimed because the saved workstation
-  `TEST_DATABASE_URL` fails authentication with `28P01`; disposable-PostgreSQL
-  CI remains the acceptance boundary.
+- `GA-OPS-005` and `GA-OPS-008` also gain typed, source-bound provider receipts
+  plus a protected runtime-configuration proof path. Empty templates and
+  repository code are not live provider evidence; no approved provider run is
+  claimed.
+- `R-050` and `GA-OPS-007` gain a complete offline install contract: a public
+  Vite manifest binds the registered entry to every lazy feature chunk, both
+  theme lockups, and the field fonts; a partial or mixed-build cache cannot
+  activate. The production-build browser journey verifies zero missing
+  manifest assets and passed three consecutive focused installed-app reopens.
+- Code checkpoint `c936dd00fbe87db493e1ebeca142bbf50599eb9f`
+  passed production build, application/security lint, 477/477 unit/frontend
+  checks, all four browser E2E journeys, Tools/Trade News/mobile-actions/Work-
+  lifecycle UI smokes, the guarded local recovery harness, diff integrity, and
+  the zero-vulnerability production dependency audit. These are local checks;
+  the exact final pull-request head and disposable-PostgreSQL 16 aggregate must
+  still pass Gate A before review or merge.
 - `GA-OPS-008` records no new deployment. The consolidated branch has not been
   merged or activated, the current production incident hold remains active,
   and Packet 94's earlier branch CI and dated Railway observations are
