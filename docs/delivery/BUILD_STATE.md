@@ -56,7 +56,7 @@ deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
 
-## Packet 98 protected incident-rehearsal workflow - source candidate PR #19; corrected PR CI rerun pending; no run or provider evidence
+## Packet 98 protected incident-rehearsal workflow - source candidate PR #19; PR CI passed; no run or provider evidence
 
 - A dedicated manual-only workflow at
   `.github/workflows/incident-rehearsal.yml` is bound to the RIVT repository,
@@ -114,8 +114,13 @@ decision.
   four E2E journeys, `npm audit --omit=dev`, and diff-integrity checks pass
   locally. The aggregate integration phase passed four available cases and
   skipped 23 PostgreSQL-backed cases because no isolated
-  `TEST_DATABASE_URL` was present; pull-request CI must run those against its
-  disposable PostgreSQL service.
+  `TEST_DATABASE_URL` was present. PR #19 Gate A run `30821741994` passed on
+  exact implementation source `d700980fb2dc63f05b1eded05f4fa801d13112b4`,
+  including the full disposable-PostgreSQL integration suite, production
+  build, repository/security lint, browser suite, formatting, launch-readiness
+  evaluation, and production-dependency audit. Launch-readiness enforcement
+  correctly remained out of scope because the PR targets the release-
+  candidate branch rather than `master`.
 - A fresh sealed working-tree security diff review covered all three source-
   like/security-critical files and found zero reportable findings. The prior
   Railway SSH wrong-instance/source-binding concern is closed by the new

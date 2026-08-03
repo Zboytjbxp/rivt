@@ -118,8 +118,9 @@ readiness, fabricating a receipt, or weakening branch protection.
   integrity checks: passed locally.
 - The aggregate integration phase passed four available cases and skipped 23
   PostgreSQL-backed cases because no isolated `TEST_DATABASE_URL` was present.
-  Pull-request CI must execute those cases against its disposable PostgreSQL
-  service before merge.
+  PR #19 Gate A run `30821741994` passed on exact implementation source
+  `d700980fb2dc63f05b1eded05f4fa801d13112b4`, including the full disposable-
+  PostgreSQL integration suite and all browser journeys.
 - Fresh sealed working-tree security diff review: complete coverage, zero
   reportable findings. It independently closes the prior Railway CLI wrong-
   instance/source-binding concern because the corrected remote guard fails
@@ -127,6 +128,8 @@ readiness, fabricating a receipt, or weakening branch protection.
 - Incident readiness remains blocked by eight missing operational evidence or
   approval records. Launch readiness remains blocked with 21 findings led by
   `ACTIVE_LAUNCH_HOLD`.
-- Pull-request CI remains pending.
+- PR #19 Gate A run `30821741994` passed all engineering steps. The separate
+  launch-readiness enforcement remained correctly inapplicable because this
+  packet targets the release-candidate branch, not `master`.
 - No workflow run, protected evidence revision `E`, later approval revision
   `A`, incident closure, hold clearance, deployment, or launch is claimed.
