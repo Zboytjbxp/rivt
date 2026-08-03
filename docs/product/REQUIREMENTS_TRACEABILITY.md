@@ -1,6 +1,6 @@
 # Gate A Requirements Traceability
 
-## Packet 95 - Provider-evidence policy boundary (local verification complete)
+## Packet 95 - Provider-evidence policy boundary (PR verification complete)
 
 - `GA-OPS-004` remains **Blocker**. This packet does not create or validate
   recovery evidence; it prevents later evidence from redefining pinned
@@ -10,11 +10,14 @@
 - `GA-OPS-007` gains a clean production build, application/security lint,
   486/486 unit/frontend tests, all four browser E2E journeys, zero known
   production dependency vulnerabilities, the non-reproducing original PoC,
-  and a clean independent change-aware security re-review. It remains
-  **Partial** pending the 23 database suites in disposable-PostgreSQL PR CI,
-  merge review, and exact deployed-source evidence.
-- `GA-OPS-008` remains **Partial**. Packet 95 is local, unmerged, and
-  undeployed and creates no deployment evidence.
+  and a clean independent change-aware security re-review. Pull-request Gate A
+  run `30788718976` additionally passes all 28 disposable-PostgreSQL
+  integration tests, the same four browser journeys, patch formatting, and
+  the production dependency audit. It remains **Partial** pending merge and
+  exact deployed-source evidence. The run stops only at the intentional final
+  enforcement of the unchanged 21-item readiness block.
+- `GA-OPS-008` remains **Partial**. Packet 95 is unmerged and undeployed and
+  creates no deployment evidence.
 - `GA-OPS-009` remains **Blocker**. This authority-boundary fix does not prove
   production hosting, redundancy, recovery, or launch readiness.
 - No merge, deployment, provider call, added cost, credential access,

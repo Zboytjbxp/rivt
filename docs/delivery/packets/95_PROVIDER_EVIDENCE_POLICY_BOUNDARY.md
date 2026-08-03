@@ -72,9 +72,8 @@ After implementation:
 
 ## Risk and requirement state
 
-- `R-060` is mitigated in the local candidate. It remains open until reviewed
-  disposable-PostgreSQL pull-request CI, merge, and exact deployed-source
-  evidence complete.
+- `R-060` is mitigated in the reviewed pull-request candidate. It remains open
+  until merge and exact deployed-source evidence complete.
 - `R-051`, `R-052`, `R-055`, and `GA-OPS-009` remain open/blocking.
 - `GA-OPS-004` remains Blocker.
 - `GA-OPS-005`, `GA-OPS-007`, and `GA-OPS-008` remain Partial.
@@ -118,13 +117,29 @@ Packet 95 is accepted only when:
 - `npm audit --omit=dev`: pass, zero known vulnerabilities.
 - `git diff --check`: pass, with only checkout line-ending warnings.
 
+Pull-request Gate A run
+[`30788718976`](https://github.com/Zboytjbxp/rivt/actions/runs/30788718976)
+verified the branch at `d0244f21fbcfce0680167d0145f049a7d014b54c` with:
+
+- production build, application lint, and security lint passing;
+- 486/486 unit/frontend tests and 28/28 disposable-PostgreSQL integration
+  tests passing;
+- all four browser journeys passing, including installed-app offline reopen;
+- patch-format verification passing; and
+- `npm audit --omit=dev` passing with zero known vulnerabilities.
+
+The workflow's final enforcement step is intentionally red because the
+readiness command preserved all 21 launch blockers, including
+`ACTIVE_LAUNCH_HOLD`. There was no build, lint, test, browser, formatting, or
+dependency-audit failure before that enforcement boundary.
+
 `npm run launch:readiness -- --require-ready` is expected to remain blocked by
 `ACTIVE_LAUNCH_HOLD`; that fail-closed result is safety evidence, not launch
 readiness.
 
 ## Status
 
-**Local implementation and fix verification complete; disposable-PostgreSQL
-pull-request CI, merge review, and exact deployed-source proof remain pending.
-Not merged or deployed, with no provider, cost, or production-data action
-authorized by this packet.**
+**Implementation, independent review, and pull-request CI are complete. Merge
+into the release-candidate branch and exact deployed-source proof remain
+pending. Not merged or deployed, with no provider, cost, or production-data
+action authorized by this packet.**

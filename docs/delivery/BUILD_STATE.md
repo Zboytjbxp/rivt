@@ -56,7 +56,7 @@ deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
 
-## Packet 95 provider-evidence policy boundary — locally verified, CI pending
+## Packet 95 provider-evidence policy boundary — PR verified, merge pending
 
 - The sealed Codex Security diff scan of
   `29e3d3a5e8773ff66fb5f255190e979431583074..f5e71b75c713c5a92eb20c8a1098009ca742c163`
@@ -74,26 +74,37 @@ decision.
   rewrites. The original PoC no longer reaches its vulnerable assertion, and
   split-root sink coverage proves an overlay policy copy cannot clear the
   source hold. The payment-disabled invariant remains enforced.
-- Current local evidence passes the provider overlay/runner suites (66/66),
+- Current evidence passes the provider overlay/runner suites (66/66),
   original packaged exploit reproduction, independent change-aware security
   review, production build, application/security lint, 486/486 unit/frontend
   tests, all four browser E2E journeys, diff integrity, and the production
-  dependency audit with zero known vulnerabilities. The exact `npm run test`
-  command exits zero; four database-independent integration checks pass and 23
-  PostgreSQL suites explicitly skip because the isolated worktree has no
-  `TEST_DATABASE_URL`. Disposable-PostgreSQL pull-request CI remains required.
+  dependency audit with zero known vulnerabilities. The exact local
+  `npm run test` command exits zero; four database-independent integration
+  checks pass and PostgreSQL-backed tests explicitly skip because the isolated
+  worktree has no `TEST_DATABASE_URL`.
+- Pull-request Gate A run
+  [`30788718976`](https://github.com/Zboytjbxp/rivt/actions/runs/30788718976)
+  verified head `d0244f21fbcfce0680167d0145f049a7d014b54c`: build,
+  application/security lint, 486/486 unit/frontend tests, all 28
+  disposable-PostgreSQL integration tests, all four browser journeys, patch
+  formatting, and the zero-vulnerability production dependency audit passed.
+  The prior installed-app offline-browser failure is cleared.
+- That workflow is red only at its final intentional readiness-enforcement
+  step. The readiness command preserved all 21 blockers, led by
+  `ACTIVE_LAUNCH_HOLD`; there was no pre-readiness engineering failure.
 - `launch:readiness --require-ready` correctly remains blocked with 21 findings,
   led by `ACTIVE_LAUNCH_HOLD`; Packet 95 neither suppresses nor clears them.
-- This packet is local and verified at its source boundary. It is not merged or deployed and
+- This packet is reviewed and PR-CI verified at its source boundary. It is not
+  merged or deployed and
   authorizes no provider call, added cost, credential access, production-data
   action, launch-hold clearance, Railway Stage 1, ACH activation, or incident
   closure.
 - Existing launch blockers remain unchanged, including `R-051`, `R-052`,
   `R-055`, `GA-OPS-004`, and `GA-OPS-009`.
-- Next acceptance boundary: commit and push the owned branch, open a reviewed
-  pull request against the release-candidate branch, and obtain green
-  disposable-PostgreSQL CI while preserving the active hold. Only then may
-  Packet 95 be merged and Packet 94 consolidation resume.
+- Next acceptance boundary: merge reviewed PR #15 into the release-candidate
+  branch without bypassing or clearing the active hold, then resume Packet 94
+  consolidation. Deployment and exact-source provider/recovery acceptance
+  remain separately authorized work.
 
 ## Packet 94 release-candidate consolidation — local only, not deployed
 
