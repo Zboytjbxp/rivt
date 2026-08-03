@@ -878,3 +878,32 @@ test("Shop Talk composer defaults trade from selected community before poster tr
     "Plumbing",
   );
 });
+
+test("account-owned child callbacks stay bound to the identity generation that rendered them", () => {
+  const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+
+  assert.match(
+    appSource,
+    /onJobLoaded=\{\(job\) => \{\s*if \(!isCurrentAccountGeneration\(renderedAccountScope\)\) return;\s*handleJobLoaded\(job\);/,
+  );
+  assert.match(
+    appSource,
+    /onOfferAccepted=\{\(nextWork\) => \{\s*if \(!isCurrentAccountGeneration\(renderedAccountScope\)\) return;\s*mergeActiveWorkRecord\(nextWork\);/,
+  );
+  assert.match(
+    appSource,
+    /onSaved=\{\(job, published\) => \{\s*if \(!isCurrentAccountGeneration\(renderedAccountScope\)\) return;\s*handleJobSaved\(job, published\);/,
+  );
+  assert.match(
+    appSource,
+    /onCommunityCreated=\{\(community\) => \{\s*if \(!isCurrentAccountGeneration\(renderedAccountScope\)\) return;\s*handleCommunityCreated\(community\);/,
+  );
+  assert.match(
+    appSource,
+    /const serverAccountRequest = !isGuest && authUser && onboardingComplete[\s\S]*?if \(serverAccountRequest && !isCurrentAccountGeneration\(serverAccountRequest\)\) return;[\s\S]*?setCommunityPosts/,
+  );
+  assert.match(
+    appSource,
+    /refreshedAccount\.id !== expectedAccountId[\s\S]*?canonicalAccountIdRef\.current !== expectedAccountId/,
+  );
+});

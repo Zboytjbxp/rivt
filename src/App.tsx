@@ -9,6 +9,7 @@ import {
   useState } from "react";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { OfflineQueueProvider } from "./lib/OfflineQueueProvider";
+import { cancelOfflineQueueFlush } from "./lib/offline-queue";
 import { LocalSetupPrompt } from "./components/LocalSetupPrompt";
 import { InstallAppPrompt } from "./components/InstallAppPrompt";
 import { PersonaProvider } from "./features/persona/usePersona";
@@ -109,7 +110,13 @@ import { isPublicToolMode, type ToolMode } from "./features/tools/tool-catalog";
 import { linkedRecordTypeForTool } from "./features/tools/tool-record-links";
 import { fetchToolRecords, type ServerToolRecord } from "./features/tools/tool-records-api";
 import { safetyQuizData, trainingModules, type SafetyQuizResult } from "./features/profile/training-data";
-import { apiPath, fetchWithTimeout, RivtApiError, RIVT_SESSION_EXPIRED_EVENT } from "./lib/api";
+import {
+  apiPath,
+  fetchWithTimeout,
+  RivtApiError,
+  RIVT_EXPECTED_ACCOUNT_HEADER,
+  RIVT_SESSION_EXPIRED_EVENT,
+} from "./lib/api";
 import { getAnonymousAnalyticsId, setAnalyticsIdentity, trackProductEvent } from "./lib/analytics";
 import {
   AuthGate,
@@ -282,44 +289,109 @@ type StorageUsageSnapshot = {
 
 const SAFETY_QUIZ_RESULTS_KEY = "rivt.safetyQuizResults.v1";
 const OFFLINE_SESSION_KEY = "rivt.offlineSession.v1";
+const PENDING_SERVER_LOGOUT_KEY = "rivt.auth.pendingServerLogout.v1";
 const OFFLINE_SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const OFFLINE_SESSION_MAX_FUTURE_SKEW_MS = 5 * 60 * 1000;
 
 interface OfflineSessionSnapshot {
   account: CanonicalAccount;
   jobs: Job[];
   activeWork: CanonicalActiveWork[];
-  updatedAt: string;
+  lastServerValidatedAt: string;
+}
+
+interface PendingServerLogout {
+  accountId: string;
+  requestedAt: string;
+}
+
+function removeOfflineSessionSnapshot() {
+  try {
+    localStorage.removeItem(OFFLINE_SESSION_KEY);
+  } catch {
+    // Local storage is a convenience only.
+  }
 }
 
 function readOfflineSessionSnapshot() {
   try {
     const value = JSON.parse(localStorage.getItem(OFFLINE_SESSION_KEY) ?? "null") as Partial<OfflineSessionSnapshot> | null;
-    if (!value?.account?.id || !value.updatedAt) return null;
-    const updatedAt = Date.parse(value.updatedAt);
-    if (!Number.isFinite(updatedAt) || Date.now() - updatedAt > OFFLINE_SESSION_MAX_AGE_MS) return null;
+    if (!value?.account?.id || !value.lastServerValidatedAt) {
+      removeOfflineSessionSnapshot();
+      return null;
+    }
+    const lastServerValidatedAt = Date.parse(value.lastServerValidatedAt);
+    const ageMs = Date.now() - lastServerValidatedAt;
+    if (
+      !Number.isFinite(lastServerValidatedAt)
+      || ageMs > OFFLINE_SESSION_MAX_AGE_MS
+      || ageMs < -OFFLINE_SESSION_MAX_FUTURE_SKEW_MS
+    ) {
+      removeOfflineSessionSnapshot();
+      return null;
+    }
     return {
       account: value.account,
       jobs: Array.isArray(value.jobs) ? value.jobs : [],
       activeWork: Array.isArray(value.activeWork) ? value.activeWork : [],
-      updatedAt: value.updatedAt,
+      lastServerValidatedAt: value.lastServerValidatedAt,
     } satisfies OfflineSessionSnapshot;
   } catch {
+    removeOfflineSessionSnapshot();
     return null;
   }
 }
 
-function writeOfflineSessionSnapshot(patch: Partial<OfflineSessionSnapshot> & { account: CanonicalAccount }) {
+function writeOfflineSessionSnapshot(
+  patch: Pick<OfflineSessionSnapshot, "account"> & Partial<Pick<OfflineSessionSnapshot, "jobs" | "activeWork" | "lastServerValidatedAt">>,
+) {
   try {
     const current = readOfflineSessionSnapshot();
     const sameAccount = current?.account.id === patch.account.id;
+    const lastServerValidatedAt = patch.lastServerValidatedAt
+      ?? (sameAccount ? current.lastServerValidatedAt : null);
+    if (!lastServerValidatedAt) return;
     localStorage.setItem(OFFLINE_SESSION_KEY, JSON.stringify({
       account: patch.account,
       jobs: patch.jobs ?? (sameAccount ? current.jobs : []),
       activeWork: patch.activeWork ?? (sameAccount ? current.activeWork : []),
-      updatedAt: new Date().toISOString(),
+      lastServerValidatedAt,
     } satisfies OfflineSessionSnapshot));
   } catch {
     // The live account remains usable when a device denies local storage.
+  }
+}
+
+function readPendingServerLogout() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PENDING_SERVER_LOGOUT_KEY) ?? "null") as Partial<PendingServerLogout> | null;
+    if (!value?.accountId || !value.requestedAt || !Number.isFinite(Date.parse(value.requestedAt))) {
+      clearPendingServerLogout();
+      return null;
+    }
+    return { accountId: value.accountId, requestedAt: value.requestedAt } satisfies PendingServerLogout;
+  } catch {
+    clearPendingServerLogout();
+    return null;
+  }
+}
+
+function writePendingServerLogout(accountId: string) {
+  try {
+    localStorage.setItem(PENDING_SERVER_LOGOUT_KEY, JSON.stringify({
+      accountId,
+      requestedAt: new Date().toISOString(),
+    } satisfies PendingServerLogout));
+  } catch {
+    // The local UI still retires the account when storage is unavailable.
+  }
+}
+
+function clearPendingServerLogout() {
+  try {
+    localStorage.removeItem(PENDING_SERVER_LOGOUT_KEY);
+  } catch {
+    // Local storage is a convenience only.
   }
 }
 
@@ -327,6 +399,7 @@ const PRESERVED_LOCAL_KEYS = new Set([
   THEME_STORAGE_KEY,
   THEME_SOURCE_KEY,
   THEME_PALETTE_STORAGE_KEY,
+  PENDING_SERVER_LOGOUT_KEY,
 ]);
 
 function clearRivtLocalState() {
@@ -679,6 +752,14 @@ function App() {
   const [shoutOuts, setShoutOuts] = useState<ShoutOut[]>([]);
   const shopTalkPostsRequestRef = useRef(0);
   const communitiesRequestRef = useRef(0);
+  const activeWorkRequestRef = useRef(0);
+  const inboxRequestRef = useRef(0);
+  const conversationMessagesRequestRef = useRef(0);
+  const accountGenerationRef = useRef(0);
+  const authSubmissionRef = useRef(false);
+  const [accountRenderGeneration, setAccountRenderGeneration] = useState(0);
+  const [initialAccountScope] = useState(() => readOfflineSessionSnapshot()?.account.id ?? null);
+  const canonicalAccountIdRef = useRef<string | null>(initialAccountScope);
   const {
     accessibilityPreferences,
     handleSetThemeSource,
@@ -691,6 +772,7 @@ function App() {
   const {
     activityItems,
     addActivity,
+    clearActivityFeed,
     dismissToast,
     markAllActivityRead,
     uiToast,
@@ -705,7 +787,10 @@ function App() {
   // Rebind a browser's existing subscription after each authenticated boot.
   // This never prompts for permission; it only restores a subscription the
   // user already granted before logging out on this device.
-  usePushNotifications({ enabled: Boolean(!isGuest && authUser && canonicalAccount && onboardingComplete) });
+  usePushNotifications({
+    accountId: !isGuest ? canonicalAccount?.id ?? null : null,
+    enabled: Boolean(!isGuest && authUser && canonicalAccount && onboardingComplete),
+  });
   const [guestPreviewSummary, setGuestPreviewSummary] = useState<GuestPreviewSummary | null>(null);
   const [guestPromptOpen, setGuestPromptOpen] = useState(false);
   const [localSetupOpen, setLocalSetupOpen] = useState(false);
@@ -719,9 +804,114 @@ function App() {
     resetCommunityReactions,
   } = useCommunityReactions({
     authReady: Boolean(!isGuest && authUser && canonicalAccount && onboardingComplete),
+    accountId: !isGuest ? canonicalAccount?.id ?? null : null,
     communityPosts,
     onReactionError: (message) => addActivity("Reaction not saved", message, "error"),
   });
+
+  const advanceAccountGeneration = useCallback(() => {
+    accountGenerationRef.current += 1;
+    setAccountRenderGeneration(accountGenerationRef.current);
+  }, []);
+
+  const retireAccountScopedClientState = useCallback(() => {
+    const retiringAccountId = canonicalAccountIdRef.current;
+    if (retiringAccountId && retiringAccountId !== "guest-preview") {
+      cancelOfflineQueueFlush(retiringAccountId);
+    }
+    advanceAccountGeneration();
+    jobsRequestRef.current += 1;
+    shopTalkPostsRequestRef.current += 1;
+    communitiesRequestRef.current += 1;
+    activeWorkRequestRef.current += 1;
+    inboxRequestRef.current += 1;
+    conversationMessagesRequestRef.current += 1;
+    canonicalAccountIdRef.current = null;
+    toolRecordLoadAttemptRef.current = null;
+    setAnalyticsIdentity(null);
+    setAuthUser(null);
+    setCanonicalAccount(null);
+    setOnboardingComplete(false);
+    setOfflineSessionRestored(false);
+    setIsGuest(false);
+    setTrustReady(false);
+    setAuthError(null);
+    setAuthNotice(null);
+    setRole("contractor");
+    setAccountProfile((current) => ({
+      email: "",
+      displayName: "",
+      organization: "",
+      location: "Jacksonville, FL",
+      specialties: [],
+      plan: current.plan,
+      authMethod: "Email",
+    }));
+    setJobs([]);
+    setQuery("");
+    setTrade("All trades");
+    setDifficulty("Any difficulty");
+    setWorkType("All work types");
+    setLocationQuery("");
+    setVerifiedOnly(false);
+    setNetworkJobs([]);
+    setNetworkJobsLoading(false);
+    setNetworkJobsError(null);
+    setJobsLoading(false);
+    setJobsError(null);
+    setSelectedId(0);
+    setEditingJob(null);
+    setRequestedTool(null);
+    setRequestedToolRecordLocalId(null);
+    setToolsImmersive(false);
+    setMessageDraft("");
+    setInboxConversations([]);
+    setSelectedConversationId(null);
+    setInboxMessages([]);
+    setInboxNotifications([]);
+    setInboxLoading(false);
+    setInboxSending(false);
+    setInboxError(null);
+    setActiveWork([]);
+    setFocusedActiveWorkId(null);
+    setFocusedCloseout(false);
+    setFocusedReviewId(null);
+    setFocusedToolRecord(null);
+    setUploadedRecords(() => new Set());
+    setStorageUsage(null);
+    setSafetyQuizResults({});
+    setCommunityPosts([]);
+    setCommunityPostsLoaded(false);
+    setCommunities([]);
+    setCommunityReports([]);
+    setShoutOuts([]);
+    setProfileSearchFocus(null);
+    setProfessionalProfileId(null);
+    setShopTalkGlobalQuery("");
+    setShopTalkPostId(null);
+    setShopTalkCompose(false);
+    setShopTalkCommunitySlug(null);
+    setShopTalkAnswerQueue(false);
+    setGuestPreviewSummary(null);
+    setGuestPromptOpen(false);
+    setLocalSetupOpen(false);
+    setAccountOpen(false);
+    setActivityOpen(false);
+    setPostOpen(false);
+    clearActivityFeed();
+    resetCommunityReactions();
+  }, [advanceAccountGeneration, clearActivityFeed, resetCommunityReactions]);
+
+  const captureAccountGeneration = useCallback(() => ({
+    accountId: canonicalAccountIdRef.current,
+    generation: accountGenerationRef.current,
+  }), []);
+
+  const isCurrentAccountGeneration = useCallback((request: { accountId: string | null; generation: number }) => (
+    Boolean(request.accountId)
+    && request.accountId === canonicalAccountIdRef.current
+    && request.generation === accountGenerationRef.current
+  ), []);
 
   useEffect(() => {
     const recordType = linkedRecordTypeForTool(requestedTool);
@@ -739,9 +929,11 @@ function App() {
       || toolRecordLoadAttemptRef.current === loadKey
     ) return;
 
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     toolRecordLoadAttemptRef.current = loadKey;
     void fetchToolRecords(recordType).then((records) => {
-      if (toolRecordLoadAttemptRef.current !== loadKey) return;
+      if (toolRecordLoadAttemptRef.current !== loadKey || !isCurrentAccountGeneration(accountRequest)) return;
       if (records === null) {
         addActivity(
           "Saved document could not load",
@@ -769,6 +961,8 @@ function App() {
     onboardingComplete,
     requestedTool,
     requestedToolRecordLocalId,
+    captureAccountGeneration,
+    isCurrentAccountGeneration,
   ]);
 
   useEffect(() => {
@@ -820,27 +1014,49 @@ function App() {
   }, [safetyQuizResults]);
 
   useEffect(() => {
-    function handleSessionExpired() {
-      if (!authUser || isGuest) return;
+    let validationInFlight = false;
+
+    function retireExpiredSession() {
+      clearPendingServerLogout();
       clearRivtLocalState();
-      setAuthUser(null);
-      setCanonicalAccount(null);
-      setOnboardingComplete(false);
-      resetCommunityReactions();
-      setStorageUsage(null);
+      retireAccountScopedClientState();
       setActiveView("Home");
-      setRequestedTool(null);
-      setToolsImmersive(false);
-      addActivity(
-        "Session ended",
-        "Your account session ended or was signed out on another device. Sign in again to keep working.",
-        "warning",
-      );
+      setAuthNotice("Your account session ended or was signed out on another device. Sign in again to keep working.");
+      window.history.replaceState({}, "", "/");
+    }
+
+    function handleSessionExpired(event: Event) {
+      if (!authUser || isGuest) return;
+      const expiredAccountId = (event as CustomEvent<{ accountId?: string }>).detail?.accountId;
+      if (expiredAccountId && expiredAccountId !== canonicalAccountIdRef.current) return;
+      if (expiredAccountId) {
+        retireExpiredSession();
+        return;
+      }
+
+      // Older API helpers cannot identify which account produced their 401.
+      // Re-check the currently rendered account before clearing it so a late
+      // Account A response cannot sign out a newly authenticated Account B.
+      if (validationInFlight) return;
+      const accountRequest = captureAccountGeneration();
+      if (!accountRequest.accountId) return;
+      validationInFlight = true;
+      void fetchWithTimeout(apiPath("/api/v1/me"), {
+        credentials: "include",
+        headers: { [RIVT_EXPECTED_ACCOUNT_HEADER]: accountRequest.accountId },
+      }).then((response) => {
+        if (!isCurrentAccountGeneration(accountRequest)) return;
+        if (response.status === 401) retireExpiredSession();
+      }).catch(() => {
+        // A connection failure is not proof that the current session ended.
+      }).finally(() => {
+        validationInFlight = false;
+      });
     }
 
     window.addEventListener(RIVT_SESSION_EXPIRED_EVENT, handleSessionExpired);
     return () => window.removeEventListener(RIVT_SESSION_EXPIRED_EVENT, handleSessionExpired);
-  }, [addActivity, authUser, isGuest, resetCommunityReactions]);
+  }, [authUser, captureAccountGeneration, isCurrentAccountGeneration, isGuest, retireAccountScopedClientState]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -877,13 +1093,30 @@ function App() {
     return () => window.removeEventListener("popstate", handleHistoryNavigation);
   }, []);
 
-  const applyCanonicalAccount = useCallback((account: CanonicalAccount) => {
+  const applyCanonicalAccount = useCallback((account: CanonicalAccount, source: "server" | "offline" | "development" = "server") => {
+    const previousAccountId = canonicalAccountIdRef.current;
+    if (previousAccountId && previousAccountId !== account.id) {
+      clearRivtLocalState();
+      retireAccountScopedClientState();
+    } else if (!previousAccountId) {
+      advanceAccountGeneration();
+      jobsRequestRef.current += 1;
+      shopTalkPostsRequestRef.current += 1;
+      communitiesRequestRef.current += 1;
+      activeWorkRequestRef.current += 1;
+      inboxRequestRef.current += 1;
+      conversationMessagesRequestRef.current += 1;
+    }
+    canonicalAccountIdRef.current = account.id;
     const normalizedAccount = { ...account, adminRoles: account.adminRoles ?? [] };
     const accountRole = account.primaryRole === "tradesperson" ? "tradesperson" : "contractor";
     const authMethod: AuthMethod = account.provider === "google" ? "Google" : account.provider === "facebook" ? "Facebook" : account.provider === "apple" ? "Apple" : "Email";
     setCanonicalAccount(normalizedAccount);
-    if (normalizedAccount.status === "active" && normalizedAccount.profile.onboardingStatus === "complete") {
-      writeOfflineSessionSnapshot({ account: normalizedAccount });
+    if (source === "server" && normalizedAccount.status === "active" && normalizedAccount.profile.onboardingStatus === "complete") {
+      writeOfflineSessionSnapshot({
+        account: normalizedAccount,
+        lastServerValidatedAt: new Date().toISOString(),
+      });
     }
     setAnalyticsIdentity({ account_id: account.id, role: account.primaryRole });
     try {
@@ -920,11 +1153,45 @@ function App() {
     const accountOnboardingComplete = account.status === "active" && account.profile.onboardingStatus === "complete";
     setOnboardingComplete(accountOnboardingComplete);
     setTrustReady(accountOnboardingComplete);
-  }, []);
+  }, [advanceAccountGeneration, retireAccountScopedClientState]);
 
   useEffect(() => {
     let cancelled = false;
     async function hydrateAuth() {
+      const pendingLogout = readPendingServerLogout();
+      if (pendingLogout) {
+        setGuestPreviewSession(false);
+        setIsGuest(false);
+        clearRivtLocalState();
+        retireAccountScopedClientState();
+        if (!navigator.onLine) {
+          setAuthConnectionError("You are signed out on this device. Reconnect so RIVT can finish ending the server session.");
+          setAuthLoading(false);
+          return;
+        }
+        try {
+          const logoutResponse = await fetchWithTimeout(apiPath("/api/v1/auth/logout"), {
+            method: "POST",
+            credentials: "include",
+            headers: { [RIVT_EXPECTED_ACCOUNT_HEADER]: pendingLogout.accountId },
+          });
+          const logoutBody = await logoutResponse.json().catch(() => ({})) as { error?: { code?: string } };
+          const accountAlreadyChanged = logoutResponse.status === 409
+            && logoutBody.error?.code === "ACCOUNT_CONTEXT_CHANGED";
+          if (!logoutResponse.ok && logoutResponse.status !== 401 && !accountAlreadyChanged) {
+            throw new Error("Server sign-out is still pending.");
+          }
+          if (cancelled) return;
+          clearPendingServerLogout();
+          clearRivtLocalState();
+        } catch {
+          if (!cancelled) {
+            setAuthConnectionError("You are signed out on this device, but RIVT could not finish ending the server session. Check your connection, then retry.");
+            setAuthLoading(false);
+          }
+          return;
+        }
+      }
       if (guestPreviewSessionActive()) {
         setAuthLoading(false);
         return;
@@ -967,29 +1234,51 @@ function App() {
             canPublishProfile: true,
           },
         };
-        applyCanonicalAccount(mockAccount);
+        applyCanonicalAccount(mockAccount, "development");
         setAuthLoading(false);
         return;
       }
+
+      // Chromium can leave a fetch pending until its full timeout even after
+      // the device has entered an explicit offline state. Restore the bounded
+      // device snapshot before attempting the network so a known-offline user
+      // is not stranded on the launch loader for 15 seconds. The one-time
+      // `online` listener below still revalidates the server session as soon
+      // as connectivity returns.
+      if (!navigator.onLine) {
+        const cached = readOfflineSessionSnapshot();
+        if (cached) {
+          applyCanonicalAccount(cached.account, "offline");
+          setJobs(cached.jobs);
+          setSelectedId(cached.jobs[0]?.id ?? 0);
+          setActiveWork(cached.activeWork);
+          setOfflineSessionRestored(true);
+          setAuthConnectionError(null);
+        } else {
+          setAuthConnectionError("Your account is still here. Check your connection, then retry.");
+        }
+        setAuthLoading(false);
+        return;
+      }
+
       try {
         // Identity is the only boot-critical request. Provider metadata and
         // storage usage improve the account UI, but must not strand a valid
         // signed-in session when one of those services is briefly unavailable.
+        const accountRequest = captureAccountGeneration();
         const meResponse = await fetchWithTimeout(apiPath("/api/v1/me"), { credentials: "include" });
         const meBody = await meResponse.json().catch(() => ({})) as { data?: CanonicalAccount };
-        if (cancelled) return;
+        if (cancelled || accountRequest.generation !== accountGenerationRef.current) return;
         if (meResponse.ok && meBody.data) {
           setAuthConnectionError(null);
           setOfflineSessionRestored(false);
-          applyCanonicalAccount(meBody.data);
+          applyCanonicalAccount(meBody.data, "server");
           setAuthLoading(false);
         } else if (meResponse.status === 401) {
           setAuthConnectionError(null);
-          setAuthUser(null);
-          setCanonicalAccount(null);
-          setOnboardingComplete(false);
-          resetCommunityReactions();
-          setStorageUsage(null);
+          clearPendingServerLogout();
+          clearRivtLocalState();
+          retireAccountScopedClientState();
           // Provider metadata is public auth-screen configuration. It is not
           // part of restoring a session, but the sign-up view still needs it
           // to truthfully show whether an invitation code is required.
@@ -1016,7 +1305,7 @@ function App() {
         if (!cancelled) {
           const cached = navigator.onLine ? null : readOfflineSessionSnapshot();
           if (cached) {
-            applyCanonicalAccount(cached.account);
+            applyCanonicalAccount(cached.account, "offline");
             setJobs(cached.jobs);
             setSelectedId(cached.jobs[0]?.id ?? 0);
             setActiveWork(cached.activeWork);
@@ -1037,7 +1326,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [applyCanonicalAccount, authRetryKey, resetCommunityReactions]);
+  }, [applyCanonicalAccount, authRetryKey, captureAccountGeneration, retireAccountScopedClientState]);
 
   useEffect(() => {
     if (!offlineSessionRestored) return;
@@ -1045,13 +1334,33 @@ function App() {
       setAuthLoading(true);
       setAuthRetryKey((current) => current + 1);
     };
+    // Connectivity can return between committing the offline snapshot and
+    // subscribing to the event. Revalidate immediately when that event was
+    // already missed instead of leaving cached identity active indefinitely.
+    if (navigator.onLine) {
+      revalidate();
+      return;
+    }
     window.addEventListener("online", revalidate, { once: true });
     return () => window.removeEventListener("online", revalidate);
   }, [offlineSessionRestored]);
 
   useEffect(() => {
+    if (!authConnectionError || !readPendingServerLogout() || navigator.onLine) return;
+    const finishPendingLogout = () => {
+      setAuthConnectionError(null);
+      setAuthLoading(true);
+      setAuthRetryKey((current) => current + 1);
+    };
+    window.addEventListener("online", finishPendingLogout, { once: true });
+    return () => window.removeEventListener("online", finishPendingLogout);
+  }, [authConnectionError]);
+
+  useEffect(() => {
     if (!authUser || isGuest || !["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView)) return;
     let cancelled = false;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     void fetchWithTimeout(apiPath("/api/storage"), { credentials: "include" })
       .then(async (response) => {
         const body = await response.json().catch(() => ({})) as {
@@ -1067,7 +1376,7 @@ function App() {
           database?: string;
           missing?: string[];
         };
-        if (cancelled) return;
+        if (cancelled || !isCurrentAccountGeneration(accountRequest)) return;
         const snapshot = body.accountStorage ?? body;
         setStorageUsage(response.ok && typeof snapshot.usedBytes === "number" ? {
           usedBytes: Number(snapshot.usedBytes),
@@ -1084,16 +1393,32 @@ function App() {
         } : null);
       })
       .catch(() => {
-        if (!cancelled) setStorageUsage(null);
+        if (!cancelled && isCurrentAccountGeneration(accountRequest)) setStorageUsage(null);
       });
     return () => { cancelled = true; };
-  }, [activeView, authUser, isGuest]);
+  }, [activeView, authUser, captureAccountGeneration, isCurrentAccountGeneration, isGuest]);
 
-  async function refreshCanonicalAccount() {
-    const response = await fetchWithTimeout(apiPath("/api/v1/me"), { credentials: "include" });
+  async function refreshCanonicalAccount(expectedAccountId?: string) {
+    const accountRequest = captureAccountGeneration();
+    const response = await fetchWithTimeout(apiPath("/api/v1/me"), {
+      credentials: "include",
+      headers: expectedAccountId ? { [RIVT_EXPECTED_ACCOUNT_HEADER]: expectedAccountId } : undefined,
+    });
     const body = await response.json().catch(() => ({})) as { data?: CanonicalAccount; error?: { message?: string } };
     if (!response.ok || !body.data) throw new Error(body.error?.message || "RIVT could not load your account.");
-    applyCanonicalAccount(body.data);
+    if (expectedAccountId && body.data.id !== expectedAccountId) {
+      throw new RivtApiError(409, {
+        error: {
+          code: "ACCOUNT_CONTEXT_CHANGED",
+          message: "The signed-in RIVT account changed while this request was running.",
+        },
+      });
+    }
+    const requestStillCurrent = accountRequest.accountId
+      ? isCurrentAccountGeneration(accountRequest)
+      : canonicalAccountIdRef.current === null && accountRequest.generation === accountGenerationRef.current;
+    if (!requestStillCurrent) throw new Error("The account changed while RIVT was refreshing it.");
+    applyCanonicalAccount(body.data, "server");
     return body.data;
   }
 
@@ -1101,6 +1426,8 @@ function App() {
     if (isGuest || !authUser || !onboardingComplete) return [];
     if (!["Home", "Work", "People", "Crew"].includes(activeView)) return [];
     const requestId = ++jobsRequestRef.current;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return [];
     setJobsLoading(true);
     setJobsError(null);
     const [locationCity = "", locationRegion = ""] = locationQuery.split(",").map((part) => part.trim());
@@ -1114,14 +1441,14 @@ function App() {
         region: locationRegion || undefined,
         insuranceRequired: verifiedOnly ? true : undefined,
       });
-      if (jobsRequestRef.current !== requestId) return undefined;
+      if (jobsRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return undefined;
       const nextJobs = canonicalJobs.map(toJobViewModel);
       setJobs(nextJobs);
       if (canonicalAccount) writeOfflineSessionSnapshot({ account: canonicalAccount, jobs: nextJobs });
       setSelectedId((current) => nextJobs.some((job) => job.id === current) ? current : nextJobs[0]?.id ?? 0);
       return nextJobs;
     } catch (cause) {
-      if (jobsRequestRef.current !== requestId) return undefined;
+      if (jobsRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return undefined;
       if (navigator.onLine) {
         setJobs([]);
         setSelectedId(0);
@@ -1131,37 +1458,39 @@ function App() {
       }
       return [];
     } finally {
-      if (jobsRequestRef.current === requestId) setJobsLoading(false);
+      if (jobsRequestRef.current === requestId && isCurrentAccountGeneration(accountRequest)) setJobsLoading(false);
     }
-  }, [activeView, authUser, canonicalAccount, difficulty, isGuest, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
+  }, [activeView, authUser, canonicalAccount, captureAccountGeneration, difficulty, isCurrentAccountGeneration, isGuest, locationQuery, onboardingComplete, query, trade, verifiedOnly, workType]);
 
   useEffect(() => {
     if (!["People", "Crew"].includes(activeView) || isGuest) return;
     if (!authUser || !onboardingComplete || role !== "contractor") return;
 
     let cancelled = false;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     const timeout = window.setTimeout(() => {
       setNetworkJobsLoading(true);
       setNetworkJobsError(null);
       void listJobs()
         .then((canonicalJobs) => {
-          if (cancelled) return;
+          if (cancelled || !isCurrentAccountGeneration(accountRequest)) return;
           setNetworkJobs(canonicalJobs.map(toJobViewModel));
         })
         .catch((cause) => {
-          if (cancelled) return;
+          if (cancelled || !isCurrentAccountGeneration(accountRequest)) return;
           setNetworkJobs([]);
           setNetworkJobsError(cause instanceof Error ? cause.message : "Work could not be loaded for assignments.");
         })
         .finally(() => {
-          if (!cancelled) setNetworkJobsLoading(false);
+          if (!cancelled && isCurrentAccountGeneration(accountRequest)) setNetworkJobsLoading(false);
         });
     }, 0);
     return () => {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [activeView, authUser, isGuest, onboardingComplete, role]);
+  }, [activeView, authUser, captureAccountGeneration, isCurrentAccountGeneration, isGuest, onboardingComplete, role]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => { void reloadJobs(); }, 250);
@@ -1170,19 +1499,28 @@ function App() {
 
   const reloadActiveWork = useCallback(async () => {
     if (isGuest) return;
-    if (!authUser || !onboardingComplete) {
-      setActiveWork([]);
-      return;
-    }
+    // Authentication hydration and the offline snapshot restore can complete
+    // in the same turn. An older zero-delay refresh may still carry the
+    // pre-hydration null account; it must not erase the just-restored work.
+    // Explicit sign-out/account-reset paths clear this state themselves.
+    if (!authUser || !onboardingComplete) return;
     if (!["Home", "Work", "People", "Crew", "Camera", "Tools", "Records"].includes(activeView)) return;
+    const requestId = ++activeWorkRequestRef.current;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     try {
       const nextActiveWork = await listActiveWork();
+      if (activeWorkRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return;
       setActiveWork(nextActiveWork);
       if (canonicalAccount) writeOfflineSessionSnapshot({ account: canonicalAccount, activeWork: nextActiveWork });
     } catch {
-      if (navigator.onLine) setActiveWork([]);
+      if (
+        navigator.onLine
+        && activeWorkRequestRef.current === requestId
+        && isCurrentAccountGeneration(accountRequest)
+      ) setActiveWork([]);
     }
-  }, [activeView, authUser, canonicalAccount, isGuest, onboardingComplete]);
+  }, [activeView, authUser, canonicalAccount, captureAccountGeneration, isCurrentAccountGeneration, isGuest, onboardingComplete]);
 
   const networkWorkOptions = useMemo(() => {
     const options = new Map<string, { id: string; title: string; status: string }>();
@@ -1216,34 +1554,39 @@ function App() {
     if (isGuest || !authUser || !onboardingComplete) return;
     if (!["Home", "Shop Talk"].includes(activeView)) return;
     const requestId = ++shopTalkPostsRequestRef.current;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     let posts: ServerShopTalkPost[];
     try {
       posts = await fetchShopTalkPosts();
     } catch (cause) {
-      if (shopTalkPostsRequestRef.current === requestId) {
+      if (shopTalkPostsRequestRef.current === requestId && isCurrentAccountGeneration(accountRequest)) {
         addActivity("Shop Talk could not refresh", cause instanceof Error ? cause.message : "Check your connection and try again.", "error");
         setCommunityPostsLoaded(true);
       }
       return;
     }
-    if (shopTalkPostsRequestRef.current !== requestId) return;
+    if (shopTalkPostsRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return;
     setCommunityPosts(posts.map(toCommunityPostViewModel));
     setCommunityPostsLoaded(true);
-  }, [activeView, addActivity, authUser, isGuest, onboardingComplete]);
+  }, [activeView, addActivity, authUser, captureAccountGeneration, isCurrentAccountGeneration, isGuest, onboardingComplete]);
 
   const loadShopTalkPost = useCallback(async (postId: string): Promise<CommunityPost | null> => {
     if (isGuest || !authUser || !onboardingComplete) return null;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return null;
     try {
       const post = await fetchShopTalkPost(postId);
-      if (!post) return null;
+      if (!post || !isCurrentAccountGeneration(accountRequest)) return null;
       const viewModel = toCommunityPostViewModel(post);
       setCommunityPosts((current) => [viewModel, ...current.filter((candidate) => candidate.id !== viewModel.id)]);
       return viewModel;
     } catch (cause) {
+      if (!isCurrentAccountGeneration(accountRequest)) return null;
       addActivity("Shop Talk post could not open", cause instanceof Error ? cause.message : "Try opening that post again.", "error");
       return null;
     }
-  }, [addActivity, authUser, isGuest, onboardingComplete]);
+  }, [addActivity, authUser, captureAccountGeneration, isCurrentAccountGeneration, isGuest, onboardingComplete]);
 
   useEffect(() => {
     void reloadShopTalkPosts();
@@ -1253,11 +1596,13 @@ function App() {
     if (isGuest || !authUser || !onboardingComplete) return;
     if (!["Home", "Shop Talk"].includes(activeView)) return;
     const requestId = ++communitiesRequestRef.current;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     const rows = await fetchCommunities();
-    if (communitiesRequestRef.current !== requestId) return;
+    if (communitiesRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return;
     if (rows === null) return;
     setCommunities(rows.length > 0 ? rows.map(mapServerCommunity) : fallbackCommunities);
-  }, [activeView, authUser, isGuest, onboardingComplete]);
+  }, [activeView, authUser, captureAccountGeneration, isCurrentAccountGeneration, isGuest, onboardingComplete]);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect */
@@ -1267,14 +1612,19 @@ function App() {
 
   const reloadInbox = useCallback(async () => {
     if (isGuest || !authUser || !onboardingComplete) return;
+    const requestId = ++inboxRequestRef.current;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     setInboxLoading(true);
     setInboxError(null);
     try {
       const notificationRows = await listNotifications();
+      if (inboxRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return;
       const safeNotifications = Array.isArray(notificationRows?.notifications) ? notificationRows.notifications : [];
       setInboxNotifications(safeNotifications);
       if (activeView === "Messages") {
         const conversationRows = await listConversations();
+        if (inboxRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return;
         const safeConversations = Array.isArray(conversationRows) ? conversationRows : [];
         setInboxConversations(safeConversations);
         setSelectedConversationId((current) => (
@@ -1284,27 +1634,33 @@ function App() {
         ));
       }
     } catch (error) {
+      if (inboxRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return;
       setInboxError(error instanceof Error ? error.message : "Inbox could not be loaded.");
     } finally {
-      setInboxLoading(false);
+      if (inboxRequestRef.current === requestId && isCurrentAccountGeneration(accountRequest)) setInboxLoading(false);
     }
-  }, [activeView, authUser, isGuest, onboardingComplete]);
+  }, [activeView, authUser, captureAccountGeneration, isCurrentAccountGeneration, isGuest, onboardingComplete]);
 
   const loadConversationMessages = useCallback(async (conversationId: string | null) => {
     if (isGuest) return;
+    const requestId = ++conversationMessagesRequestRef.current;
     if (!conversationId || !authUser || !onboardingComplete) {
       setInboxMessages([]);
       return;
     }
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     setInboxError(null);
     try {
       const messages = await listConversationMessages(conversationId);
+      if (conversationMessagesRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return;
       setInboxMessages(Array.isArray(messages) ? messages : []);
     } catch (error) {
+      if (conversationMessagesRequestRef.current !== requestId || !isCurrentAccountGeneration(accountRequest)) return;
       setInboxMessages([]);
       setInboxError(error instanceof Error ? error.message : "Messages could not be loaded.");
     }
-  }, [authUser, isGuest, onboardingComplete]);
+  }, [authUser, captureAccountGeneration, isCurrentAccountGeneration, isGuest, onboardingComplete]);
 
   useEffect(() => {
     if (isGuest || !authUser || !onboardingComplete) return;
@@ -1408,8 +1764,11 @@ function App() {
   }
 
   async function handleAuthSubmit(form: { email: string; password: string; displayName?: string; role?: Role; inviteCode?: string }) {
+    if (authSubmissionRef.current) return;
+    authSubmissionRef.current = true;
     setAuthError(null);
     setAuthNotice(null);
+    let authenticatedAccountId: string | null = null;
     try {
       const requestMode = authMode;
       if (requestMode === "signup") {
@@ -1433,7 +1792,8 @@ function App() {
       if (!response.ok || !body.data?.user) {
         throw new Error(formatAuthFailure(requestMode, body));
       }
-      const account = await refreshCanonicalAccount();
+      authenticatedAccountId = body.data.user.id;
+      const account = await refreshCanonicalAccount(authenticatedAccountId);
       if (requestMode === "signup") trackProductEvent("signup_completed");
       if (body.data.verificationRequired || !account.emailVerified) {
         setAuthNotice(body.data.verificationDelivered === false
@@ -1441,11 +1801,27 @@ function App() {
           : `We sent a verification link to ${account.email}.`);
       }
     } catch (error) {
-      setAuthUser(null);
-      setCanonicalAccount(null);
-      setOnboardingComplete(false);
-      resetCommunityReactions();
-      setAuthError(error instanceof Error ? error.message : "Sign-in failed. Check your connection and try again.");
+      if (error instanceof RivtApiError && error.code === "ACCOUNT_CONTEXT_CHANGED") {
+        clearRivtLocalState();
+        retireAccountScopedClientState();
+        try {
+          await refreshCanonicalAccount();
+          setAuthNotice("A different RIVT account became current in this browser, so RIVT opened that account without ending its session.");
+        } catch {
+          setAuthError("The signed-in account changed in another tab. Refresh RIVT to continue safely.");
+        }
+        return;
+      }
+      if (authenticatedAccountId) writePendingServerLogout(authenticatedAccountId);
+      clearRivtLocalState();
+      retireAccountScopedClientState();
+      if (authenticatedAccountId) {
+        setAuthConnectionError("RIVT accepted the sign-in but could not verify the account workspace. Retry so RIVT can safely end that incomplete session.");
+      } else {
+        setAuthError(error instanceof Error ? error.message : "Sign-in failed. Check your connection and try again.");
+      }
+    } finally {
+      authSubmissionRef.current = false;
     }
   }
 
@@ -1468,6 +1844,8 @@ function App() {
   }
 
   async function handleResendVerification() {
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     setAuthError(null);
     setAuthNotice(null);
     try {
@@ -1476,9 +1854,11 @@ function App() {
         credentials: "include",
       });
       const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       if (!response.ok) throw new Error(body.error?.message || "Verification email could not be sent.");
       setAuthNotice(`A fresh verification link was sent to ${canonicalAccount?.email ?? accountProfile.email}.`);
     } catch (error) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setAuthError(error instanceof Error ? error.message : "Verification email could not be sent.");
     }
   }
@@ -1488,31 +1868,45 @@ function App() {
       setGuestPromptOpen(true);
       return;
     }
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     const response = await fetchWithTimeout(apiPath("/api/v1/profile"), {
       method: "PATCH",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        [RIVT_EXPECTED_ACCOUNT_HEADER]: accountRequest.accountId,
+      },
       body: JSON.stringify({
         ...input,
         tradeCodes: input.specialties.map((specialty) => tradeCodeByName[specialty]),
       }),
     });
     const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+    if (!isCurrentAccountGeneration(accountRequest)) return;
     if (!response.ok) throw new Error(body.error?.message || "Profile could not be saved.");
-    await refreshCanonicalAccount();
+    await refreshCanonicalAccount(accountRequest.accountId);
+    if (!isCurrentAccountGeneration(accountRequest)) return;
     addActivity("Profile saved", "Your network profile and service area are up to date.", "success");
   }
 
   async function _handleSetAvailability(availabilityStatus: CanonicalAccount["profile"]["availabilityStatus"]) {
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     const response = await fetchWithTimeout(apiPath("/api/v1/profile"), {
       method: "PATCH",
       credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        [RIVT_EXPECTED_ACCOUNT_HEADER]: accountRequest.accountId,
+      },
       body: JSON.stringify({ availabilityStatus }),
     });
     const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+    if (!isCurrentAccountGeneration(accountRequest)) return;
     if (!response.ok) throw new Error(body.error?.message || "Availability could not be saved.");
-    await refreshCanonicalAccount();
+    await refreshCanonicalAccount(accountRequest.accountId);
+    if (!isCurrentAccountGeneration(accountRequest)) return;
     addActivity(
       "Availability updated",
       availabilityStatus === "available"
@@ -1529,13 +1923,18 @@ function App() {
       setGuestPromptOpen(true);
       return;
     }
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     const response = await fetchWithTimeout(apiPath(`/api/v1/profile/${visibility === "network" ? "publish" : "unpublish"}`), {
       method: "POST",
       credentials: "include",
+      headers: { [RIVT_EXPECTED_ACCOUNT_HEADER]: accountRequest.accountId },
     });
     const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
+    if (!isCurrentAccountGeneration(accountRequest)) return;
     if (!response.ok) throw new Error(body.error?.message || "Profile visibility could not be changed.");
-    await refreshCanonicalAccount();
+    await refreshCanonicalAccount(accountRequest.accountId);
+    if (!isCurrentAccountGeneration(accountRequest)) return;
     addActivity(
       visibility === "network" ? "Profile visible" : "Profile private",
       visibility === "network" ? "Other RIVT members can now discover your profile." : "Your profile is hidden from network discovery.",
@@ -1544,81 +1943,53 @@ function App() {
   }
 
   function handleCurrentSessionRevoked() {
+    clearPendingServerLogout();
     clearRivtLocalState();
-    setAuthUser(null);
-    setCanonicalAccount(null);
-    setOnboardingComplete(false);
-    setJobs([]);
-    setSelectedId(0);
-    setEditingJob(null);
-    setMessageDraft("");
-    setInboxConversations([]);
-    setSelectedConversationId(null);
-    setInboxMessages([]);
-    setInboxNotifications([]);
-    setActiveWork([]);
-    setFocusedActiveWorkId(null);
-    setFocusedCloseout(false);
-    setInboxError(null);
-    setJobsError(null);
-    setUploadedRecords(() => new Set());
-    setStorageUsage(null);
-    setShoutOuts([]);
-    setProfileSearchFocus(null);
-    setShopTalkPostId(null);
-    setShopTalkCompose(false);
-    setShopTalkCommunitySlug(null);
-    setShopTalkAnswerQueue(false);
-    resetCommunityReactions();
+    retireAccountScopedClientState();
     setAuthNotice("This session ended on this device. Sign in again to keep going.");
-    setAccountOpen(false);
-    setActivityOpen(false);
-    setPostOpen(false);
     setActiveView("Home");
     window.history.replaceState({}, "", "/");
   }
 
   async function handleLogout() {
-    try {
-      await fetchWithTimeout(apiPath("/api/v1/auth/logout"), {
-        method: "POST",
-        credentials: "include",
-      });
-    } catch {
-      // Ignore logout network hiccups; the local session can still be cleared.
-    } finally {
-      clearRivtLocalState();
-      setAuthUser(null);
-      setCanonicalAccount(null);
-      setOnboardingComplete(false);
-      setJobs([]);
-      setSelectedId(0);
-      setEditingJob(null);
-      setMessageDraft("");
-      setInboxConversations([]);
-      setSelectedConversationId(null);
-      setInboxMessages([]);
-      setInboxNotifications([]);
-      setActiveWork([]);
-      setFocusedActiveWorkId(null);
-      setFocusedCloseout(false);
-      setInboxError(null);
-      setJobsError(null);
-      setUploadedRecords(() => new Set());
-      setStorageUsage(null);
-      setShoutOuts([]);
-      setProfileSearchFocus(null);
-      setShopTalkPostId(null);
-      setShopTalkCompose(false);
-      setShopTalkCommunitySlug(null);
-      setShopTalkAnswerQueue(false);
-      resetCommunityReactions();
-      setAuthNotice(null);
-      setAccountOpen(false);
-      setActivityOpen(false);
-      setPostOpen(false);
+    if (isGuest) {
+      handleExitGuest();
       setActiveView("Home");
       window.history.replaceState({}, "", "/");
+      return;
+    }
+    const accountId = canonicalAccountIdRef.current ?? canonicalAccount?.id ?? authUser?.id ?? null;
+    let serverLogoutConfirmed = !accountId;
+    if (accountId) {
+      writePendingServerLogout(accountId);
+    }
+    setAuthLoading(true);
+    clearRivtLocalState();
+    retireAccountScopedClientState();
+    setActiveView("Home");
+    window.history.replaceState({}, "", "/");
+    try {
+      const response = await fetchWithTimeout(apiPath("/api/v1/auth/logout"), {
+        method: "POST",
+        credentials: "include",
+        headers: { [RIVT_EXPECTED_ACCOUNT_HEADER]: accountId ?? "" },
+      });
+      const body = await response.json().catch(() => ({})) as { error?: { code?: string } };
+      const accountAlreadyChanged = response.status === 409 && body.error?.code === "ACCOUNT_CONTEXT_CHANGED";
+      serverLogoutConfirmed = response.ok || response.status === 401 || accountAlreadyChanged;
+      if (accountAlreadyChanged) {
+        setAuthNotice("A different RIVT account is already current in this browser. It was not signed out.");
+      }
+    } catch {
+      serverLogoutConfirmed = false;
+    } finally {
+      if (serverLogoutConfirmed) {
+        clearPendingServerLogout();
+        setAuthConnectionError(null);
+      } else {
+        setAuthConnectionError("Signed out on this device. Reconnect so RIVT can finish ending the server session.");
+      }
+      setAuthLoading(false);
     }
   }
 
@@ -1832,13 +2203,17 @@ function App() {
     };
 
     if (!isGuest && authUser && onboardingComplete && !postId.startsWith("local-") && !postId.startsWith("prompt-")) {
+      const accountRequest = captureAccountGeneration();
+      if (!accountRequest.accountId) return;
       let serverAnswer: ServerShopTalkAnswer | null;
       try {
         serverAnswer = await createShopTalkAnswer(postId, body, post.webVisibility === "public");
       } catch (cause) {
+        if (!isCurrentAccountGeneration(accountRequest)) return;
         addActivity("Shop Talk answer not saved", cause instanceof Error ? cause.message : "Your answer could not reach the server.", "error");
         return;
       }
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       if (!serverAnswer) {
         addActivity("Shop Talk answer not saved", "Your answer could not reach the server. Try again when your connection is stable.");
         return;
@@ -1871,13 +2246,17 @@ function App() {
     }
 
     if (!isGuest && authUser && onboardingComplete && !postId.startsWith("local-") && !postId.startsWith("prompt-")) {
+      const accountRequest = captureAccountGeneration();
+      if (!accountRequest.accountId) return;
       let serverAnswers: ServerShopTalkAnswer[] | null;
       try {
         serverAnswers = await verifyShopTalkAnswer(postId, answerId);
       } catch (cause) {
+        if (!isCurrentAccountGeneration(accountRequest)) return;
         addActivity("Verified Fix not saved", cause instanceof Error ? cause.message : "RIVT could not update that answer.", "error");
         return;
       }
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       if (!serverAnswers) {
         addActivity("Verified Fix not saved", "Only the original poster can mark a server-owned verified fix.");
         return;
@@ -1924,6 +2303,8 @@ function App() {
     if (!post) {
       return;
     }
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     try {
       await reportShopTalkTarget({
         targetType: "post",
@@ -1932,6 +2313,7 @@ function App() {
         note: (note ? `${reason}: ${note}` : reason).slice(0, 1000),
       });
     } catch (error) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       addActivity(
         "Shop Talk report was not filed",
         error instanceof Error ? error.message : "RIVT could not send that report. Try again in a minute.",
@@ -1939,6 +2321,7 @@ function App() {
       );
       return;
     }
+    if (!isCurrentAccountGeneration(accountRequest)) return;
 
     setCommunityReports((current) => {
       const alreadyFlagged = current.some(
@@ -1966,6 +2349,8 @@ function App() {
     const post = communityPosts.find((candidate) => candidate.id === postId);
     const answer = post?.replies.find((candidate) => candidate.id === answerId);
     if (!post || !answer) return;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
 
     try {
       await reportShopTalkTarget({
@@ -1975,6 +2360,7 @@ function App() {
         note: (note ? `${reason} on answer for "${post.title}": ${note}` : `${reason} on answer for "${post.title}"`).slice(0, 1000),
       });
     } catch (error) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       addActivity(
         "Shop Talk answer was not reported",
         error instanceof Error ? error.message : "RIVT could not send that report. Try again in a minute.",
@@ -1982,6 +2368,7 @@ function App() {
       );
       return;
     }
+    if (!isCurrentAccountGeneration(accountRequest)) return;
     addActivity("Shop Talk answer reported", `An answer from ${answer.author} is in the admin moderation queue for ${reason.toLowerCase()}.`);
   }
 
@@ -1993,6 +2380,8 @@ function App() {
       );
       return;
     }
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
 
     try {
       await reportShopTalkTarget({
@@ -2002,6 +2391,7 @@ function App() {
         note: (note ? `${reason} in ${community.name}: ${note}` : `${reason} in ${community.name}`).slice(0, 1000),
       });
     } catch (error) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       addActivity(
         "Community report was not filed",
         error instanceof Error ? error.message : "RIVT could not send that report. Try again in a minute.",
@@ -2009,6 +2399,7 @@ function App() {
       );
       return;
     }
+    if (!isCurrentAccountGeneration(accountRequest)) return;
     addActivity("Community report filed", `${community.name} is in the admin moderation queue for ${reason.toLowerCase()}.`);
   }
 
@@ -2026,6 +2417,10 @@ function App() {
     webVisibility: "members" | "public" = "members",
     article?: { url: string; source: string; publishedAt?: string | null } | null,
   ) {
+    const serverAccountRequest = !isGuest && authUser && onboardingComplete
+      ? captureAccountGeneration()
+      : null;
+    if (serverAccountRequest && !serverAccountRequest.accountId) return;
     const localThumbnailUrl = photoFile ? URL.createObjectURL(photoFile) : undefined;
     const localPost: CommunityPost = {
       id: `local-${Date.now()}`,
@@ -2066,6 +2461,7 @@ function App() {
           webVisibility,
           article,
         });
+        if (serverAccountRequest && !isCurrentAccountGeneration(serverAccountRequest)) return;
         if (!serverPost) {
           addActivity(
             "Shop Talk post was not saved",
@@ -2078,7 +2474,9 @@ function App() {
         if (photoFile) {
           try {
             mediaPost = await uploadShopTalkPostPhoto(serverPost.id, photoFile, webVisibility === "public");
+            if (serverAccountRequest && !isCurrentAccountGeneration(serverAccountRequest)) return;
           } catch (cause) {
+            if (serverAccountRequest && !isCurrentAccountGeneration(serverAccountRequest)) return;
             photoUploadFailed = true;
             addActivity(
               "Shop Talk photo was not saved",
@@ -2090,6 +2488,7 @@ function App() {
         photoUploadFailed ||= Boolean(photoFile && !mediaPost);
         postToAdd = toCommunityPostViewModel(mediaPost ?? serverPost);
       } catch (cause) {
+        if (serverAccountRequest && !isCurrentAccountGeneration(serverAccountRequest)) return;
         if (
           cause instanceof RivtApiError
           && cause.code === "SHOP_TALK_ARTICLE_DISCUSSION_EXISTS"
@@ -2099,6 +2498,7 @@ function App() {
           && typeof cause.details.postId === "string"
         ) {
           const existingPost = await loadShopTalkPost(cause.details.postId);
+          if (serverAccountRequest && !isCurrentAccountGeneration(serverAccountRequest)) return;
           if (existingPost) {
             setShopTalkPostId(existingPost.id);
             setShopTalkCompose(false);
@@ -2118,6 +2518,7 @@ function App() {
       }
     }
 
+    if (serverAccountRequest && !isCurrentAccountGeneration(serverAccountRequest)) return;
     setCommunityPosts((current) => [
       postToAdd,
       ...current.filter((post) => post.id !== postToAdd.id),
@@ -2133,12 +2534,15 @@ function App() {
   async function handleShopTalkVisibility(postId: string, webVisibility: "members" | "public") {
     const target = communityPosts.find((post) => post.id === postId);
     if (!target || target.badge || postId.startsWith("local-") || postId.startsWith("prompt-")) return false;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return false;
     try {
       const updated = await setShopTalkPostVisibility(
         postId,
         webVisibility,
         webVisibility === "public" && Boolean(target.thumbnailUrl),
       );
+      if (!isCurrentAccountGeneration(accountRequest)) return false;
       if (!updated) throw new Error("RIVT did not return the updated post.");
       const nextPost = toCommunityPostViewModel(updated);
       setCommunityPosts((current) => current.map((post) => post.id === postId ? nextPost : post));
@@ -2150,6 +2554,7 @@ function App() {
       );
       return true;
     } catch (cause) {
+      if (!isCurrentAccountGeneration(accountRequest)) return false;
       addActivity(
         "Shop Talk visibility was not changed",
         cause instanceof Error ? cause.message : "RIVT could not update that post.",
@@ -2163,9 +2568,12 @@ function App() {
     const target = communityPosts.find((candidate) => candidate.id === postId);
     const serverOwned = Boolean(target && !target.badge && !postId.startsWith("local-"));
     if (serverOwned && (!isGuest && authUser && onboardingComplete)) {
+      const accountRequest = captureAccountGeneration();
+      if (!accountRequest.accountId) return false;
       try {
         await deleteShopTalkPost(postId);
       } catch (error) {
+        if (!isCurrentAccountGeneration(accountRequest)) return false;
         addActivity(
           "Shop Talk post was not deleted",
           error instanceof Error ? error.message : "RIVT could not remove that post from the server. Try again in a minute.",
@@ -2173,6 +2581,7 @@ function App() {
         );
         return false;
       }
+      if (!isCurrentAccountGeneration(accountRequest)) return false;
     } else if (serverOwned) {
       addActivity("Sign in required", "Sign in again before deleting a server-owned Shop Talk post.");
       return false;
@@ -2220,32 +2629,41 @@ function App() {
   }
 
   async function handleEditJob(job: Job) {
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     setJobsError(null);
     try {
       if (!job.canonical) throw new Error("This job is missing its server identity.");
       const canonical = await getJob(job.canonical.id);
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setEditingJob(toJobViewModel(canonical));
       setPostOpen(true);
     } catch (cause) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setJobsError(cause instanceof Error ? cause.message : "The job could not be opened.");
     }
   }
 
   async function handleJobTransition(job: Job, action: "publish" | "pause" | "resume" | "close") {
     if (!job.canonical) throw new Error("This job is missing canonical lifecycle data.");
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     setJobsError(null);
     try {
       let transitionTarget = job;
       if (action === "publish" || !Number.isInteger(job.canonical.version) || job.canonical.version < 1) {
         transitionTarget = toJobViewModel(await getJob(job.canonical.id));
       }
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       if (!transitionTarget.canonical) throw new Error("This job is missing canonical lifecycle data.");
       const updated = toJobViewModel(await transitionJob(transitionTarget.canonical.id, action, transitionTarget.canonical.version));
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setJobs((current) => current.map((candidate) => candidate.id === updated.id ? updated : candidate));
       setSelectedId(updated.id);
       const activityLabel = { publish: "published", pause: "paused", resume: "reopened", close: "closed" }[action];
       addActivity(`Job ${activityLabel}`, `${updated.title} is now ${updated.status.toLowerCase()}.`);
     } catch (cause) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       const message = cause instanceof Error ? cause.message : "The job status could not be changed.";
       setJobsError(message);
       throw cause;
@@ -2253,7 +2671,11 @@ function App() {
   }
 
   async function handleOnboardingComplete(result: OnboardingResult) {
+    const accountRequest = captureAccountGeneration();
+    const expectedAccountId = accountRequest.accountId;
+    if (!expectedAccountId) return;
     setAuthError(null);
+    let refreshedAccount: CanonicalAccount;
     try {
       const response = await fetchWithTimeout(apiPath("/api/v1/onboarding/complete"), {
         method: "POST",
@@ -2277,28 +2699,24 @@ function App() {
       if (!response.ok) {
         throw new Error(body.error?.message || "Account setup could not be saved.");
       }
-      await refreshCanonicalAccount();
+      if (!isCurrentAccountGeneration(accountRequest)) return;
+      refreshedAccount = await refreshCanonicalAccount();
     } catch (error) {
+      if (canonicalAccountIdRef.current !== expectedAccountId) return;
       setAuthError(error instanceof Error ? error.message : "Account setup could not be saved.");
       return;
     }
 
-    setRole(result.role);
-    setAccountProfile({
-      email: result.email,
-      displayName: result.displayName,
-      organization: result.organization,
-      location: result.location,
-      specialties: result.specialties,
-      plan: result.plan,
-      authMethod: result.authMethod,
-    });
+    if (
+      refreshedAccount.id !== expectedAccountId
+      || canonicalAccountIdRef.current !== expectedAccountId
+    ) return;
+
     setTrade(
-      result.role === "tradesperson" && result.specialties[0]
-        ? result.specialties[0]
+      refreshedAccount.primaryRole === "tradesperson" && refreshedAccount.profile.trades[0]?.name
+        ? refreshedAccount.profile.trades[0].name as Trade
         : "All trades",
     );
-    setTrustReady(true);
     setUploadedRecords(() => new Set());
     const postOnboardingView = ({
       home: "Home",
@@ -2316,7 +2734,6 @@ function App() {
         "/app/profile/settings?section=profile",
       );
     }
-    setOnboardingComplete(true);
     trackProductEvent("onboarding_completed", { onboarding_goal: result.goal });
     addActivity(
       "Account setup complete",
@@ -2342,6 +2759,8 @@ function App() {
       );
       return false;
     }
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return false;
 
     setInboxSending(true);
     setInboxError(null);
@@ -2351,11 +2770,13 @@ function App() {
         trimmed,
         attachments.map(({ uploadId }) => ({ uploadId })),
       );
+      if (!isCurrentAccountGeneration(accountRequest)) return false;
       setInboxMessages((current) => [...current, message]);
       setMessageDraft("");
       await reloadInbox();
       return true;
     } catch (error) {
+      if (!isCurrentAccountGeneration(accountRequest)) return false;
       setInboxError(error instanceof Error ? error.message : "Message could not be sent.");
       addActivity(
         "Message not sent",
@@ -2364,14 +2785,17 @@ function App() {
       );
       return false;
     } finally {
-      setInboxSending(false);
+      if (isCurrentAccountGeneration(accountRequest)) setInboxSending(false);
     }
   }
 
   function handleSelectConversation(conversationId: string) {
     setSelectedConversationId(conversationId);
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     void markConversationRead(conversationId)
       .then((conversation) => {
+        if (!isCurrentAccountGeneration(accountRequest)) return;
         setInboxConversations((current) => current.map((item) => item.id === conversation.id ? conversation : item));
         setInboxNotifications((current) => current.map((item) => {
           const metadataConversationId = typeof item.metadata?.conversationId === "string" ? item.metadata.conversationId : null;
@@ -2387,20 +2811,28 @@ function App() {
 
   async function handleMarkSelectedConversationRead() {
     if (!selectedConversationId) return;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     try {
       const conversation = await markConversationRead(selectedConversationId);
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setInboxConversations((current) => current.map((item) => item.id === conversation.id ? conversation : item));
       await reloadInbox();
     } catch (error) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setInboxError(error instanceof Error ? error.message : "Conversation could not be marked read.");
     }
   }
 
   async function handleMarkNotificationsRead() {
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     try {
       await markNotificationsRead([], true);
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setInboxNotifications((current) => current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })));
     } catch (error) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setInboxError(error instanceof Error ? error.message : "Notifications could not be marked read.");
     }
   }
@@ -2427,9 +2859,12 @@ function App() {
   }
 
   async function handleOpenActiveWorkMessages(activeWorkId: string) {
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     setFocusedActiveWorkId(activeWorkId);
     try {
       const conversation = await openActiveWorkConversation(activeWorkId);
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setSelectedConversationId(conversation.id);
       setActiveView("Messages");
       const params = new URLSearchParams({ conversation: conversation.id, activeWork: activeWorkId });
@@ -2442,6 +2877,7 @@ function App() {
       setPostOpen(false);
       void reloadInbox();
     } catch {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       handleNavigate("Messages");
       void reloadInbox();
     }
@@ -2607,22 +3043,35 @@ function App() {
 
   async function handleMuteSelectedConversation() {
     if (!selectedConversationId) return;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     try {
       const mutedUntil = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
-      await muteConversation(selectedConversationId, mutedUntil);
+      await muteConversation(selectedConversationId, mutedUntil, accountRequest.accountId);
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       addActivity("Thread muted", "This conversation is muted for 8 hours.", "success");
       await reloadInbox();
     } catch (error) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setInboxError(error instanceof Error ? error.message : "Conversation could not be muted.");
     }
   }
 
   async function handleReportSelectedConversation() {
     if (!selectedConversationId) return;
+    const accountRequest = captureAccountGeneration();
+    if (!accountRequest.accountId) return;
     try {
-      await reportConversation(selectedConversationId, "safety", "Reported from the inbox for review.");
+      await reportConversation(
+        selectedConversationId,
+        "safety",
+        "Reported from the inbox for review.",
+        accountRequest.accountId,
+      );
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       addActivity("Conversation reported", "RIVT recorded this conversation for admin review.", "warning");
     } catch (error) {
+      if (!isCurrentAccountGeneration(accountRequest)) return;
       setInboxError(error instanceof Error ? error.message : "Conversation could not be reported.");
     }
   }
@@ -2656,51 +3105,18 @@ function App() {
 
   function handleExitGuest() {
     setGuestPreviewSession(false);
-    setIsGuest(false);
-    setGuestPreviewSummary(null);
-    setAuthUser(null);
-    setCanonicalAccount(null);
-    setOnboardingComplete(false);
-    setJobs([]);
-    setSelectedId(0);
-    setActiveWork([]);
-    setFocusedActiveWorkId(null);
-    setInboxConversations([]);
-    setSelectedConversationId(null);
-    setInboxMessages([]);
-    setInboxNotifications([]);
-    setUploadedRecords(new Set());
-    setCommunityPosts([]);
-    setCommunities([]);
-    setShoutOuts([]);
-    setAccountProfile((current) => ({ ...current, displayName: "" }));
+    retireAccountScopedClientState();
   }
 
   function handleSignUpFromGuest() {
     setGuestPreviewSession(false);
+    retireAccountScopedClientState();
     setAuthMode("signup");
-    setIsGuest(false);
-    setGuestPreviewSummary(null);
-    setAuthUser(null);
-    setCanonicalAccount(null);
-    setOnboardingComplete(false);
-    setJobs([]);
-    setSelectedId(0);
-    setActiveWork([]);
-    setFocusedActiveWorkId(null);
-    setInboxConversations([]);
-    setSelectedConversationId(null);
-    setInboxMessages([]);
-    setInboxNotifications([]);
-    setUploadedRecords(new Set());
-    setCommunityPosts([]);
-    setCommunities([]);
-    setShoutOuts([]);
-    setAccountProfile((current) => ({ ...current, displayName: "" }));
   }
 
   function handleBrowseAsGuest(options?: { resumeCurrentRoute?: boolean }) {
     try {
+      retireAccountScopedClientState();
       const previewPreferences = readGuestPreviewPreferences();
       const previewTrade = previewPreferences?.trade ?? "Carpentry";
       const previewLocation = previewPreferences?.location ?? "Jacksonville, FL";
@@ -2714,6 +3130,7 @@ function App() {
       setAuthNotice(null);
       setGuestPreviewSession(true);
       setIsGuest(true);
+      canonicalAccountIdRef.current = "guest-preview";
       setCanonicalAccount(previewWorkspace.canonicalAccount);
       setGuestPreviewSummary(previewWorkspace.summary);
       setAuthUser({
@@ -2871,8 +3288,18 @@ function App() {
     );
   }
 
+  // Child surfaces can finish an async operation after they have been
+  // unmounted during sign-out or an account transition. Bind every direct
+  // account-owned callback to the exact identity generation that rendered
+  // that child so a late Account A result cannot repopulate Account B state.
+  const renderedAccountScope = {
+    accountId: canonicalAccount?.id ?? authUser.id,
+    generation: accountRenderGeneration,
+  };
+
   return (
     <PersonaProvider
+      key={canonicalAccount?.id ?? authUser.id}
       trade={canonicalAccount?.profile.trades.find((tradeItem) => tradeItem.primary)?.name
         ?? canonicalAccount?.profile.trades[0]?.name
         ?? null}
@@ -3012,7 +3439,10 @@ function App() {
             onOpenProfessionalProfile={(accountId) => setProfessionalProfileId(accountId)}
             onEditJob={(job) => void handleEditJob(job)}
             onTransition={handleJobTransition}
-            onJobLoaded={handleJobLoaded}
+            onJobLoaded={(job) => {
+              if (!isCurrentAccountGeneration(renderedAccountScope)) return;
+              handleJobLoaded(job);
+            }}
             onOpenTool={(tool, activeWorkId) => {
               if (activeWorkId) {
                 handleOpenActiveWorkTool(activeWorkId, tool);
@@ -3024,6 +3454,7 @@ function App() {
             onOpenActiveWorkMessages={(activeWorkId) => void handleOpenActiveWorkMessages(activeWorkId)}
             onRetry={() => void reloadJobs()}
             onOfferAccepted={(nextWork) => {
+              if (!isCurrentAccountGeneration(renderedAccountScope)) return;
               mergeActiveWorkRecord(nextWork);
               addActivity(
                 "Active work started",
@@ -3066,7 +3497,10 @@ function App() {
             onNewPost={handleNewShopTalkPost}
             onDeletePost={handleDeleteShopTalkPost}
             onSetPostWebVisibility={handleShopTalkVisibility}
-            onCommunityCreated={handleCommunityCreated}
+            onCommunityCreated={(community) => {
+              if (!isCurrentAccountGeneration(renderedAccountScope)) return;
+              handleCommunityCreated(community);
+            }}
             onLoadPost={loadShopTalkPost}
             onOpenProfessionalProfile={(accountId) => setProfessionalProfileId(accountId)}
           />
@@ -3121,6 +3555,7 @@ function App() {
           />
         ) : ["Trust & Legal", "Safety & Training", "Reviews", "Feedback", "Settings"].includes(activeView) ? (
           <ProfileRoute
+            accountId={canonicalAccount?.id ?? authUser.id}
             view={activeView as ProfileRouteView}
             initialSettingsSection={new URLSearchParams(window.location.search).get("section") === "profile" ? "profile" : undefined}
             role={role}
@@ -3244,7 +3679,10 @@ function App() {
               job={editingJob}
               defaultLocation={accountProfile.location}
               onClose={() => { setPostOpen(false); setEditingJob(null); }}
-              onSaved={handleJobSaved}
+              onSaved={(job, published) => {
+                if (!isCurrentAccountGeneration(renderedAccountScope)) return;
+                handleJobSaved(job, published);
+              }}
             />
           </Suspense>
         </RouteErrorBoundary>

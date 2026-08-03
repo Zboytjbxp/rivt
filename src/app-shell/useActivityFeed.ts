@@ -119,6 +119,11 @@ export function useActivityFeed({ activeView, notifications, role }: UseActivity
     );
   }, []);
 
+  const clearActivityFeed = useCallback(() => {
+    setActivityFeed([]);
+    setUiToast(null);
+  }, []);
+
   useEffect(() => {
     if (!uiToast) {
       return;
@@ -134,6 +139,7 @@ export function useActivityFeed({ activeView, notifications, role }: UseActivity
   return {
     activityItems,
     addActivity,
+    clearActivityFeed,
     dismissToast,
     markAllActivityRead,
     uiToast,

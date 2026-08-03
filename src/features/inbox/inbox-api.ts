@@ -1,4 +1,10 @@
-import { type ApiErrorBody, RivtApiError, requestKey, makeRequest } from "../../lib/api";
+import {
+  type ApiErrorBody,
+  RivtApiError,
+  RIVT_EXPECTED_ACCOUNT_HEADER,
+  requestKey,
+  makeRequest,
+} from "../../lib/api";
 
 export interface InboxParticipant {
   accountId: string;
@@ -244,19 +250,31 @@ export async function markConversationRead(conversationId: string) {
   return body.data.conversation;
 }
 
-export async function muteConversation(conversationId: string, mutedUntil: string | null) {
+export async function muteConversation(conversationId: string, mutedUntil: string | null, expectedAccountId: string) {
   const body = await request<{ data: { participant: InboxParticipant } }>(`/api/v1/conversations/${conversationId}/mute`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      [RIVT_EXPECTED_ACCOUNT_HEADER]: expectedAccountId,
+    },
     body: JSON.stringify({ mutedUntil }),
   });
   return body.data.participant;
 }
 
-export async function reportConversation(conversationId: string, reason: "spam" | "harassment" | "suspicious" | "inappropriate" | "safety", note = "") {
+export async function reportConversation(
+  conversationId: string,
+  reason: "spam" | "harassment" | "suspicious" | "inappropriate" | "safety",
+  note: string,
+  expectedAccountId: string,
+) {
   await request<{ data: { report: { id: string } } }>(`/api/v1/conversations/${conversationId}/report`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Idempotency-Key": requestKey() },
+    headers: {
+      "Content-Type": "application/json",
+      "Idempotency-Key": requestKey(),
+      [RIVT_EXPECTED_ACCOUNT_HEADER]: expectedAccountId,
+    },
     body: JSON.stringify({ reason, note }),
   });
 }

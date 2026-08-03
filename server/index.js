@@ -42,7 +42,7 @@ import {
   verifyGoogleIdToken,
   verifyLoginPassword,
 } from "./auth.js";
-import { loadActorContext, requireOrganizationRole } from "./authorization.js";
+import { assertExpectedAccount, loadActorContext, requireOrganizationRole } from "./authorization.js";
 import { startDatabaseMaintenance } from "./database-maintenance.js";
 import { startCapacityRuntime } from "./capacity-runtime.js";
 import { createDatabasePool, databaseUrlForEnvironment } from "./database-pool.js";
@@ -728,6 +728,7 @@ const requireV1Actor = asyncRoute(async (request, _response, next) => {
   if (["suspended", "closed"].includes(request.actor.account.status)) {
     throw new ApiError(403, "ACCOUNT_NOT_ACTIVE", "This account cannot access the current API.");
   }
+  assertExpectedAccount(request);
   next();
 });
 
@@ -6322,6 +6323,7 @@ app.post("/api/auth/logout", authRateLimit, async (request, response, next) => {
 });
 
 app.post("/api/v1/auth/logout", authRateLimit, requireV1AuthenticatedUser, asyncRoute(async (request, response) => {
+  assertExpectedAccount(request, request.authUser.id);
   await database.query("UPDATE auth_sessions SET revoked_at = now() WHERE session_id = $1", [request.authSessionId]);
   await database.query("DELETE FROM push_subscriptions WHERE auth_session_id = $1", [request.authSessionId]);
   response.clearCookie(sessionCookieName, { path: "/", sameSite: "lax", secure: process.env.NODE_ENV === "production" });

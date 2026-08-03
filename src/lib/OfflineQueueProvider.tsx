@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   OFFLINE_QUEUE_CHANGED_EVENT,
+  cancelOfflineQueueFlush,
   flushOfflineQueue,
   listOfflineOperations,
   removeOfflineOperation,
@@ -72,6 +73,7 @@ export function OfflineQueueProvider({
     window.addEventListener("offline", handleOffline);
     return () => {
       cancelled = true;
+      cancelOfflineQueueFlush(accountId);
       window.removeEventListener(OFFLINE_QUEUE_CHANGED_EVENT, handleChanged);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);

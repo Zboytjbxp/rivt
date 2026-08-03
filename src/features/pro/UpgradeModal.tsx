@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -17,6 +17,7 @@ import { RIVT_PRO_OFFER } from "./proOffer";
 import "./pro.css";
 
 interface UpgradeModalProps {
+  accountId: string;
   reason?: string;
   onClose: () => void;
 }
@@ -45,18 +46,41 @@ const INCLUDED = [
   "Self-serve cancellation from Settings",
 ];
 
-export function UpgradeModal({ reason, onClose }: UpgradeModalProps) {
+export function UpgradeModal({ accountId, reason, onClose }: UpgradeModalProps) {
   const [state, setState] = useState<"idle" | "paying" | "unavailable">("idle");
   const [message, setMessage] = useState("Subscription checkout is unavailable right now.");
+  const mountedRef = useRef(true);
+  const accountIdRef = useRef(accountId);
+  const checkoutControllerRef = useRef<AbortController | null>(null);
+  const checkoutInFlightRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    accountIdRef.current = accountId;
+    return () => {
+      mountedRef.current = false;
+      checkoutControllerRef.current?.abort();
+    };
+  }, [accountId]);
 
   async function handleUpgrade() {
+    if (checkoutInFlightRef.current) return;
+    checkoutInFlightRef.current = true;
+    const originAccountId = accountId;
+    const controller = new AbortController();
+    checkoutControllerRef.current?.abort();
+    checkoutControllerRef.current = controller;
     setState("paying");
     try {
-      const checkout = await startStripeCheckout();
+      const checkout = await startStripeCheckout(originAccountId, controller.signal);
+      if (!mountedRef.current || controller.signal.aborted || accountIdRef.current !== originAccountId) return;
       window.location.href = checkout.url;
     } catch (error) {
+      if (!mountedRef.current || controller.signal.aborted || accountIdRef.current !== originAccountId) return;
       setMessage(error instanceof BillingApiError ? "Subscriptions are temporarily unavailable. Try again in a moment." : "Billing is not available right now.");
       setState("unavailable");
+    } finally {
+      if (checkoutControllerRef.current === controller) checkoutControllerRef.current = null;
+      checkoutInFlightRef.current = false;
     }
   }
 
