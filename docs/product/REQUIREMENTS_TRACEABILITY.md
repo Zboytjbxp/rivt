@@ -1,5 +1,29 @@
 # Gate A Requirements Traceability
 
+## Packet 95 - Provider-evidence policy boundary (PR verification complete)
+
+- `GA-OPS-004` remains **Blocker**. This packet does not create or validate
+  recovery evidence; it prevents later evidence from redefining pinned
+  recovery policy.
+- `GA-OPS-005` remains **Partial**. Incident policy remains subject to the
+  active launch hold and independent evidence and approval requirements.
+- `GA-OPS-007` gains a clean production build, application/security lint,
+  486/486 unit/frontend tests, all four browser E2E journeys, zero known
+  production dependency vulnerabilities, the non-reproducing original PoC,
+  and a clean independent change-aware security re-review. Pull-request Gate A
+  run `30788718976` additionally passes all 28 disposable-PostgreSQL
+  integration tests, the same four browser journeys, patch formatting, and
+  the production dependency audit. It remains **Partial** pending merge and
+  exact deployed-source evidence. The run stops only at the intentional final
+  enforcement of the unchanged 21-item readiness block.
+- `GA-OPS-008` remains **Partial**. Packet 95 is unmerged and undeployed and
+  creates no deployment evidence.
+- `GA-OPS-009` remains **Blocker**. This authority-boundary fix does not prove
+  production hosting, redundancy, recovery, or launch readiness.
+- No merge, deployment, provider call, added cost, credential access,
+  production-data action, launch-hold clearance, Railway Stage 1, ACH
+  activation, or incident closure is authorized by this packet.
+
 ## Packet 87 — Money-integrity containment (local verification)
 
 - `GA-FND-003` gains one authoritative amount boundary for each invoice path:

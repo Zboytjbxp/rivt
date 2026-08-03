@@ -22,6 +22,7 @@ import {
 import {
   validateProviderEvidenceOverlay,
   validateProviderEvidenceWorktree,
+  validateProviderPolicyWorktree,
 } from "./provider-evidence-overlay.js";
 import { stripeConnectRuntimeProof } from "../server/stripe-connect.js";
 
@@ -1005,9 +1006,12 @@ export async function runEvidenceVerification({
   now = new Date(),
   overlayValidator = validateProviderEvidenceOverlay,
   plan,
+  policyRoot,
+  requirePolicyRoot = false,
   rootDir = process.cwd(),
   evidenceRoot = rootDir,
   sourceCommit,
+  sourceWorktreeValidator = validateProviderPolicyWorktree,
   expectedLiveCommit,
   worktreeValidator = validateProviderEvidenceWorktree,
 } = {}) {
@@ -1028,6 +1032,7 @@ export async function runEvidenceVerification({
         findingCodes: planValidation.findings,
         overlayDigest: null,
         overlayValidated: false,
+        policyRootValidated: null,
         sourceCommit: fullSourceCommitPattern.test(sourceCommit ?? "") ? sourceCommit : null,
         status: "blocked",
       },
@@ -1049,7 +1054,50 @@ export async function runEvidenceVerification({
         findingCodes: ["SOURCE_COMMIT_MISMATCH"],
         overlayDigest: null,
         overlayValidated: false,
+        policyRootValidated: null,
         sourceCommit: fullSourceCommitPattern.test(sourceCommit ?? "") ? sourceCommit : null,
+        status: "blocked",
+      },
+    };
+  }
+  if (
+    requirePolicyRoot
+    && (typeof policyRoot !== "string" || policyRoot.length === 0)
+  ) {
+    return {
+      ok: false,
+      externallyVerifiedEvidence,
+      report: {
+        controls,
+        evidenceCommit: fullSourceCommitPattern.test(evidenceCommit ?? "")
+          ? evidenceCommit
+          : null,
+        findingCodes: ["POLICY_ROOT_REQUIRED"],
+        overlayDigest: null,
+        overlayValidated: false,
+        policyRootValidated: false,
+        sourceCommit,
+        status: "blocked",
+      },
+    };
+  }
+  const sourceWorktree = requirePolicyRoot
+    ? sourceWorktreeValidator({ policyRoot, sourceCommit })
+    : { ok: true, findingCodes: [] };
+  if (evidenceCommit === undefined && !sourceWorktree.ok) {
+    return {
+      ok: false,
+      externallyVerifiedEvidence,
+      report: {
+        controls,
+        evidenceCommit: null,
+        findingCodes: Array.isArray(sourceWorktree.findingCodes)
+          ? [...new Set(sourceWorktree.findingCodes)].sort()
+          : ["POLICY_ROOT_UNTRUSTED"],
+        overlayDigest: null,
+        overlayValidated: null,
+        policyRootValidated: false,
+        sourceCommit,
         status: "blocked",
       },
     };
@@ -1058,14 +1106,14 @@ export async function runEvidenceVerification({
     const overlay = overlayValidator({
       evidenceCommit,
       plan,
-      rootDir,
+      rootDir: evidenceRoot,
       sourceCommit,
     });
     const evidenceWorktree = worktreeValidator({
       evidenceCommit,
       evidenceRoot,
     });
-    if (!overlay.ok || !evidenceWorktree.ok) {
+    if (!overlay.ok || !sourceWorktree.ok || !evidenceWorktree.ok) {
       return {
         ok: false,
         externallyVerifiedEvidence,
@@ -1079,9 +1127,13 @@ export async function runEvidenceVerification({
             ...(Array.isArray(evidenceWorktree.findingCodes)
               ? evidenceWorktree.findingCodes
               : []),
+            ...(Array.isArray(sourceWorktree.findingCodes)
+              ? sourceWorktree.findingCodes
+              : []),
           ])].sort(),
           overlayDigest: overlay.report?.overlayDigest ?? null,
-          overlayValidated: false,
+          overlayValidated: overlay.ok === true && evidenceWorktree.ok === true,
+          policyRootValidated: requirePolicyRoot ? sourceWorktree.ok === true : null,
           sourceCommit,
           status: "blocked",
         },
@@ -1238,6 +1290,7 @@ export async function runEvidenceVerification({
       findingCodes: ok ? [] : ["PROVIDER_EVIDENCE_INCOMPLETE"],
       overlayDigest: overlayReport?.overlayDigest ?? null,
       overlayValidated: evidenceCommit === undefined ? null : true,
+      policyRootValidated: requirePolicyRoot ? true : null,
       sourceCommit,
       status: ok ? "verified" : "blocked",
     },
@@ -1255,23 +1308,29 @@ export function evaluateRepositoryReadiness({
   incidentPath = defaultIncidentPath,
   now = new Date(),
   paymentProviderPath = defaultPaymentProviderPath,
+  rootDir,
+  policyRoot = rootDir ?? process.cwd(),
   recoveryPath = defaultRecoveryPath,
-  rootDir = process.cwd(),
+  evidenceRoot = policyRoot,
 } = {}) {
-  const incidentConfigPath = resolveRepositoryConfig(rootDir, incidentPath);
-  const recoveryConfigPath = resolveRepositoryConfig(rootDir, recoveryPath);
-  const paymentConfigPath = resolveRepositoryConfig(rootDir, paymentProviderPath);
+  const incidentConfigPath = resolveRepositoryConfig(policyRoot, incidentPath);
+  const recoveryConfigPath = resolveRepositoryConfig(policyRoot, recoveryPath);
+  const paymentConfigPath = resolveRepositoryConfig(policyRoot, paymentProviderPath);
   const recoveryPolicy = loadRecoveryPolicy(recoveryConfigPath);
   const paymentProviderPolicy = loadPaymentProviderPolicy(paymentConfigPath);
-  const recoveryEvidenceByPath = readRecoveryPolicyEvidence(recoveryPolicy, { rootDir });
-  const paymentProviderEvidence = readPaymentProviderEvidence(paymentProviderPolicy, { rootDir });
+  const recoveryEvidenceByPath = readRecoveryPolicyEvidence(recoveryPolicy, {
+    rootDir: evidenceRoot,
+  });
+  const paymentProviderEvidence = readPaymentProviderEvidence(paymentProviderPolicy, {
+    rootDir: evidenceRoot,
+  });
   return evaluateLaunchReadiness({
     incidentConfig: loadIncidentRoutingConfig(incidentConfigPath),
     recoveryPolicy,
     paymentProviderPolicy,
   }, {
     externallyVerifiedEvidence,
-    incidentEvidenceRoot: rootDir,
+    incidentEvidenceRoot: evidenceRoot,
     now,
     paymentProviderEvidence,
     recoveryEvidenceByPath,
@@ -1295,23 +1354,41 @@ function readinessSummary(readiness) {
 }
 
 export async function runProviderEvidenceGate(options = {}) {
-  const verification = await runEvidenceVerification(options);
+  const verification = await runEvidenceVerification({
+    ...options,
+    requirePolicyRoot: options.evidenceCommit !== undefined,
+  });
   let readiness;
-  if (options.evidenceCommit !== undefined && verification.report.overlayValidated !== true) {
+  if (
+    options.evidenceCommit !== undefined
+    && (
+      verification.report.overlayValidated !== true
+      || verification.report.policyRootValidated !== true
+    )
+  ) {
     readiness = {
       ok: false,
-      findings: [{ code: "EVIDENCE_OVERLAY_UNTRUSTED", source: "readiness" }],
+      findings: [{
+        code: verification.report.overlayValidated !== true
+          ? "EVIDENCE_OVERLAY_UNTRUSTED"
+          : "POLICY_ROOT_UNTRUSTED",
+        source: "readiness",
+      }],
     };
   } else {
     try {
       const evaluateReadiness = options.evaluateReadiness ?? evaluateRepositoryReadiness;
       readiness = await evaluateReadiness({
+        evidenceRoot: options.evidenceRoot
+          ?? options.policyRoot
+          ?? options.rootDir
+          ?? process.cwd(),
         externallyVerifiedEvidence: verification.externallyVerifiedEvidence,
         incidentPath: options.incidentPath,
         now: options.now,
         paymentProviderPath: options.paymentProviderPath,
+        policyRoot: options.policyRoot ?? options.rootDir ?? process.cwd(),
         recoveryPath: options.recoveryPath,
-        rootDir: options.evidenceRoot ?? options.rootDir,
       });
     } catch {
       readiness = {
@@ -1331,10 +1408,20 @@ export async function runProviderEvidenceGate(options = {}) {
       findingCodes: verification.report.findingCodes,
       overlayDigest: verification.report.overlayDigest,
       overlayValidated: verification.report.overlayValidated,
+      policyRootValidated: verification.report.policyRootValidated,
       providerEvidence: {
         status: verification.ok ? "verified" : "blocked",
       },
+      evidenceRevision: verification.report.evidenceCommit
+        ?? verification.report.sourceCommit,
+      policyRevision: verification.report.sourceCommit,
       readiness: summarizedReadiness,
+      rootRoles: {
+        evidence: options.evidenceCommit === undefined
+          ? "immutable-source"
+          : "protected-overlay",
+        policy: "immutable-source",
+      },
       schemaVersion: 1,
       sourceCommit: verification.report.sourceCommit,
       status: ok ? "ready" : "blocked",
@@ -1477,6 +1564,7 @@ export async function main(argv = process.argv.slice(2), { environment = process
     paymentProviderPath:
       parsed.values.get("--payment-provider-file") ?? defaultPaymentProviderPath,
     plan: parsedPlan.plan,
+    policyRoot: process.cwd(),
     recoveryPath: parsed.values.get("--recovery-file") ?? defaultRecoveryPath,
     rootDir: process.cwd(),
     sourceCommit: parsed.values.get("--source-commit"),

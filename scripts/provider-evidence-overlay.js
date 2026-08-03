@@ -20,10 +20,8 @@ const allowedModifiedPaths = new Set([
   "docs/delivery/DEPLOYMENT_LEDGER.md",
   "docs/delivery/RISKS.md",
   "docs/delivery/packets/87_MONEY_INTEGRITY_CONTAINMENT.md",
-  "docs/operations/incident-routing.json",
   "docs/operations/incidents/2026-07-29-production-credential-exposure.md",
   "docs/operations/payment-provider-readiness.json",
-  "docs/operations/recovery-policy.json",
   "docs/product/REQUIREMENTS_TRACEABILITY.md",
 ]);
 
@@ -109,25 +107,28 @@ function defaultGitRunner(rootDir, args, { allowFailure = false } = {}) {
   };
 }
 
-export function validateProviderEvidenceWorktree({
-  evidenceCommit,
-  evidenceRoot,
-  gitRunner = defaultGitRunner,
-} = {}) {
+function validatePinnedWorktree({
+  commit,
+  root,
+  codePrefix,
+  gitRunner,
+  reportCommitKey,
+  reportRootKey,
+}) {
   const findingCodes = [];
   let canonicalRoot = null;
-  if (!fullCommitPattern.test(evidenceCommit ?? "")) {
-    findingCodes.push("EVIDENCE_WORKTREE_COMMIT_INVALID");
+  if (!fullCommitPattern.test(commit ?? "")) {
+    findingCodes.push(`${codePrefix}_WORKTREE_COMMIT_INVALID`);
   }
   try {
-    const rootStat = fs.lstatSync(evidenceRoot);
+    const rootStat = fs.lstatSync(root);
     if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
-      findingCodes.push("EVIDENCE_WORKTREE_INVALID");
+      findingCodes.push(`${codePrefix}_WORKTREE_INVALID`);
     } else {
-      canonicalRoot = fs.realpathSync(evidenceRoot);
+      canonicalRoot = fs.realpathSync(root);
     }
   } catch {
-    findingCodes.push("EVIDENCE_WORKTREE_INVALID");
+    findingCodes.push(`${codePrefix}_WORKTREE_INVALID`);
   }
   if (findingCodes.length === 0) {
     const topLevelResult = gitRunner(canonicalRoot, ["rev-parse", "--show-toplevel"]);
@@ -142,24 +143,54 @@ export function validateProviderEvidenceWorktree({
     const head = headResult.ok ? decodeUtf8(headResult.stdout)?.trim() : null;
     try {
       if (!topLevel || fs.realpathSync(topLevel) !== canonicalRoot) {
-        findingCodes.push("EVIDENCE_WORKTREE_INVALID");
+        findingCodes.push(`${codePrefix}_WORKTREE_INVALID`);
       }
     } catch {
-      findingCodes.push("EVIDENCE_WORKTREE_INVALID");
+      findingCodes.push(`${codePrefix}_WORKTREE_INVALID`);
     }
-    if (head !== evidenceCommit) findingCodes.push("EVIDENCE_WORKTREE_COMMIT_MISMATCH");
+    if (head !== commit) findingCodes.push(`${codePrefix}_WORKTREE_COMMIT_MISMATCH`);
     if (!statusResult.ok || statusResult.stdout.length > 0) {
-      findingCodes.push("EVIDENCE_WORKTREE_DIRTY");
+      findingCodes.push(`${codePrefix}_WORKTREE_DIRTY`);
     }
   }
   return {
     ok: findingCodes.length === 0,
     findingCodes: uniqueSorted(findingCodes),
     report: {
-      evidenceCommit: fullCommitPattern.test(evidenceCommit ?? "") ? evidenceCommit : null,
-      evidenceRoot: canonicalRoot,
+      [reportCommitKey]: fullCommitPattern.test(commit ?? "") ? commit : null,
+      [reportRootKey]: canonicalRoot,
     },
   };
+}
+
+export function validateProviderEvidenceWorktree({
+  evidenceCommit,
+  evidenceRoot,
+  gitRunner = defaultGitRunner,
+} = {}) {
+  return validatePinnedWorktree({
+    codePrefix: "EVIDENCE",
+    commit: evidenceCommit,
+    gitRunner,
+    reportCommitKey: "evidenceCommit",
+    reportRootKey: "evidenceRoot",
+    root: evidenceRoot,
+  });
+}
+
+export function validateProviderPolicyWorktree({
+  policyRoot,
+  sourceCommit,
+  gitRunner = defaultGitRunner,
+} = {}) {
+  return validatePinnedWorktree({
+    codePrefix: "POLICY",
+    commit: sourceCommit,
+    gitRunner,
+    reportCommitKey: "policyRevision",
+    reportRootKey: "policyRoot",
+    root: policyRoot,
+  });
 }
 
 function verifyCommit(rootDir, commit, gitRunner) {

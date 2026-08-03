@@ -31,6 +31,7 @@ tightly controlled sessions. Do not combine packets to save time.
 | 92 | Railway production-posture decision and tunable hosting thresholds |
 | 93 | Railway replica, worker, migration, and connection safety |
 | 94 | Railway activation readiness, staged rollback, and exact-approval boundary |
+| 95 | Immutable launch-policy and mutable provider-evidence root separation; remediation of `csf_04e2d7dfe8fbe53f254d821c` |
 
 Before each packet read:
 

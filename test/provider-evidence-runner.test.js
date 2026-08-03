@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   compiledProviderAdapters,
+  evaluateRepositoryReadiness,
   evidenceRunnerExitCode,
   parseEvidencePlanSecret,
   runEvidenceVerification,
@@ -924,6 +925,249 @@ test("the gate passes identities in memory and keeps readiness and evidence inde
   }
 });
 
+test("launch readiness keeps source policy separate from overlay evidence", async () => {
+  const fixture = createFixture();
+  const policyRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rivt-policy-root-"));
+  let readinessInput = null;
+  try {
+    const result = await runProviderEvidenceGate({
+      adapters: { "github-production-synthetic": verifiedAdapter() },
+      credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+      evidenceCommit: "b".repeat(40),
+      evidenceRoot: fixture.rootDir,
+      evaluateReadiness(input) {
+        readinessInput = input;
+        return { ok: false, findings: [{ code: "ACTIVE_LAUNCH_HOLD", source: "incident" }] };
+      },
+      expectedLiveCommit: sourceCommit,
+      now,
+      overlayValidator: () => ({
+        ok: true,
+        findingCodes: [],
+        report: {
+          evidenceCommit: "b".repeat(40),
+          overlayDigest: "c".repeat(64),
+          sourceCommit,
+        },
+      }),
+      plan: fixture.plan,
+      policyRoot,
+      sourceCommit,
+      sourceWorktreeValidator: () => ({ ok: true, findingCodes: [] }),
+      worktreeValidator: () => ({ ok: true, findingCodes: [] }),
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.report.providerEvidence.status, "verified");
+    assert.deepEqual(result.report.readiness.findingCodes, [
+      { code: "ACTIVE_LAUNCH_HOLD", source: "incident" },
+    ]);
+    assert.equal(readinessInput.policyRoot, policyRoot);
+    assert.equal(readinessInput.evidenceRoot, fixture.rootDir);
+    assert.equal(Object.hasOwn(readinessInput, "rootDir"), false);
+    assert.equal(result.report.policyRevision, sourceCommit);
+    assert.equal(result.report.evidenceRevision, "b".repeat(40));
+    assert.deepEqual(result.report.rootRoles, {
+      evidence: "protected-overlay",
+      policy: "immutable-source",
+    });
+  } finally {
+    fs.rmSync(policyRoot, { recursive: true, force: true });
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("overlay copies of launch policy cannot clear the immutable source hold", () => {
+  const policyRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rivt-source-policy-copy-"));
+  const evidenceRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rivt-evidence-policy-copy-"));
+  try {
+    fs.cpSync(
+      path.join(process.cwd(), "docs"),
+      path.join(policyRoot, "docs"),
+      { recursive: true },
+    );
+    fs.cpSync(
+      path.join(process.cwd(), "docs"),
+      path.join(evidenceRoot, "docs"),
+      { recursive: true },
+    );
+    const sourceIncidentPath = path.join(
+      policyRoot,
+      "docs",
+      "operations",
+      "incident-routing.json",
+    );
+    const incidentPath = path.join(
+      evidenceRoot,
+      "docs",
+      "operations",
+      "incident-routing.json",
+    );
+    const recoveryPath = path.join(
+      evidenceRoot,
+      "docs",
+      "operations",
+      "recovery-policy.json",
+    );
+    const sourceIncident = JSON.parse(fs.readFileSync(sourceIncidentPath, "utf8"));
+    const incident = JSON.parse(fs.readFileSync(incidentPath, "utf8"));
+    const recovery = JSON.parse(fs.readFileSync(recoveryPath, "utf8"));
+    sourceIncident.launchHold = {
+      active: true,
+      reason: "synthetic immutable-source hold",
+    };
+    incident.launchHold = { active: false, reason: "overlay attempted to clear hold" };
+    recovery.targets.rpoMinutes = 525_600;
+    recovery.targets.rtoMinutes = 525_600;
+    fs.writeFileSync(
+      sourceIncidentPath,
+      `${JSON.stringify(sourceIncident, null, 2)}\n`,
+      "utf8",
+    );
+    fs.writeFileSync(incidentPath, `${JSON.stringify(incident, null, 2)}\n`, "utf8");
+    fs.writeFileSync(recoveryPath, `${JSON.stringify(recovery, null, 2)}\n`, "utf8");
+
+    const readiness = evaluateRepositoryReadiness({
+      evidenceRoot,
+      now,
+      policyRoot,
+    });
+
+    assert.ok(readiness.findings.some((finding) => finding.code === "ACTIVE_LAUNCH_HOLD"));
+    assert.equal(readiness.summary.activeLaunchHold, true);
+  } finally {
+    fs.rmSync(policyRoot, { recursive: true, force: true });
+    fs.rmSync(evidenceRoot, { recursive: true, force: true });
+  }
+});
+
+test("an evidence commit without an explicit source policy root fails before adapters", async () => {
+  const fixture = createFixture();
+  let adapterCalled = false;
+  try {
+    const adapter = verifiedAdapter();
+    const result = await runProviderEvidenceGate({
+      adapters: {
+        "github-production-synthetic": {
+          ...adapter,
+          async verify(context) {
+            adapterCalled = true;
+            return adapter.verify(context);
+          },
+        },
+      },
+      credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+      evidenceCommit: "b".repeat(40),
+      evidenceRoot: fixture.rootDir,
+      expectedLiveCommit: sourceCommit,
+      now,
+      plan: fixture.plan,
+      rootDir: fixture.rootDir,
+      sourceCommit,
+    });
+
+    assert.equal(adapterCalled, false);
+    assert.equal(result.ok, false);
+    assert.ok(result.report.findingCodes.includes("POLICY_ROOT_REQUIRED"));
+    assert.equal(result.report.readiness.status, "blocked");
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("an untrusted policy root stops before adapters and readiness", async () => {
+  const fixture = createFixture();
+  let adapterCalled = false;
+  let readinessCalled = false;
+  try {
+    const adapter = verifiedAdapter();
+    const result = await runProviderEvidenceGate({
+      adapters: {
+        "github-production-synthetic": {
+          ...adapter,
+          async verify(context) {
+            adapterCalled = true;
+            return adapter.verify(context);
+          },
+        },
+      },
+      credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+      evidenceCommit: "b".repeat(40),
+      evidenceRoot: fixture.rootDir,
+      evaluateReadiness() {
+        readinessCalled = true;
+        return { ok: true, findings: [] };
+      },
+      expectedLiveCommit: sourceCommit,
+      now,
+      overlayValidator: () => ({
+        ok: true,
+        findingCodes: [],
+        report: {
+          evidenceCommit: "b".repeat(40),
+          overlayDigest: "c".repeat(64),
+          sourceCommit,
+        },
+      }),
+      plan: fixture.plan,
+      policyRoot: fixture.rootDir,
+      sourceCommit,
+      sourceWorktreeValidator: () => ({
+        ok: false,
+        findingCodes: ["POLICY_WORKTREE_DIRTY"],
+      }),
+      worktreeValidator: () => ({ ok: true, findingCodes: [] }),
+    });
+
+    assert.equal(adapterCalled, false);
+    assert.equal(readinessCalled, false);
+    assert.ok(result.report.findingCodes.includes("POLICY_WORKTREE_DIRTY"));
+    assert.deepEqual(result.report.readiness.findingCodes, [
+      { code: "POLICY_ROOT_UNTRUSTED", source: "readiness" },
+    ]);
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
+test("required policy validation cannot attest success without overlay mode", async () => {
+  const fixture = createFixture();
+  let adapterCalled = false;
+  try {
+    const result = await runEvidenceVerification({
+      adapters: {
+        "github-production-synthetic": {
+          ...verifiedAdapter(),
+          async verify() {
+            adapterCalled = true;
+            return { status: "verified", reasonCode: "SHOULD_NOT_RUN" };
+          },
+        },
+      },
+      credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+      expectedLiveCommit: sourceCommit,
+      now,
+      plan: fixture.plan,
+      policyRoot: fixture.rootDir,
+      requirePolicyRoot: true,
+      rootDir: fixture.rootDir,
+      sourceCommit,
+      sourceWorktreeValidator: () => ({
+        ok: false,
+        findingCodes: ["POLICY_WORKTREE_DIRTY"],
+      }),
+    });
+
+    assert.equal(adapterCalled, false);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.report.findingCodes, ["POLICY_WORKTREE_DIRTY"]);
+    assert.equal(result.report.overlayValidated, null);
+    assert.equal(result.report.policyRootValidated, false);
+  } finally {
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
 test("an invalid S/E overlay stops before any provider adapter executes", async () => {
   const fixture = createFixture();
   let adapterCalled = false;
@@ -949,8 +1193,10 @@ test("an invalid S/E overlay stops before any provider adapter executes", async 
         report: { overlayDigest: "c".repeat(64) },
       }),
       plan: fixture.plan,
+      policyRoot: fixture.rootDir,
       rootDir: fixture.rootDir,
       sourceCommit,
+      sourceWorktreeValidator: () => ({ ok: true, findingCodes: [] }),
       worktreeValidator: () => ({ ok: true, findingCodes: [] }),
     });
     assert.equal(adapterCalled, false);
@@ -984,8 +1230,10 @@ test("an untrusted evidence root is never parsed by readiness evaluation", async
         report: { overlayDigest: null },
       }),
       plan: fixture.plan,
+      policyRoot: fixture.rootDir,
       rootDir: fixture.rootDir,
       sourceCommit,
+      sourceWorktreeValidator: () => ({ ok: true, findingCodes: [] }),
       worktreeValidator: () => ({ ok: true, findingCodes: [] }),
     });
     assert.equal(readinessCalled, false);

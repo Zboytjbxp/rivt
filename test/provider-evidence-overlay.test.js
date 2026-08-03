@@ -10,6 +10,7 @@ import {
   providerEvidenceOverlayContract,
   validateProviderEvidenceOverlay,
   validateProviderEvidenceWorktree,
+  validateProviderPolicyWorktree,
 } from "../scripts/provider-evidence-overlay.js";
 
 function run(rootDir, args, { input } = {}) {
@@ -171,6 +172,30 @@ test("the filesystem evidence root must be a clean checkout of the exact evidenc
   assert.ok(mismatch.findingCodes.includes("EVIDENCE_WORKTREE_COMMIT_MISMATCH"));
 });
 
+test("the policy root must be a clean checkout of the exact deployed source commit", (t) => {
+  const fixture = createRepository(t);
+  const exact = validateProviderPolicyWorktree({
+    policyRoot: fixture.rootDir,
+    sourceCommit: fixture.sourceCommit,
+  });
+  assert.equal(exact.ok, true);
+  assert.equal(exact.report.policyRevision, fixture.sourceCommit);
+
+  write(fixture.rootDir, "untracked.txt", "not policy\n");
+  const dirty = validateProviderPolicyWorktree({
+    policyRoot: fixture.rootDir,
+    sourceCommit: fixture.sourceCommit,
+  });
+  assert.ok(dirty.findingCodes.includes("POLICY_WORKTREE_DIRTY"));
+
+  fs.unlinkSync(path.join(fixture.rootDir, "untracked.txt"));
+  const mismatch = validateProviderPolicyWorktree({
+    policyRoot: fixture.rootDir,
+    sourceCommit: "f".repeat(40),
+  });
+  assert.ok(mismatch.findingCodes.includes("POLICY_WORKTREE_COMMIT_MISMATCH"));
+});
+
 test("full commit IDs and source ancestry are mandatory", (t) => {
   const fixture = createValidOverlay(t);
   const abbreviated = validateProviderEvidenceOverlay({
@@ -199,6 +224,42 @@ test("runtime, workflow, and arbitrary documentation paths are outside the overl
   const result = validateProviderEvidenceOverlay({ ...fixture, evidenceCommit });
   assert.equal(result.ok, false);
   assert.deepEqual(result.findingCodes, ["OVERLAY_PATH_NOT_ALLOWED"]);
+});
+
+test("incident and recovery launch policy are immutable in the evidence overlay", async (t) => {
+  await t.test("incident launch hold", () => {
+    const fixture = createRepository(t);
+    write(
+      fixture.rootDir,
+      "docs/operations/incident-routing.json",
+      '{"launchHold":{"active":false},"version":4}\n',
+    );
+    const evidenceCommit = commitAll(fixture.rootDir, "clear launch hold");
+    const result = validateProviderEvidenceOverlay({ ...fixture, evidenceCommit });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.findingCodes.includes("OVERLAY_PATH_NOT_ALLOWED"));
+    assert.deepEqual(result.report.changedPaths, [
+      "docs/operations/incident-routing.json",
+    ]);
+  });
+
+  await t.test("recovery targets", () => {
+    const fixture = createRepository(t);
+    write(
+      fixture.rootDir,
+      "docs/operations/recovery-policy.json",
+      '{"targets":{"rpoMinutes":525600,"rtoMinutes":525600},"version":3}\n',
+    );
+    const evidenceCommit = commitAll(fixture.rootDir, "weaken recovery targets");
+    const result = validateProviderEvidenceOverlay({ ...fixture, evidenceCommit });
+
+    assert.equal(result.ok, false);
+    assert.ok(result.findingCodes.includes("OVERLAY_PATH_NOT_ALLOWED"));
+    assert.deepEqual(result.report.changedPaths, [
+      "docs/operations/recovery-policy.json",
+    ]);
+  });
 });
 
 test("an intermediate forbidden change cannot be hidden by reverting it before evidence HEAD", (t) => {
@@ -309,7 +370,7 @@ test("deletions and executable-mode changes are denied on otherwise allowlisted 
     run(fixture.rootDir, [
       "update-index",
       "--chmod=+x",
-      "docs/operations/recovery-policy.json",
+      "docs/operations/payment-provider-readiness.json",
     ]);
     const evidenceCommit = run(fixture.rootDir, ["commit", "-m", "unsafe mode"])
       && run(fixture.rootDir, ["rev-parse", "HEAD"]);
