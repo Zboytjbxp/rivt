@@ -19,7 +19,7 @@ Run this rehearsal before any named customer cohort and repeat it at least every
 
 ## Protected Workflow Record
 
-Packet 98 candidate PR #19 proposes
+Packet 98 PR #19 merged into the release candidate and adds
 `.github/workflows/incident-rehearsal.yml` as a manual-only,
 provider-verifiable record of the human rehearsal. It is not a scheduled
 monitor and it does not create the human exercise by itself.
@@ -36,9 +36,11 @@ Before an authorized dispatch, independently confirm:
 - `RIVT_REHEARSAL_RAILWAY_TOKEN` is a narrowly controlled rehearsal
   credential;
 - the public half of a dedicated, non-passphrase rehearsal SSH identity is
-  registered with the intended Railway workspace, while the matching private
-  half exists only as protected environment secret
-  `RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY`;
+  registered with the intended Railway workspace; setup supplies its private
+  half to protected environment secret
+  `RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY`, removes every known temporary
+  local copy, and records that GitHub cannot reveal the stored value for an
+  independent post-upload pair or exclusivity check;
 - the reviewed Railway relay ED25519 fingerprint remains
   `SHA256:+S1xg92FrnHz6pY3bpkmh1OGtWQGNANXilPzlxA7B1g`; and
 - the operator has separately explained and received approval for the
@@ -51,6 +53,26 @@ restrict reviewers, and rotate or remove it when the rehearsal path is retired.
 When activated, the checked-in workflow consumes an identity that must first
 be separately approved; it does not register, replace, or delete a Railway
 key.
+
+Current configuration checkpoint (2026-08-03; not a rehearsal receipt):
+
+- `production-rehearsal` requires reviewer `Zboytjbxp` and permits only branch
+  `master`. `prevent_self_review=false` because no second repository
+  administrator exists. The normal deployment path enters the single-owner
+  approval gate, but GitHub currently reports `can_admins_bypass=true`; the
+  gate is neither independent nor unbypassable.
+- Railway workspace key `rivt-production-rehearsal-20260803` is registered as
+  `ssh-ed25519` with fingerprint
+  `SHA256:oOWKlKo88YhJsRDhUMJNNK6+wD2aGdYgRATtyS6+XVE`.
+- The setup supplied the newly generated private key to protected environment
+  secret `RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY`, and GitHub lists that secret
+  name. GitHub does not expose its stored value, so post-upload content,
+  key-pair matching, and exclusivity were not independently verified. The known
+  temporary local key material was removed after setup.
+- The rehearsal token and exact source/resource variables remain absent, the
+  workflow is not on `master`, and no run has been dispatched. Do not dispatch
+  until each still-open checklist item above is separately satisfied and the
+  dispatch itself is explained and approved.
 
 The operator must complete the human exercise first, then truthfully confirm
 the workflow's required attestations and provide a bounded non-secret decision-

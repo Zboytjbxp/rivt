@@ -2,9 +2,9 @@
 
 Last updated: 2026-08-03 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Protected incident-rehearsal workflow hardening under the active production credential-containment hold; no rehearsal has been dispatched.
+Current phase: Protected incident-rehearsal activation under the active production credential-containment hold; the protected environment and dedicated SSH identity are configured, but no rehearsal has been dispatched.
 Active packet: `docs/delivery/packets/98_INCIDENT_REHEARSAL_WORKFLOW.md`
-Repository branch: `codex/incident-rehearsal-workflow` (candidate base `c8d1596d0a1dd371f3951fdf484cac8704391f38`)
+Repository branch: `codex/packet98-provider-configuration` (release-candidate base `f5b42b68fd133f2880cd0e8792e98f2742bed8d3`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -56,7 +56,7 @@ deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
 
-## Packet 98 protected incident-rehearsal workflow - source candidate PR #19; PR CI passed; no run or provider evidence
+## Packet 98 protected incident-rehearsal workflow - source merged to release candidate; protected credential configured; no run
 
 - A dedicated manual-only workflow at
   `.github/workflows/incident-rehearsal.yml` is bound to the RIVT repository,
@@ -91,15 +91,38 @@ decision.
   `migrationStatus()` path. The workflow performs no deployment, migration,
   backup, restore, provider creation/configuration, payment activation, or
   production-data mutation.
-- A protected `production-rehearsal` environment with required review and a
-  `master` restriction must be independently confirmed before any later
-  dispatch. A separately approved dedicated Railway workspace SSH public key
-  and matching protected GitHub private-key secret must also be configured;
-  Railway documents that a workspace key can reach every service in the
-  workspace. This packet configured none of them, and no provider evidence
-  currently confirms that the protected environment, key, or secret exists.
-  No environment, variable, secret, SSH key, provider resource, or run is
-  created by this packet.
+- PR #19 merged into `codex/release-candidate-consolidation` as
+  `f5b42b68fd133f2880cd0e8792e98f2742bed8d3`. Release-candidate Gate A run
+  `30823461905` passed every engineering check and stopped only at the
+  intentional launch-readiness enforcement. The workflow is not on `master`
+  and is not deployed.
+- Under Michael's explicit 2026-08-03 approval, GitHub environment
+  `production-rehearsal` now requires reviewer `Zboytjbxp` and admits only the
+  `master` branch. `prevent_self_review` is `false` because `Zboytjbxp` is the
+  repository's only administrator. The normal deployment path enters this
+  single-owner approval gate, but GitHub currently reports
+  `can_admins_bypass=true`; this is neither independent nor unbypassable
+  approval.
+- Railway workspace `zboytjbxp's Projects` now contains only the dedicated
+  workspace key `rivt-production-rehearsal-20260803`, type `ssh-ed25519`, with
+  fingerprint `SHA256:oOWKlKo88YhJsRDhUMJNNK6+wD2aGdYgRATtyS6+XVE`.
+  The setup supplied the newly generated private key to environment secret
+  `RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY`, and GitHub lists that protected
+  secret name. GitHub does not expose its stored value, so post-upload content,
+  key-pair matching, and exclusivity were not independently verified. The known
+  temporary local private and public files were deleted after registration.
+- This is a configuration checkpoint, not protected evidence revision `E` or
+  proof of a rehearsal. GitHub still lists no rehearsal Railway token and no
+  exact source/project/environment/service variables, and the workflow has
+  zero runs. No workflow dispatch, deployment, production-data access or
+  mutation, provider receipt, added cost, or launch action occurred.
+- The documentation-only follow-up passes production build, application and
+  security lint, 551/551 unit/frontend tests, all four database-independent
+  integration checks, all four browser E2E journeys, diff integrity, and the
+  production dependency audit with zero known vulnerabilities. Twenty-three
+  PostgreSQL-backed integration cases skip locally because this clean worktree
+  has no `TEST_DATABASE_URL`; the unchanged release-candidate code already
+  passed the full disposable-PostgreSQL suite in Gate A run `30823461905`.
 - The workflow records an operator-attested human exercise plus exact automated
   observations; it does not independently prove that a person told the truth.
   The decision log, provider receipts, later approvals, and complete runbook

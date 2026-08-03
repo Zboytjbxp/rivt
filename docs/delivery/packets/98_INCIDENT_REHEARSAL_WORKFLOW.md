@@ -11,13 +11,17 @@ proof that the human exercise occurred.
 - Branch: `codex/incident-rehearsal-workflow`
 - Candidate pull request: `#19`
 - Candidate base: `c8d1596d0a1dd371f3951fdf484cac8704391f38`
+- Release-candidate merge: `f5b42b68fd133f2880cd0e8792e98f2742bed8d3`
+- Provider-configuration follow-up: `codex/packet98-provider-configuration`
 - Workflow: `.github/workflows/incident-rehearsal.yml`
 - Protected environment required before use: `production-rehearsal`
 
-This packet does not authorize or perform a workflow dispatch, provider call,
-credential use, production-data action, deployment, migration, backup,
-restore, provider-resource change, added cost, incident closure, launch-hold
-clearance, ACH activation, or public launch.
+The source implementation packet did not authorize or perform external
+configuration. Michael separately approved the bounded, no-cost environment
+and SSH-identity configuration recorded below. Neither approval authorizes a
+workflow dispatch, production-data action, deployment, migration, backup,
+restore, incident closure, launch-hold clearance, ACH activation, or public
+launch.
 
 ## Root problem
 
@@ -92,18 +96,35 @@ Packet 98 is accepted only when:
 
 The workflow cannot produce trusted evidence before it exists on protected
 `master` and production serves the same exact source. Before an authorized
-dispatch, the owner must independently confirm the `production-rehearsal`
-environment's required reviewers and branch restriction, its exact source and
-Railway resource variables, and its narrowly controlled Railway token. The
-owner must also confirm that the public half of one dedicated, non-passphrase
-rehearsal key is registered as the intended Railway workspace key and that the
-matching private half exists only in the protected
-`RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY` environment secret. Railway documents
-that a workspace SSH key can access every service in that workspace, so this
-credential must be separately approved, access-controlled, and rotated. This
-source packet does not create, register, or store that external credential,
-and no provider evidence currently confirms that the protected environment,
-workspace key, or GitHub secret is configured.
+dispatch, the owner must independently confirm the exact source and Railway
+resource variables plus a narrowly controlled Railway token.
+
+The separately approved 2026-08-03 configuration completed only the protected
+environment and SSH-identity portion of that boundary:
+
+- GitHub environment `production-rehearsal` requires reviewer `Zboytjbxp` and
+  has one custom deployment policy for branch `master`.
+- `prevent_self_review` is `false` because `Zboytjbxp` is the only repository
+  administrator. The normal deployment path enters this single-owner approval
+  gate, but GitHub currently reports `can_admins_bypass=true`; the gate is
+  neither independent nor unbypassable.
+- Railway workspace `zboytjbxp's Projects` contains dedicated key
+  `rivt-production-rehearsal-20260803`, type `ssh-ed25519`, fingerprint
+  `SHA256:oOWKlKo88YhJsRDhUMJNNK6+wD2aGdYgRATtyS6+XVE`.
+- The setup supplied the newly generated private key to protected environment
+  secret `RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY`, and GitHub lists that secret
+  name. GitHub does not expose its stored value, so post-upload content,
+  key-pair matching, and exclusivity were not independently verified. The known
+  temporary local key files were deleted.
+- The protected environment currently has no rehearsal Railway token and no
+  exact source/project/environment/service variables. The workflow has not
+  run.
+
+Railway documents that a workspace SSH key can access every service in that
+workspace, so this credential remains high impact and must be rotated or
+removed when the rehearsal path is retired. This configuration observation is
+not a hand-authored provider receipt, protected evidence revision `E`, or
+proof that the human rehearsal occurred.
 
 The current master gate evaluates source-only readiness and cannot consume the
 later protected evidence revision `E` and approval revision `A`. Resolve that
@@ -131,5 +152,19 @@ readiness, fabricating a receipt, or weakening branch protection.
 - PR #19 Gate A run `30821741994` passed all engineering steps. The separate
   launch-readiness enforcement remained correctly inapplicable because this
   packet targets the release-candidate branch, not `master`.
+- PR #19 merged into the release candidate as
+  `f5b42b68fd133f2880cd0e8792e98f2742bed8d3`. Release-candidate run
+  `30823461905` passed every engineering check and stopped only at the
+  intentional launch-readiness enforcement.
+- Read-only provider verification at `2026-08-03T14:53:39Z` confirmed the
+  environment reviewer, `master` policy, protected secret name, Railway key
+  name/type/fingerprint, removal of local key material, and zero matching
+  workflow runs. It did not access the private-key value or production data.
+- The documentation-only follow-up passes production build, application and
+  security lint, 551/551 unit/frontend tests, all four database-independent
+  integration checks, all four browser E2E journeys, diff integrity, and the
+  production dependency audit with zero known vulnerabilities. Twenty-three
+  PostgreSQL-backed cases skip locally without `TEST_DATABASE_URL`; unchanged
+  release-candidate code passed them in Gate A run `30823461905`.
 - No workflow run, protected evidence revision `E`, later approval revision
   `A`, incident closure, hold clearance, deployment, or launch is claimed.
