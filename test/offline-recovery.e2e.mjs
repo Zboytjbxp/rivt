@@ -272,6 +272,19 @@ async function reopenInstalledAppOffline(page) {
   await page.goto(`${baseUrl}/app`, { waitUntil: "domcontentloaded", timeout: 20_000 });
 }
 
+async function reopenInstalledAppOfflineInFreshPage(context, page, configurePage) {
+  // A real installed-app relaunch creates a fresh window in the existing
+  // browser profile. Model that boundary directly: Cache Storage,
+  // localStorage, IndexedDB, and the active service-worker registration stay
+  // in the context, while Chromium cannot reuse the prior tab's DevTools
+  // reload/navigation state for module subresources.
+  await page.close();
+  const nextPage = await context.newPage();
+  configurePage(nextPage);
+  await nextPage.goto(`${baseUrl}/app`, { waitUntil: "domcontentloaded", timeout: 20_000 });
+  return nextPage;
+}
+
 async function signOutThroughAccountMenu(page) {
   await page.locator(".v2-account-button").click();
   await page.getByRole("dialog", { name: "Account menu" }).getByRole("button", { name: "Sign out" }).click();
@@ -286,6 +299,20 @@ async function logInThroughEmailForm(page, source) {
   await email.fill(source.email);
   await password.fill("Valid-password-1!");
   await submit.click();
+}
+
+async function logInThroughEmailFormAndWait(page, source) {
+  await logInThroughEmailForm(page, source);
+  try {
+    await waitForToolsWithDiagnostics(page, 8_000);
+  } catch (error) {
+    // A fast mocked account retirement can finish replacing the auth screen
+    // after the first synthetic pointer event. Retry the still-visible form
+    // once; a real workspace failure or a second missed submit remains fatal.
+    if (!await page.getByLabel("Email").isVisible().catch(() => false)) throw error;
+    await logInThroughEmailForm(page, source);
+    await waitForToolsWithDiagnostics(page, 15_000);
+  }
 }
 
 async function switchToSecondAccount(page) {
@@ -646,8 +673,7 @@ async function runAccountTransitionRegression(browserInstance) {
     await page.getByRole("button", { name: "Log in", exact: true }).first().waitFor({ timeout: 10_000 });
     assert.equal(await page.locator(".activity-toast").count(), 0, "Account A's toast must be cleared at sign-out");
 
-    await logInThroughEmailForm(page, accountB);
-    await waitForToolsWithDiagnostics(page, 15_000);
+    await logInThroughEmailFormAndWait(page, accountB);
     await page.getByRole("button", { name: "Work", exact: true }).click();
     await page.getByRole("navigation", { name: "Work stages" }).getByRole("button", { name: /^Active\b/ }).click();
     await page.getByRole("heading", { name: activeWorkB.job.title, exact: true }).waitFor({ timeout: 10_000 });
@@ -975,8 +1001,7 @@ async function runOnboardingRefreshIsolationRegression(browserInstance) {
       window.dispatchEvent(new CustomEvent("rivt:session-expired", { detail: { accountId } }));
     }, onboardingAccountA.id);
     await page.getByRole("button", { name: "Log in", exact: true }).first().waitFor({ timeout: 10_000 });
-    await logInThroughEmailForm(page, tradespersonAccountB);
-    await waitForToolsWithDiagnostics(page, 15_000);
+    await logInThroughEmailFormAndWait(page, tradespersonAccountB);
     const accountBDestination = await page.locator("main.v2-main").getAttribute("data-destination");
     assert.ok(accountBDestination, "Account B must reach a canonical app destination before the stale Account A refresh is released");
 
@@ -1110,8 +1135,7 @@ async function runRestrictedShopTalkCreateIsolationRegression(browserInstance) {
       window.dispatchEvent(new CustomEvent("rivt:session-expired", { detail: { accountId } }));
     }, account.id);
     await page.getByRole("button", { name: "Log in", exact: true }).first().waitFor({ timeout: 10_000 });
-    await logInThroughEmailForm(page, tradespersonAccountB);
-    await waitForToolsWithDiagnostics(page, 15_000);
+    await logInThroughEmailFormAndWait(page, tradespersonAccountB);
     await page.getByRole("button", { name: "Shop Talk", exact: true }).click();
     await page.getByText("No matching Shop Talk posts", { exact: true }).waitFor({ timeout: 10_000 });
     await page.evaluate(({ title, body }) => {
@@ -1292,8 +1316,7 @@ async function runOfflineQueueAccountTransitionRegression(browserInstance) {
       window.dispatchEvent(new CustomEvent("rivt:session-expired", { detail: { accountId } }));
     }, account.id);
     await page.getByRole("button", { name: "Log in", exact: true }).first().waitFor({ timeout: 10_000 });
-    await logInThroughEmailForm(page, tradespersonAccountB);
-    await waitForToolsWithDiagnostics(page, 15_000);
+    await logInThroughEmailFormAndWait(page, tradespersonAccountB);
     await page.evaluate(({ first, second }) => {
       const accountALeakText = [first, second, "Account A private records"];
       const check = () => {
@@ -1527,18 +1550,21 @@ try {
     viewport: { width: 390, height: 844 },
     serviceWorkers: "allow",
   });
-  const page = await context.newPage();
+  let page = await context.newPage();
   const browserEvents = [];
-  page.on("pageerror", (error) => browserEvents.push(`pageerror:${error.message}`));
-  page.on("requestfailed", (request) => {
-    const url = new URL(request.url());
-    if (!url.pathname.startsWith("/api/")) {
-      browserEvents.push(`requestfailed:${url.pathname}:${request.failure()?.errorText ?? "unknown"}`);
-    }
-  });
+  const configurePage = (targetPage) => {
+    targetPage.on("pageerror", (error) => browserEvents.push(`pageerror:${error.message}`));
+    targetPage.on("requestfailed", (request) => {
+      const url = new URL(request.url());
+      if (!url.pathname.startsWith("/api/")) {
+        browserEvents.push(`requestfailed:${url.pathname}:${request.failure()?.errorText ?? "unknown"}`);
+      }
+    });
+  };
+  configurePage(page);
   let serveApi = true;
 
-  await page.route("**/api/**", (route) => {
+  await context.route("**/api/**", (route) => {
     if (!serveApi) return route.abort("internetdisconnected");
     const url = new URL(route.request().url());
     if (url.pathname === "/api/v1/me") return json(route, { data: account });
@@ -1601,7 +1627,8 @@ try {
       missingManifestPaths: [...new Set(manifestPaths)].filter((value) => !cachedPaths.includes(value)),
     };
   });
-  assert.ok(cacheCoverage.cachedPaths.some((value) => /^\/assets\/index-.*\.js$/.test(value)), `App entry was not precached: ${cacheCoverage.cachedPaths.join(", ")}`);
+  const cachedEntryPath = cacheCoverage.cachedPaths.find((value) => /^\/assets\/index-.*\.js$/.test(value));
+  assert.ok(cachedEntryPath, `App entry was not precached: ${cacheCoverage.cachedPaths.join(", ")}`);
   assert.deepEqual(
     cacheCoverage.missingManifestPaths,
     [],
@@ -1665,7 +1692,26 @@ try {
   await context.setOffline(true);
   await page.waitForFunction(() => navigator.onLine === false);
   const offlineReloadStartedAt = Date.now();
-  await reopenInstalledAppOffline(page);
+  page = await reopenInstalledAppOfflineInFreshPage(context, page, configurePage);
+  const freshPageWorkerState = await page.evaluate(async (entryPath) => {
+    const controllerUrl = navigator.serviceWorker.controller?.scriptURL ?? null;
+    const cacheNames = await caches.keys();
+    const cachedPaths = (await Promise.all(cacheNames.map(async (cacheName) => (
+      await (await caches.open(cacheName)).keys()
+    )))).flat().map((request) => new URL(request.url).pathname);
+    return { controllerUrl, entryCached: cachedPaths.includes(entryPath), cachedPaths };
+  }, cachedEntryPath);
+  assert.ok(freshPageWorkerState.controllerUrl, "The fresh installed-app page must start under service-worker control");
+  assert.equal(
+    new URL(freshPageWorkerState.controllerUrl).searchParams.get("build"),
+    cachedEntryPath,
+    "The fresh installed-app page must use the worker registered for the cached entry build",
+  );
+  assert.equal(
+    freshPageWorkerState.entryCached,
+    true,
+    `The fresh installed-app page must retain the cached entry module: ${freshPageWorkerState.cachedPaths.join(", ")}`,
+  );
   await waitForToolsWithDiagnostics(page, 10_000, browserEvents);
   assert.ok(
     Date.now() - offlineReloadStartedAt < 10_000,
