@@ -1,8 +1,21 @@
 import "dotenv/config";
-import crypto from "node:crypto";
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
-import { evaluateIncidentReadiness, loadIncidentRoutingConfig } from "./incident-readiness-check.js";
+import {
+  evaluateIncidentReadiness,
+  loadIncidentRoutingConfig,
+} from "./incident-readiness-check.js";
+import {
+  launchHoldConfigurationDigest,
+  paymentProviderConfigurationDigest,
+  recoveryPolicyConfigurationDigest,
+} from "./readiness-configuration-digests.js";
+
+export {
+  launchHoldConfigurationDigest,
+  paymentProviderConfigurationDigest,
+  recoveryPolicyConfigurationDigest,
+} from "./readiness-configuration-digests.js";
 import {
   canonicalRepositoryEvidence,
   isExternallyVerifiedEvidence,
@@ -94,57 +107,42 @@ function evidenceRecord(
   );
 }
 
-export function recoveryPolicyConfigurationDigest(policy = {}) {
-  const reviewedConfiguration = {
-    version: policy.version ?? null,
-    status: policy.status ?? null,
-    targets: policy.targets ?? null,
-    backupSchedule: policy.backupSchedule ?? null,
-    latestSuccessfulBackup: policy.latestSuccessfulBackup ?? null,
-    missedBackupAlert: policy.missedBackupAlert ?? null,
-    backupRetention: policy.backupRetention ?? null,
-    failureDomain: policy.failureDomain ?? null,
-    restoreDrillCadence: policy.restoreDrillCadence ?? null,
-    latestNamedArtifactRestore: policy.latestNamedArtifactRestore ?? null,
-    approvals: Object.fromEntries(
-      ["founder", "operations"].map((key) => [key, {
-        status: policy.approvals?.[key]?.status ?? null,
-        approvedBy: policy.approvals?.[key]?.approvedBy ?? null,
-        approvedAt: policy.approvals?.[key]?.approvedAt ?? null,
-      }]),
-    ),
-  };
-  return crypto.createHash("sha256").update(JSON.stringify(reviewedConfiguration)).digest("hex");
-}
+function validLaunchHoldClearance(
+  clearance,
+  { incidentConfig, recoveryPolicy, paymentProviderPolicy, now },
+) {
+  if (!clearance || typeof clearance !== "object" || Array.isArray(clearance)) return false;
+  const expectedKeys = [
+    "configurationDigest",
+    "decidedAt",
+    "decidedByRoleId",
+    "incident",
+    "reason",
+    "status",
+  ];
+  const actualKeys = Object.keys(clearance).sort();
+  if (
+    actualKeys.length !== expectedKeys.length
+    || !actualKeys.every((key, index) => key === expectedKeys[index])
+  ) return false;
 
-export function paymentProviderConfigurationDigest(policy = {}) {
-  const state = policy.verifiedProductionState ?? {};
-  const approval = policy.approval ?? {};
-  const reviewedConfiguration = {
-    version: policy.version ?? null,
-    status: policy.status ?? null,
-    mode: policy.mode ?? null,
-    featureFlagVerifiedOff: policy.featureFlagVerifiedOff === true,
-    providerDestinationScope: policy.providerDestinationScope ?? null,
-    runtimeScopeAttestation: policy.runtimeScopeAttestation ?? null,
-    signedDeliveryVerified: policy.signedDeliveryVerified === true,
-    verifiedAt: policy.verifiedAt ?? null,
-    evidenceProvider: policy.evidenceProvider ?? null,
-    evidence: policy.evidence ?? null,
-    evidenceSha256: policy.evidenceSha256 ?? null,
-    verifiedProductionState: {
-      enabled: state.enabled ?? null,
-      configured: state.configured ?? null,
-      webhookConfigured: state.webhookConfigured ?? null,
-      mode: state.mode ?? null,
-    },
-    approval: {
-      status: approval.status ?? null,
-      approvedBy: approval.approvedBy ?? null,
-      approvedAt: approval.approvedAt ?? null,
-    },
-  };
-  return crypto.createHash("sha256").update(JSON.stringify(reviewedConfiguration)).digest("hex");
+  const decidedAt = dateValue(clearance.decidedAt);
+  return (
+    clearance.status === "cleared"
+    && hasValue(clearance.decidedByRoleId)
+    && hasValue(clearance.decidedAt)
+    && hasValue(clearance.incident)
+    && clearance.incident === incidentConfig.launchHold?.incident
+    && hasValue(clearance.reason)
+    && decidedAt !== null
+    && decidedAt.getTime() <= now.getTime()
+    && sha256Value(clearance.configurationDigest)
+    && clearance.configurationDigest === launchHoldConfigurationDigest({
+      incidentConfig,
+      recoveryPolicy,
+      paymentProviderPolicy,
+    })
+  );
 }
 
 function readRepositoryEvidence(evidence, { rootDir = process.cwd() } = {}) {
@@ -707,6 +705,7 @@ export function evaluateLaunchReadiness(
     recoveryEvidenceSha256ByPath = {},
     externallyVerifiedEvidence = new Set(),
     incidentEvidenceRoot = process.cwd(),
+    launchHoldClearance = null,
   } = {},
 ) {
   const evidenceCanonicalUseCount = allEvidencePathUseCounts({
@@ -733,8 +732,14 @@ export function evaluateLaunchReadiness(
     externallyVerifiedEvidence,
     evidenceCanonicalUseCount,
   });
+  const sourceLaunchHoldActive = Boolean(incidentConfig.launchHold?.active);
+  const launchHoldClearanceApplied = sourceLaunchHoldActive && validLaunchHoldClearance(
+    launchHoldClearance,
+    { incidentConfig, recoveryPolicy, paymentProviderPolicy, now },
+  );
+  const activeLaunchHold = sourceLaunchHoldActive && !launchHoldClearanceApplied;
   const findings = [
-    ...(incidentConfig.launchHold?.active
+    ...(activeLaunchHold
       ? [{
           code: "ACTIVE_LAUNCH_HOLD",
           message:
@@ -756,7 +761,9 @@ export function evaluateLaunchReadiness(
       incident: incident.summary,
       recovery: recovery.summary,
       paymentProvider: paymentProvider.summary,
-      activeLaunchHold: Boolean(incidentConfig.launchHold?.active),
+      activeLaunchHold,
+      sourceLaunchHoldActive,
+      launchHoldClearanceApplied,
     },
   };
 }

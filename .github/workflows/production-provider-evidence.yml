@@ -7,6 +7,10 @@ on:
         description: Full current production-evidence-overlay SHA containing only allowlisted evidence updates
         required: true
         type: string
+      approval_commit:
+        description: Full protected production-launch-approval SHA (required only for launch-ready mode)
+        required: false
+        type: string
       mode:
         description: Verify provider controls only, or require full launch readiness
         required: true
@@ -47,7 +51,9 @@ jobs:
       - name: Validate immutable source and evidence revisions
         shell: bash
         env:
+          RIVT_APPROVAL_COMMIT: ${{ inputs.approval_commit }}
           RIVT_EVIDENCE_COMMIT: ${{ inputs.evidence_commit }}
+          RIVT_PROVIDER_EVIDENCE_MODE: ${{ inputs.mode }}
           RIVT_PRODUCTION_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
         run: |
           set -euo pipefail
@@ -67,6 +73,54 @@ jobs:
             echo "Evidence commit must follow the deployed source commit."
             exit 1
           fi
+          case "$RIVT_PROVIDER_EVIDENCE_MODE" in
+            providers-only)
+              if [[ -n "$RIVT_APPROVAL_COMMIT" ]]; then
+                echo "Provider-only verification must not accept an approval commit."
+                exit 1
+              fi
+              ;;
+            launch-ready)
+              if [[ ! "$RIVT_APPROVAL_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
+                echo "Launch-ready verification requires a full approval commit."
+                exit 1
+              fi
+              if [[ "$RIVT_APPROVAL_COMMIT" == "$RIVT_EVIDENCE_COMMIT" || "$RIVT_APPROVAL_COMMIT" == "$RIVT_PRODUCTION_SOURCE_COMMIT" ]]; then
+                echo "Approval commit must follow and remain distinct from source and evidence."
+                exit 1
+              fi
+              ;;
+            *)
+              echo "Provider evidence mode is invalid."
+              exit 1
+              ;;
+          esac
+
+      - name: Verify evidence and approval branches are protected
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RIVT_PROVIDER_EVIDENCE_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          verify_protected_branch() {
+            local branch_name="$1"
+            local protected
+            protected="$(gh api \
+              --method GET \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "repos/$GITHUB_REPOSITORY/branches/$branch_name" \
+              --jq '.protected')"
+            if [[ "$protected" != "true" ]]; then
+              echo "Required trust-root branch '$branch_name' is not protected."
+              exit 1
+            fi
+          }
+          verify_protected_branch "production-evidence-overlay"
+          if [[ "$RIVT_PROVIDER_EVIDENCE_MODE" == "launch-ready" ]]; then
+            verify_protected_branch "production-launch-approval"
+          fi
 
       - name: Check out immutable deployed source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -84,6 +138,15 @@ jobs:
           persist-credentials: false
           ref: refs/heads/production-evidence-overlay
 
+      - name: Check out protected post-evidence approval overlay
+        if: inputs.mode == 'launch-ready'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          path: approval
+          persist-credentials: false
+          ref: refs/heads/production-launch-approval
+
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
@@ -95,6 +158,7 @@ jobs:
         shell: bash
         env:
           RIVT_EVIDENCE_COMMIT: ${{ inputs.evidence_commit }}
+          RIVT_PROVIDER_EVIDENCE_PLAN_JSON: ${{ secrets.RIVT_PROVIDER_EVIDENCE_PLAN_JSON }}
           RIVT_PRODUCTION_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
         run: |
           set -euo pipefail
@@ -119,10 +183,51 @@ jobs:
           fi
           node "$source_root/scripts/provider-evidence-overlay.js" \
             --json \
+            --require-plan \
             --root "$evidence_root" \
             --source-commit "$RIVT_PRODUCTION_SOURCE_COMMIT" \
             --evidence-commit "$RIVT_EVIDENCE_COMMIT"
           echo "RIVT_EVIDENCE_ROOT=$evidence_root" >> "$GITHUB_ENV"
+
+      - name: Validate protected approval revision before dependencies or provider credentials
+        if: inputs.mode == 'launch-ready'
+        shell: bash
+        env:
+          RIVT_APPROVAL_COMMIT: ${{ inputs.approval_commit }}
+          RIVT_EVIDENCE_COMMIT: ${{ inputs.evidence_commit }}
+          RIVT_PROVIDER_EVIDENCE_PLAN_JSON: ${{ secrets.RIVT_PROVIDER_EVIDENCE_PLAN_JSON }}
+          RIVT_PRODUCTION_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
+        run: |
+          set -euo pipefail
+          approval_root="$GITHUB_WORKSPACE/approval"
+          evidence_root="$GITHUB_WORKSPACE/evidence"
+          source_root="$GITHUB_WORKSPACE/source"
+          approval_branch_ref="refs/remotes/origin/production-launch-approval"
+          if ! git -C "$approval_root" show-ref --verify --quiet "$approval_branch_ref"; then
+            echo "The protected production-launch-approval branch was not fetched."
+            exit 1
+          fi
+          if [[ "$(git -C "$approval_root" rev-parse "$approval_branch_ref")" != "$RIVT_APPROVAL_COMMIT" ]]; then
+            echo "Approval commit must match the protected approval branch head."
+            exit 1
+          fi
+          if [[ "$(git -C "$approval_root" rev-parse HEAD)" != "$RIVT_APPROVAL_COMMIT" ]]; then
+            echo "Approval checkout does not match the requested approval revision."
+            exit 1
+          fi
+          if ! git -C "$approval_root" merge-base --is-ancestor "$RIVT_EVIDENCE_COMMIT" "$RIVT_APPROVAL_COMMIT"; then
+            echo "Approval commit must descend from the exact evidence commit."
+            exit 1
+          fi
+          node "$source_root/scripts/provider-approval-overlay.js" \
+            --json \
+            --source-commit "$RIVT_PRODUCTION_SOURCE_COMMIT" \
+            --policy-root "$source_root" \
+            --evidence-commit "$RIVT_EVIDENCE_COMMIT" \
+            --evidence-root "$evidence_root" \
+            --approval-commit "$RIVT_APPROVAL_COMMIT" \
+            --approval-root "$approval_root"
+          echo "RIVT_APPROVAL_ROOT=$approval_root" >> "$GITHUB_ENV"
 
       - name: Install locked dependencies without lifecycle scripts
         working-directory: source
@@ -136,6 +241,7 @@ jobs:
           RIVT_EVIDENCE_RAILWAY_TOKEN: ${{ secrets.RIVT_EVIDENCE_RAILWAY_TOKEN }}
           RIVT_EVIDENCE_SENTRY_TOKEN: ${{ secrets.RIVT_EVIDENCE_SENTRY_TOKEN }}
           RIVT_EVIDENCE_COMMIT: ${{ inputs.evidence_commit }}
+          RIVT_APPROVAL_COMMIT: ${{ inputs.approval_commit }}
           RIVT_PROVIDER_EVIDENCE_MODE: ${{ inputs.mode }}
           RIVT_PRODUCTION_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
           RIVT_PROVIDER_EVIDENCE_PLAN_JSON: ${{ secrets.RIVT_PROVIDER_EVIDENCE_PLAN_JSON }}
@@ -149,9 +255,16 @@ jobs:
             echo "Protected provider evidence plan is not configured."
             exit 1
           fi
+          approval_args=()
           case "$RIVT_PROVIDER_EVIDENCE_MODE" in
             providers-only) verification_mode="--verify-providers-only" ;;
-            launch-ready) verification_mode="--require-ready" ;;
+            launch-ready)
+              verification_mode="--require-ready"
+              approval_args=(
+                --approval-commit "$RIVT_APPROVAL_COMMIT"
+                --approval-root "$RIVT_APPROVAL_ROOT"
+              )
+              ;;
             *)
               echo "Provider evidence mode is invalid."
               exit 1
@@ -164,4 +277,5 @@ jobs:
             --evidence-commit "$RIVT_EVIDENCE_COMMIT" \
             --evidence-root "$RIVT_EVIDENCE_ROOT" \
             --source-commit "$RIVT_PRODUCTION_SOURCE_COMMIT" \
-            --expected-live-commit "$RIVT_PRODUCTION_SOURCE_COMMIT"
+            --expected-live-commit "$RIVT_PRODUCTION_SOURCE_COMMIT" \
+            "${approval_args[@]}"

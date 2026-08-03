@@ -6,6 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import {
   evaluateLaunchReadiness as evaluateLaunchReadinessBase,
+  launchHoldConfigurationDigest,
   loadPaymentProviderPolicy,
   loadRecoveryPolicy,
   paymentProviderConfigurationDigest,
@@ -1498,6 +1499,7 @@ test("launch readiness fails closed while an explicit incident hold is active", 
       ...readyIncidentConfig,
       launchHold: {
         active: true,
+        incident: "docs/operations/incidents/credential-containment.md",
         reason: "Emergency credential containment remains open.",
       },
     }),
@@ -1513,6 +1515,135 @@ test("launch readiness fails closed while an explicit incident hold is active", 
     message: "Emergency credential containment remains open.",
     source: "incident",
   }]);
+});
+
+test("a bound launch-hold clearance removes only the explicit active hold", () => {
+  const incidentConfig = withIncidentApprovalDigests({
+    ...readyIncidentConfig,
+    launchHold: {
+      active: true,
+      incident: "docs/operations/incidents/credential-containment.md",
+      reason: "Emergency credential containment remains open.",
+    },
+  });
+  const launchHoldClearance = {
+    status: "cleared",
+    decidedByRoleId: "founder",
+    decidedAt: "2026-06-21T11:59:00.000Z",
+    incident: "docs/operations/incidents/credential-containment.md",
+    reason: "Containment evidence and recovery controls were reviewed.",
+    configurationDigest: launchHoldConfigurationDigest({
+      incidentConfig,
+      recoveryPolicy: readyRecoveryPolicy,
+      paymentProviderPolicy: readyPaymentProviderPolicy,
+    }),
+  };
+
+  const result = evaluateLaunchReadiness({
+    incidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: readyPaymentProviderPolicy,
+  }, {
+    now: new Date("2026-06-21T12:00:00.000Z"),
+    launchHoldClearance,
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.findings, []);
+  assert.equal(result.summary.activeLaunchHold, false);
+  assert.equal(result.summary.sourceLaunchHoldActive, true);
+  assert.equal(result.summary.launchHoldClearanceApplied, true);
+});
+
+test("launch-hold clearance fails closed when its shape or configuration binding is invalid", () => {
+  const incidentConfig = withIncidentApprovalDigests({
+    ...readyIncidentConfig,
+    launchHold: {
+      active: true,
+      incident: "docs/operations/incidents/credential-containment.md",
+      reason: "Emergency credential containment remains open.",
+    },
+  });
+  const boundDigest = launchHoldConfigurationDigest({
+    incidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy: readyPaymentProviderPolicy,
+  });
+  const validClearance = {
+    status: "cleared",
+    decidedByRoleId: "founder",
+    decidedAt: "2026-06-21T11:59:00.000Z",
+    incident: "docs/operations/incidents/credential-containment.md",
+    reason: "Containment evidence and recovery controls were reviewed.",
+    configurationDigest: boundDigest,
+  };
+  const invalidClearances = [
+    { ...validClearance, configurationDigest: "0".repeat(64) },
+    { ...validClearance, status: "retained" },
+    { ...validClearance, decidedAt: "not-a-date" },
+    { ...validClearance, decidedAt: 0 },
+    { ...validClearance, decidedAt: "2026-06-21T12:00:01.000Z" },
+    { ...validClearance, incident: "docs/operations/incidents/unrelated.md" },
+    { ...validClearance, unexpected: true },
+  ];
+
+  for (const launchHoldClearance of invalidClearances) {
+    const result = evaluateLaunchReadiness({
+      incidentConfig,
+      recoveryPolicy: readyRecoveryPolicy,
+      paymentProviderPolicy: readyPaymentProviderPolicy,
+    }, {
+      now: new Date("2026-06-21T12:00:00.000Z"),
+      launchHoldClearance,
+    });
+
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.findings.map((finding) => finding.code), ["ACTIVE_LAUNCH_HOLD"]);
+    assert.equal(result.summary.activeLaunchHold, true);
+    assert.equal(result.summary.launchHoldClearanceApplied, false);
+  }
+});
+
+test("launch-hold clearance cannot hide any other readiness finding", () => {
+  const incidentConfig = withIncidentApprovalDigests({
+    ...readyIncidentConfig,
+    launchHold: {
+      active: true,
+      incident: "docs/operations/incidents/credential-containment.md",
+      reason: "Emergency credential containment remains open.",
+    },
+  });
+  const paymentProviderPolicy = { status: "blocked", mode: "unknown" };
+  const launchHoldClearance = {
+    status: "cleared",
+    decidedByRoleId: "founder",
+    decidedAt: "2026-06-21T11:59:00.000Z",
+    incident: "docs/operations/incidents/credential-containment.md",
+    reason: "Containment evidence and recovery controls were reviewed.",
+    configurationDigest: launchHoldConfigurationDigest({
+      incidentConfig,
+      recoveryPolicy: readyRecoveryPolicy,
+      paymentProviderPolicy,
+    }),
+  };
+
+  const result = evaluateLaunchReadiness({
+    incidentConfig,
+    recoveryPolicy: readyRecoveryPolicy,
+    paymentProviderPolicy,
+  }, {
+    now: new Date("2026-06-21T12:00:00.000Z"),
+    launchHoldClearance,
+  });
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.findings, [{
+    code: "PAYMENT_PROVIDER_NOT_APPROVED",
+    message: "Bank-payment configuration requires a current named approval; enabled mode also requires verified Connected accounts signed delivery.",
+    source: "payment_provider",
+  }]);
+  assert.equal(result.summary.activeLaunchHold, false);
+  assert.equal(result.summary.launchHoldClearanceApplied, true);
 });
 
 test("launch readiness fails closed when bank-payment launch state is not approved", () => {

@@ -1209,6 +1209,73 @@ test("an invalid S/E overlay stops before any provider adapter executes", async 
   }
 });
 
+test("an invalid post-evidence approval stops before any provider adapter executes", async () => {
+  const fixture = createFixture();
+  const policyRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rivt-approval-source-"));
+  const approvalRoot = fs.mkdtempSync(path.join(os.tmpdir(), "rivt-approval-root-"));
+  let adapterCalled = false;
+  try {
+    fs.cpSync(
+      path.join(process.cwd(), "docs"),
+      path.join(policyRoot, "docs"),
+      { recursive: true },
+    );
+    const adapter = verifiedAdapter();
+    const result = await runEvidenceVerification({
+      adapters: {
+        "github-production-synthetic": {
+          ...adapter,
+          async verify(context) {
+            adapterCalled = true;
+            return adapter.verify(context);
+          },
+        },
+      },
+      approvalCommit: "c".repeat(40),
+      approvalOverlayValidator: () => ({
+        ok: false,
+        findingCodes: ["APPROVAL_MANIFEST_PLAN_DIGEST_MISMATCH"],
+        manifest: null,
+        report: null,
+      }),
+      approvalRoot,
+      approvalWorktreeValidator: () => ({ ok: true, findingCodes: [] }),
+      credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "test-only-secret" },
+      evidenceCommit: "b".repeat(40),
+      evidenceRoot: fixture.rootDir,
+      expectedLiveCommit: sourceCommit,
+      now,
+      overlayValidator: () => ({
+        ok: true,
+        findingCodes: [],
+        report: {
+          evidenceCommit: "b".repeat(40),
+          overlayDigest: "d".repeat(64),
+          sourceCommit,
+        },
+      }),
+      plan: fixture.plan,
+      policyRoot,
+      requireApprovalRoot: true,
+      requirePolicyRoot: true,
+      sourceCommit,
+      sourceWorktreeValidator: () => ({ ok: true, findingCodes: [] }),
+      worktreeValidator: () => ({ ok: true, findingCodes: [] }),
+    });
+
+    assert.equal(adapterCalled, false);
+    assert.equal(result.ok, false);
+    assert.equal(result.report.approvalValidated, false);
+    assert.deepEqual(result.report.findingCodes, [
+      "APPROVAL_MANIFEST_PLAN_DIGEST_MISMATCH",
+    ]);
+  } finally {
+    fs.rmSync(approvalRoot, { recursive: true, force: true });
+    fs.rmSync(policyRoot, { recursive: true, force: true });
+    fs.rmSync(fixture.rootDir, { recursive: true, force: true });
+  }
+});
+
 test("an untrusted evidence root is never parsed by readiness evaluation", async () => {
   const fixture = createFixture();
   let readinessCalled = false;
@@ -1333,7 +1400,36 @@ test("CLI validation requires an explicit read-only protected-run contract", () 
     "--evidence-root", "evidence-root",
     "--source-commit", sourceCommit,
     "--expected-live-commit", sourceCommit,
+  ]).reasonCode, "APPROVAL_ARGUMENT_REQUIRED");
+  assert.equal(validateEvidenceRunnerArguments([
+    "--read-only",
+    "--require-ready",
+    "--approval-commit", "c".repeat(40),
+    "--approval-root", "approval-root",
+    "--evidence-commit", sourceCommit,
+    "--evidence-root", "evidence-root",
+    "--source-commit", sourceCommit,
+    "--expected-live-commit", sourceCommit,
   ]).ok, true);
+  assert.equal(validateEvidenceRunnerArguments([
+    "--read-only",
+    "--require-ready",
+    "--approval-commit", "c".repeat(40),
+    "--evidence-commit", sourceCommit,
+    "--evidence-root", "evidence-root",
+    "--source-commit", sourceCommit,
+    "--expected-live-commit", sourceCommit,
+  ]).reasonCode, "APPROVAL_ARGUMENT_PAIR_REQUIRED");
+  assert.equal(validateEvidenceRunnerArguments([
+    "--read-only",
+    "--verify-providers-only",
+    "--approval-commit", "c".repeat(40),
+    "--approval-root", "approval-root",
+    "--evidence-commit", sourceCommit,
+    "--evidence-root", "evidence-root",
+    "--source-commit", sourceCommit,
+    "--expected-live-commit", sourceCommit,
+  ]).reasonCode, "APPROVAL_ARGUMENT_NOT_ALLOWED");
   assert.equal(validateEvidenceRunnerArguments([
     "--read-only",
     "--require-ready",
@@ -1399,4 +1495,43 @@ test("the provider plan is accepted only as one bounded protected JSON secret", 
   } finally {
     fs.rmSync(fixture.rootDir, { recursive: true, force: true });
   }
+});
+
+test("the production evidence workflow validates protected S, E, and A before dependencies", () => {
+  const workflow = fs.readFileSync(
+    path.join(process.cwd(), ".github/workflows/production-provider-evidence.yml"),
+    "utf8",
+  );
+  const sourceCheckout = workflow.indexOf("name: Check out immutable deployed source");
+  const protectionAttestation = workflow.indexOf(
+    "name: Verify evidence and approval branches are protected",
+  );
+  const evidenceCheckout = workflow.indexOf("name: Check out protected evidence overlay");
+  const approvalCheckout = workflow.indexOf(
+    "name: Check out protected post-evidence approval overlay",
+  );
+  const evidenceValidation = workflow.indexOf(
+    "name: Validate evidence-only overlay before dependencies or provider credentials",
+  );
+  const approvalValidation = workflow.indexOf(
+    "name: Validate protected approval revision before dependencies or provider credentials",
+  );
+  const dependencyInstall = workflow.indexOf("name: Install locked dependencies without lifecycle scripts");
+
+  assert.equal(workflow.includes("approval_commit:"), true);
+  assert.equal(workflow.includes("refs/heads/production-launch-approval"), true);
+  assert.equal(workflow.includes("repos/$GITHUB_REPOSITORY/branches/$branch_name"), true);
+  assert.equal(workflow.includes("verify_protected_branch \"production-evidence-overlay\""), true);
+  assert.equal(workflow.includes("verify_protected_branch \"production-launch-approval\""), true);
+  assert.equal(workflow.includes("--require-plan"), true);
+  assert.equal(workflow.includes("scripts/provider-approval-overlay.js"), true);
+  assert.equal(workflow.includes("--approval-commit \"$RIVT_APPROVAL_COMMIT\""), true);
+  assert.equal(workflow.includes("--approval-root \"$RIVT_APPROVAL_ROOT\""), true);
+  assert.equal(protectionAttestation >= 0, true);
+  assert.equal(sourceCheckout > protectionAttestation, true);
+  assert.equal(evidenceCheckout > sourceCheckout, true);
+  assert.equal(approvalCheckout > evidenceCheckout, true);
+  assert.equal(evidenceValidation > approvalCheckout, true);
+  assert.equal(approvalValidation > evidenceValidation, true);
+  assert.equal(dependencyInstall > approvalValidation, true);
 });

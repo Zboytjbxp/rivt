@@ -1,5 +1,4 @@
 import "dotenv/config";
-import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { pathToFileURL } from "node:url";
 import {
@@ -8,6 +7,9 @@ import {
   repositoryEvidenceSha256,
   resolveRegularRepositoryFile,
 } from "./repository-evidence.js";
+import { incidentRoutingConfigurationDigest } from "./readiness-configuration-digests.js";
+
+export { incidentRoutingConfigurationDigest } from "./readiness-configuration-digests.js";
 
 const defaultConfigPath = "docs/operations/incident-routing.json";
 const privateRouteEvidenceType = "private-route-delivery-test";
@@ -31,35 +33,6 @@ const rehearsalEvidenceType = "incident-rehearsal-test";
 
 function hasValue(value) {
   return typeof value === "string" && value.trim() && value.trim().toUpperCase() !== "TBD";
-}
-
-function canonicalValue(value) {
-  if (Array.isArray(value)) return value.map((entry) => canonicalValue(entry));
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.keys(value)
-        .sort()
-        .filter((key) => value[key] !== undefined)
-        .map((key) => [key, canonicalValue(value[key])]),
-    );
-  }
-  return value;
-}
-
-export function incidentRoutingConfigurationDigest(config = {}) {
-  const reviewedConfiguration = {
-    ...config,
-    approvals: Object.fromEntries(
-      Object.entries(config.approvals ?? {}).map(([key, approval]) => {
-        const reviewedApproval = { ...(approval ?? {}) };
-        delete reviewedApproval.configurationDigest;
-        return [key, reviewedApproval];
-      }),
-    ),
-  };
-  return createHash("sha256")
-    .update(JSON.stringify(canonicalValue(reviewedConfiguration)))
-    .digest("hex");
 }
 
 function configuredContactRoute(config, routeId) {

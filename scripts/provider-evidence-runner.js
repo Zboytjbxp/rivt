@@ -24,6 +24,11 @@ import {
   validateProviderEvidenceWorktree,
   validateProviderPolicyWorktree,
 } from "./provider-evidence-overlay.js";
+import {
+  validateProviderApprovalOverlay,
+  validateProviderApprovalWorktree,
+} from "./provider-approval-overlay.js";
+import { materializeProviderReadiness } from "./provider-readiness-materializer.js";
 import { stripeConnectRuntimeProof } from "../server/stripe-connect.js";
 
 const defaultIncidentPath = "docs/operations/incident-routing.json";
@@ -1001,13 +1006,21 @@ function adapterRegistryEntry(registry, adapterId) {
 
 export async function runEvidenceVerification({
   adapters = compiledProviderAdapters,
+  approvalCommit,
+  approvalOverlayValidator = validateProviderApprovalOverlay,
+  approvalRoot,
+  approvalWorktreeValidator = validateProviderApprovalWorktree,
   credentials = {},
   evidenceCommit,
+  incidentPath = defaultIncidentPath,
   now = new Date(),
   overlayValidator = validateProviderEvidenceOverlay,
   plan,
+  paymentProviderPath = defaultPaymentProviderPath,
   policyRoot,
   requirePolicyRoot = false,
+  requireApprovalRoot = false,
+  recoveryPath = defaultRecoveryPath,
   rootDir = process.cwd(),
   evidenceRoot = rootDir,
   sourceCommit,
@@ -1019,6 +1032,8 @@ export async function runEvidenceVerification({
   const controls = [];
   const proofIds = new Set();
   let overlayReport = null;
+  let approvalReport = null;
+  let materializedReadiness = null;
   const planValidation = validateEvidencePlan(plan);
   if (!planValidation.ok) {
     return {
@@ -1076,6 +1091,36 @@ export async function runEvidenceVerification({
         overlayDigest: null,
         overlayValidated: false,
         policyRootValidated: false,
+        sourceCommit,
+        status: "blocked",
+      },
+    };
+  }
+  if (
+    requireApprovalRoot
+    && (
+      typeof approvalRoot !== "string"
+      || approvalRoot.length === 0
+      || !fullSourceCommitPattern.test(approvalCommit ?? "")
+    )
+  ) {
+    return {
+      ok: false,
+      externallyVerifiedEvidence,
+      materializedReadiness,
+      report: {
+        approvalCommit: fullSourceCommitPattern.test(approvalCommit ?? "")
+          ? approvalCommit
+          : null,
+        approvalValidated: false,
+        controls,
+        evidenceCommit: fullSourceCommitPattern.test(evidenceCommit ?? "")
+          ? evidenceCommit
+          : null,
+        findingCodes: ["APPROVAL_ROOT_REQUIRED"],
+        overlayDigest: null,
+        overlayValidated: false,
+        policyRootValidated: null,
         sourceCommit,
         status: "blocked",
       },
@@ -1140,6 +1185,132 @@ export async function runEvidenceVerification({
       };
     }
     overlayReport = overlay.report;
+  }
+
+  if (requireApprovalRoot) {
+    let policies;
+    try {
+      policies = loadRepositoryPolicyBundle({
+        incidentPath,
+        paymentProviderPath,
+        policyRoot,
+        recoveryPath,
+      });
+    } catch {
+      policies = null;
+    }
+    const approvalWorktree = approvalWorktreeValidator({
+      approvalCommit,
+      approvalRoot,
+    });
+    const approvalOverlay = policies
+      ? approvalOverlayValidator({
+          approvalCommit,
+          evidenceCommit,
+          evidenceOverlayDigest: overlayReport?.overlayDigest,
+          incidentConfig: policies.incidentConfig,
+          now,
+          paymentProviderPolicy: policies.paymentProviderPolicy,
+          plan,
+          recoveryPolicy: policies.recoveryPolicy,
+          rootDir: approvalRoot,
+          sourceCommit,
+        })
+      : {
+          ok: false,
+          findingCodes: ["APPROVAL_SOURCE_POLICY_INVALID"],
+          manifest: null,
+          report: null,
+        };
+    if (!approvalWorktree.ok || !approvalOverlay.ok) {
+      return {
+        ok: false,
+        externallyVerifiedEvidence,
+        materializedReadiness,
+        report: {
+          approvalCommit: fullSourceCommitPattern.test(approvalCommit ?? "")
+            ? approvalCommit
+            : null,
+          approvalValidated: false,
+          controls,
+          evidenceCommit: overlayReport?.evidenceCommit ?? null,
+          findingCodes: [...new Set([
+            ...(Array.isArray(approvalWorktree.findingCodes)
+              ? approvalWorktree.findingCodes
+              : []),
+            ...(Array.isArray(approvalOverlay.findingCodes)
+              ? approvalOverlay.findingCodes
+              : []),
+          ])].sort(),
+          overlayDigest: overlayReport?.overlayDigest ?? null,
+          overlayValidated: true,
+          policyRootValidated: true,
+          sourceCommit,
+          status: "blocked",
+        },
+      };
+    }
+    const evidenceRecords = [];
+    for (const claim of plan.claims) {
+      const evidence = readReceipt(evidenceRoot, claim);
+      if (!evidence.ok) {
+        return {
+          ok: false,
+          externallyVerifiedEvidence,
+          materializedReadiness,
+          report: {
+            approvalCommit,
+            approvalValidated: false,
+            controls,
+            evidenceCommit: overlayReport?.evidenceCommit ?? null,
+            findingCodes: [evidence.reasonCode],
+            overlayDigest: overlayReport?.overlayDigest ?? null,
+            overlayValidated: true,
+            policyRootValidated: true,
+            sourceCommit,
+            status: "blocked",
+          },
+        };
+      }
+      evidenceRecords.push({
+        canonicalPath: evidence.canonicalPath,
+        path: claim.evidencePath,
+        receipt: evidence.receipt,
+        sha256: evidence.sha256,
+      });
+    }
+    const materialized = materializeProviderReadiness({
+      approvalManifest: approvalOverlay.manifest,
+      evidenceCommit,
+      evidenceOverlayDigest: overlayReport.overlayDigest,
+      evidenceRecords,
+      incidentConfig: policies.incidentConfig,
+      paymentProviderPolicy: policies.paymentProviderPolicy,
+      plan,
+      recoveryPolicy: policies.recoveryPolicy,
+      sourceCommit,
+    });
+    if (!materialized.ok) {
+      return {
+        ok: false,
+        externallyVerifiedEvidence,
+        materializedReadiness,
+        report: {
+          approvalCommit,
+          approvalValidated: false,
+          controls,
+          evidenceCommit: overlayReport?.evidenceCommit ?? null,
+          findingCodes: materialized.findingCodes,
+          overlayDigest: overlayReport?.overlayDigest ?? null,
+          overlayValidated: true,
+          policyRootValidated: true,
+          sourceCommit,
+          status: "blocked",
+        },
+      };
+    }
+    materializedReadiness = materialized;
+    approvalReport = approvalOverlay.report;
   }
 
   for (const claim of [...plan.claims].sort((left, right) => (
@@ -1284,7 +1455,10 @@ export async function runEvidenceVerification({
   return {
     ok,
     externallyVerifiedEvidence,
+    materializedReadiness,
     report: {
+      approvalCommit: approvalReport?.approvalCommit ?? null,
+      approvalValidated: requireApprovalRoot ? true : null,
       controls,
       evidenceCommit: overlayReport?.evidenceCommit ?? null,
       findingCodes: ok ? [] : ["PROVIDER_EVIDENCE_INCOMPLETE"],
@@ -1303,6 +1477,21 @@ function resolveRepositoryConfig(rootDir, relativePath) {
   return resolved.canonicalPath;
 }
 
+function loadRepositoryPolicyBundle({
+  incidentPath = defaultIncidentPath,
+  paymentProviderPath = defaultPaymentProviderPath,
+  policyRoot,
+  recoveryPath = defaultRecoveryPath,
+}) {
+  return {
+    incidentConfig: loadIncidentRoutingConfig(resolveRepositoryConfig(policyRoot, incidentPath)),
+    paymentProviderPolicy: loadPaymentProviderPolicy(
+      resolveRepositoryConfig(policyRoot, paymentProviderPath),
+    ),
+    recoveryPolicy: loadRecoveryPolicy(resolveRepositoryConfig(policyRoot, recoveryPath)),
+  };
+}
+
 export function evaluateRepositoryReadiness({
   externallyVerifiedEvidence,
   incidentPath = defaultIncidentPath,
@@ -1312,7 +1501,26 @@ export function evaluateRepositoryReadiness({
   policyRoot = rootDir ?? process.cwd(),
   recoveryPath = defaultRecoveryPath,
   evidenceRoot = policyRoot,
+  materializedReadiness = null,
 } = {}) {
+  if (materializedReadiness) {
+    return evaluateLaunchReadiness({
+      incidentConfig: materializedReadiness.incidentConfig,
+      paymentProviderPolicy: materializedReadiness.paymentProviderPolicy,
+      recoveryPolicy: materializedReadiness.recoveryPolicy,
+    }, {
+      externallyVerifiedEvidence,
+      incidentEvidenceRoot: evidenceRoot,
+      launchHoldClearance: materializedReadiness.holdContext,
+      now,
+      paymentProviderEvidence:
+        materializedReadiness.readinessEvidence?.paymentProviderEvidence,
+      recoveryEvidenceByPath:
+        materializedReadiness.readinessEvidence?.recoveryEvidenceByPath ?? {},
+      recoveryEvidenceSha256ByPath:
+        materializedReadiness.readinessEvidence?.recoveryEvidenceSha256ByPath ?? {},
+    });
+  }
   const incidentConfigPath = resolveRepositoryConfig(policyRoot, incidentPath);
   const recoveryConfigPath = resolveRepositoryConfig(policyRoot, recoveryPath);
   const paymentConfigPath = resolveRepositoryConfig(policyRoot, paymentProviderPath);
@@ -1354,8 +1562,10 @@ function readinessSummary(readiness) {
 }
 
 export async function runProviderEvidenceGate(options = {}) {
+  const requireApprovalRoot = options.requireApprovalRoot === true;
   const verification = await runEvidenceVerification({
     ...options,
+    requireApprovalRoot,
     requirePolicyRoot: options.evidenceCommit !== undefined,
   });
   let readiness;
@@ -1364,6 +1574,7 @@ export async function runProviderEvidenceGate(options = {}) {
     && (
       verification.report.overlayValidated !== true
       || verification.report.policyRootValidated !== true
+      || (requireApprovalRoot && verification.report.approvalValidated !== true)
     )
   ) {
     readiness = {
@@ -1371,7 +1582,9 @@ export async function runProviderEvidenceGate(options = {}) {
       findings: [{
         code: verification.report.overlayValidated !== true
           ? "EVIDENCE_OVERLAY_UNTRUSTED"
-          : "POLICY_ROOT_UNTRUSTED",
+          : verification.report.policyRootValidated !== true
+            ? "POLICY_ROOT_UNTRUSTED"
+            : "APPROVAL_ROOT_UNTRUSTED",
         source: "readiness",
       }],
     };
@@ -1385,6 +1598,7 @@ export async function runProviderEvidenceGate(options = {}) {
           ?? process.cwd(),
         externallyVerifiedEvidence: verification.externallyVerifiedEvidence,
         incidentPath: options.incidentPath,
+        materializedReadiness: verification.materializedReadiness,
         now: options.now,
         paymentProviderPath: options.paymentProviderPath,
         policyRoot: options.policyRoot ?? options.rootDir ?? process.cwd(),
@@ -1404,6 +1618,8 @@ export async function runProviderEvidenceGate(options = {}) {
     externallyVerifiedEvidence: verification.externallyVerifiedEvidence,
     report: {
       controls: verification.report.controls,
+      approvalCommit: verification.report.approvalCommit ?? null,
+      approvalValidated: verification.report.approvalValidated ?? null,
       evidenceCommit: verification.report.evidenceCommit,
       findingCodes: verification.report.findingCodes,
       overlayDigest: verification.report.overlayDigest,
@@ -1417,12 +1633,15 @@ export async function runProviderEvidenceGate(options = {}) {
       policyRevision: verification.report.sourceCommit,
       readiness: summarizedReadiness,
       rootRoles: {
+        ...(requireApprovalRoot
+          ? { approval: "protected-post-evidence-approval" }
+          : {}),
         evidence: options.evidenceCommit === undefined
           ? "immutable-source"
           : "protected-overlay",
         policy: "immutable-source",
       },
-      schemaVersion: 1,
+      schemaVersion: requireApprovalRoot ? 2 : 1,
       sourceCommit: verification.report.sourceCommit,
       status: ok ? "ready" : "blocked",
     },
@@ -1431,6 +1650,8 @@ export async function runProviderEvidenceGate(options = {}) {
 
 export function validateEvidenceRunnerArguments(argv) {
   const valueFlags = new Set([
+    "--approval-commit",
+    "--approval-root",
     "--evidence-commit",
     "--evidence-root",
     "--expected-live-commit",
@@ -1479,6 +1700,17 @@ export function validateEvidenceRunnerArguments(argv) {
     "--expected-live-commit",
   ]) {
     if (!values.has(required)) return { ok: false, reasonCode: "ARGUMENT_REQUIRED" };
+  }
+  const hasApprovalCommit = values.has("--approval-commit");
+  const hasApprovalRoot = values.has("--approval-root");
+  if (hasApprovalCommit !== hasApprovalRoot) {
+    return { ok: false, reasonCode: "APPROVAL_ARGUMENT_PAIR_REQUIRED" };
+  }
+  if (requireReady && !hasApprovalCommit) {
+    return { ok: false, reasonCode: "APPROVAL_ARGUMENT_REQUIRED" };
+  }
+  if (providersOnly && hasApprovalCommit) {
+    return { ok: false, reasonCode: "APPROVAL_ARGUMENT_NOT_ALLOWED" };
   }
   return { ok: true, flags, values };
 }
@@ -1556,6 +1788,8 @@ export async function main(argv = process.argv.slice(2), { environment = process
     return;
   }
   const result = await runProviderEvidenceGate({
+    approvalCommit: parsed.values.get("--approval-commit"),
+    approvalRoot: parsed.values.get("--approval-root"),
     credentials: environmentCredentials(environment),
     evidenceCommit: parsed.values.get("--evidence-commit"),
     evidenceRoot: parsed.values.get("--evidence-root"),
@@ -1566,6 +1800,7 @@ export async function main(argv = process.argv.slice(2), { environment = process
     plan: parsedPlan.plan,
     policyRoot: process.cwd(),
     recoveryPath: parsed.values.get("--recovery-file") ?? defaultRecoveryPath,
+    requireApprovalRoot: parsed.flags.has("--require-ready"),
     rootDir: process.cwd(),
     sourceCommit: parsed.values.get("--source-commit"),
   });
