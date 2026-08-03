@@ -217,6 +217,7 @@ jobs:
         shell: bash
         env:
           RAILWAY_TOKEN: ${{ secrets.RIVT_REHEARSAL_RAILWAY_TOKEN }}
+          RAILWAY_REHEARSAL_SSH_PRIVATE_KEY: ${{ secrets.RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY }}
           RIVT_RAILWAY_ENVIRONMENT_ID: ${{ vars.RIVT_RAILWAY_ENVIRONMENT_ID }}
           RIVT_RAILWAY_PROJECT_ID: ${{ vars.RIVT_RAILWAY_PROJECT_ID }}
           RIVT_RAILWAY_SERVICE_ID: ${{ vars.RIVT_RAILWAY_SERVICE_ID }}
@@ -224,6 +225,10 @@ jobs:
           set -euo pipefail
           if [[ -z "$RAILWAY_TOKEN" ]]; then
             echo "The protected rehearsal Railway token is not configured."
+            exit 1
+          fi
+          if [[ -z "$RAILWAY_REHEARSAL_SSH_PRIVATE_KEY" ]]; then
+            echo "The protected rehearsal Railway SSH identity is not configured."
             exit 1
           fi
           for resource_id in \
@@ -237,7 +242,22 @@ jobs:
           done
           umask 077
           raw_output="$(mktemp "$RUNNER_TEMP/rivt-rehearsal-gate-a.XXXXXX")"
-          trap 'rm -f "$raw_output"' EXIT
+          identity_file="$(mktemp "$RUNNER_TEMP/rivt-rehearsal-ssh-key.XXXXXX")"
+          trap 'rm -f "$raw_output" "$identity_file"' EXIT
+          printf '%s\n' "$RAILWAY_REHEARSAL_SSH_PRIVATE_KEY" > "$identity_file"
+          chmod 600 "$identity_file"
+          if ! timeout 5s ssh-keygen -y -f "$identity_file" </dev/null >/dev/null 2>&1; then
+            echo "The protected rehearsal Railway SSH identity is invalid or requires a passphrase."
+            exit 1
+          fi
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          railway_host_key='ssh.railway.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ8X3z81/tuP7CvmK3ZqWgwEvHUR6b04oi2lQJGld2C1'
+          touch "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          if ! grep -Fqx "$railway_host_key" "$HOME/.ssh/known_hosts"; then
+            printf '%s\n' "$railway_host_key" >> "$HOME/.ssh/known_hosts"
+          fi
           remote_guard=$(cat <<'REMOTE_GUARD'
           if [ "${RAILWAY_GIT_COMMIT_SHA:-}" != "${EXPECTED_SOURCE_COMMIT:-}" ]; then
             echo "Remote Railway source does not match the protected rehearsal source." >&2
@@ -257,6 +277,7 @@ jobs:
           REMOTE_GUARD
           )
           if ! railway ssh \
+            --identity-file "$identity_file" \
             --project "$RIVT_RAILWAY_PROJECT_ID" \
             --environment "$RIVT_RAILWAY_ENVIRONMENT_ID" \
             --service "$RIVT_RAILWAY_SERVICE_ID" \

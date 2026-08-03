@@ -1739,6 +1739,9 @@ test("incident rehearsal workflow fails closed before credentials and binds exac
   const railwayToken = incidentRehearsalWorkflow.indexOf(
     "RIVT_REHEARSAL_RAILWAY_TOKEN",
   );
+  const railwaySshIdentity = incidentRehearsalWorkflow.indexOf(
+    "RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY",
+  );
 
   assert.match(incidentRehearsalWorkflow, /github\.repository == 'Zboytjbxp\/rivt'/u);
   assert.match(incidentRehearsalWorkflow, /github\.event_name == 'workflow_dispatch'/u);
@@ -1762,6 +1765,7 @@ test("incident rehearsal workflow fails closed before credentials and binds exac
   assert.equal(validateSource >= 0, true);
   assert.equal(dependencyInstall > validateSource, true);
   assert.equal(railwayToken > dependencyInstall, true);
+  assert.equal(railwaySshIdentity > dependencyInstall, true);
 });
 
 test("incident rehearsal workflow keeps permissions and dependencies read-only and pinned", () => {
@@ -1875,6 +1879,16 @@ test("incident rehearsal workflow scopes remote execution and withholds raw prod
     liveSmoke,
     /RAILWAY_TOKEN:.*secrets\.RIVT_REHEARSAL_RAILWAY_TOKEN/u,
   );
+  assert.match(
+    liveSmoke,
+    /RAILWAY_REHEARSAL_SSH_PRIVATE_KEY:.*secrets\.RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY/u,
+  );
+  assert.match(liveSmoke, /timeout 5s ssh-keygen -y -f "\$identity_file"/u);
+  assert.match(
+    liveSmoke,
+    /ssh\.railway\.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ8X3z81\/tuP7CvmK3ZqWgwEvHUR6b04oi2lQJGld2C1/u,
+  );
+  assert.match(liveSmoke, /--identity-file "\$identity_file"/u);
   assert.match(liveSmoke, /--project "\$RIVT_RAILWAY_PROJECT_ID"/u);
   assert.match(liveSmoke, /--environment "\$RIVT_RAILWAY_ENVIRONMENT_ID"/u);
   assert.match(liveSmoke, /--service "\$RIVT_RAILWAY_SERVICE_ID"/u);
@@ -1937,13 +1951,17 @@ test("incident rehearsal workflow scopes remote execution and withholds raw prod
     /payload\?\.build\?\.commit, process\.env\.EXPECTED_SOURCE_COMMIT/u,
   );
   assert.match(liveSmoke, /umask 077/u);
-  assert.match(liveSmoke, /trap 'rm -f "\$raw_output"' EXIT/u);
+  assert.match(
+    liveSmoke,
+    /trap 'rm -f "\$raw_output" "\$identity_file"' EXIT/u,
+  );
   assert.match(liveSmoke, />"\$raw_output" 2>&1/u);
   assert.doesNotMatch(incidentRehearsalWorkflow, /actions\/upload-artifact/u);
   assert.doesNotMatch(
     incidentRehearsalWorkflow,
     /railway\s+(?:up|deploy|variable|variables|delete)/iu,
   );
+  assert.doesNotMatch(incidentRehearsalWorkflow, /railway\s+ssh\s+keys/iu);
   assert.doesNotMatch(
     incidentRehearsalWorkflow,
     /npm run (?:migrate|restore|backup)/iu,
