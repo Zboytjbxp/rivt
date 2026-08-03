@@ -58,9 +58,9 @@ Current configuration checkpoint (2026-08-03; not a rehearsal receipt):
 
 - `production-rehearsal` requires reviewer `Zboytjbxp` and permits only branch
   `master`. `prevent_self_review=false` because no second repository
-  administrator exists. The normal deployment path enters the single-owner
-  approval gate, but GitHub currently reports `can_admins_bypass=true`; the
-  gate is neither independent nor unbypassable.
+  administrator exists. GitHub now reports `can_admins_bypass=false`, so
+  administrators cannot skip the configured protection rules. The reviewer
+  gate remains single-owner and is not independent approval.
 - Railway workspace key `rivt-production-rehearsal-20260803` is registered as
   `ssh-ed25519` with fingerprint
   `SHA256:oOWKlKo88YhJsRDhUMJNNK6+wD2aGdYgRATtyS6+XVE`.

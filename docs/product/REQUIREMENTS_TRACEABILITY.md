@@ -38,10 +38,11 @@
   but GitHub does not expose its stored value; post-upload content, key-pair
   matching, and exclusivity were not independently verified. Known temporary
   local key files were deleted. Because `Zboytjbxp` is the sole administrator,
-  `prevent_self_review=false`; the normal path enters this single-owner gate,
-  while GitHub's current `can_admins_bypass=true` setting means the gate is
-  neither independent nor unbypassable. The workflow is still absent from protected
-  `master`, not deployed, and has zero runs. The environment has no rehearsal
+  `prevent_self_review=false`; GitHub now reports `can_admins_bypass=false`, so
+  administrators cannot skip the configured protection rules. The reviewer
+  gate remains single-owner and is not independent approval. The workflow is
+  still absent from protected `master`, not deployed, and has zero runs. The
+  environment has no rehearsal
   Railway token or exact source/resource variables. No protected evidence
   revision `E`, later approval `A`, provider receipt, production-data action,
   deployment, cost, or hold clearance is claimed.

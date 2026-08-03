@@ -99,10 +99,10 @@ decision.
 - Under Michael's explicit 2026-08-03 approval, GitHub environment
   `production-rehearsal` now requires reviewer `Zboytjbxp` and admits only the
   `master` branch. `prevent_self_review` is `false` because `Zboytjbxp` is the
-  repository's only administrator. The normal deployment path enters this
-  single-owner approval gate, but GitHub currently reports
-  `can_admins_bypass=true`; this is neither independent nor unbypassable
-  approval.
+  repository's only administrator. GitHub now reports
+  `can_admins_bypass=false`, so administrators cannot skip the configured
+  protection rules. The reviewer gate remains single-owner and therefore is
+  not independent approval.
 - Railway workspace `zboytjbxp's Projects` now contains only the dedicated
   workspace key `rivt-production-rehearsal-20260803`, type `ssh-ed25519`, with
   fingerprint `SHA256:oOWKlKo88YhJsRDhUMJNNK6+wD2aGdYgRATtyS6+XVE`.

@@ -105,9 +105,9 @@ environment and SSH-identity portion of that boundary:
 - GitHub environment `production-rehearsal` requires reviewer `Zboytjbxp` and
   has one custom deployment policy for branch `master`.
 - `prevent_self_review` is `false` because `Zboytjbxp` is the only repository
-  administrator. The normal deployment path enters this single-owner approval
-  gate, but GitHub currently reports `can_admins_bypass=true`; the gate is
-  neither independent nor unbypassable.
+  administrator. GitHub now reports `can_admins_bypass=false`, so
+  administrators cannot skip the configured protection rules. The reviewer
+  gate remains single-owner and is not independent approval.
 - Railway workspace `zboytjbxp's Projects` contains dedicated key
   `rivt-production-rehearsal-20260803`, type `ssh-ed25519`, fingerprint
   `SHA256:oOWKlKo88YhJsRDhUMJNNK6+wD2aGdYgRATtyS6+XVE`.
