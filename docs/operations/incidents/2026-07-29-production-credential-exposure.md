@@ -10,7 +10,7 @@
   was not recorded)
 - Declared at: `2026-07-29T21:42:25-04:00` (first formal repository
   declaration; any earlier verbal declaration is unverified)
-- Last updated: 2026-07-31 America/New_York
+- Last updated: 2026-08-02 America/New_York
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
   followed by authorization to continue the remaining incident work unless
@@ -271,9 +271,11 @@ moment.
   S3-compatible storage healthy, Sentry, Web Push, and Stripe Connect Accounts
   v2 configured, matching-job alerts enabled, operational controls open, and
   seven anonymous private-route checks closed.
-- VAPID rotation and previous-key retirement are complete. The broader
-  incident remains open for Sentry and the remaining bounded
-  provider/data-access review; Railway Stage 1 remains paused.
+- VAPID rotation and previous-key retirement are complete. At this point in
+  the response Sentry and the bounded provider/data-access review were still
+  open; those later reviews are reconciled below. The current exit criteria,
+  not this historical checkpoint, control closure. Railway Stage 1 remains
+  paused.
 
 ## Google OAuth callback evidence
 
@@ -474,9 +476,9 @@ moment.
   the most recent isolated CI run remains the 22/22 PostgreSQL integration
   proof recorded above.
 - Sentry credential rotation is complete. The broader incident and
-  `ACTIVE_LAUNCH_HOLD` remain open for the final provider-review synthesis,
-  explicit incident-owner acceptance of the historical PostgreSQL and object
-  storage forensic limits, and a fresh Railway Stage 1 re-review and approval.
+  `ACTIVE_LAUNCH_HOLD` remain open. The later bounded provider-review synthesis
+  and exact incident-owner forensic-limit acceptances are recorded below;
+  neither closes the incident nor proves that historical misuse did not occur.
 
 ## Bounded access-log review evidence
 
@@ -519,12 +521,54 @@ moment.
   that no-new-service application control from later provider/external
   immutable logging whose cost, privacy, residency, and retention have not
   been approved. No part of that proposed design is represented as implemented.
-- No misuse indicator has been identified in the evidence reviewed so far.
-  The bounded PostgreSQL error review is complete for the repository-backed
-  incident window, subject to the historical auditing limitation above. The
-  review remains open for provider logs and the unavoidable database/object-
-  storage forensic limitations. The incident is not represented as proof of
-  no access or no exfiltration.
+- No misuse indicator has been identified in the bounded evidence reviewed.
+  The PostgreSQL error review is complete for the repository-backed incident
+  window, subject to the historical auditing limitation above. The incident is
+  not represented as proof of no access or no exfiltration.
+
+## Later bounded review and incident-owner forensic-limit acceptance
+
+The later `origin/codex/railway-stage1-packet87-integration` incident record
+preserves factual provider-review and owner-decision evidence collected after
+the sections above. It is historical incident evidence, not proof for the
+current release-candidate source, CI result, provider configuration, cost, or
+deployment readiness.
+
+- Read-only reviews of the bounded Stripe platform-account and configured
+  production destination views, Resend, Sentry, Google Cloud audit/activity,
+  Railway workspace audit/deployment history, retained PostgreSQL logs, and
+  minimized application-ledger aggregates found no identified misuse indicator
+  within their named query and retention bounds. Successful historical
+  PostgreSQL access and direct bucket reads cannot be reconstructed, and the
+  application-generated secrets below have no complete provider audit trail.
+  These limits prevent RIVT from proving that no historical access,
+  exfiltration, token exchange, or offline secret use occurred.
+- At `2026-07-31T12:22:03.895Z`, the incident-owner role stated: "I accept that
+  all available provider evidence was reviewed and no misuse indicator was
+  found, but historical successful PostgreSQL access and direct bucket reads
+  cannot be reconstructed. RIVT cannot honestly prove that no historical access
+  or exfiltration occurred." Later reconciliation found the statement's
+  provider-review premise incomplete at the moment it was made. Only its exact
+  acceptance of the PostgreSQL/direct-bucket historical limitation and its
+  no-proof-of-no-misuse conclusion are retained as closure evidence.
+- At `2026-07-31T19:39:34.5524830Z`, the incident-owner role stated: "I accept
+  these three forensic limits: RIVT cannot prove the retired VAPID private key
+  was never used outside RIVT; cannot prove an encrypted backup and retired
+  backup key were never copied and used offline; and cannot prove the retired
+  authentication metadata pepper was never used offline. This acceptance does
+  not prove no misuse occurred and does not authorize deployment or added
+  cost."
+- These owner decisions close only the five named unavailable/unobservable
+  forensic-decision requirements. They do not reconstruct missing history,
+  reduce incident severity, close this incident, clear `ACTIVE_LAUNCH_HOLD`,
+  authorize deployment, authorize launch, or approve cost.
+- On 2026-08-01, production invoice bank payments were recorded as disabled and
+  the owner approved only that exact disabled configuration. That approval did
+  not enable ACH, authorize a deployment or worker, clear this incident, or
+  authorize launch. It is time-bound provider evidence and must be refreshed
+  before clearance; any future ACH enablement separately requires a dedicated
+  `Connected accounts` destination, Stripe-signed delivery/state-transition
+  proof, scope attestation, and new approval.
 
 ## Recovery plan
 
@@ -537,25 +581,37 @@ credential during application rollback.
 
 ## Exit criteria
 
-This incident remains open until:
+Completed containment and rotation evidence above remains required history.
+The still-open exit boundary is:
 
-- the hotfix is verified and exact-source production health passes;
-- every exposed provider-managed credential has been replaced and the old
-  credential has been revoked or disabled;
-- application-generated secrets have been replaced and removed from active use;
-- previous backup/VAPID material is constrained to transition-only use and then
-  retired at a measured safe boundary; if either remains configured, the
-  incident may be contained but not closed;
-- authentication, database, storage, email, payments/webhooks, OAuth, Web Push,
-  monitoring, and backup restore access are verified without printing secrets;
-- the existing backup artifact is still recoverable through the approved
-  previous-key path;
-- provider, PostgreSQL, and object-access logs have been reviewed for
-  unauthorized access or exfiltration;
-- the incident record contains only nonsecret evidence and timestamps;
-- a follow-up prevents secret-bearing environment enumeration in operator
-  workflows; and
-- Stage 1 is re-reviewed against its new exact source and configuration.
+- finish the consolidated release-candidate forward-port, then obtain a final
+  independent exact-source review and disposable-PostgreSQL CI evidence for
+  that exact documentation-inclusive candidate; historical branch SHAs, scan
+  receipts, test counts, and CI runs are not candidate proof;
+- obtain a fresh Railway/provider snapshot, operator review, cost and recovery
+  plan, owner-approved evidence digest, rollback target, and passing strict
+  activation preflight for the exact final candidate;
+- perform any deployment only under separate exact authorization, then capture
+  reviewed exact-runtime source, migration, health, monitor, and rollback
+  evidence for the final candidate;
+- immediately before launch-hold clearance, prove invoice bank payments remain
+  disabled, or separately complete the `Connected accounts` Stripe delivery,
+  durable state-transition, scope-attestation, and new approval boundary;
+- revoke or replace the exposed reusable production pilot invite through a
+  separately authorized live operation and record only its nonsecret record
+  identifier;
+- remove retired private incident-contact data from any hosted synthetic issue
+  through a separately authorized live operation;
+- point the backup incident role to an access-controlled private route and
+  record a recent successful route test with content-bound evidence;
+- preserve a nonsecret incident record, confirm each unavailable historical
+  limit has the exact owner decision above, and obtain the incident owner's
+  final closure decision; and
+- clear `ACTIVE_LAUNCH_HOLD` only through its reviewed, explicit process after
+  every criterion above is evidenced.
+
+Incident closure alone does not authorize deployment, spending, Railway Stage
+1 activation, ACH enablement, or public launch.
 
 ## Evidence rules
 

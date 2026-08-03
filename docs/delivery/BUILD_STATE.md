@@ -1,10 +1,10 @@
 # RIVT Build State
 
-Last updated: 2026-07-31 America/New_York
-Current gate: Gate B controlled engagement
-Current phase: Emergency production credential containment; feature activation paused.
-Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
-Repository branch: `master` (source: `codex/customer-documents-contact-import`)
+Last updated: 2026-08-02 America/New_York
+Current gate: Gate B controlled engagement; public launch remains blocked
+Current phase: Release-candidate consolidation under the active production credential-containment hold; provider activation remains paused.
+Active packet: `docs/delivery/packets/94_RAILWAY_ACTIVATION_READINESS.md`
+Repository branch: `codex/release-candidate-consolidation` (based on `origin/master` at `29e3c613f2eb95a6583b52c671275e5046dde0d3`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -45,9 +45,56 @@ outbox. This closes the Web Push key-retirement acceptance boundary without
 clearing the broader incident or `ACTIVE_LAUNCH_HOLD`. Sentry provider audit
 and usage views now also show only the expected rotation actions, 20 accepted
 errors in 14 days, zero filtered, rate-limited, or invalid events, and no
-significant spike. The remaining exit work is final evidence synthesis,
-explicit acceptance of the known historical database/object-storage forensic
-gaps, and a fresh Railway Stage 1 re-review and approval.
+significant spike. The later bounded provider review and exact incident-owner
+acceptances of the five unavailable/unobservable forensic limits are now
+reconciled into the incident record. They do not prove no misuse occurred or
+clear the hold. The remaining boundary is the final consolidated candidate and
+CI, fresh provider and cost evidence, separately authorized reviewed
+deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
+route items, strict preflight, and an explicit incident closure and launch-hold
+decision.
+
+## Packet 94 release-candidate consolidation — local only, not deployed
+
+- Branch `codex/release-candidate-consolidation` selectively forward-ports the
+  Packet 88-94 security, recovery, monitoring, push-delivery, replica-safety,
+  and Railway activation controls onto current `origin/master`. It deliberately
+  preserves the later credential-containment fixes and does not merge an old
+  branch wholesale.
+- Provisional implementation checkpoint before the remaining code forward-ports
+  is `1c5e957e3daa3c09617b7f0f06e445bc6649127e`. It is not the final candidate
+  SHA and must not be used for activation, deployment, approval, or exact-source
+  evidence. At that checkpoint, the branch included explicit hosted
+  web/worker/migrate roles, fail-closed migration ownership, bounded database
+  pools, leased maintenance, fenced push attempts, hard delivery/shutdown
+  deadlines, privacy-safe request/capacity telemetry, content-digested logical
+  recovery, a provider-neutral local recovery harness, and activation
+  preflight/config contracts.
+- At that provisional checkpoint, local no-cost verification passed:
+  production build, application lint, security lint, 260/260 unit/frontend
+  tests, all four browser E2E journeys, the guarded local recovery harness,
+  incident readiness, diff integrity, and the production dependency audit with
+  zero known vulnerabilities. Those counts are checkpoint evidence only and
+  must be rerun and replaced after all forward-ports and documentation are
+  complete. The full PostgreSQL integration aggregate is not claimed locally
+  because the saved workstation `TEST_DATABASE_URL` fails authentication with
+  `28P01`; final candidate CI must provide disposable PostgreSQL proof.
+- The 2026-08-02 approved backup refresh created one new encrypted logical
+  artifact in the existing private Railway bucket for 109 tables and 8,811
+  rows. It refreshes same-provider RPO evidence only. It does not restore that
+  artifact, copy referenced object bytes to an independent provider, create a
+  recurring schedule, or close `R-052` / `GA-OPS-004`.
+- This release candidate has not been merged, deployed, or activated. No
+  Railway service, replica, worker, variable, database, bucket, volume, plan,
+  DNS, traffic, production record, or payment was changed by consolidation.
+  Packet 94's earlier branch CI and dated provider observations remain
+  historical evidence, not proof for this candidate.
+- Next acceptance boundary: finish the remaining code and documentation
+  forward-ports, record the final candidate SHA, rerun every required local
+  gate, commit and push the consolidated branch, use the repository's
+  disposable PostgreSQL CI to verify the full aggregate, retain the active
+  incident hold, and obtain a fresh exact-source/cost approval only after the
+  incident is formally closed. A push is not deployment approval.
 
 ## Active operational incident - Production credential exposure
 
@@ -55,9 +102,11 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   values into a restricted automation transcript on 2026-07-29. No secret is
   recorded in repository evidence, and no unauthorized use is currently known.
   All exposed credential classes are nevertheless treated as compromised.
-- Packet 86 remains the active product packet. The separately approved Railway
-  Stage 1 activation is paused and its approval cannot be reused after this
-  incident hotfix or any credential change.
+- Packet 86 remains the last deployed product packet in this incident record;
+  Packet 94 is now the active repository-hardening packet. The separately
+  approved Railway Stage 1 activation remains paused, and its old approval
+  cannot be reused after this incident hotfix, credential changes, or release-
+  candidate rebase.
 - A narrow compatibility hotfix was prepared from exact production source
   `92a8451b8190f5119384a4970fb1a324503df995` and deployed by Railway. The final
   Stripe Connect credential cutover deployment was

@@ -19,7 +19,14 @@ Run packets in order. A packet is one AI session or a small number of tightly co
 | 12 | Gate B daily use |
 | 13 | Workflow coherence and subtraction |
 | 14 | Field camera |
+| 87 | Contacts-to-estimate-to-invoice-to-payment acceptance boundary |
 | 88 | Security and infrastructure hardening, recovery, and data-governance launch boundary |
+| 89 | Recovery closure design and lossless artifact contract |
+| 90 | Guarded provider-neutral local recovery harness |
+| 91 | Recovery activation decision and retention/key-custody boundary |
+| 92 | Railway production-posture decision and tunable hosting thresholds |
+| 93 | Railway replica, worker, migration, and connection safety |
+| 94 | Railway activation readiness, staged rollback, and exact-approval boundary |
 
 Before each packet read:
 

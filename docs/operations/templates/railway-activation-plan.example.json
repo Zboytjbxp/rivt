@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "status": "draft",
+  "activationStage": "split",
+  "approval": {
+    "approved": false,
+    "approvedBy": null,
+    "approvedAt": null,
+    "expiresAt": null,
+    "oneTimeMaximumUsd": null,
+    "incrementalMonthlyMaximumUsd": null,
+    "totalMonthlyApprovedCeilingUsd": null,
+    "testDurationMinutes": null,
+    "maximumWorkerUnavailableMinutes": null
+  },
+  "source": {
+    "preparedImplementationCommit": null,
+    "candidateCommit": null,
+    "liveCommitBefore": null,
+    "rollbackCommit": null
+  },
+  "railway": {
+    "environmentName": null,
+    "region": null,
+    "connectedBranch": null,
+    "autodeployMode": null,
+    "effectiveConfigSource": null,
+    "serverlessDisabled": null,
+    "overlapSeconds": null,
+    "billingCycleStartsAt": null,
+    "billingCycleEndsAt": null,
+    "services": [
+      {
+        "name": "web",
+        "configPath": "/railway.json",
+        "role": "web",
+        "startCommand": "node server/runtime.js web",
+        "preDeployCommand": "node server/runtime.js migrate",
+        "healthcheckPath": "/api/health",
+        "renderedReplicaCount": null,
+        "region": null,
+        "volumeAttached": null,
+        "serverlessDisabled": null,
+        "drainingSeconds": 30,
+        "deploymentTrigger": "manual_staged",
+        "configurationHash": null
+      },
+      {
+        "name": "worker",
+        "configPath": "/railway.worker.json",
+        "role": "worker",
+        "startCommand": "node server/runtime.js worker",
+        "preDeployCommand": "node server/runtime.js worker-check",
+        "healthcheckPath": null,
+        "renderedReplicaCount": null,
+        "region": null,
+        "volumeAttached": null,
+        "serverlessDisabled": null,
+        "drainingSeconds": 30,
+        "deploymentTrigger": "manual_staged",
+        "configurationHash": null
+      }
+    ]
+  },
+  "database": {
+    "privateEndpointConfirmed": null,
+    "endpointMode": null,
+    "poolerClientLimit": null,
+    "observedGlobalUsableConnections": null,
+    "observedEffectiveConnections": null,
+    "declaredMaxConnections": null,
+    "migrationOwner": "web",
+    "maximumConcurrentMigrationProcesses": 1,
+    "expandContractCompatibleWithRollback": null,
+    "steadyStateTopology": {
+      "candidateWebReplicas": null,
+      "webPoolMax": null,
+      "candidateWorkerReplicas": null,
+      "workerPoolMax": null,
+      "migrationProcesses": 0,
+      "migratePoolMax": 0,
+      "reservedConnections": null,
+      "oldCombinedReplicas": 0,
+      "oldCombinedPoolMax": 0
+    },
+    "transitionTopology": {
+      "candidateWebReplicas": null,
+      "webPoolMax": null,
+      "candidateWorkerReplicas": null,
+      "workerPoolMax": null,
+      "migrationProcesses": 1,
+      "migratePoolMax": null,
+      "reservedConnections": null,
+      "oldCombinedReplicas": null,
+      "oldCombinedPoolMax": null
+    },
+    "plannedSteadyStateConnections": null,
+    "plannedTransitionPeakConnections": null
+  },
+  "push": {
+    "webPublicKeyFingerprint": null,
+    "workerPublicKeyFingerprint": null,
+    "webSubjectFingerprint": null,
+    "workerSubjectFingerprint": null
+  },
+  "recovery": {
+    "checkpointIdRedacted": null,
+    "checkpointCreatedAt": null,
+    "maximumCheckpointAgeHours": 24,
+    "restoreProcedureReviewed": null,
+    "rollbackSchemaCompatible": null
+  },
+  "monitoring": {
+    "publicUptimeConfigured": null,
+    "workerHeartbeatConfigured": null,
+    "pushBacklogAlertConfigured": null,
+    "deadLetterAlertConfigured": null,
+    "resourceAlertsConfigured": null,
+    "alertReceiverTested": null,
+    "onCallOwner": null
+  },
+  "cost": {
+    "currentMonthActualUsd": null,
+    "currentMonthEstimateBeforeUsd": null,
+    "stagedEstimateUsd": null,
+    "retainedMonthlyCostUsd": null,
+    "agentUsageUsd": null,
+    "providerHardLimitVerified": null,
+    "providerEnforcedHardLimitUsd": null,
+    "providerHardLimitScope": null,
+    "providerHardLimitCanStopWorkspace": null,
+    "fullWorkspaceOutageMechanismAccepted": null,
+    "agentLimitRecordedSeparately": null,
+    "residualCostRiskAccepted": null,
+    "manualStopAtUsd": null
+  },
+  "rollback": {
+    "owner": null,
+    "deploymentIdFingerprint": null,
+    "deploymentActionVisible": null,
+    "rebuildFallbackReady": null
+  },
+  "providerSnapshotBinding": {
+    "source": "railway_cli_status_v1",
+    "artifactSha256": null,
+    "observedAt": null,
+    "projectIdFingerprint": null,
+    "environmentIdFingerprint": null,
+    "currentWebServiceIdFingerprint": null,
+    "currentWebDeploymentIdFingerprint": null,
+    "liveHealth": {
+      "checkedAt": null,
+      "statusCode": null,
+      "sourceCommit": null,
+      "migrationVersion": null
+    }
+  }
+}

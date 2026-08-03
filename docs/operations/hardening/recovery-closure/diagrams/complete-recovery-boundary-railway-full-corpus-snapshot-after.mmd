@@ -1,0 +1,9 @@
+flowchart LR
+  Primary["Primary Railway buckets"] --> Copier["Bounded snapshot copier"]
+  Logical["Named encrypted DB artifact"] --> TempDB["Disposable Railway PostgreSQL"]
+  Copier --> TempBucket["Temporary second Railway bucket"]
+  TempBucket --> RestoreCheck["Full manifest and representative byte restore"]
+  TempDB --> RestoreCheck
+  RestoreCheck --> Evidence["One-time recovery evidence"]
+  Operator["Same Railway administrative boundary"] --> Primary
+  Operator --> TempBucket

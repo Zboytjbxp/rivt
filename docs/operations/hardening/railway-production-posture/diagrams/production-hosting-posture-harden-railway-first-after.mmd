@@ -1,0 +1,16 @@
+flowchart LR
+    U["Browser / PWA"] --> EDGE["Webhook-safe edge controls"]
+    EDGE --> ROUTER["Railway routing"]
+    ROUTER --> W1["Web replica A"]
+    ROUTER --> W2["Web replica B"]
+    W1 --> POOL["PgBouncer / bounded pool"]
+    W2 --> POOL
+    WORKER["Dedicated durable worker"] --> POOL
+    MIG["One-shot migration job"] --> POOL
+    POOL --> PG["Proved PostgreSQL HA + PITR"]
+    W1 --> OBJ["Private object storage"]
+    W2 --> OBJ
+    WORKER --> EXT["Stripe / Resend / Web Push"]
+    OBS["External SLO checks + app telemetry"] --> EDGE
+    PG --> BACKUP["Independent immutable recovery"]
+    OBJ --> BACKUP
