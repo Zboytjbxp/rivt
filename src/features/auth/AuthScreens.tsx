@@ -25,7 +25,7 @@ import {
 import { brandConfig, type ThemeMode, type TrialPlan } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
-import { apiPath, fetchWithTimeout } from "../../lib/api";
+import { apiPath, fetchWithTimeout, RIVT_EXPECTED_ACCOUNT_HEADER } from "../../lib/api";
 import { tradeCodeByName } from "../work/work-mappings";
 import type { Role, Trade } from "../../types";
 
@@ -1124,6 +1124,7 @@ function EmailIcon() {
 }
 
 export function OnboardingFlow({
+  accountId,
   themeMode,
   onToggleTheme,
   onComplete,
@@ -1139,6 +1140,7 @@ export function OnboardingFlow({
   notice,
   error,
 }: {
+  accountId: string;
   themeMode: ThemeMode;
   onToggleTheme: () => void;
   onComplete: (result: OnboardingResult) => void;
@@ -1284,7 +1286,10 @@ export function OnboardingFlow({
       await fetchWithTimeout(apiPath("/api/v1/profile"), {
         method: "PATCH",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          [RIVT_EXPECTED_ACCOUNT_HEADER]: accountId,
+        },
         body: JSON.stringify({
           displayName: trimmedName,
           serviceAreaCity: trimmedCity,

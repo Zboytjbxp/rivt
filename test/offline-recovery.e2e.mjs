@@ -891,6 +891,9 @@ async function runOnboardingRefreshIsolationRegression(browserInstance) {
   const semanticOrder = [];
   let currentAccount = onboardingAccountA;
   let holdCompletedAccountRefresh = false;
+  const onboardingDraftAccountHeaders = [];
+  let onboardingCompleteAccountHeader = null;
+  let onboardingRefreshAccountHeader = null;
   let releaseAccountARefresh;
   let markAccountARefreshStarted;
   let markAccountARefreshFulfilled;
@@ -910,13 +913,18 @@ async function runOnboardingRefreshIsolationRegression(browserInstance) {
       semanticOrder.push("login:B:200");
       return json(route, { data: { user: authUserFor(tradespersonAccountB), verificationRequired: false } });
     }
+    if (url.pathname === "/api/v1/profile" && method === "PATCH") {
+      onboardingDraftAccountHeaders.push(route.request().headers()["x-rivt-expected-account-id"] ?? null);
+    }
     if (url.pathname === "/api/v1/onboarding/complete" && method === "POST") {
+      onboardingCompleteAccountHeader = route.request().headers()["x-rivt-expected-account-id"] ?? null;
       holdCompletedAccountRefresh = true;
       semanticOrder.push("onboarding:A:200");
       return json(route, { data: { completed: true } });
     }
     if (url.pathname === "/api/v1/me") {
       if (currentAccount.id === onboardingAccountA.id && holdCompletedAccountRefresh) {
+        onboardingRefreshAccountHeader = route.request().headers()["x-rivt-expected-account-id"] ?? null;
         semanticOrder.push("me:A:refresh:start");
         markAccountARefreshStarted();
         await accountARefreshRelease;
@@ -943,6 +951,13 @@ async function runOnboardingRefreshIsolationRegression(browserInstance) {
     await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Open RIVT", exact: true }).click();
     await accountARefreshStarted;
+    assert.ok(onboardingDraftAccountHeaders.length > 0, "Onboarding must persist at least one account-bound profile draft");
+    assert.ok(
+      onboardingDraftAccountHeaders.every((accountId) => accountId === onboardingAccountA.id),
+      `Every onboarding profile draft must carry Account A in the expected-account header: ${JSON.stringify(onboardingDraftAccountHeaders)}`,
+    );
+    assert.equal(onboardingCompleteAccountHeader, onboardingAccountA.id, "Onboarding completion must carry Account A in the expected-account header");
+    assert.equal(onboardingRefreshAccountHeader, onboardingAccountA.id, "Post-onboarding refresh must carry Account A in the expected-account header");
 
     await page.evaluate((accountId) => {
       window.dispatchEvent(new CustomEvent("rivt:session-expired", { detail: { accountId } }));

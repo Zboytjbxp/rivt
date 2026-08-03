@@ -124,9 +124,12 @@ Preferred path:
 
 1. AI works on its own branch
 2. AI pushes that branch
-3. other AI or Michael reviews from that branch
-4. branch is merged to `master`
-5. Railway deploys from `master`
+3. AI opens or updates a pull request from that branch into `master`; a branch
+   push by itself does not run the repository's disposable-PostgreSQL Gate A CI
+4. Gate A verifies the pull-request head with its disposable PostgreSQL service
+5. other AI or Michael reviews from that branch and pull request
+6. branch is merged to `master`
+7. Railway deploys from `master`
 
 Avoid GitHub squash merges when mixed AI authorship matters.
 

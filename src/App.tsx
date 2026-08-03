@@ -2680,7 +2680,10 @@ function App() {
       const response = await fetchWithTimeout(apiPath("/api/v1/onboarding/complete"), {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          [RIVT_EXPECTED_ACCOUNT_HEADER]: expectedAccountId,
+        },
         body: JSON.stringify({
           role: result.role,
           displayName: result.displayName,
@@ -2700,7 +2703,7 @@ function App() {
         throw new Error(body.error?.message || "Account setup could not be saved.");
       }
       if (!isCurrentAccountGeneration(accountRequest)) return;
-      refreshedAccount = await refreshCanonicalAccount();
+      refreshedAccount = await refreshCanonicalAccount(expectedAccountId);
     } catch (error) {
       if (canonicalAccountIdRef.current !== expectedAccountId) return;
       setAuthError(error instanceof Error ? error.message : "Account setup could not be saved.");
@@ -3270,6 +3273,7 @@ function App() {
   if (!onboardingComplete) {
     return (
       <OnboardingFlow
+        accountId={canonicalAccount?.id ?? authUser.id}
         themeMode={themeMode}
         onToggleTheme={handleToggleTheme}
         onComplete={handleOnboardingComplete}

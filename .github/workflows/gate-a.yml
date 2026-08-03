@@ -44,6 +44,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -88,7 +89,28 @@ jobs:
           exit "$status"
 
       - name: Check patch formatting
-        run: git diff --check
+        shell: bash
+        env:
+          RIVT_EVENT_NAME: ${{ github.event_name }}
+          RIVT_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          RIVT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RIVT_PUSH_BEFORE_SHA: ${{ github.event.before }}
+          RIVT_PUSH_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          empty_tree="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+          zero_sha="0000000000000000000000000000000000000000"
+          if [[ "$RIVT_EVENT_NAME" == "pull_request" ]]; then
+            base_sha="$RIVT_PR_BASE_SHA"
+            head_sha="$RIVT_PR_HEAD_SHA"
+          else
+            base_sha="$RIVT_PUSH_BEFORE_SHA"
+            head_sha="$RIVT_PUSH_HEAD_SHA"
+            if [[ -z "$base_sha" || "$base_sha" == "$zero_sha" ]]; then
+              base_sha="$empty_tree"
+            fi
+          fi
+          git diff --check "$base_sha" "$head_sha"
 
       - name: Require current launch-readiness evidence
         id: launch_readiness

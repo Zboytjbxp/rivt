@@ -86,6 +86,25 @@ test("Gate A does not duplicate pull-request verification on codex branch pushes
   assert.doesNotMatch(workflow, /^\s*-\s*["']?codex\/\*\*["']?\s*$/m);
 });
 
+test("Gate A checks committed event changes for patch-formatting errors", () => {
+  const workflow = readFileSync(
+    join(process.cwd(), ".github", "workflows", "gate-a.yml"),
+    "utf8",
+  );
+
+  assert.match(workflow, /fetch-depth:\s*0/);
+  assert.match(workflow, /RIVT_EVENT_NAME:\s*\$\{\{ github\.event_name \}\}/);
+  assert.match(workflow, /RIVT_PR_BASE_SHA:\s*\$\{\{ github\.event\.pull_request\.base\.sha \}\}/);
+  assert.match(workflow, /RIVT_PR_HEAD_SHA:\s*\$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+  assert.match(workflow, /RIVT_PUSH_BEFORE_SHA:\s*\$\{\{ github\.event\.before \}\}/);
+  assert.match(workflow, /RIVT_PUSH_HEAD_SHA:\s*\$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /empty_tree=["']4b825dc642cb6eb9a060e54bf8d69288fbee4904["']/);
+  assert.match(workflow, /zero_sha=["']0{40}["']/);
+  assert.match(workflow, /\[\[ -z ["']\$base_sha["'] \|\| ["']\$base_sha["'] == ["']\$zero_sha["'] \]\]/);
+  assert.match(workflow, /git diff --check ["']\$base_sha["'] ["']\$head_sha["']/);
+  assert.doesNotMatch(workflow, /^\s*run:\s*git diff --check\s*$/m);
+});
+
 function flushAsyncWork() {
   return new Promise((resolve) => setImmediate(resolve));
 }

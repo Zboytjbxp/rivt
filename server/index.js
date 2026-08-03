@@ -6339,6 +6339,7 @@ app.post("/api/v1/auth/logout", authRateLimit, requireV1AuthenticatedUser, async
 }));
 
 app.get("/api/v1/sessions", requireV1AuthenticatedUser, asyncRoute(async (request, response) => {
+  assertExpectedAccount(request, request.authUser.id);
   const result = await database.query(
     `SELECT id, session_id, device_label, created_at, last_seen_at, expires_at
      FROM auth_sessions
@@ -6362,6 +6363,7 @@ app.get("/api/v1/sessions", requireV1AuthenticatedUser, asyncRoute(async (reques
 }));
 
 app.delete("/api/v1/sessions/:id", requireV1AuthenticatedUser, writeRateLimit, asyncRoute(async (request, response) => {
+  assertExpectedAccount(request, request.authUser.id);
   const sessionId = validate(z.uuid(), request.params.id);
   const result = await database.query(
     `UPDATE auth_sessions SET revoked_at = now()
@@ -6379,6 +6381,7 @@ app.delete("/api/v1/sessions/:id", requireV1AuthenticatedUser, writeRateLimit, a
 }));
 
 app.post("/api/v1/sessions/revoke-others", requireV1AuthenticatedUser, writeRateLimit, asyncRoute(async (request, response) => {
+  assertExpectedAccount(request, request.authUser.id);
   const result = await database.query(
     `UPDATE auth_sessions SET revoked_at = now()
      WHERE user_id = $1 AND session_id <> $2 AND revoked_at IS NULL
