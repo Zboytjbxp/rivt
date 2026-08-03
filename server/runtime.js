@@ -182,7 +182,13 @@ async function runMigrationRuntime(role, environment, budget) {
   }
 }
 
-async function startHttpRuntime(role) {
+async function startHttpRuntime(role, environment) {
+  const hosted = isHostedRuntime(environment);
+  assertRequiredPushProvider(
+    environment,
+    pushProviderStatus(environment),
+    { required: hosted },
+  );
   const serverModule = await import("./index.js");
   serverModule.startCapacityMeasurements({
     includeWorkerBacklog: processCapabilities(role).runsPushWorker,
@@ -229,7 +235,7 @@ export async function startConfiguredRuntime({
   if (role === "worker") {
     return startWorkerRuntime(role, environment, budget);
   }
-  return startHttpRuntime(role);
+  return startHttpRuntime(role, environment);
 }
 
 function reportOperationalFailure(error, source) {
