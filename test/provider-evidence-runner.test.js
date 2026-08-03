@@ -12,6 +12,7 @@ import {
   runProviderEvidenceGate,
   validateEvidencePlan,
   validateEvidenceRunnerArguments,
+  verifyGitHubIncidentRehearsalEvidence,
   verifyGitHubProductionSyntheticEvidence,
   verifyRailwayStripeDisabledPaymentEvidence,
   verifySentryErrorIngestionEvidence,
@@ -155,24 +156,176 @@ test("evidence verification authorizes one exact in-memory identity", async () =
 
 test("the compiled registry supports only adapters with provider-verifiable contracts", async () => {
   for (const adapterId of [
+    "incident-rehearsal",
     "github-production-synthetic",
     "sentry-error-ingestion",
     "railway-stripe-disabled-payment",
   ]) {
     assert.equal(typeof compiledProviderAdapters[adapterId].verify, "function", adapterId);
   }
-  for (const adapterId of [
-    "sentry-paging-delivery",
-    "backup-completion",
-    "backup-retention",
-    "backup-failure-domain",
-  ]) {
+  const unsupportedReasons = {
+    "sentry-paging-delivery": "PROVIDER_DELIVERY_NOT_OBSERVABLE",
+    "private-route-delivery": "PRIVATE_ROUTE_PROVIDER_REQUIRED",
+    "backup-schedule": "BACKUP_PROVIDER_SELECTION_REQUIRED",
+    "backup-completion": "BACKUP_PROVIDER_SELECTION_REQUIRED",
+    "backup-alert-delivery": "BACKUP_ALERT_DELIVERY_SEAM_REQUIRED",
+    "backup-retention": "BACKUP_PROVIDER_SELECTION_REQUIRED",
+    "backup-failure-domain": "BACKUP_FAILURE_DOMAIN_PROOF_REQUIRED",
+    "backup-restore": "BACKUP_RESTORE_PROOF_SEAM_REQUIRED",
+  };
+  for (const [adapterId, reasonCode] of Object.entries(unsupportedReasons)) {
     const result = await compiledProviderAdapters[adapterId].verify({});
     assert.deepEqual(result, {
       status: "unsupported",
-      reasonCode: "ADAPTER_NOT_IMPLEMENTED",
+      reasonCode,
     }, adapterId);
   }
+});
+
+test("incident rehearsal adapter binds one protected-branch workflow-dispatch run and its critical steps", async () => {
+  const receipt = {
+    schemaVersion: 1,
+    controlId: "rehearsal-2026-08-01",
+    type: "incident-rehearsal-test",
+    provider: "github-actions",
+    status: "passed",
+    timestamp: "2026-08-01T11:59:00.000Z",
+    scenario: "public-health-provider-failure",
+    commanderRoleId: "incident-commander",
+  };
+  const claim = {
+    provider: receipt.provider,
+    evidenceSha256: "4".repeat(64),
+    scope: {
+      account: "rivt-owner",
+      environment: "master",
+      project: "rivt",
+      resource: "workflow:4321:run:9912",
+    },
+  };
+  const repository = { full_name: "rivt-owner/rivt", default_branch: "master" };
+  const branch = { name: "master", protected: true };
+  const workflow = {
+    id: 4321,
+    name: "Production Incident Rehearsal",
+    path: ".github/workflows/incident-rehearsal.yml",
+    state: "active",
+  };
+  const run = {
+    id: 9912,
+    workflow_id: 4321,
+    event: "workflow_dispatch",
+    status: "completed",
+    conclusion: "success",
+    display_title: "Incident rehearsal: public-health-provider-failure / incident-commander",
+    head_sha: sourceCommit,
+    head_branch: "master",
+    created_at: "2026-08-01T11:50:00.000Z",
+    updated_at: receipt.timestamp,
+    head_repository: { full_name: "rivt-owner/rivt" },
+  };
+  const successfulStep = (name, number) => ({
+    name,
+    number,
+    status: "completed",
+    conclusion: "success",
+  });
+  const job = {
+    id: 7001,
+    run_id: 9912,
+    head_sha: sourceCommit,
+    name: "rehearsal",
+    status: "completed",
+    conclusion: "success",
+    steps: [
+      successfulStep("Check out source", 1),
+      successfulStep("Check production health", 2),
+      successfulStep("Run production monitor", 3),
+      successfulStep("Run live Gate A smoke", 4),
+      successfulStep("Verify incident evidence", 5),
+      { name: "Post cache cleanup", number: 6, status: "completed", conclusion: "skipped" },
+    ],
+  };
+  const jobsPayload = { total_count: 1, jobs: [job] };
+  const calls = [];
+  const fetchFunction = routedFetch([
+    { method: "GET", match: (url) => url.pathname === "/repos/rivt-owner/rivt", payload: repository },
+    { method: "GET", match: (url) => url.pathname.endsWith("/branches/master"), payload: branch },
+    { method: "GET", match: (url) => url.pathname.endsWith("/actions/workflows/4321"), payload: workflow },
+    { method: "GET", match: (url) => url.pathname.endsWith("/actions/runs/9912"), payload: run },
+    {
+      method: "GET",
+      match: (url) => url.pathname.endsWith("/actions/runs/9912/jobs"),
+      payload: jobsPayload,
+    },
+  ], calls);
+  const context = providerContext({
+    claim,
+    credentials: { RIVT_EVIDENCE_GITHUB_TOKEN: "github-secret" },
+    receipt,
+  });
+  const result = await verifyGitHubIncidentRehearsalEvidence(context, { fetchFunction });
+  assert.equal(result.status, "verified", JSON.stringify(result));
+  assert.equal(calls.length, 5);
+  assert.equal(calls.every(({ url }) => url.origin === "https://api.github.com"), true);
+  assert.equal(calls.every(({ init }) => (init.method ?? "GET") === "GET"), true);
+  assert.equal(calls.every(({ init }) => init.redirect === "error"), true);
+  const jobsCall = calls.find(({ url }) => url.pathname.endsWith("/jobs"));
+  assert.equal(jobsCall.url.searchParams.get("filter"), "all");
+  assert.equal(jobsCall.url.searchParams.get("per_page"), "100");
+  assert.equal(JSON.stringify(result).includes("github-secret"), false);
+
+  branch.protected = false;
+  const unprotected = await verifyGitHubIncidentRehearsalEvidence(context, { fetchFunction });
+  assert.equal(unprotected.reasonCode, "PROVIDER_BINDING_MISMATCH");
+  branch.protected = true;
+
+  run.event = "schedule";
+  const scheduled = await verifyGitHubIncidentRehearsalEvidence(context, { fetchFunction });
+  assert.equal(scheduled.reasonCode, "PROVIDER_BINDING_MISMATCH");
+  run.event = "workflow_dispatch";
+
+  run.display_title = "Incident rehearsal: storage-failure / incident-commander";
+  const wrongScenario = await verifyGitHubIncidentRehearsalEvidence(context, { fetchFunction });
+  assert.equal(wrongScenario.reasonCode, "PROVIDER_BINDING_MISMATCH");
+  run.display_title = "Incident rehearsal: public-health-provider-failure / backup-commander";
+  const wrongCommander = await verifyGitHubIncidentRehearsalEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(wrongCommander.reasonCode, "PROVIDER_BINDING_MISMATCH");
+  run.display_title = "Incident rehearsal: public-health-provider-failure / incident-commander";
+
+  jobsPayload.total_count = 2;
+  const multipleJobs = await verifyGitHubIncidentRehearsalEvidence(context, { fetchFunction });
+  assert.equal(multipleJobs.reasonCode, "PROVIDER_BINDING_MISMATCH");
+  jobsPayload.total_count = 1;
+
+  job.steps[3].conclusion = "failure";
+  const failedCriticalStep = await verifyGitHubIncidentRehearsalEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(failedCriticalStep.reasonCode, "PROVIDER_OBSERVATION_MISMATCH");
+  job.steps[3].conclusion = "success";
+
+  job.steps.push({
+    name: "Unexpected unfinished setup",
+    number: 7,
+    status: "completed",
+    conclusion: "skipped",
+  });
+  const skippedNonPostStep = await verifyGitHubIncidentRehearsalEvidence(
+    context,
+    { fetchFunction },
+  );
+  assert.equal(skippedNonPostStep.reasonCode, "PROVIDER_OBSERVATION_MISMATCH");
+  job.steps.pop();
+
+  run.updated_at = "2026-08-01T10:00:00.000Z";
+  receipt.timestamp = run.updated_at;
+  const stale = await verifyGitHubIncidentRehearsalEvidence(context, { fetchFunction });
+  assert.equal(stale.reasonCode, "PROVIDER_BINDING_MISMATCH");
 });
 
 test("GitHub adapter binds a protected default-branch run to one bot-owned recovery delivery", async () => {
@@ -711,17 +864,18 @@ test("disabled-payment adapter uses read-only Railway and Stripe queries and rej
   assert.equal(stagedRuntimeDrift.reasonCode, "PROVIDER_BINDING_MISMATCH");
 });
 
-test("paging and B2 backup claims stay unsupported without provider delivery/version/digest fields", async () => {
-  for (const adapterId of [
-    "sentry-paging-delivery",
-    "backup-schedule",
-    "backup-completion",
-    "backup-retention",
-    "backup-failure-domain",
-  ]) {
+test("delivery and recovery claims expose their exact unresolved proof seam", async () => {
+  const reasons = {
+    "sentry-paging-delivery": "PROVIDER_DELIVERY_NOT_OBSERVABLE",
+    "backup-schedule": "BACKUP_PROVIDER_SELECTION_REQUIRED",
+    "backup-completion": "BACKUP_PROVIDER_SELECTION_REQUIRED",
+    "backup-retention": "BACKUP_PROVIDER_SELECTION_REQUIRED",
+    "backup-failure-domain": "BACKUP_FAILURE_DOMAIN_PROOF_REQUIRED",
+  };
+  for (const [adapterId, reasonCode] of Object.entries(reasons)) {
     const result = await compiledProviderAdapters[adapterId].verify({});
     assert.equal(result.status, "unsupported", adapterId);
-    assert.equal(result.reasonCode, "ADAPTER_NOT_IMPLEMENTED", adapterId);
+    assert.equal(result.reasonCode, reasonCode, adapterId);
   }
 });
 
