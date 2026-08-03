@@ -460,7 +460,7 @@ test("tool invoices receive a short RIVT payment URL without exposing Stripe che
   assert.equal(payment.invoiceId, null);
   assert.equal(payment.toolRecordId, "6d317040-ffb5-426c-b125-1999753a2763");
   assert.equal(payment.paymentUrl, "https://rivt.pro/pay/2c209df4-c27c-4d5d-a38a-140e57c8be94");
-  assert.match(payment.checkoutUrl, /^https:\/\/checkout\.stripe\.com\//);
+  assert.equal("checkoutUrl" in payment, false);
 });
 
 test("unreconciled reservations never expose a payable URL", () => {
@@ -475,7 +475,7 @@ test("unreconciled reservations never expose a payable URL", () => {
   }, { appOrigin: "https://rivt.pro" });
 
   assert.equal(payment.paymentUrl, null);
-  assert.equal(payment.checkoutUrl, null);
+  assert.equal("checkoutUrl" in payment, false);
 });
 
 test("checkout failure classification fails closed for ambiguous provider outcomes", () => {

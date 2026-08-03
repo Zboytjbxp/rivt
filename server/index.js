@@ -2258,6 +2258,7 @@ async function mapProjectInvoicesWithPayments(client, invoiceRows) {
     invoice,
     byInvoiceId.get(invoice.id) ?? [],
     onlineByInvoiceId.get(invoice.id) ?? [],
+    { appOrigin: productionOrigin },
   ));
 }
 

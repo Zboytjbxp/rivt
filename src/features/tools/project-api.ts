@@ -93,7 +93,6 @@ export interface ProjectInvoiceOnlinePayment {
   currency: "usd";
   status: ProjectInvoiceOnlinePaymentStatus;
   paymentMethodType: "us_bank_account" | "card" | "unknown" | null;
-  checkoutUrl: string | null;
   paymentUrl?: string | null;
   expiresAt: string | null;
   paidAt: string | null;

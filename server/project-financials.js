@@ -35,7 +35,7 @@ export function invoiceSubtotalCents(lineItems) {
   return lineItems.reduce((total, line) => total + Math.round(line.quantity * line.rateCents), 0);
 }
 
-export function mapProjectInvoice(row, payments = [], onlinePayments = []) {
+export function mapProjectInvoice(row, payments = [], onlinePayments = [], { appOrigin = null } = {}) {
   const externalPaidCents = payments.reduce((total, payment) => total + Number(payment.amount_cents ?? payment.amountCents ?? 0), 0);
   const onlinePaidCents = onlinePayments.reduce((total, payment) => {
     if (!["paid", "partially_refunded"].includes(payment.status)) return total;
@@ -73,7 +73,7 @@ export function mapProjectInvoice(row, payments = [], onlinePayments = []) {
     createdAt: toIso(row.created_at ?? row.createdAt),
     updatedAt: toIso(row.updated_at ?? row.updatedAt),
     payments: payments.map(mapProjectInvoicePayment),
-    onlinePayments: onlinePayments.map(mapProjectInvoiceOnlinePayment),
+    onlinePayments: onlinePayments.map((payment) => mapProjectInvoiceOnlinePayment(payment, { appOrigin })),
   };
 }
 
@@ -92,7 +92,8 @@ export function mapProjectInvoicePayment(row) {
   };
 }
 
-export function mapProjectInvoiceOnlinePayment(row) {
+export function mapProjectInvoiceOnlinePayment(row, { appOrigin = null } = {}) {
+  const checkoutUrl = row.checkout_url ?? row.checkoutUrl ?? null;
   return {
     id: row.id,
     invoiceId: row.invoice_id ?? row.invoiceId,
@@ -101,7 +102,12 @@ export function mapProjectInvoiceOnlinePayment(row) {
     currency: row.currency ?? "usd",
     status: row.status,
     paymentMethodType: row.payment_method_type ?? row.paymentMethodType ?? null,
-    checkoutUrl: row.checkout_url ?? row.checkoutUrl ?? null,
+    paymentUrl: appOrigin
+      && row.status === "open"
+      && typeof checkoutUrl === "string"
+      && checkoutUrl.startsWith("https://checkout.stripe.com/")
+      ? `${appOrigin}/pay/${row.id}`
+      : null,
     expiresAt: toIso(row.expires_at ?? row.expiresAt),
     paidAt: toIso(row.paid_at ?? row.paidAt),
     failedAt: toIso(row.failed_at ?? row.failedAt),

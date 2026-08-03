@@ -509,7 +509,7 @@ function connectManagementAvailable(row, config) {
   return row.stripe_account_api_version === "v2" || Boolean(config.secretKey);
 }
 
-function mapPaymentRequest(row, { includeCheckoutUrl = true, appOrigin = null } = {}) {
+function mapPaymentRequest(row, { includeCheckoutUrl = false, appOrigin = null } = {}) {
   return {
     id: row.id,
     invoiceId: row.invoice_id ?? row.invoiceId ?? null,
@@ -519,7 +519,7 @@ function mapPaymentRequest(row, { includeCheckoutUrl = true, appOrigin = null } 
     currency: row.currency ?? "usd",
     status: row.status,
     paymentMethodType: row.payment_method_type ?? row.paymentMethodType ?? null,
-    checkoutUrl: includeCheckoutUrl ? (row.checkout_url ?? row.checkoutUrl ?? null) : undefined,
+    ...(includeCheckoutUrl ? { checkoutUrl: row.checkout_url ?? row.checkoutUrl ?? null } : {}),
     paymentUrl: appOrigin
       && row.status === "open"
       && typeof (row.checkout_url ?? row.checkoutUrl) === "string"

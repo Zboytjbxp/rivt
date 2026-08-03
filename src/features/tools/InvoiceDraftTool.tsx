@@ -424,7 +424,7 @@ export function InvoiceDraftTool({
     ?? (toolPaymentRequest && ["paid", "partially_refunded", "refunded", "disputed"].includes(toolPaymentRequest.status)
       ? toolPaymentRequest
       : null);
-  const bankPaymentUrl = activeBankPayment?.paymentUrl ?? activeBankPayment?.checkoutUrl ?? null;
+  const bankPaymentUrl = activeBankPayment?.paymentUrl ?? null;
   const paymentIntegrityIssue = (() => {
     if (projectInvoiceLoading) {
       return {
@@ -1148,7 +1148,7 @@ export function InvoiceDraftTool({
         paymentRequest = await createToolInvoiceBankPaymentLink(record.localId);
         setToolPaymentRequest(paymentRequest);
       }
-      const shareUrl = paymentRequest.paymentUrl ?? paymentRequest.checkoutUrl;
+      const shareUrl = paymentRequest.paymentUrl;
       if (shareUrl) {
         try {
           await navigator.clipboard.writeText(shareUrl);
@@ -1175,7 +1175,7 @@ export function InvoiceDraftTool({
       setProjectInvoiceError(message);
       return;
     }
-    const shareUrl = payment.paymentUrl ?? payment.checkoutUrl;
+    const shareUrl = payment.paymentUrl;
     if (!shareUrl) return;
     try {
       await navigator.clipboard.writeText(shareUrl);
@@ -1358,7 +1358,7 @@ export function InvoiceDraftTool({
     let preparedBankPayment = activeBankPayment;
     if (paymentOptions.bank && !bankPaymentUrl) {
       preparedBankPayment = await createBankPaymentLink();
-      if (!preparedBankPayment?.paymentUrl && !preparedBankPayment?.checkoutUrl) {
+      if (!preparedBankPayment?.paymentUrl) {
         setSendOpen(false);
         setInvoiceEmailBusy(false);
         return false;
@@ -1647,10 +1647,10 @@ export function InvoiceDraftTool({
                           {payment.status === "processing" ? " · not marked paid yet" : ""}
                         </small>
                       </span>
-                      {payment.checkoutUrl && ["created", "open"].includes(payment.status) ? (
+                      {payment.paymentUrl && payment.status === "open" ? (
                         <span className="v2-tool-action-row">
                           <button type="button" aria-label="Copy customer bank-payment link" onClick={() => void copyBankPaymentLink(payment)}><Copy size={15} /></button>
-                          <a href={payment.checkoutUrl} target="_blank" rel="noreferrer" aria-label="Open customer bank-payment page"><ExternalLink size={15} /></a>
+                          <a href={payment.paymentUrl} target="_blank" rel="noreferrer" aria-label="Open customer bank-payment page"><ExternalLink size={15} /></a>
                           <button type="button" onClick={() => void cancelBankPaymentLink()} disabled={connectBusy}>Cancel link</button>
                         </span>
                       ) : null}
