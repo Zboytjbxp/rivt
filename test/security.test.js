@@ -77,6 +77,15 @@ test("operator tooling cannot enumerate an entire Railway service environment", 
   );
 });
 
+test("Gate A does not duplicate pull-request verification on codex branch pushes", () => {
+  const workflow = readFileSync(
+    join(process.cwd(), ".github", "workflows", "gate-a.yml"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(workflow, /^\s*-\s*["']?codex\/\*\*["']?\s*$/m);
+});
+
 function flushAsyncWork() {
   return new Promise((resolve) => setImmediate(resolve));
 }

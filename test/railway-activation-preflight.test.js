@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import test from "node:test";
 import {
@@ -1058,6 +1059,23 @@ test("activation CLI rejects mixed modes, missing values, and unsupported flags"
     ]),
     /cannot be combined/i,
   );
+});
+
+test("activation CLI help is side-effect free and documents every mode", () => {
+  const result = spawnSync(
+    process.execPath,
+    ["scripts/railway-activation-preflight.js", "--help"],
+    { encoding: "utf8", windowsHide: true },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stderr, "");
+  assert.match(result.stdout, /Usage:/);
+  assert.match(result.stdout, /--capture-provider-snapshot <path>/);
+  assert.match(result.stdout, /--print-approval-digest/);
+  assert.match(result.stdout, /--provider-snapshot <path>/);
+  assert.match(result.stdout, /--operator-control-review <path>/);
+  assert.match(result.stdout, /--approved-plan-digest <sha256>/);
 });
 
 test("Git status failures block cleanliness and evaluation failures exit nonzero by default", () => {

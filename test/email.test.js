@@ -55,7 +55,17 @@ test("transactional email creates and enforces its default timeout signal", asyn
       }, {
         timeoutMs: 5,
         fetchImpl: (_url, options) => new Promise((_resolve, reject) => {
-          options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true });
+          // AbortSignal.timeout intentionally uses an unref'ed Node timer. This
+          // referenced guard keeps the isolated test alive and gives a normal
+          // failure if the expected abort is not delivered.
+          const guard = setTimeout(
+            () => reject(new Error("Timeout signal did not abort.")),
+            100,
+          );
+          options.signal.addEventListener("abort", () => {
+            clearTimeout(guard);
+            reject(options.signal.reason);
+          }, { once: true });
         }),
       }),
       (error) => error.status === 504 && error.code === "EMAIL_DELIVERY_TIMEOUT",

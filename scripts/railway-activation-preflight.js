@@ -12,6 +12,12 @@ const MAX_APPROVAL_AGE_MS = 24 * 60 * 60 * 1_000;
 const MAX_RECOVERY_AGE_HOURS = 24;
 const EXPECTED_AUTODEPLOY_MODE = "staged_manual_apply";
 const EXPECTED_DEPLOYMENT_TRIGGER = "manual_staged";
+const ACTIVATION_PREFLIGHT_USAGE = `Usage:
+  npm run railway:activation:preflight -- --capture-provider-snapshot <path> [--environment <name>] [--web-service <name>]
+  npm run railway:activation:preflight -- --plan <path> --print-approval-digest
+  npm run railway:activation:preflight -- --plan <path> --provider-snapshot <path> --operator-control-review <path> --approved-plan-digest <sha256> [--require-ready | --report-only]
+
+Activation artifacts must be stored outside the repository or at an explicitly ignored path.`;
 
 const text = (maximum = 256) => z.string().trim().min(1).max(maximum);
 const nullableText = (maximum = 256) => text(maximum).nullable();
@@ -1614,6 +1620,10 @@ function railwayStatusJson() {
 }
 
 export async function main(argv = process.argv.slice(2)) {
+  if (argv.length === 1 && ["--help", "-h"].includes(argv[0])) {
+    console.log(ACTIVATION_PREFLIGHT_USAGE);
+    return;
+  }
   validateActivationPreflightArguments(argv);
   const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const capturePath = argValue(argv, "--capture-provider-snapshot");
