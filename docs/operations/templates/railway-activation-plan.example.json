@@ -7,11 +7,16 @@
     "approvedBy": null,
     "approvedAt": null,
     "expiresAt": null,
+    "approvedPlanSha256": null,
     "oneTimeMaximumUsd": null,
     "incrementalMonthlyMaximumUsd": null,
     "totalMonthlyApprovedCeilingUsd": null,
     "testDurationMinutes": null,
     "maximumWorkerUnavailableMinutes": null
+  },
+  "activationWindow": {
+    "plannedTestDurationMinutes": null,
+    "plannedWorkerUnavailableMinutes": null
   },
   "source": {
     "preparedImplementationCommit": null,
@@ -32,32 +37,34 @@
     "services": [
       {
         "name": "web",
-        "configPath": "/railway.json",
+        "configPath": null,
         "role": "web",
-        "startCommand": "node server/runtime.js web",
-        "preDeployCommand": "node server/runtime.js migrate",
-        "healthcheckPath": "/api/health",
-        "renderedReplicaCount": null,
-        "region": null,
-        "volumeAttached": null,
-        "serverlessDisabled": null,
-        "drainingSeconds": 30,
-        "deploymentTrigger": "manual_staged",
-        "configurationHash": null
-      },
-      {
-        "name": "worker",
-        "configPath": "/railway.worker.json",
-        "role": "worker",
-        "startCommand": "node server/runtime.js worker",
-        "preDeployCommand": "node server/runtime.js worker-check",
+        "startCommand": null,
+        "preDeployCommand": null,
         "healthcheckPath": null,
         "renderedReplicaCount": null,
         "region": null,
         "volumeAttached": null,
         "serverlessDisabled": null,
-        "drainingSeconds": 30,
-        "deploymentTrigger": "manual_staged",
+        "pushRequired": null,
+        "drainingSeconds": null,
+        "deploymentTrigger": null,
+        "configurationHash": null
+      },
+      {
+        "name": "worker",
+        "configPath": null,
+        "role": "worker",
+        "startCommand": null,
+        "preDeployCommand": null,
+        "healthcheckPath": null,
+        "renderedReplicaCount": null,
+        "region": null,
+        "volumeAttached": null,
+        "serverlessDisabled": null,
+        "pushRequired": null,
+        "drainingSeconds": null,
+        "deploymentTrigger": null,
         "configurationHash": null
       }
     ]
@@ -69,26 +76,26 @@
     "observedGlobalUsableConnections": null,
     "observedEffectiveConnections": null,
     "declaredMaxConnections": null,
-    "migrationOwner": "web",
-    "maximumConcurrentMigrationProcesses": 1,
+    "migrationOwner": null,
+    "maximumConcurrentMigrationProcesses": null,
     "expandContractCompatibleWithRollback": null,
     "steadyStateTopology": {
       "candidateWebReplicas": null,
       "webPoolMax": null,
       "candidateWorkerReplicas": null,
       "workerPoolMax": null,
-      "migrationProcesses": 0,
-      "migratePoolMax": 0,
+      "migrationProcesses": null,
+      "migratePoolMax": null,
       "reservedConnections": null,
-      "oldCombinedReplicas": 0,
-      "oldCombinedPoolMax": 0
+      "oldCombinedReplicas": null,
+      "oldCombinedPoolMax": null
     },
     "transitionTopology": {
       "candidateWebReplicas": null,
       "webPoolMax": null,
       "candidateWorkerReplicas": null,
       "workerPoolMax": null,
-      "migrationProcesses": 1,
+      "migrationProcesses": null,
       "migratePoolMax": null,
       "reservedConnections": null,
       "oldCombinedReplicas": null,
@@ -106,7 +113,7 @@
   "recovery": {
     "checkpointIdRedacted": null,
     "checkpointCreatedAt": null,
-    "maximumCheckpointAgeHours": 24,
+    "maximumCheckpointAgeHours": null,
     "restoreProcedureReviewed": null,
     "rollbackSchemaCompatible": null
   },
@@ -120,11 +127,15 @@
     "onCallOwner": null
   },
   "cost": {
+    "oneTimeActivationEstimateUsd": null,
     "currentMonthActualUsd": null,
     "currentMonthEstimateBeforeUsd": null,
+    "currentCycleIncrementalEstimateUsd": null,
     "stagedEstimateUsd": null,
+    "stagedEstimateIncludesOneTimeActivation": null,
     "retainedMonthlyCostUsd": null,
     "agentUsageUsd": null,
+    "agentMonthlyLimitUsd": null,
     "providerHardLimitVerified": null,
     "providerEnforcedHardLimitUsd": null,
     "providerHardLimitScope": null,
@@ -154,5 +165,11 @@
       "sourceCommit": null,
       "migrationVersion": null
     }
+  },
+  "operatorControlReviewBinding": {
+    "source": "operator_activation_control_review_v1",
+    "artifactSha256": null,
+    "reviewedAt": null,
+    "reviewedBy": null
   }
 }

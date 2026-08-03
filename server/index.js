@@ -817,6 +817,14 @@ const publicPaymentRateLimit = createDurableRateLimiter({
   namespace: "invoice-payment-public",
 });
 
+// Provider evidence is read-only. Authenticate before this process-local
+// limiter so verification cannot create durable rate_limit_windows rows.
+const providerEvidenceRateLimit = createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 5,
+  namespace: "provider-evidence",
+});
+
 const publicDiscoveryRateLimit = createDurableRateLimiter({
   database,
   databaseAvailable: () => Boolean(database),
@@ -6427,6 +6435,8 @@ registerStripeConnectRoutes({
   requireV1Actor,
   writeRateLimit,
   publicPaymentRateLimit,
+  providerEvidenceRateLimit,
+  sourceCommit,
   runIdempotentMutation,
   sendIdempotentResult,
 });

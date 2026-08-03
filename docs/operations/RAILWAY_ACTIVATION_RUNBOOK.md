@@ -1,615 +1,371 @@
-# Railway activation runbook
+# Railway Activation Runbook
 
-Last reviewed: 2026-07-29 America/New_York
+This runbook governs a future manual Railway Stage 1 role split. It is a
+fail-closed operating procedure, not standing permission to change Railway.
 
-## Status and authority boundary
+Current status: **source prepared and re-reviewed only**. Railway activation,
+provider mutation, spending, deployment, high availability, redundancy,
+incident exit, and launch readiness are not claimed.
 
-This is an operator runbook, not an authorization or a deployment receipt.
-Packet 94 changed source and documentation only. A later read-only Railway
-status export inspected service metadata, but no provider setting, data,
-service, replica, deployment, traffic, or paid resource was changed or
-created.
+## Authority boundary
 
-Michael's standing instruction is controlling: **no action that can create a
-charge may be taken without his explicit permission immediately before that
-action**. A generic "proceed" does not authorize the provider stage below.
-The approval must identify the exact project, environment, services,
-resources, duration, and maximum cost.
+Do not begin an activation while any of these are true:
 
-The source prepared by Packet 94 is:
+- the production credential incident remains unaccepted for the exact
+  activation scope;
+- `ACTIVE_LAUNCH_HOLD` has not been intentionally addressed;
+- the final candidate is not a clean reviewed commit on `master`;
+- required evidence is missing, stale, or stored unsafely;
+- the plan has not passed the strict preflight;
+- the owner has not separately authorized the exact passing plan and its
+  current cost/window limits.
 
-- branch: `codex/railway-activation-readiness`;
-- implementation commit: `e5d952ca454a2857c131e1b860ad9cd07dc6399a`;
-- live production observed before this packet:
-  `92a8451b8190f5119384a4970fb1a324503df995`.
+An earlier approval cannot be reused after a commit, credential, provider
+setting, topology, cost, billing-cycle, monitoring, recovery, or rollback
+change.
 
-These values must be re-read immediately before a future activation. Never
-activate from an assumed branch or stale SHA.
+## Prepared service design
 
-> **Consolidated-candidate warning:** the branch and SHAs above belong to the
-> historical Packet 94 preparation and are not activation inputs for
-> `codex/release-candidate-consolidation`. That candidate has not been merged or
-> deployed and does not yet have a final documentation-inclusive SHA. Do not
-> activate it until the credential incident and launch hold are formally
-> closed, all candidate gates pass, a fresh provider snapshot binds the exact
-> final source and rollback target, and Michael explicitly approves the updated
-> cost, configuration, outage, and rollback record.
+| Service | Checked-in config | Runtime | Predeploy | Health | Stage 1 replicas |
+| --- | --- | --- | --- | --- | --- |
+| Web | `railway.json` | `node server/runtime.js web` | `node server/runtime.js migrate` | `/api/health` | 1 |
+| Worker | `railway.worker.json` | `node server/runtime.js worker` | `node server/runtime.js worker-check` | none | 1 |
 
-## Current read-only provider facts
+Both services:
 
-A read-only `railway status --json` observation on 2026-07-29 reported:
+- use Node 20 from `.nvmrc`;
+- build with Nixpacks and `npm run build`;
+- restart on failure with at most 10 retries;
+- use a 30-second Railway drain;
+- run in the same explicitly reviewed region;
+- have no application volume;
+- have serverless mode disabled;
+- set `RIVT_PUSH_REQUIRED=true`;
+- deploy only through the `manual_staged` trigger while autodeploy is
+  `staged_manual_apply`.
 
-- production source `92a8451b8190f5119384a4970fb1a324503df995`;
-- one application replica and one PostgreSQL service;
-- no worker service;
-- the existing application still using its prior `npm start`/Nixpacks-style
-  effective deployment settings rather than the Packet 94 split config;
-- application sleep disabled;
-- no volume attached to the application service; and
-- a separate unattached, `READY`, 5 GB production volume.
+The web predeploy is the only migration owner. `worker-check` is read-only and
+must see the migration ledger already current before the worker starts.
+Hosted `combined` mode is forbidden.
 
-These are time-bound read-only observations, not activation evidence and not
-permission to change anything. The unattached volume must not be called
-orphaned or deleted by inference. Identify its owner, purpose, data/recovery
-relationship, retention need, and ongoing cost before any action. Historical
-deployment metadata that says `plan:hobby` is not authoritative evidence of
-the workspace's current plan; use the current billing/account view.
+One web plus one worker is a responsibility split, not redundancy. Do not use
+this runbook to add a second web replica. That is a separate `redundancy`
+stage, approval, cost, and acceptance exercise.
 
-## What Railway Pro does and does not establish
+## Required configuration contract
 
-Railway Pro raises available platform limits and has a US$20 monthly minimum
-that includes the first US$20 of resource usage. It does not, by itself,
-create replicas, database high availability, point-in-time recovery,
-application monitoring, a WAF policy, a capacity baseline, or a tested
-rollback.
+Record presence and fingerprints only; never copy secret values into an
+artifact or repository document.
 
-Published usage rates reviewed on 2026-07-29 were:
+Both hosted services need the role/topology/database contract:
 
-- memory: US$10 per GB-month;
-- CPU: US$20 per vCPU-month;
-- service egress: US$0.05 per GB;
-- volume storage and incremental native volume-backup bytes: US$0.15 per
-  GB-month; and
-- storage-bucket bytes, including a configured PITR archive bucket:
-  US$0.015 per GB-month, plus applicable service egress for archive uploads.
+- `RIVT_PROCESS_ROLE`
+- `RIVT_WEB_REPLICAS`
+- `RIVT_WORKER_REPLICAS`
+- `RIVT_WEB_PG_POOL_MAX`
+- `RIVT_WORKER_PG_POOL_MAX`
+- `RIVT_MIGRATE_PG_POOL_MAX`
+- `RIVT_DB_RESERVED_CONNECTIONS`
+- `RIVT_DB_MAX_CONNECTIONS`
+- `DATABASE_URL` using the reviewed private direct endpoint
+- `HTTP_SHUTDOWN_TIMEOUT_MS`
+- `PUSH_DELIVERY_TIMEOUT_MS`
+- `RIVT_PUSH_REQUIRED=true`
+- `VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT`
 
-Those rates are planning inputs, not a quote. The dashboard estimate and the
-owner's written ceiling control any future action. Compute and Agent limits
-are separate; Agent usage also consumes the Pro included credit and must be
-recorded.
+Keep VAPID public-key and subject fingerprints identical between web and
+worker. Keep the private key secret and server-side. Preserve any other
+service credentials through provider references; this runbook never authorizes
+reading or exporting their values.
 
-Official references:
+If invoice bank payments are enabled on the web service, it must also have:
 
-- <https://docs.railway.com/pricing/plans>
-- <https://docs.railway.com/pricing/understanding-your-bill>
-- <https://docs.railway.com/pricing/cost-control>
-- <https://docs.railway.com/deployments/optimize-performance>
-- <https://docs.railway.com/deployments/healthchecks>
-- <https://docs.railway.com/deployments/pre-deploy-command>
-- <https://docs.railway.com/deployments/deployment-teardown>
-- <https://docs.railway.com/networking/private-networking>
-- <https://docs.railway.com/networking/waf>
-- <https://docs.railway.com/volumes/backups>
-- <https://docs.railway.com/volumes/point-in-time-recovery>
-- <https://docs.railway.com/storage-buckets/billing>
+- `STRIPE_CONNECT_ACH_ENABLED=true`;
+- a dedicated `STRIPE_CONNECT_WEBHOOK_SECRET`; and
+- `STRIPE_CONNECT_WEBHOOK_SCOPE=connected_accounts`, set only after the live
+  Connected-accounts destination and signed state-transition proof pass.
 
-The current unauthorized, read-only Stage 1 worksheet is
-`docs/operations/RAILWAY_STAGE1_COST_BRIEF.md`. It must be refreshed from
-the account immediately before approval and must not be treated as provider
-or activation evidence.
+If that provider proof is incomplete, keep `STRIPE_CONNECT_ACH_ENABLED=false`
+and do not set the scope attestation merely to make health look configured.
 
-## Selected staged topology
+## Artifact handling
 
-The safe transition is intentionally smaller than the final launch target.
+The activation plan, provider snapshot, and operator-control review must be:
 
-### Stage 1 - split the process
+- outside the repository, or inside a path that Git explicitly ignores;
+- newly created for the activation window;
+- strict JSON;
+- free of secrets, raw provider IDs, customer data, private URLs, access
+  tokens, keys, passwords, or copied environment values;
+- retained only according to the incident/evidence policy.
 
-- Existing public service: **one** `web` process.
-- New private service: **one** `worker` process.
-- Migration: the web deployment owns the single schema-mutating pre-deploy
-  command. The worker runs only the non-mutating `worker-check` and must start
-  only after the web migration and readiness receipts are current.
-- PostgreSQL: existing private endpoint, after its exact capacity, backup,
-  PITR, and failure-domain settings are recorded.
-- Region: keep the web, worker, and database in the same current region.
+The preflight refuses an artifact path inside the repository unless the path
+is explicitly ignored. Provider capture also refuses to overwrite an existing
+file.
 
-Stage 1 separates HTTP from push delivery and maintenance. It is not
-application redundancy and does not close `GA-OPS-009`.
+Environment enumeration is prohibited. Do not run or record a broad variable
+or secret inventory. Use only the allowlisted status capture below.
 
-### Stage 2 - add web redundancy
+## Step 0 - Freeze deployment before merging
 
-Only after Stage 1 is stable and under a separate cost approval:
+1. Read-only inspect the production branch and autodeploy control.
+2. If autodeploy is already off, record that fact in the fresh operator review.
+3. If autodeploy is on or cannot be proved off, stop. Obtain separate owner
+   authorization to disable it, perform only that control change, and verify it
+   is off. Source approval does not authorize this provider mutation.
+4. Only after the freeze is proven may the reviewed candidate be merged to
+   `master`. The merge itself does not authorize a deployment.
+5. Verify that no deployment started from the merge. If one did, stop the
+   process and follow the incident/rollback boundary before continuing.
+6. Fetch again and prove the clean candidate equals `origin/master`; only then
+   may Step 1 and strict preflight run.
 
-- increase the public web service to **two same-region replicas**;
-- retain one worker unless measured backlog requires a reviewed change;
-- prove shared session behavior, graceful drain, request distribution,
-  database headroom, and rollback on the exact deployed source.
+## Step 1 - Freeze and identify source
 
-Do not start with multi-region web replicas. A single-region PostgreSQL
-dependency would add cross-region latency and would not create end-to-end
-regional failover.
+1. Fetch public remote history.
+2. Confirm the worktree is clean, local HEAD is the final candidate, and that
+   candidate equals freshly resolved `origin/master`.
+3. Record:
+   - final prepared implementation commit;
+   - final candidate commit;
+   - exact live-before commit from fresh production health;
+   - rollback commit from the current successful, redeployable web
+     deployment.
+4. Confirm candidate history contains both the prepared implementation and the
+   live-before commit.
+5. Hash `railway.json` and `railway.worker.json` for the plan.
+6. Do not continue if any source, config, or branch fact changes afterward.
 
-## Source configuration contract
+## Step 2 - Prove current health, schema, push, and recovery
 
-Railway config-as-code can override dashboard values. Each service must point
-at the right file:
+1. Capture fresh `/api/health` evidence:
+   - HTTP 200;
+   - exact live-before source;
+   - current migration version.
+2. Confirm migration `0042_push_vapid_generation` is in the required history
+   and rollback compatibility or a reviewed forward repair is documented.
+3. Run the production push-readiness check read-only. Require:
+   - generation schema ready;
+   - all eligible registrations active-generation and delivery-proven;
+   - zero previous, unknown, unrecognized, retired, or inactive eligible
+     registrations;
+   - no due, stale, processing, or recent terminal outbox work.
+4. Record a compatible recovery checkpoint no more than 24 hours old.
+5. Confirm the restore procedure was reviewed and the rollback source can use
+   the current schema.
+6. Require either demonstrable bank-payment disablement or a live Stripe
+   `Connected accounts` destination with its dedicated signing secret, the
+   required event selection, and signed-delivery/state-transition proof. The
+   current `Your account` destination is not payment-activation evidence.
 
-| Service | Config path | Start | Pre-deploy | Health |
-| --- | --- | --- | --- | --- |
-| Web | `/railway.json` | `node server/runtime.js web` | `node server/runtime.js migrate` | HTTP 200 at `/api/health` |
-| Worker | `/railway.worker.json` | `node server/runtime.js worker` | `node server/runtime.js worker-check` | No HTTP health check |
+Do not create a backup, restore target, subscription, push delivery, or
+production row unless separately authorized.
 
-Both configs use a direct Node start so the process receives `SIGTERM`.
-Both allow a 30-second Railway drain while RIVT keeps its bounded shutdown
-coordinator. The worker intentionally has no public domain and no HTTP health
-path. Its activation evidence comes from structured startup, capacity, queue,
-and shutdown events.
+## Step 3 - Capture a sanitized Railway snapshot
 
-Railway documents a pre-deploy command as a separate container that runs
-before the application starts. Only the web command mutates schema. RIVT's
-migration command retains the checksummed migration ledger and PostgreSQL
-advisory lock. The worker's `worker-check` is deliberately non-mutating: it
-checks the database ceiling, current migration ledger, required VAPID
-configuration, and shutdown budget before the worker is eligible to start.
-
-Deploy the web and retain both its migration receipt and ready deployment
-identity before manually deploying the worker from the same exact candidate
-commit. A GitHub push can deploy services independently and does not provide
-cross-service ordering. Worker autodeploy must therefore remain disabled (or
-its source trigger disconnected) through the web migration and readiness
-gate. Do not treat staged changes, reference-variable dependencies, or a
-passing local plan linter as a cross-service deployment transaction.
-
-## Environment contract
-
-Set shared topology values identically on web and worker. Set only the
-role-specific `RIVT_PROCESS_ROLE` per service.
-
-| Variable | Web | Worker | Rule |
-| --- | --- | --- | --- |
-| `RIVT_PROCESS_ROLE` | `web` | `worker` | Never use hosted `combined` |
-| `RIVT_WEB_REPLICAS` | same value | same value | Must equal actual deployed web count |
-| `RIVT_WORKER_REPLICAS` | same value | same value | Must equal actual deployed worker count |
-| `RIVT_WEB_PG_POOL_MAX` | same value | same value | Must match reviewed budget |
-| `RIVT_WORKER_PG_POOL_MAX` | same value | same value | Must match reviewed budget |
-| `RIVT_MIGRATE_PG_POOL_MAX` | same value | same value | Includes one pre-deploy pool |
-| `RIVT_DB_RESERVED_CONNECTIONS` | same value | same value | App/operator safety allowance |
-| `RIVT_DB_MAX_CONNECTIONS` | same value | same value | No greater than observed usable PostgreSQL ceiling |
-| `RIVT_PUSH_REQUIRED` | `false` | `true` | Worker must fail closed without valid VAPID |
-| `PUSH_DELIVERY_TIMEOUT_MS` | `8000` | `8000` | Allowed range is 1,000-10,000 ms |
-| `HTTP_SHUTDOWN_TIMEOUT_MS` | `20000` | `20000` | Reserves a nominal post-push margin and stays below the 30-second drain; forced shutdown is still the bound if database work stalls |
-| `RIVT_CAPACITY_TELEMETRY_ENABLED` | `true` | `true` | Fixed-schema aggregate evidence only |
-| `RIVT_CAPACITY_TELEMETRY_INTERVAL_MS` | reviewed value | reviewed value | Default 300,000 ms; retain cost/volume bounds |
-
-Use Railway private networking for `DATABASE_URL`. This activation requires
-the **direct private PostgreSQL endpoint**. Do not use a public TCP proxy,
-PgBouncer/pooled endpoint, or an unverified HA proxy: startup's
-`max_connections` observation and the connection worksheet must describe the
-same PostgreSQL server that accepts the application sessions. A future
-pooler/HA endpoint requires a separately reviewed budget and failover test.
-Record only a redacted host fingerprint, port, endpoint kind, and TLS mode;
-never record the URL or credentials. Keep secrets out of screenshots, logs,
-evidence JSON, shell history, and this repository.
-
-Do not invent any pool or connection value. Query PostgreSQL first:
-
-```sql
-SELECT
-  current_setting('max_connections')::integer AS max_connections,
-  current_setting('superuser_reserved_connections')::integer
-    AS superuser_reserved_connections,
-  COALESCE(NULLIF(current_setting('reserved_connections', true), ''), '0')::integer
-    AS reserved_connections,
-  (SELECT datconnlimit
-   FROM pg_database
-   WHERE datname = current_database())::integer AS database_connection_limit,
-  (SELECT rolconnlimit
-   FROM pg_roles
-   WHERE rolname = current_user)::integer AS role_connection_limit;
-```
-
-RIVT now repeats this check during every web, worker, and migration startup.
-Startup fails if the declared database ceiling is above PostgreSQL's observed
-effective ceiling: the minimum of global usable slots and any non-unlimited
-database or role limit.
-
-Confirm that the selected endpoint is direct PostgreSQL. Also record the
-database product/image and version, region and failure domain, volume
-attachment, HA topology and failover endpoint behavior (even when HA is
-disabled), and every global/database/role-reserved connection limit. A
-PgBouncer or HA endpoint is a stop condition for this activation until its
-frontend/client ceiling, backend/server ceiling, pool mode, failover
-behavior, and startup-query measurement layer are added to a reviewed plan.
-
-The steady-state connection plan is:
+Create a new external or ignored path, then run:
 
 ```text
-(web replicas x web pool)
-+ (worker replicas x worker pool)
-+ RIVT reserved connections
+npm run railway:activation:preflight -- --capture-provider-snapshot <railway-status.json> --environment production --web-service RIVT
 ```
 
-The migration pool is zero after deployment. It must retain at least 30%
-headroom. The transition worksheet must separately show:
+The command invokes only read-only `railway status --json`, keeps allowlisted
+facts, replaces provider identities with SHA-256 fingerprints, scans for
+sensitive values, and writes the artifact once.
+
+The snapshot must be no more than 15 minutes old when evaluated. If it becomes
+stale, capture a new file; do not overwrite the old one.
+
+## Step 4 - Perform the operator control review
+
+Create a separate external or ignored strict JSON artifact with:
+
+- `schemaVersion: 1`;
+- `source: "operator_activation_control_review_v1"`;
+- review time and reviewer;
+- production environment name and fingerprint matching the snapshot;
+- connected branch `master`;
+- autodeploy mode `staged_manual_apply`;
+- effective config source `checked-in Railway configuration`;
+- serverless disabled;
+- current billing-cycle start and end;
+- exactly one reviewed `web` control and one reviewed `worker` control,
+  including config path, start/predeploy command, health path, replica count,
+  region, volume, serverless, push-required, drain, and manual trigger;
+- private/direct database state, observed global and effective connection
+  ceilings, declared planning ceiling, and the web, worker, migration, and
+  reserved connection bounds currently shown for the proposed configuration,
+  including the live service's pool bound during deployment overlap;
+- monitoring facts for public uptime, worker heartbeat, push backlog,
+  dead-letter, resources, tested alert receiver, and on-call owner;
+- current-month actual and estimate, Railway Agent usage/limit, and provider
+  hard-limit facts.
+
+This review must be no more than 15 minutes old when evaluated. It is a human
+review of provider controls that the sanitized status snapshot cannot prove.
+
+## Step 5 - Build the strict activation plan
+
+Set:
+
+- `schemaVersion: 1`;
+- `status: "authorized_preflight"`;
+- `activationStage: "split"`;
+- the exact source, service, database, push, recovery, monitoring, cost,
+  rollback, provider-binding, and operator-review facts;
+- planned test duration and planned worker-unavailable minutes;
+- new owner approval identity/times and positive maximums for:
+  - one-time activation cost;
+  - incremental retained monthly cost;
+  - total monthly cost;
+  - test duration;
+  - worker-unavailable duration.
+
+Cost evidence must distinguish:
+
+- current-month actual;
+- current-month estimate before activation;
+- current-cycle incremental estimate;
+- one-time activation estimate;
+- staged estimate, explicitly including the one-time estimate;
+- retained monthly cost;
+- Railway Agent usage and separate monthly limit;
+- verified workspace-compute hard limit and its whole-workspace outage effect,
+  or explicitly accepted residual risk plus a manual stop.
+
+The hard limit or manual stop, together with the Agent limit, must fit under
+the owner's total approved ceiling. Do not round down or hide tax, residual
+network/storage risk, or the fact that a workspace limit may stop both the app
+and database.
+
+## Step 6 - Bind owner approval to the plan
+
+With the strict plan complete except for its final approval digest, print the
+digest:
 
 ```text
-(old combined replicas x old combined pool)
-+ (candidate web replicas x web pool)
-+ (candidate worker replicas x worker pool)
-+ (concurrent web migration processes x migration pool)
-+ operator/admin/RIVT reserved allowance
+npm run railway:activation:preflight -- --plan <activation-plan.json> --print-approval-digest
 ```
 
-Use the greatest conservative phase total even though the staged procedure
-is designed not to run every component concurrently. Record the old
-deployment's actual pool, the pre-deploy process count, deployment overlap,
-observed active connections, and the phase in which the peak occurred. A safe
-steady-state calculation is not sufficient for an unsafe replacement or
-rollback overlap.
+Give the owner the complete plain-language plan, including cost and outage
+effects. Record approval only for that exact digest, and preserve the
+owner-approved digest separately from the editable plan. Do not derive the
+independent command value from the plan during evaluation. Approval is valid
+for at most 24 hours and must expire at or before the approved activation
+boundary.
 
-## Mandatory no-write preflight
+If any material fact changes, regenerate the digest and obtain a new
+approval.
 
-Stop before provider mutation if any item is missing:
+### Approval trust boundary
 
-1. Exact `origin/master`, proposed deploy SHA, and live `/api/health` SHA are
-   recorded and reconciled.
-2. The implementation and documentation commits have passed review.
-3. Railway project, production environment, service IDs, config paths,
-   region, actual replica counts, resource limits, restart policy, drain,
-   private networking, effective config source, connected branch/watch
-   patterns, per-service deployment trigger, autodeploy state, overlap,
-   runtime, domains, app-sleep state, volume attachments, deployment IDs,
-   applied configuration hashes, alert routing, and current usage are
-   recorded from Railway. Web and worker must have no attached volume before
-   replica activation. Worker autodeploy must be off until web acceptance.
-4. PostgreSQL product/image/version, private direct-endpoint use, redacted
-   endpoint fingerprint/port/TLS mode, every applicable connection limit,
-   volume, region/failure domain, failover endpoint behavior, HA state,
-   backup and PITR details, and last restore drill/RTO are recorded from the
-   account. The native-volume-backup record includes schedule, retention,
-   last success, protected volume, bytes, restore target/scope, and the
-   volume-deletion limitation. The PITR record separately includes enable
-   time, bucket/region, base/full/incremental schedule, restore-window start
-   and end, last successful archive, WAL continuity, and sibling-service/HA
-   restore behavior. A sustained archive outage can shorten the effective
-   restore window; the dashboard window is not sufficient proof by itself.
-5. The transition and steady-state connection budgets both retain at least
-   30% headroom. The transition worksheet separately records old combined
-   count/pool, candidate web count/pool, candidate worker count/pool, the one
-   web migration count/pool, and reserve.
-6. The exact merged candidate migrations are reviewed as expand/contract
-   compatible with the old rollback source, or a reviewed forward-repair path
-   exists. A successful advisory lock is not schema rollback proof.
-7. VAPID configuration is valid; web and worker public-key and subject
-   SHA-256 fingerprints match; and the future worker uses
-   `RIVT_PUSH_REQUIRED=true`. Record fingerprints only, never key material.
-8. Fixed-schema capacity telemetry is enabled with reviewed provider
-   retention, access, volume, and cost controls.
-9. Continuous public uptime plus worker heartbeat, push backlog, dead-letter,
-   CPU, RAM, disk, and egress alerts are configured; their receiver and
-   on-call owner are tested. The plan records restart-exhaustion behavior,
-   detection interval, alert-delivery bound, backlog threshold, and the
-   owner-approved maximum worker-unavailable interval. `ON_FAILURE` with ten
-   retries can leave the worker stopped after exhaustion. Deployment health
-   and logs alone do not satisfy monitoring.
-10. A fresh recovery point and rollback owner exist. The prior deployment's
-    removed-image expiry is calculated from Railway's 120-hour Pro retention,
-    the rollback action is visibly available, and an exact rebuild fallback
-    binds source SHA, config hash, build inputs, and redacted variable hash.
-    This does not substitute for the still-open independent-recovery blocker.
-11. A current read-only dashboard estimate or manual rate worksheet is
-    captured without secrets. Do not apply or stage provider configuration
-    merely to obtain an estimate, because that action can trigger a build or
-    deployment.
-12. The owner-approved project change ceiling and Railway's workspace-level
-    Compute hard limit are recorded as different controls. Crossing the hard
-    limit can stop every workload in that workspace; it is not a precise
-    per-project budget and does not cap Agent charges. Alerts/estimates are
-    not caps. If that outage mechanism is unacceptable or no suitable
-    enforced limit exists, approval must accept residual risk and set a
-    numeric manual stop value. Residual risk includes actual metered usage,
-    other workspace services, Agent usage, taxes, egress, PITR upload,
-    native-backup bytes, deployment overlap, pre-deploy compute, and partial
-    billing-cycle effects.
-13. Michael signs the exact approval record below no more than 24 hours
-    before activation; it remains unexpired for the whole approved window.
-14. A fresh, redacted, read-only Railway provider snapshot is captured
-    without overwriting prior evidence:
-    `npm run railway:activation:preflight -- --capture-provider-snapshot <new-snapshot-path> --environment production --web-service RIVT`.
-    The capture mode runs only `railway status --json`, discards fields
-    outside the strict allowlist, and replaces raw provider IDs with SHA-256
-    fingerprints. Bind its printed artifact hash and observation time to the
-    plan. The plan and supplied snapshot then pass:
-    `npm run railway:activation:preflight -- --plan <plan-path> --provider-snapshot <snapshot-path> --require-ready`.
+The digest is an accidental-drift and audit control, not cryptographic proof
+of who typed the command. The preflight assumes the invoking operator is
+trusted and cannot stop a malicious operator with source/provider access from
+substituting both a plan and its digest. Preserve the owner's approval in a
+separate access-controlled record, have a second person compare that record to
+the command value, and require the owner to perform the final Railway action.
+A future owner-controlled signing key or hardware approval can remove this
+procedural trust; it is not claimed by this packet.
 
-The verification mode is a local **plan/snapshot verifier**. It checks the
-redacted plan, exact local repository facts, and a supplied, short-lived
-read-only provider snapshot for consistency. Unlike the separate capture
-mode above, verification does not log into Railway or acquire a snapshot.
-Neither mode verifies a deployment, inspects PostgreSQL, tests an alert, or
-proves live acceptance. A passing result says that the supplied artifacts
-agree; it does not establish post-deploy behavior. Every provider or runtime
-claim still needs a timestamped, redacted observation in the evidence
-receipt.
-
-## Cost worksheet and approval record
-
-Complete this with current dashboard evidence. Do not put credentials,
-database URLs, signing secrets, contact data, or customer data in it.
+## Step 7 - Run the read-only preflight
 
 ```text
-Approval status: NOT AUTHORIZED / AUTHORIZED
-Approved by:
-Approved at:
-Expires at:
-
-Railway workspace name + redacted ID:
-Railway project name + redacted ID:
-Environment name + redacted ID:
-Region:
-Source commit:
-Live rollback commit/deployment ID:
-Recovery checkpoint ID + age:
-Maximum worker-unavailable minutes:
-
-Stage:
-Web service ID/config path/replicas/resource limits:
-Worker service ID/config path/replicas/resource limits:
-Web/worker deployment IDs and exact source/image:
-Web/worker deployment triggers and autodeploy states:
-Connected branch and watch paths:
-Effective config source and applied config hashes:
-App-sleep/serverless states:
-Database service ID/product/resource limits:
-Web/worker volume attachments (must be none):
-Unattached volume ID/purpose/owner/size/recovery role/retained cost:
-Database direct-private endpoint fingerprint/port/TLS mode:
-Database version/region/failure domain/HA/failover behavior:
-Database global/database/role/reserved limits:
-Native volume-backup schedule/retention/last success/bytes/restore scope:
-PITR enabled/window/WAL continuity/last archive/bucket/region/restore behavior:
-
-Billing-cycle start/end:
-Current month actual usage:
-Current month estimated bill:
-Pro included usage remaining:
-Agent usage:
-Staged one-time maximum:
-Staged incremental monthly maximum:
-Total monthly approved ceiling:
-Provider-enforced hard limit and workspace scope:
-Provider hard-limit behavior verified:
-Full-workspace outage mechanism accepted:
-Residual cost risk accepted:
-Manual stop at:
-Test duration and traffic ceiling:
-Resources retained after test:
-Expected retained monthly cost:
-
-Operator:
-Rollback owner:
-Approval wording:
+npm run railway:activation:preflight -- --plan <activation-plan.json> --provider-snapshot <railway-status.json> --operator-control-review <operator-review.json> --approved-plan-digest APPROVED_PLAN_SHA256 --require-ready
 ```
 
-Approval must name a numeric one-time maximum and incremental monthly
-maximum. "Included in Pro", "should be free", or an unpriced dashboard
-preview is not an acceptable ceiling. Railway alerts and estimates are not
-caps. A workspace Compute hard limit can create a full-workspace outage, so
-the approval must either accept that exact mechanism or accept the residual
-risk and a numeric manual stop. Native volume backups are billed at the
-volume rate (US$0.15/GB-month reviewed above); bucket/PITR storage is a
-different meter (US$0.015/GB-month reviewed above) and PITR uploads can add
-service egress.
+Proceed only if:
 
-## Future activation procedure
+- the command exits successfully;
+- findings are empty; and
+- status is exactly
+  `plan_snapshot_and_operator_review_consistent_pending_owner_activation`.
 
-Every step below is future work and requires the completed approval above.
+This status does not activate anything. Ask the owner for the final go/no-go
+decision for the exact still-current plan.
 
-### 1. Freeze and reconcile
+Blocked evaluation exits nonzero by default even when `--require-ready` is
+omitted. `--report-only` is the explicit diagnostic exception and must never
+be used as an activation gate.
 
-1. Freeze unrelated production changes.
-2. Fetch `origin/master`; record its exact SHA.
-3. Read `/api/health`; record live source and migration version.
-4. Confirm the proposed source is reviewed and reachable from `master`.
-5. Export redacted current config metadata and capture the current deployment
-   ID for rollback.
+## Step 8 - Future manual activation
 
-### 2. Protect recovery and cost
+Perform this section only after the owner gives that separate go decision.
 
-1. Verify the approved recovery checkpoint is current.
-2. Verify rollback owner and communication channel.
-3. Verify the cost limit, alerts, expiry, and resource cleanup owner.
-4. Stop if the estimate exceeds either approved ceiling.
+1. Verify the plan, approval, snapshot, review, source, billing, and cost facts
+   are still current.
+2. Keep autodeploy off.
+3. Manually stage the web service from the candidate commit and checked-in
+   `railway.json`.
+4. Wait for the one web predeploy migration to finish.
+5. Require exact-source web health, current migration, database health, and
+   monitored stability before touching the worker.
+6. Manually stage the worker from the same candidate commit and checked-in
+   `railway.worker.json`.
+7. Require successful `worker-check`, worker heartbeat, required push mode,
+   acceptable backlog, and database headroom.
+8. Monitor for the owner-approved duration:
+   - web health and error rate;
+   - worker heartbeat and shutdown behavior;
+   - push backlog, dead letters, and actual delivery;
+   - PostgreSQL connection peak and headroom;
+   - current cost against the manual stop/hard limit.
+9. Stop and roll back on any failed invariant or when an approved time/cost
+   boundary is reached.
 
-### 3. Prove trigger safety, then stage shared settings
-
-Railway variable and configuration changes can trigger a deployment. Before
-editing anything, prove from current provider evidence that autodeploy and
-every source/reference-variable trigger are disabled and that the edits will
-remain unapplied. If that cannot be proved, do not pre-stage settings; make
-the reviewed changes only inside the approved manual web deployment window.
-
-1. Add the reviewed shared topology/pool/ceiling values.
-2. Keep actual declared replica counts equal to the existing topology.
-3. Confirm the existing service still has its current role until the staged
-   release is intentionally applied.
-4. Set the web config path and effective deployment settings, but do not
-   trigger a release until its exact diff and configuration hash are
-   recorded.
-5. Confirm no secret is visible in the change set or evidence.
-
-### 4. Create and validate the worker definition
-
-1. Create an empty worker service or otherwise disable its source trigger
-   before connecting the approved source. Creating capacity is itself inside
-   the approved cost window.
-2. Set config path `/railway.worker.json`.
-3. Set `RIVT_PROCESS_ROLE=worker` and `RIVT_PUSH_REQUIRED=true`.
-4. Use the direct private `DATABASE_URL`.
-5. Do not attach a public domain or HTTP health check.
-6. Disable worker autodeploy/app sleep and record connected branch, watch
-   paths, trigger mode, effective config, and configuration hash.
-7. Confirm that no worker deployment exists or is running. Do not use a
-   simultaneous GitHub push, batch, or reference-variable change to start it.
-8. Do not start or retain it if the dashboard estimate changed beyond the
-   approved ceiling.
-
-### 5. Deploy web first, then the worker
-
-1. Manually deploy the existing public service from the exact candidate
-   commit with `RIVT_PROCESS_ROLE=web` and `/railway.json`.
-2. Observe exactly one web pre-deploy migration process; retain its deployment
-   and migration receipts. Stop if another migration or worker deployment
-   starts.
-3. Require Railway deployment success, `/api/health` HTTP 200, expected
-   source/migration identity, and `processRole=web`.
-4. Wait for the former combined deployment to drain fully, confirm
-   connections fall inside the reviewed bound, and retain the web deployment
-   ID/configuration hash. Do not add a second web replica in Stage 1.
-5. Only after the web gate passes, manually deploy one worker from the same
-   exact candidate commit. Its non-mutating pre-deploy command must be
-   `node server/runtime.js worker-check`.
-6. Require the worker startup/heartbeat/backlog evidence below. Keep worker
-   autodeploy disabled until the entire Stage 1 receipt is accepted.
-7. Stop and roll back if a readiness race, unexpected deployment trigger,
-   source/config mismatch, or connection peak occurs. Do not repair the
-   sequence by launching another deployment.
-
-### 6. Stage 1 acceptance
-
-Require all of the following on the exact source:
-
-- `/api/health` returns 200 and the expected source/migration identity;
-- the recorded deployment IDs, applied config hashes, triggers, watch paths,
-  app-sleep states, domains, and volume attachments match the approved plan;
-- the web starts with `processRole=web`;
-- the worker starts with `processRole=worker`, a current migration ledger,
-  valid push provider, and the expected private pool size;
-- one test account can sign in and retain its session across a web restart;
-- Stripe billing and Connect webhook endpoints return their expected safe
-  validation responses;
-- one consenting test push queues and reaches its test device once;
-- worker backlog returns to baseline and no attempt is finalized twice;
-- maintenance lease evidence shows bounded, non-overlapping work;
-- uploads and signed object reads work on a non-sensitive test artifact;
-- graceful `SIGTERM` logs a completed drain within the provider window;
-- continuous monitoring detects a stopped/exhausted worker and delivers an
-  alert inside the approved bound, while total worker unavailability remains
-  below its approved maximum;
-- error, capacity, resource, and cost signals remain inside approved bounds;
-  and
-- the owner-visible app smoke covers Contacts -> Estimate -> Invoice ->
-  Payment without using a real charge unless separately approved.
-
-Stage 1 failure means rollback, not improvisation.
-
-### 7. Stage 2 approval and acceptance
-
-Obtain a new exact cost approval before changing web replicas from one to
-two. Then require:
-
-- both actual web replicas identify the exact source and role;
-- observed requests reach both replica IDs;
-- shared sessions and authorization work regardless of replica;
-- terminating either replica leaves the public path available;
-- the surviving topology stays inside connection, latency, memory, CPU, and
-  error ceilings;
-- Stripe webhooks are not blocked or duplicated by the edge path;
-- rollback to one web replica is rehearsed; and
-- at least seven days of privacy-safe baseline evidence are collected before
-  claiming capacity or SLO readiness.
+Never manually start the worker before the web migration and exact-source
+health are complete.
 
 ## Rollback
 
-Rollback never runs a down migration and never deletes production data.
+The plan must bind rollback to the current successful, redeployable web
+deployment and source, name the rollback owner, and prove either:
 
-### Stage 1 rollback
+- a visible Railway rollback/redeploy action; or
+- an exact-source rebuild fallback.
 
-1. Stop the new worker so it cannot continue background work.
-2. If Railway still exposes the recorded combined deployment image within
-   the documented 120-hour Pro removed-image retention window, use that exact
-   rollback action and record the resulting deployment ID.
-3. If that action is missing, expired, or fails, rebuild the exact rollback
-   source with the recorded config, build inputs, and redacted variable hash.
-   A branch name or an unpinned "previous" image is not an exact fallback.
-4. Roll the existing public service back to the recorded combined role and
-   prior environment contract.
-5. Retain PostgreSQL, volumes, object storage, backups, and recovery evidence.
-6. Verify `/api/health`, migration identity, sessions, one safe API read,
-   Stripe webhook reachability, push backlog state, and error rate.
-7. Record any migration that remains forward-only and open a reviewed repair
-   plan. Do not improvise a schema downgrade.
+Rollback sequence:
 
-### Stage 2 rollback
+1. stop or remove the newly staged worker first;
+2. restore the bound web deployment/source;
+3. verify public health, migration compatibility, PostgreSQL, storage, and
+   authentication;
+4. verify push backlog is not being processed by two workers;
+5. run the production monitor and targeted smoke;
+6. record redacted evidence and actual cost;
+7. keep the launch hold in place unless separately cleared.
 
-1. Return the public service to one web replica.
-2. Keep the healthy worker only if its Stage 1 proof remains valid.
-3. If worker health is uncertain, use the full Stage 1 rollback.
-4. Verify the same health, session, API, webhook, backlog, and cost checks.
+If the old source is not schema-compatible, use only the pre-reviewed forward
+repair. Do not improvise a destructive down migration.
 
-If the source rollback cannot safely read the current schema, stop the
-release and use the reviewed forward-fix/recovery plan. Do not delete rows,
-restore over live production, or mutate a recovery point without a separate
-production-data authorization.
+## Evidence after an authorized activation
 
-## Edge, TLS, and DDoS cautions
+Repository evidence may record:
 
-- Railway provides public TLS and layer-4 mitigation. That is not a full
-  application-layer DDoS or bot-control proof.
-- Railway Under Attack Mode is an emergency browser challenge. It can block
-  non-browser clients, Stripe webhooks, public API clients, external uptime
-  monitors, and other machine traffic. Do not claim that it blocks or protects
-  Railway's internal deployment health check without provider-specific proof.
-  Never enable it as an always-on control without an explicit bypass-safe
-  design and webhook proof.
-- Keep PostgreSQL on private networking. `R-056` remains open for any public
-  database client that cannot authenticate the expected certificate.
-- A later Cloudflare or equivalent edge stage must preserve original client
-  identity safely, authenticate trusted proxies, exempt only the exact
-  webhook paths needed, and pass replay/signature/rate-limit tests.
+- candidate and live source SHAs;
+- redacted artifact hashes and timestamps;
+- commands/results without secrets;
+- deployment status and opaque/fingerprinted provider references;
+- health, migration, monitoring, push-readiness, capacity, rollback, and
+  actual-cost results;
+- the owner's exact authorized boundary.
 
-## Evidence receipt
+Do not commit the raw plan, provider snapshot, operator review, secret values,
+raw provider identifiers, or customer data.
 
-Use
-`docs/operations/templates/railway-activation-evidence.example.json` as a
-schema guide. Use
-`docs/operations/templates/railway-activation-plan.example.json` for the
-owner-approved plan. Use
-`docs/operations/templates/railway-provider-snapshot.example.json` only as
-the strict shape for the short-lived, read-only current-state CLI artifact.
-Its deliberately stale time, zero fingerprints, and
-`EXAMPLE_NOT_EVIDENCE` values must all be replaced from a fresh observation;
-the example file itself must never be supplied as activation evidence.
+## Exit states
 
-The plan contains intended candidate values, the provider snapshot contains
-the current pre-activation Railway state, and the evidence receipt contains
-independently observed activation/post-deploy provider and runtime values.
-Never copy a plan value into an observed field without actually checking it
-and recording the observation method and time. A valid receipt must bind:
+- **Blocked:** any required fact, approval, freshness check, or invariant
+  fails.
+- **Prepared:** source and runbook are reviewed, but no fresh passing plan or
+  owner activation exists.
+- **Pending owner activation:** the exact preflight status above passes, but no
+  provider mutation has occurred.
+- **Activated for Stage 1:** may be claimed only after the separately
+  authorized provider changes, exact-source health, worker/capacity/push
+  checks, time-bounded monitoring, actual-cost review, and evidence update all
+  pass.
 
-- exact source, deployment, service, environment, config-path, role, region,
-  and replica identities;
-- redacted configuration hashes rather than secret values;
-- migration version and every pre-deploy outcome;
-- actual and declared PostgreSQL ceilings, pools, replicas, transition
-  overlap, and headroom;
-- web health plus worker startup/backlog/lease/drain evidence;
-- session, API, Stripe webhook, push, upload, and rollback results;
-- approved and observed cost ceilings; and
-- explicit pass/fail/rollback status with operator and timestamps.
-
-Machine-observed evidence includes exact deployment/source/config identities,
-health/API responses, database query output, worker telemetry, and monitor
-delivery. Provider-observed evidence includes Railway IDs, effective settings,
-billing, backup/PITR, and rollback availability read from the account.
-Manual observations must name the operator, time, and procedure. An empty
-template, plan-linter pass, screenshot of the Pro badge, successful build, or
-passing local test is not deployment evidence.
-
-## Exit state
-
-Packet 94 exits when the source guardrails, runbook, approval boundary,
-rollback, and empty evidence schema are reviewed and locally verified.
-`GA-OPS-009`, `R-055`, `R-056`, and `R-057` remain open. Public-launch
-readiness requires later, separately approved provider, capacity, failure,
-recovery, edge, cost, and production-runtime proof.
+This document currently ends in **Prepared**, not Activated.

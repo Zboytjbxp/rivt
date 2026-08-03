@@ -1,3 +1,4 @@
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { ApiError, asyncRoute, validate, z } from "./api.js";
 import { verifyStripeSignature } from "./billing.js";
 import { logInfo } from "./logger.js";
@@ -25,6 +26,10 @@ const ACH_MIN_AMOUNT_CENTS = 50;
 const ACH_MAX_AMOUNT_CENTS = 99_999_999;
 const STRIPE_REQUEST_TIMEOUT_MS = 8_000;
 const REQUIRED_CONNECT_WEBHOOK_SCOPE = "connected_accounts";
+const PROVIDER_EVIDENCE_CLOCK_SKEW_MS = 2 * 60 * 1000;
+const PROVIDER_EVIDENCE_NONCE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const PROVIDER_EVIDENCE_PROOF_PATTERN = /^[a-f0-9]{64}$/;
+const SOURCE_COMMIT_PATTERN = /^[a-f0-9]{40}$/;
 const invoiceIdSchema = z.uuid();
 const toolInvoiceLocalIdSchema = z.string().trim().min(1).max(120).regex(/^[A-Za-z0-9:_-]+$/);
 const onboardingInputSchema = z.object({
@@ -42,6 +47,85 @@ function envValue(name, fallback = undefined) {
   return value || fallback;
 }
 
+function stripeConnectRuntimeProofKey({
+  secretKey,
+  webhookSecret,
+  enabled,
+  webhookScope,
+}) {
+  const hash = createHash("sha256");
+  hash.update("rivt-stripe-connect-runtime-v1\0");
+  for (const field of [
+    secretKey ?? "",
+    webhookSecret ?? "",
+    enabled === true ? "true" : "false",
+    webhookScope ?? "",
+  ]) {
+    const value = String(field);
+    hash.update(`${Buffer.byteLength(value, "utf8")}:`);
+    hash.update(value);
+    hash.update("\0");
+  }
+  return hash.digest();
+}
+
+export function stripeConnectRuntimeProof({
+  secretKey,
+  webhookSecret,
+  enabled,
+  webhookScope,
+  sourceCommit,
+  timestamp,
+  nonce,
+}) {
+  return createHmac("sha256", stripeConnectRuntimeProofKey({
+    secretKey,
+    webhookSecret,
+    enabled,
+    webhookScope,
+  }))
+    .update("rivt-provider-evidence-runtime-v1\0")
+    .update(String(timestamp))
+    .update("\0")
+    .update(String(nonce))
+    .update("\0")
+    .update(String(sourceCommit))
+    .digest("hex");
+}
+
+export function verifyStripeConnectRuntimeProof({
+  authorization,
+  nonce,
+  sourceCommit,
+  timestamp,
+  now = Date.now(),
+}) {
+  const proof = /^RIVT-HMAC ([a-f0-9]{64})$/.exec(String(authorization ?? ""))?.[1] ?? "";
+  const timestampText = String(timestamp ?? "");
+  const timestampSeconds = /^\d{10}$/.test(timestampText) ? Number(timestampText) : Number.NaN;
+  if (
+    !PROVIDER_EVIDENCE_NONCE_PATTERN.test(String(nonce ?? ""))
+    || !PROVIDER_EVIDENCE_PROOF_PATTERN.test(proof)
+    || !SOURCE_COMMIT_PATTERN.test(String(sourceCommit ?? ""))
+    || !Number.isSafeInteger(timestampSeconds)
+    || Math.abs(now - timestampSeconds * 1000) > PROVIDER_EVIDENCE_CLOCK_SKEW_MS
+  ) {
+    return false;
+  }
+  const config = connectConfig();
+  if (!config.secretKey || !config.webhookSecret) return false;
+  const expected = stripeConnectRuntimeProof({
+    secretKey: config.secretKey,
+    webhookSecret: config.webhookSecret,
+    enabled: config.enabled,
+    webhookScope: config.webhookScope,
+    sourceCommit,
+    timestamp: timestampText,
+    nonce,
+  });
+  return timingSafeEqual(Buffer.from(proof, "hex"), Buffer.from(expected, "hex"));
+}
+
 function connectConfig(appOrigin) {
   const secretKey = envValue("STRIPE_SECRET_KEY");
   const webhookSecret = envValue("STRIPE_CONNECT_WEBHOOK_SECRET");
@@ -56,6 +140,7 @@ function connectConfig(appOrigin) {
   return {
     secretKey,
     webhookSecret,
+    webhookScope,
     webhookScopeConfigured,
     enabled,
     appOrigin,
@@ -893,9 +978,40 @@ export function registerStripeConnectRoutes({
   requireV1Actor,
   writeRateLimit,
   publicPaymentRateLimit,
+  providerEvidenceRateLimit,
+  sourceCommit,
   runIdempotentMutation,
   sendIdempotentResult,
 }) {
+  const requireProviderEvidenceProof = (request, _response, next) => {
+    const authorized = verifyStripeConnectRuntimeProof({
+      authorization: request.get("authorization"),
+      nonce: request.get("x-rivt-evidence-nonce"),
+      sourceCommit,
+      timestamp: request.get("x-rivt-evidence-timestamp"),
+    });
+    if (!authorized) {
+      next(new ApiError(401, "PROVIDER_EVIDENCE_UNAUTHORIZED", "Provider evidence authorization failed."));
+      return;
+    }
+    next();
+  };
+
+  app.post(
+    "/api/provider-evidence/stripe-connect/runtime",
+    requireProviderEvidenceProof,
+    providerEvidenceRateLimit,
+    asyncRoute(async (request, response) => {
+      response.json({
+        data: {
+          provider: "stripe_connect",
+          sourceCommit,
+        },
+        meta: { requestId: request.requestId },
+      });
+    }),
+  );
+
   app.get("/api/v1/payments/connect/status", requireAuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const config = connectConfig(appOrigin);
     let row = (await database.query(
