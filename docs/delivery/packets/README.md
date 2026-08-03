@@ -33,6 +33,8 @@ tightly controlled sessions. Do not combine packets to save time.
 | 94 | Railway activation readiness, staged rollback, and exact-approval boundary |
 | 95 | Immutable launch-policy and mutable provider-evidence root separation; remediation of `csf_04e2d7dfe8fbe53f254d821c` |
 | 96 | Reachable three-revision `S -> E -> A` provider-evidence approval lifecycle without transferring policy authority to later roots |
+| 97 | Exact source-bound provider-control contract and fail-closed provider adapters |
+| 98 | Protected human-attested incident-rehearsal workflow and read-only exact-source smoke |
 
 Before each packet read:
 

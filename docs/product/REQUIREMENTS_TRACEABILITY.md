@@ -1,6 +1,47 @@
 # Gate A Requirements Traceability
 
-## Packet 97 - Provider-control contract hardening (locally complete; PR CI required)
+## Packet 98 - Protected incident-rehearsal workflow (candidate PR #19; source-only; no dispatch)
+
+- `GA-OPS-005` remains **Partial**. The candidate adds one manual-only,
+  protected-master, exact-source workflow whose run identity and four critical
+  steps match the source-bound Packet 97 incident-rehearsal adapter. It also
+  fails unless the operator attests that the controlled failure, human page,
+  role assignment, recovery, kill-switch decision, and decision log are
+  complete. A successful future run cannot independently prove those human
+  statements or replace review of the complete Scenario A record.
+- `GA-OPS-007` remains **Partial**. Source-contract tests lock the workflow to
+  one job, four exact critical steps, commit-pinned actions, a SHA-256-pinned
+  Railway CLI archive, read-only GitHub permissions, UUID-scoped remote
+  resources, an explicit protected SSH identity, a pinned Railway relay host
+  key, exact-source revalidation, private key/raw-output deletion, and the
+  absence of deployment, migration, backup, restore, SSH-key registration, or
+  provider-mutation commands. Before Node or database access, the remote guard independently
+  checks the runtime commit, project, environment, service, literal
+  `production` environment, and fixed `https://rivt.pro` origin. The live
+  Gate A smoke uses the read-only migration assertion. Focused workflow and
+  migration-safety tests pass 41/41; full local gates pass; and a fresh sealed
+  diff security review reports zero findings. PR #19 Gate A run `30821741994`
+  passed on exact implementation source
+  `d700980fb2dc63f05b1eded05f4fa801d13112b4`, including the disposable-
+  PostgreSQL integration and browser suites. Launch-readiness enforcement
+  remained correctly inapplicable because this packet targets the release-
+  candidate branch, not `master`.
+- `GA-OPS-008` remains **Partial**. This packet creates source code only. The
+  workflow has not been reviewed onto protected `master`, dispatched,
+  materialized into protected evidence revision `E`, approved in later
+  revision `A`, deployed, or used to clear the incident hold. The required
+  dedicated Railway workspace SSH public key and matching protected GitHub
+  private-key secret have not been created or approved by this packet, and no
+  provider evidence currently confirms that either credential or the
+  protected environment is configured.
+- `GA-OPS-009` remains **Blocker**. One rehearsal cannot prove redundancy,
+  failover, recovery, autoscaling, DDoS capacity, or launch readiness.
+- Requirement maturity does not change. `ACTIVE_LAUNCH_HOLD` remains active,
+  and no provider call, credential use, production-data action, workflow
+  dispatch, added cost, deployment, incident closure, ACH activation, or
+  launch is authorized.
+
+## Packet 97 - Provider-control contract hardening (accepted into release candidate)
 
 - `GA-OPS-004` remains **Blocker**. Six recovery controls are now declared in
   checked-in source and pinned to exact adapter/provider identities. Dynamic
@@ -17,10 +58,15 @@
   41/41 with exact adapter/provider-substitution, stale/failed rehearsal,
   dynamic recovery-status coverage, and fail-closed extreme-date handling.
   Full local gates and independent diff security review pass with no
-  reportable candidate; pull-request CI remains required before merge.
+  reportable candidate. Pull request #18 passed Gate A run `30811623328` and
+  merged into the release candidate as
+  `c8d1596d0a1dd371f3951fdf484cac8704391f38`. Release-candidate pull request
+  #16 then passed every engineering check in Gate A run `30812346351` and
+  stopped only at the intentional final launch-readiness enforcement.
 - `GA-OPS-008` remains **Partial**. Source policy now pins all 12 controls and
   payment remains disabled, but no protected `E` evidence or later protected
-  `A` approval revision has been collected.
+  `A` approval revision has been collected. Packet 97 is not merged to
+  `master` or deployed.
 - `GA-OPS-009` remains **Blocker**. This packet improves the evidence contract;
   it does not prove capacity, redundancy, failover, recovery, provider
   configuration, or launch readiness.
