@@ -56,7 +56,7 @@ deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
 
-## Packet 98 protected incident-rehearsal workflow - locally verified; PR CI required; no run or provider evidence
+## Packet 98 protected incident-rehearsal workflow - source candidate PR #19; corrected PR CI rerun pending; no run or provider evidence
 
 - A dedicated manual-only workflow at
   `.github/workflows/incident-rehearsal.yml` is bound to the RIVT repository,
@@ -96,8 +96,10 @@ decision.
   dispatch. A separately approved dedicated Railway workspace SSH public key
   and matching protected GitHub private-key secret must also be configured;
   Railway documents that a workspace key can reach every service in the
-  workspace. No environment, variable, secret, SSH key, provider resource, or
-  run is created by this packet.
+  workspace. This packet configured none of them, and no provider evidence
+  currently confirms that the protected environment, key, or secret exists.
+  No environment, variable, secret, SSH key, provider resource, or run is
+  created by this packet.
 - The workflow records an operator-attested human exercise plus exact automated
   observations; it does not independently prove that a person told the truth.
   The decision log, provider receipts, later approvals, and complete runbook

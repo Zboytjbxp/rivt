@@ -1,6 +1,6 @@
 # Gate A Requirements Traceability
 
-## Packet 98 - Protected incident-rehearsal workflow (source-only; no dispatch)
+## Packet 98 - Protected incident-rehearsal workflow (candidate PR #19; source-only; no dispatch)
 
 - `GA-OPS-005` remains **Partial**. The candidate adds one manual-only,
   protected-master, exact-source workflow whose run identity and four critical
@@ -20,15 +20,17 @@
   `production` environment, and fixed `https://rivt.pro` origin. The live
   Gate A smoke uses the read-only migration assertion. Focused workflow and
   migration-safety tests pass 41/41; full local gates pass; and a fresh sealed
-  diff security review reports zero findings. Pull-request CI remains
-  required because 23 PostgreSQL-backed integration cases need its disposable
-  database.
+  diff security review reports zero findings. The corrected pull-request CI
+  rerun remains pending because 23 PostgreSQL-backed integration cases need
+  its disposable database.
 - `GA-OPS-008` remains **Partial**. This packet creates source code only. The
   workflow has not been reviewed onto protected `master`, dispatched,
   materialized into protected evidence revision `E`, approved in later
   revision `A`, deployed, or used to clear the incident hold. The required
   dedicated Railway workspace SSH public key and matching protected GitHub
-  private-key secret have not been created or approved by this packet.
+  private-key secret have not been created or approved by this packet, and no
+  provider evidence currently confirms that either credential or the
+  protected environment is configured.
 - `GA-OPS-009` remains **Blocker**. One rehearsal cannot prove redundancy,
   failover, recovery, autoscaling, DDoS capacity, or launch readiness.
 - Requirement maturity does not change. `ACTIVE_LAUNCH_HOLD` remains active,

@@ -19,7 +19,8 @@ Run this rehearsal before any named customer cohort and repeat it at least every
 
 ## Protected Workflow Record
 
-Packet 98 adds `.github/workflows/incident-rehearsal.yml` as a manual-only,
+Packet 98 candidate PR #19 proposes
+`.github/workflows/incident-rehearsal.yml` as a manual-only,
 provider-verifiable record of the human rehearsal. It is not a scheduled
 monitor and it does not create the human exercise by itself.
 
@@ -47,8 +48,9 @@ Railway documents that a workspace SSH key grants access to every service in
 that workspace. Treat this as a high-impact production credential: use a
 dedicated key, keep the private half only in the protected GitHub environment,
 restrict reviewers, and rotate or remove it when the rehearsal path is retired.
-The checked-in workflow only consumes an already-approved identity; it does
-not register, replace, or delete a Railway key.
+When activated, the checked-in workflow consumes an identity that must first
+be separately approved; it does not register, replace, or delete a Railway
+key.
 
 The operator must complete the human exercise first, then truthfully confirm
 the workflow's required attestations and provide a bounded non-secret decision-

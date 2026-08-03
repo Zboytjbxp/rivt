@@ -9,6 +9,7 @@ proof that the human exercise occurred.
 ## Source and production boundary
 
 - Branch: `codex/incident-rehearsal-workflow`
+- Candidate pull request: `#19`
 - Candidate base: `c8d1596d0a1dd371f3951fdf484cac8704391f38`
 - Workflow: `.github/workflows/incident-rehearsal.yml`
 - Protected environment required before use: `production-rehearsal`
@@ -100,7 +101,9 @@ matching private half exists only in the protected
 `RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY` environment secret. Railway documents
 that a workspace SSH key can access every service in that workspace, so this
 credential must be separately approved, access-controlled, and rotated. This
-source packet does not create, register, or store that external credential.
+source packet does not create, register, or store that external credential,
+and no provider evidence currently confirms that the protected environment,
+workspace key, or GitHub secret is configured.
 
 The current master gate evaluates source-only readiness and cannot consume the
 later protected evidence revision `E` and approval revision `A`. Resolve that
