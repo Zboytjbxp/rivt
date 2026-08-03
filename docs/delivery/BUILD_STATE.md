@@ -2,9 +2,9 @@
 
 Last updated: 2026-08-03 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Provider-control contract hardening under the active production credential-containment hold; provider activation remains paused.
-Active packet: `docs/delivery/packets/97_PROVIDER_CONTROL_CONTRACT.md`
-Repository branch: `codex/provider-evidence-adapters` (candidate base `7655bff50a991bd82b2dfd7cf44676aac36e9a27`)
+Current phase: Protected incident-rehearsal workflow hardening under the active production credential-containment hold; no rehearsal has been dispatched.
+Active packet: `docs/delivery/packets/98_INCIDENT_REHEARSAL_WORKFLOW.md`
+Repository branch: `codex/incident-rehearsal-workflow` (candidate base `c8d1596d0a1dd371f3951fdf484cac8704391f38`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -56,7 +56,71 @@ deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
 
-## Packet 97 provider-control contract hardening - locally complete; PR CI required
+## Packet 98 protected incident-rehearsal workflow - locally verified; PR CI required; no run or provider evidence
+
+- A dedicated manual-only workflow at
+  `.github/workflows/incident-rehearsal.yml` is bound to the RIVT repository,
+  protected default `master` branch, exact deployed source commit, fixed
+  `public-health-provider-failure` scenario, and `incident-commander` role.
+- The single `rehearsal` job exposes exactly the four critical step identities
+  required by the Packet 97 provider adapter: `Check production health`,
+  `Run production monitor`, `Run live Gate A smoke`, and
+  `Verify incident evidence`.
+- The workflow requires human confirmation that a controlled failure was
+  exercised, the assigned owner received the alert, incident roles were
+  assigned, recovery was observed, the kill-switch decision was recorded, and
+  a bounded decision-log reference exists. Automated health checks alone
+  cannot masquerade as the complete human rehearsal.
+- Production health must report the workflow SHA with PostgreSQL and
+  S3-compatible storage healthy. The synthetic monitor runs outside Railway,
+  while the live Gate A smoke executes inside the existing production service
+  so the production database URL is not copied into GitHub. Before Node or
+  database access, the remote guard independently requires the exact runtime
+  commit, project, environment, service, literal `production` environment
+  name, and fixed `https://rivt.pro` smoke origin. Public health is rechecked
+  afterward. A stale or wrong active instance therefore fails closed.
+- GitHub permissions are read-only. Third-party actions are commit-pinned, the
+  official Railway CLI archive is version- and SHA-256-pinned, checkout
+  credentials are not persisted, the Railway credential is scoped only to the
+  live-smoke step, raw production output is withheld and deleted, and no
+  workflow artifact is uploaded.
+- The live Gate A smoke now checks migration history with the read-only
+  `assertMigrationsCurrent()` path rather than the ledger-creating
+  `migrationStatus()` path. The workflow performs no deployment, migration,
+  backup, restore, provider creation/configuration, payment activation, or
+  production-data mutation.
+- A protected `production-rehearsal` environment with required review and a
+  `master` restriction must be independently confirmed before any later
+  dispatch. No environment, variable, secret, provider resource, or run is
+  created by this packet.
+- The workflow records an operator-attested human exercise plus exact automated
+  observations; it does not independently prove that a person told the truth.
+  The decision log, provider receipts, later approvals, and complete runbook
+  review remain separately required.
+- The workflow cannot become trusted provider evidence until it is reviewed
+  onto protected `master`, production serves that exact source, and a
+  separately authorized manual dispatch succeeds. A receipt must then be
+  materialized through the reviewed provider adapter; it must never be hand-
+  authored.
+- Focused provider/workflow and migration-safety tests pass 41/41. Build,
+  lint, security lint, the 551-test unit/frontend suite, aggregate tests, all
+  four E2E journeys, `npm audit --omit=dev`, and diff-integrity checks pass
+  locally. The aggregate integration phase passed four available cases and
+  skipped 23 PostgreSQL-backed cases because no isolated
+  `TEST_DATABASE_URL` was present; pull-request CI must run those against its
+  disposable PostgreSQL service.
+- A fresh sealed working-tree security diff review covered all three source-
+  like/security-critical files and found zero reportable findings. The prior
+  Railway SSH wrong-instance/source-binding concern is closed by the new
+  fail-closed remote runtime identity guard.
+- Readiness remains blocked with 21 findings led by `ACTIVE_LAUNCH_HOLD`;
+  incident readiness separately remains blocked by eight missing operational
+  evidence/approval records. Requirement maturity does not change. No
+  workflow run, provider receipt,
+  protected evidence revision `E`, post-evidence approval revision `A`,
+  incident closure, launch-hold clearance, deployment, or launch is claimed.
+
+## Packet 97 provider-control contract hardening - accepted into release candidate
 
 - The checked-in source policies now declare the exact five incident, six
   recovery, and one disabled-payment evidence controls expected by the
@@ -87,7 +151,14 @@ decision.
   provider runner or materializer. It confirmed the exact source/provider/run
   bindings, evidence freshness and proof uniqueness, S/E/A authority split,
   payment-disabled posture, and final `verification.ok && readiness.ok` gate.
-  Pull-request CI remains required before release-candidate merge.
+  Pull request #18 passed Gate A run `30811623328` and merged into
+  `codex/release-candidate-consolidation` as
+  `c8d1596d0a1dd371f3951fdf484cac8704391f38`.
+- Release-candidate pull request #16 then passed every engineering check in
+  Gate A run `30812346351` and stopped only at the intentional final launch-
+  readiness enforcement with the unchanged 21 blockers.
+- Packet 97 is not merged to `master` or deployed and supplies no protected
+  provider evidence or later approval.
 - The unchanged readiness evaluator remains blocked with 21 findings, led by
   `ACTIVE_LAUNCH_HOLD`. No provider call, credential use, workflow dispatch,
   production-data action, backup/restore, deployment, added cost, hold
