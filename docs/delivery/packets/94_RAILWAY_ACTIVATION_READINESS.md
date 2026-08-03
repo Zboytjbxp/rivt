@@ -4,9 +4,12 @@
 > `codex/railway-activation-readiness` implementation and evidence boundary.
 > Its SHAs, provider observations, CI result, and cost worksheet do not prove
 > the later `codex/release-candidate-consolidation` candidate. The consolidated
-> candidate remains local, unmerged, undeployed, and subject to the active
-> credential-incident launch hold, fresh CI, a fresh provider snapshot, and a
-> new exact-source/cost approval.
+> candidate now includes the reviewed Packet 95 policy/evidence boundary
+> through merge `ce757652fa49d4592dcf6e13c4291cd8e4db18aa`, but remains
+> unmerged to `master`, undeployed, and subject to the active credential-
+> incident launch hold, a fresh provider snapshot, and a new exact-source/cost
+> approval. Packet 95 PR CI passed every engineering gate before the
+> intentional readiness-hold enforcement.
 
 ## Objective
 

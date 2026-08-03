@@ -139,7 +139,8 @@ readiness.
 
 ## Status
 
-**Implementation, independent review, and pull-request CI are complete. Merge
-into the release-candidate branch and exact deployed-source proof remain
-pending. Not merged or deployed, with no provider, cost, or production-data
-action authorized by this packet.**
+**Implementation, independent review, and pull-request CI are complete. PR #15
+merged into `codex/release-candidate-consolidation` as
+`ce757652fa49d4592dcf6e13c4291cd8e4db18aa`. Exact deployed-source proof
+remains pending. The candidate is not merged to `master` or deployed, with no
+provider, cost, or production-data action authorized by this packet.**

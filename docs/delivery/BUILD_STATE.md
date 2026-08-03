@@ -2,9 +2,9 @@
 
 Last updated: 2026-08-03 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Provider-evidence policy-boundary remediation under the active production credential-containment hold; provider activation remains paused.
-Active packet: `docs/delivery/packets/95_PROVIDER_EVIDENCE_POLICY_BOUNDARY.md`
-Repository branch: `codex/provider-evidence-policy-boundary` (based on release-candidate tip `f5e71b75c713c5a92eb20c8a1098009ca742c163`)
+Current phase: Release-candidate activation readiness under the active production credential-containment hold; provider activation remains paused.
+Active packet: `docs/delivery/packets/94_RAILWAY_ACTIVATION_READINESS.md`
+Repository branch: `codex/release-candidate-consolidation` (Packet 95 merge commit `ce757652fa49d4592dcf6e13c4291cd8e4db18aa`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -56,7 +56,7 @@ deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
 
-## Packet 95 provider-evidence policy boundary — PR verified, merge pending
+## Packet 95 provider-evidence policy boundary — merged into release candidate
 
 - The sealed Codex Security diff scan of
   `29e3d3a5e8773ff66fb5f255190e979431583074..f5e71b75c713c5a92eb20c8a1098009ca742c163`
@@ -92,21 +92,25 @@ decision.
 - That workflow is red only at its final intentional readiness-enforcement
   step. The readiness command preserved all 21 blockers, led by
   `ACTIVE_LAUNCH_HOLD`; there was no pre-readiness engineering failure.
+- Documentation-only Gate A run
+  [`30789376060`](https://github.com/Zboytjbxp/rivt/actions/runs/30789376060)
+  repeated the same result: every engineering and audit step passed, followed
+  only by the intentional final readiness-enforcement stop.
 - `launch:readiness --require-ready` correctly remains blocked with 21 findings,
   led by `ACTIVE_LAUNCH_HOLD`; Packet 95 neither suppresses nor clears them.
-- This packet is reviewed and PR-CI verified at its source boundary. It is not
-  merged or deployed and
+- Reviewed PR #15 merged into `codex/release-candidate-consolidation` as
+  `ce757652fa49d4592dcf6e13c4291cd8e4db18aa`. It is not merged to `master` or
+  deployed and
   authorizes no provider call, added cost, credential access, production-data
   action, launch-hold clearance, Railway Stage 1, ACH activation, or incident
   closure.
 - Existing launch blockers remain unchanged, including `R-051`, `R-052`,
   `R-055`, `GA-OPS-004`, and `GA-OPS-009`.
-- Next acceptance boundary: merge reviewed PR #15 into the release-candidate
-  branch without bypassing or clearing the active hold, then resume Packet 94
-  consolidation. Deployment and exact-source provider/recovery acceptance
-  remain separately authorized work.
+- Packet 95's acceptance boundary is complete. Packet 94 resumes with the
+  active hold unchanged. Deployment and exact-source provider/recovery
+  acceptance remain separately authorized work.
 
-## Packet 94 release-candidate consolidation — local only, not deployed
+## Packet 94 release-candidate consolidation — merged candidate, not deployed
 
 - Branch `codex/release-candidate-consolidation` selectively forward-ports the
   Packet 88-94 security, recovery, monitoring, push-delivery, replica-safety,
@@ -124,6 +128,10 @@ decision.
   converges ambiguous retries, keeps raw Stripe Checkout URLs server-side, and
   installs a complete version-matched offline bundle rather than only the entry
   chunk.
+- Packet 95 is included through merge commit
+  `ce757652fa49d4592dcf6e13c4291cd8e4db18aa`, so the candidate also enforces
+  an immutable source-policy root separate from the mutable provider-evidence
+  root before any adapter or readiness call.
 - No-cost local verification on that checkpoint passed: production build,
   application lint, security lint, 477/477 unit/frontend tests, all four browser
   E2E journeys, Tools/Trade News/mobile-actions/Work-lifecycle UI smokes, diff
