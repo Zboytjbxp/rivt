@@ -201,21 +201,29 @@ test("Stripe requests fail with a bounded, explicit timeout", async () => {
 });
 
 test("Stripe creates and enforces its default timeout signal", async () => {
-  await assert.rejects(
-    () => stripeConnectInternals.stripeConnectRequest(
-      { secretKey: "sk_test_placeholder" },
-      "/accounts/acct_test",
-      {},
-      {
-        method: "GET",
-        timeoutMs: 5,
-        fetchImpl: (_url, options) => new Promise((_resolve, reject) => {
-          options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true });
-        }),
-      },
-    ),
-    (error) => error.status === 504 && error.code === "STRIPE_CONNECT_TIMEOUT",
-  );
+  // AbortSignal.timeout() deliberately uses an unref'ed timer. Keep the test
+  // process alive long enough to observe that real default-timeout path when
+  // this file is the last active test on a fast CI runner.
+  const keepAlive = setTimeout(() => {}, 1_000);
+  try {
+    await assert.rejects(
+      () => stripeConnectInternals.stripeConnectRequest(
+        { secretKey: "sk_test_placeholder" },
+        "/accounts/acct_test",
+        {},
+        {
+          method: "GET",
+          timeoutMs: 5,
+          fetchImpl: (_url, options) => new Promise((_resolve, reject) => {
+            options.signal.addEventListener("abort", () => reject(options.signal.reason), { once: true });
+          }),
+        },
+      ),
+      (error) => error.status === 504 && error.code === "STRIPE_CONNECT_TIMEOUT",
+    );
+  } finally {
+    clearTimeout(keepAlive);
+  }
 });
 
 test("Stripe response-body timeouts are not mistaken for successful requests", async () => {
