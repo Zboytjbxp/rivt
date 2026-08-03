@@ -30,10 +30,17 @@ if (!testDatabaseUrl) {
     return String(response.headers.get("set-cookie") ?? "").split(";", 1)[0];
   }
 
-  async function requestJson(baseUrl, path, { body, cookie, method = "GET", userAgent } = {}) {
+  async function requestJson(baseUrl, path, {
+    body,
+    cookie,
+    expectedAccountId,
+    method = "GET",
+    userAgent,
+  } = {}) {
     const headers = { Origin: "https://rivt.pro" };
     if (body !== undefined) headers["Content-Type"] = "application/json";
     if (cookie) headers.Cookie = cookie;
+    if (expectedAccountId) headers["X-RIVT-Expected-Account-Id"] = expectedAccountId;
     if (userAgent) headers["User-Agent"] = userAgent;
     const response = await fetch(`${baseUrl}${path}`, {
       method,
@@ -88,6 +95,7 @@ if (!testDatabaseUrl) {
     const result = await requestJson(baseUrl, "/api/v1/onboarding/complete", {
       method: "POST",
       cookie: account.cookie,
+      expectedAccountId: account.id,
       body: {
         role,
         displayName: role === "contractor" ? "River City Electric" : "Alex Torres",
@@ -212,6 +220,101 @@ if (!testDatabaseUrl) {
     const tradespersonMe = await requestJson(baseUrl, "/api/v1/me", { cookie: tradesperson.cookie });
     assert.equal(tradespersonMe.payload.data.capabilities.canApplyToWork, true);
     assert.equal(tradespersonMe.payload.data.organizations.length, 0);
+
+    const originalTradespersonProfile = {
+      displayName: tradespersonMe.payload.data.profile.displayName,
+      serviceAreaCity: tradespersonMe.payload.data.profile.serviceAreaCity,
+      serviceAreaRegion: tradespersonMe.payload.data.profile.serviceAreaRegion,
+    };
+    const staleProfileDraft = await requestJson(baseUrl, "/api/v1/profile", {
+      method: "PATCH",
+      cookie: tradesperson.cookie,
+      expectedAccountId: contractor.id,
+      body: {
+        displayName: "Stale Account A Draft",
+        serviceAreaCity: "Tampa",
+        serviceAreaRegion: "FL",
+        serviceRadiusMiles: 50,
+        tradeCodes: ["plumbing"],
+      },
+    });
+    assert.equal(staleProfileDraft.response.status, 409);
+    assert.equal(staleProfileDraft.payload.error.code, "ACCOUNT_CONTEXT_CHANGED");
+
+    const staleOnboardingCompletion = await requestJson(baseUrl, "/api/v1/onboarding/complete", {
+      method: "POST",
+      cookie: tradesperson.cookie,
+      expectedAccountId: contractor.id,
+      body: {
+        role: "tradesperson",
+        displayName: "Stale Account A Completion",
+        serviceAreaCity: "Tampa",
+        serviceAreaRegion: "FL",
+        serviceRadiusMiles: 50,
+        tradeCodes: ["plumbing"],
+        consentAccepted: true,
+        consentVersion: "2026-06-19",
+      },
+    });
+    assert.equal(staleOnboardingCompletion.response.status, 409);
+    assert.equal(staleOnboardingCompletion.payload.error.code, "ACCOUNT_CONTEXT_CHANGED");
+
+    const tradespersonAfterStaleOnboarding = await requestJson(baseUrl, "/api/v1/me", { cookie: tradesperson.cookie });
+    assert.equal(tradespersonAfterStaleOnboarding.response.status, 200);
+    assert.deepEqual({
+      displayName: tradespersonAfterStaleOnboarding.payload.data.profile.displayName,
+      serviceAreaCity: tradespersonAfterStaleOnboarding.payload.data.profile.serviceAreaCity,
+      serviceAreaRegion: tradespersonAfterStaleOnboarding.payload.data.profile.serviceAreaRegion,
+    }, originalTradespersonProfile);
+    assert.equal(tradespersonAfterStaleOnboarding.payload.data.profile.trades[0].code, "electrical");
+
+    const secondTradespersonLogin = await requestJson(baseUrl, "/api/v1/auth/login", {
+      method: "POST",
+      userAgent: "Mozilla/5.0 (iPhone) Safari/17.0",
+      body: { email: tradesperson.email, password: "SafePassword!1234" },
+    });
+    assert.equal(secondTradespersonLogin.response.status, 200);
+    const secondTradespersonCookie = sessionCookie(secondTradespersonLogin.response);
+
+    const staleSessionInventory = await requestJson(baseUrl, "/api/v1/sessions", {
+      cookie: secondTradespersonCookie,
+      expectedAccountId: contractor.id,
+    });
+    assert.equal(staleSessionInventory.response.status, 409);
+    assert.equal(staleSessionInventory.payload.error.code, "ACCOUNT_CONTEXT_CHANGED");
+
+    const tradespersonSessions = await requestJson(baseUrl, "/api/v1/sessions", {
+      cookie: secondTradespersonCookie,
+      expectedAccountId: tradesperson.id,
+    });
+    assert.equal(tradespersonSessions.response.status, 200);
+    assert.equal(tradespersonSessions.payload.data.sessions.length, 2);
+    const originalTradespersonSession = tradespersonSessions.payload.data.sessions.find((session) => !session.current);
+    assert.ok(originalTradespersonSession);
+
+    const staleSessionDelete = await requestJson(baseUrl, `/api/v1/sessions/${originalTradespersonSession.id}`, {
+      method: "DELETE",
+      cookie: secondTradespersonCookie,
+      expectedAccountId: contractor.id,
+    });
+    assert.equal(staleSessionDelete.response.status, 409);
+    assert.equal(staleSessionDelete.payload.error.code, "ACCOUNT_CONTEXT_CHANGED");
+    assert.equal((await requestJson(baseUrl, "/api/v1/me", { cookie: tradesperson.cookie })).response.status, 200);
+
+    const staleRevokeOthers = await requestJson(baseUrl, "/api/v1/sessions/revoke-others", {
+      method: "POST",
+      cookie: secondTradespersonCookie,
+      expectedAccountId: contractor.id,
+    });
+    assert.equal(staleRevokeOthers.response.status, 409);
+    assert.equal(staleRevokeOthers.payload.error.code, "ACCOUNT_CONTEXT_CHANGED");
+    assert.equal((await requestJson(baseUrl, "/api/v1/me", { cookie: tradesperson.cookie })).response.status, 200);
+    const sessionsAfterStaleMutations = await requestJson(baseUrl, "/api/v1/sessions", {
+      cookie: secondTradespersonCookie,
+      expectedAccountId: tradesperson.id,
+    });
+    assert.equal(sessionsAfterStaleMutations.response.status, 200);
+    assert.equal(sessionsAfterStaleMutations.payload.data.sessions.length, 2);
 
     const avatarUploadId = randomUUID();
     await database.query(

@@ -1,126 +1,130 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
-import pg from "pg";
-import { migrateUp, migrationStatus } from "../server/migrations.js";
+import {
+  aggregateTableDigest,
+  assertBackupCatalogComplete,
+  assertBackupDatabaseRoleReadOnly,
+  assertDifferentDatabases,
+  beginReadOnlyBackupSnapshot,
+  countTableRows,
+  databaseTableDigests,
+  diffCounts,
+  diffTableDigests,
+  enforceRecoveryRto,
+  isDirectExecution,
+  poolFor,
+  publicTables,
+  recoveryRtoMinutesFromEnv,
+  requireConfiguredEnv,
+  sanitizedFailure,
+  sanitizedSuccess,
+  sequenceStates,
+  tableColumns,
+} from "./logical-backup-utils.js";
+import { restoreLogicalBackupArtifact } from "./restore-logical-backup-artifact.js";
 
-const targetUrl = process.env.RESTORE_DATABASE_URL?.trim();
-const sourceUrl = process.env.RESTORE_SOURCE_DATABASE_URL?.trim();
-const applyMigrations = process.argv.includes("--apply-migrations");
-const strictCompare = process.env.RESTORE_STRICT_COMPARE !== "false";
-const confirmedIsolated = process.env.CONFIRM_RESTORE_TARGET_ISOLATED === "true";
-
-if (!targetUrl) {
-  console.error("RESTORE_DATABASE_URL is required and must point to an isolated nonproduction PostgreSQL target.");
-  process.exit(1);
-}
-if (!confirmedIsolated) {
-  console.error("CONFIRM_RESTORE_TARGET_ISOLATED=true is required. Never run a restore drill against production.");
-  process.exit(1);
-}
-if (sourceUrl && sourceUrl === targetUrl) {
-  console.error("RESTORE_SOURCE_DATABASE_URL and RESTORE_DATABASE_URL must not point to the same database.");
-  process.exit(1);
-}
-
-function sslFor(url) {
-  return process.env.PGSSL === "disable" || url.includes("localhost") ? false : { rejectUnauthorized: false };
-}
-
-function poolFor(url) {
-  return new pg.Pool({ connectionString: url, ssl: sslFor(url) });
-}
-
-const criticalTables = [
-  "schema_migrations",
-  "auth_users",
-  "accounts",
-  "profiles",
-  "organizations",
-  "organization_memberships",
-  "jobs",
-  "job_applications",
-  "job_offers",
-  "active_work",
-  "conversations",
-  "conversation_messages",
-  "in_app_notifications",
-  "projects",
-  "project_entries",
-  "project_media",
-  "project_completion_submissions",
-  "work_reviews",
-  "support_cases",
-  "admin_action_events",
-  "rate_limit_windows",
-];
-
-async function tableExists(client, tableName) {
-  const result = await client.query("SELECT to_regclass($1) AS table_name", [tableName]);
-  return Boolean(result.rows[0]?.table_name);
-}
-
-async function inventory(pool) {
+export async function completeInventory(pool, { requireReadOnlyRole = false } = {}) {
   const client = await pool.connect();
   try {
-    const counts = {};
-    for (const tableName of criticalTables) {
-      assert.equal(await tableExists(client, tableName), true, `${tableName} is missing from restore target.`);
-      const result = await client.query(`SELECT count(*)::integer AS count FROM ${tableName}`);
-      counts[tableName] = result.rows[0].count;
+    await beginReadOnlyBackupSnapshot(client);
+    try {
+      if (requireReadOnlyRole) await assertBackupDatabaseRoleReadOnly(client);
+      await assertBackupCatalogComplete(client);
+      const tableNames = await publicTables(client);
+      const tables = [];
+      for (const tableName of tableNames) {
+        tables.push({ name: tableName, columns: await tableColumns(client, tableName) });
+      }
+      const inventory = {
+        tableNames,
+        tables,
+        counts: await countTableRows(client, tableNames),
+        tableDigests: await databaseTableDigests(client, tables),
+        sequences: await sequenceStates(client),
+      };
+      await client.query("COMMIT");
+      return inventory;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
     }
-    return counts;
   } finally {
     client.release();
   }
 }
 
-function diffCounts(sourceCounts, targetCounts) {
-  return criticalTables
-    .map((tableName) => ({
-      tableName,
-      source: sourceCounts[tableName],
-      target: targetCounts[tableName],
-      delta: targetCounts[tableName] - sourceCounts[tableName],
-    }))
-    .filter((entry) => entry.delta !== 0);
-}
+export async function verifyRestoreDrill({
+  env = process.env,
+  applyMigrations = process.argv.includes("--apply-migrations"),
+  poolFactory = poolFor,
+  s3ClientFactory,
+} = {}) {
+  const drillStartedAt = Date.now();
+  const targetUrl = requireConfiguredEnv("RESTORE_DATABASE_URL", env);
+  const sourceUrl = requireConfiguredEnv("RESTORE_SOURCE_DATABASE_URL", env);
+  assertDifferentDatabases(sourceUrl, targetUrl);
+  const rtoMinutes = recoveryRtoMinutesFromEnv(env);
 
-const startedAt = Date.now();
-const targetPool = poolFor(targetUrl);
-const sourcePool = sourceUrl ? poolFor(sourceUrl) : null;
+  const restoreResult = await restoreLogicalBackupArtifact({
+    env,
+    applyMigrations,
+    poolFactory,
+    ...(s3ClientFactory ? { s3ClientFactory } : {}),
+  });
+  const verificationStartedAt = Date.now();
+  const targetPool = poolFactory(targetUrl);
+  const sourcePool = poolFactory(sourceUrl);
+  try {
+    const [sourceInventory, targetInventory] = await Promise.all([
+      completeInventory(sourcePool, { requireReadOnlyRole: true }),
+      completeInventory(targetPool),
+    ]);
+    assert.deepEqual(
+      targetInventory.tableNames,
+      sourceInventory.tableNames,
+      "Restore target public table inventory differs from source.",
+    );
+    assert.deepEqual(
+      targetInventory.tables,
+      sourceInventory.tables,
+      "Restore target public table definitions differ from source.",
+    );
+    const countDiffs = diffCounts(sourceInventory.counts, targetInventory.counts);
+    assert.deepEqual(countDiffs, [], `Restore target row counts differ from source: ${JSON.stringify(countDiffs)}`);
+    const contentDiffs = diffTableDigests(sourceInventory.tableDigests, targetInventory.tableDigests);
+    assert.deepEqual(contentDiffs, [], `Restore target content differs from source: ${JSON.stringify(contentDiffs)}`);
+    assert.deepEqual(
+      targetInventory.sequences,
+      sourceInventory.sequences,
+      "Restore target sequence state differs from source.",
+    );
 
-try {
-  if (applyMigrations) await migrateUp(targetPool);
-  const status = await migrationStatus(targetPool);
-  assert.equal(status.pending.length, 0, `Restore target has pending migrations: ${JSON.stringify(status.pending)}`);
-  assert.ok(status.applied.some((migration) => migration.version === 9), "Restore target must include migration 0009.");
-
-  const targetCounts = await inventory(targetPool);
-  let sourceCounts = null;
-  let countDiffs = [];
-  if (sourcePool) {
-    sourceCounts = await inventory(sourcePool);
-    countDiffs = diffCounts(sourceCounts, targetCounts);
-    if (strictCompare) {
-      assert.deepEqual(countDiffs, [], `Restore target row counts differ from source: ${JSON.stringify(countDiffs)}`);
-    }
+    const verifyDurationMs = Date.now() - verificationStartedAt;
+    const restoreDurationMs = verificationStartedAt - drillStartedAt;
+    const recoveryDurations = enforceRecoveryRto(restoreDurationMs, verifyDurationMs, rtoMinutes);
+    return {
+      ...restoreResult,
+      mode: applyMigrations ? "migrate-restore-and-verify" : "restore-and-verify",
+      countDiffs,
+      contentDigest: aggregateTableDigest(targetInventory.tableDigests),
+      contentDiffCount: contentDiffs.length,
+      strictCompare: true,
+      ...recoveryDurations,
+      durationMs: recoveryDurations.combinedDurationMs,
+    };
+  } finally {
+    await targetPool.end();
+    await sourcePool.end();
   }
-
-  console.log(JSON.stringify({
-    ok: true,
-    mode: applyMigrations ? "migrate-and-verify" : "verify-restored-target",
-    latestMigration: status.latestVersion
-      ? `${String(status.latestVersion).padStart(4, "0")}_${status.latestName}`
-      : null,
-    appliedMigrations: status.applied.length,
-    pendingMigrations: status.pending.length,
-    targetCounts,
-    sourceCounts,
-    countDiffs,
-    strictCompare,
-    durationMs: Date.now() - startedAt,
-  }, null, 2));
-} finally {
-  await targetPool.end();
-  if (sourcePool) await sourcePool.end();
 }
+
+async function main() {
+  try {
+    console.log(JSON.stringify(sanitizedSuccess(await verifyRestoreDrill()), null, 2));
+  } catch (error) {
+    console.error(JSON.stringify(sanitizedFailure(error, "restore-drill"), null, 2));
+    process.exitCode = 1;
+  }
+}
+
+if (isDirectExecution(import.meta.url)) await main();

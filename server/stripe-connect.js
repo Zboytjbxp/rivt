@@ -1,6 +1,8 @@
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { ApiError, asyncRoute, validate, z } from "./api.js";
 import { verifyStripeSignature } from "./billing.js";
 import { logInfo } from "./logger.js";
+import { providerAbortSignal } from "./provider-safety.js";
 
 const STRIPE_API_VERSION = "2026-02-25.clover";
 const STRIPE_ACCOUNTS_V2_API_VERSION = "2026-06-24.preview";
@@ -13,30 +15,133 @@ const STRIPE_ACCOUNT_V2_INCLUDE = [
 ];
 const SETTLED_PAYMENT_STATUSES = new Set(["paid", "partially_refunded"]);
 const ACTIVE_PAYMENT_STATUSES = new Set(["created", "open", "processing"]);
+const IMMUTABLE_INVOICE_PAYMENT_STATUSES = new Set([
+  "processing",
+  "paid",
+  "partially_refunded",
+  "refunded",
+  "disputed",
+]);
 const ACH_MIN_AMOUNT_CENTS = 50;
 const ACH_MAX_AMOUNT_CENTS = 99_999_999;
+const STRIPE_REQUEST_TIMEOUT_MS = 8_000;
+const REQUIRED_CONNECT_WEBHOOK_SCOPE = "connected_accounts";
+const PROVIDER_EVIDENCE_CLOCK_SKEW_MS = 2 * 60 * 1000;
+const PROVIDER_EVIDENCE_NONCE_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const PROVIDER_EVIDENCE_PROOF_PATTERN = /^[a-f0-9]{64}$/;
+const SOURCE_COMMIT_PATTERN = /^[a-f0-9]{40}$/;
 const invoiceIdSchema = z.uuid();
 const toolInvoiceLocalIdSchema = z.string().trim().min(1).max(120).regex(/^[A-Za-z0-9:_-]+$/);
 const onboardingInputSchema = z.object({
   activeWorkId: z.uuid().optional(),
 });
 
+function preventPaymentResponseCaching(_request, response, next) {
+  response.setHeader("Cache-Control", "no-store");
+  response.setHeader("Pragma", "no-cache");
+  next();
+}
+
 function envValue(name, fallback = undefined) {
   const value = process.env[name]?.trim();
   return value || fallback;
 }
 
+function stripeConnectRuntimeProofKey({
+  secretKey,
+  webhookSecret,
+  enabled,
+  webhookScope,
+}) {
+  const hash = createHash("sha256");
+  hash.update("rivt-stripe-connect-runtime-v1\0");
+  for (const field of [
+    secretKey ?? "",
+    webhookSecret ?? "",
+    enabled === true ? "true" : "false",
+    webhookScope ?? "",
+  ]) {
+    const value = String(field);
+    hash.update(`${Buffer.byteLength(value, "utf8")}:`);
+    hash.update(value);
+    hash.update("\0");
+  }
+  return hash.digest();
+}
+
+export function stripeConnectRuntimeProof({
+  secretKey,
+  webhookSecret,
+  enabled,
+  webhookScope,
+  sourceCommit,
+  timestamp,
+  nonce,
+}) {
+  return createHmac("sha256", stripeConnectRuntimeProofKey({
+    secretKey,
+    webhookSecret,
+    enabled,
+    webhookScope,
+  }))
+    .update("rivt-provider-evidence-runtime-v1\0")
+    .update(String(timestamp))
+    .update("\0")
+    .update(String(nonce))
+    .update("\0")
+    .update(String(sourceCommit))
+    .digest("hex");
+}
+
+export function verifyStripeConnectRuntimeProof({
+  authorization,
+  nonce,
+  sourceCommit,
+  timestamp,
+  now = Date.now(),
+}) {
+  const proof = /^RIVT-HMAC ([a-f0-9]{64})$/.exec(String(authorization ?? ""))?.[1] ?? "";
+  const timestampText = String(timestamp ?? "");
+  const timestampSeconds = /^\d{10}$/.test(timestampText) ? Number(timestampText) : Number.NaN;
+  if (
+    !PROVIDER_EVIDENCE_NONCE_PATTERN.test(String(nonce ?? ""))
+    || !PROVIDER_EVIDENCE_PROOF_PATTERN.test(proof)
+    || !SOURCE_COMMIT_PATTERN.test(String(sourceCommit ?? ""))
+    || !Number.isSafeInteger(timestampSeconds)
+    || Math.abs(now - timestampSeconds * 1000) > PROVIDER_EVIDENCE_CLOCK_SKEW_MS
+  ) {
+    return false;
+  }
+  const config = connectConfig();
+  if (!config.secretKey || !config.webhookSecret) return false;
+  const expected = stripeConnectRuntimeProof({
+    secretKey: config.secretKey,
+    webhookSecret: config.webhookSecret,
+    enabled: config.enabled,
+    webhookScope: config.webhookScope,
+    sourceCommit,
+    timestamp: timestampText,
+    nonce,
+  });
+  return timingSafeEqual(Buffer.from(proof, "hex"), Buffer.from(expected, "hex"));
+}
+
 function connectConfig(appOrigin) {
   const secretKey = envValue("STRIPE_SECRET_KEY");
   const webhookSecret = envValue("STRIPE_CONNECT_WEBHOOK_SECRET");
+  const webhookScope = envValue("STRIPE_CONNECT_WEBHOOK_SCOPE");
   const enabled = envValue("STRIPE_CONNECT_ACH_ENABLED") === "true";
+  const webhookScopeConfigured = webhookScope === REQUIRED_CONNECT_WEBHOOK_SCOPE;
   const missing = [];
   if (!enabled) missing.push("STRIPE_CONNECT_ACH_ENABLED");
   if (!secretKey) missing.push("STRIPE_SECRET_KEY");
   if (!webhookSecret) missing.push("STRIPE_CONNECT_WEBHOOK_SECRET");
+  if (!webhookScopeConfigured) missing.push("STRIPE_CONNECT_WEBHOOK_SCOPE=connected_accounts");
   return {
     secretKey,
     webhookSecret,
+    webhookScope,
+    webhookScopeConfigured,
     enabled,
     appOrigin,
     configured: missing.length === 0,
@@ -52,6 +157,7 @@ export function stripeConnectProviderStatus(appOrigin) {
     enabled: config.enabled,
     configured: config.configured,
     webhookConfigured: Boolean(config.webhookSecret),
+    webhookScopeConfigured: config.webhookScopeConfigured,
     mode: config.configured ? "configured" : "setup_required",
   };
 }
@@ -65,6 +171,44 @@ function encodeForm(params) {
   return form;
 }
 
+function isProviderTimeout(error, signal) {
+  return error?.name === "TimeoutError"
+    || error?.name === "AbortError"
+    || (signal?.aborted && signal.reason?.name === "TimeoutError");
+}
+
+function stripeProviderFailure(error, signal) {
+  if (isProviderTimeout(error, signal)) {
+    return new ApiError(504, "STRIPE_CONNECT_TIMEOUT", "Stripe did not respond in time. Try again shortly.");
+  }
+  return new ApiError(502, "STRIPE_CONNECT_UNAVAILABLE", "Stripe could not be reached. Try again shortly.");
+}
+
+async function stripeProviderRequest(url, init, {
+  fetchImpl = globalThis.fetch,
+  timeoutMs = STRIPE_REQUEST_TIMEOUT_MS,
+  signal = AbortSignal.timeout(timeoutMs),
+} = {}) {
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      ...init,
+      signal,
+    });
+  } catch (error) {
+    throw stripeProviderFailure(error, signal);
+  }
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch (error) {
+    if (isProviderTimeout(error, signal) || response.ok) {
+      throw stripeProviderFailure(error, signal);
+    }
+  }
+  return { response, payload };
+}
+
 async function stripeConnectRequest(config, path, params = {}, options = {}) {
   if (!config.secretKey) {
     throw new ApiError(424, "STRIPE_CONNECT_NOT_CONFIGURED", "Stripe Connect is not configured.", {
@@ -73,8 +217,9 @@ async function stripeConnectRequest(config, path, params = {}, options = {}) {
   }
   const method = options.method ?? "POST";
   const body = method === "GET" ? undefined : encodeForm(params);
-  const response = await fetch(`https://api.stripe.com/v1${path}`, {
+  const { response, payload } = await stripeProviderRequest(`https://api.stripe.com/v1${path}`, {
     method,
+    signal: providerAbortSignal(),
     headers: {
       Authorization: `Bearer ${config.secretKey}`,
       "Stripe-Version": STRIPE_API_VERSION,
@@ -83,8 +228,11 @@ async function stripeConnectRequest(config, path, params = {}, options = {}) {
       ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
     },
     body,
+  }, {
+    fetchImpl: options.fetchImpl,
+    timeoutMs: options.timeoutMs,
+    signal: options.signal,
   });
-  const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new ApiError(502, "STRIPE_CONNECT_REQUEST_FAILED", "Stripe could not complete the bank-payment request.", {
       providerStatus: response.status,
@@ -120,8 +268,9 @@ async function stripeConnectV2Request(config, path, params = {}, options = {}) {
   const url = new URL(`https://api.stripe.com/v2${path}`);
   if (query) url.search = query.toString();
   const body = method === "GET" ? undefined : JSON.stringify(params);
-  const response = await fetch(url, {
+  const { response, payload } = await stripeProviderRequest(url, {
     method,
+    signal: providerAbortSignal(),
     headers: {
       Authorization: `Bearer ${config.secretKey}`,
       "Stripe-Version": STRIPE_ACCOUNTS_V2_API_VERSION,
@@ -129,8 +278,11 @@ async function stripeConnectV2Request(config, path, params = {}, options = {}) {
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     body,
+  }, {
+    fetchImpl: options.fetchImpl,
+    timeoutMs: options.timeoutMs,
+    signal: options.signal,
   });
-  const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     throw new ApiError(502, "STRIPE_CONNECT_REQUEST_FAILED", "Stripe could not complete the bank-payment request.", {
       providerStatus: response.status,
@@ -328,12 +480,15 @@ async function syncConnectAccount(database, config, row) {
 function mapConnectStatus(row, config) {
   const onboarding = row?.onboarding_status ?? "not_started";
   const achStatus = row?.ach_payments_status ?? "unrequested";
+  const accountReady = onboarding === "ready" && achStatus === "active";
+  const paymentLinksAvailable = config.configured && accountReady;
   return {
     provider: "stripe_connect",
     accountApiVersion: row?.stripe_account_api_version ?? null,
     dashboardType: row?.stripe_dashboard ?? null,
     providerConfigured: config.configured,
     webhookConfigured: Boolean(config.webhookSecret),
+    webhookScopeConfigured: config.webhookScopeConfigured,
     missing: config.missing,
     connected: Boolean(row),
     onboardingStatus: onboarding,
@@ -341,12 +496,20 @@ function mapConnectStatus(row, config) {
     chargesEnabled: Boolean(row?.charges_enabled),
     payoutsEnabled: Boolean(row?.payouts_enabled),
     detailsSubmitted: Boolean(row?.details_submitted),
-    ready: config.configured && onboarding === "ready" && achStatus === "active",
+    accountReady,
+    managementAvailable: connectManagementAvailable(row, config),
+    paymentLinksAvailable,
+    ready: paymentLinksAvailable,
     lastSyncedAt: row?.last_synced_at ? new Date(row.last_synced_at).toISOString() : null,
   };
 }
 
-function mapPaymentRequest(row, { includeCheckoutUrl = true, appOrigin = null } = {}) {
+function connectManagementAvailable(row, config) {
+  if (!row) return false;
+  return row.stripe_account_api_version === "v2" || Boolean(config.secretKey);
+}
+
+function mapPaymentRequest(row, { includeCheckoutUrl = false, appOrigin = null } = {}) {
   return {
     id: row.id,
     invoiceId: row.invoice_id ?? row.invoiceId ?? null,
@@ -356,8 +519,11 @@ function mapPaymentRequest(row, { includeCheckoutUrl = true, appOrigin = null } 
     currency: row.currency ?? "usd",
     status: row.status,
     paymentMethodType: row.payment_method_type ?? row.paymentMethodType ?? null,
-    checkoutUrl: includeCheckoutUrl ? (row.checkout_url ?? row.checkoutUrl ?? null) : undefined,
-    paymentUrl: appOrigin && ["created", "open"].includes(row.status)
+    ...(includeCheckoutUrl ? { checkoutUrl: row.checkout_url ?? row.checkoutUrl ?? null } : {}),
+    paymentUrl: appOrigin
+      && row.status === "open"
+      && typeof (row.checkout_url ?? row.checkoutUrl) === "string"
+      && (row.checkout_url ?? row.checkoutUrl).startsWith("https://checkout.stripe.com/")
       ? `${appOrigin}/pay/${row.id}`
       : null,
     expiresAt: toIso(row.expires_at ?? row.expiresAt),
@@ -386,6 +552,79 @@ function assertAchAmount(amountCents) {
   if (amountCents > ACH_MAX_AMOUNT_CENTS) {
     throw new ApiError(422, "BANK_PAYMENT_ABOVE_MAXIMUM", "A single Stripe bank payment cannot exceed $999,999.99.");
   }
+}
+
+function isAmbiguousCheckoutCreationFailure(error) {
+  if (["STRIPE_CONNECT_TIMEOUT", "STRIPE_CONNECT_UNAVAILABLE"].includes(error?.code)) return true;
+  if (error?.code !== "STRIPE_CONNECT_REQUEST_FAILED") return true;
+  const providerStatus = Number(error?.details?.providerStatus ?? 0);
+  const providerType = String(error?.details?.type ?? "").toLowerCase();
+  const providerCode = String(error?.details?.code ?? "").toLowerCase();
+  // Stripe can report an idempotency-key replay conflict as HTTP 400. That
+  // response does not prove the original Checkout creation failed, so retain
+  // the reservation and require reconciliation instead of allowing a new row.
+  if (providerType.includes("idempotency") || providerCode.includes("idempotency")) return true;
+  return providerStatus === 408
+    || providerStatus === 409
+    || providerStatus === 429
+    || providerStatus >= 500
+    || providerStatus <= 0;
+}
+
+function checkoutCreationFailureCode(error) {
+  const providerStatus = Number(error?.details?.providerStatus ?? 0);
+  return providerStatus >= 400 && providerStatus < 500
+    ? `checkout_create_rejected_${providerStatus}`
+    : "checkout_create_failed";
+}
+
+function assertCheckoutSession(session) {
+  if (!session
+    || typeof session.id !== "string"
+    || !/^cs_[A-Za-z0-9_]{8,200}$/.test(session.id)
+    || typeof session.url !== "string"
+    || !session.url.startsWith("https://checkout.stripe.com/")
+    || !Number.isFinite(Number(session.expires_at))) {
+    throw new ApiError(
+      502,
+      "STRIPE_CONNECT_INVALID_RESPONSE",
+      "Stripe returned an incomplete bank-payment response. Retry to reconcile this payment link.",
+    );
+  }
+  return session;
+}
+
+function checkoutSessionParams(context, appOrigin, kind) {
+  const requestMetadataKey = kind === "tool" ? "tool_payment_request_id" : "payment_request_id";
+  const subjectMetadataKey = kind === "tool" ? "tool_record_id" : "invoice_id";
+  const subjectId = kind === "tool" ? context.tool_record_id : context.invoice_id;
+  return {
+    mode: "payment",
+    customer_creation: "always",
+    success_url: `${appOrigin}/payment/complete?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${appOrigin}/payment/complete?cancelled=1`,
+    client_reference_id: context.id,
+    "payment_method_types[0]": "us_bank_account",
+    "line_items[0][price_data][currency]": "usd",
+    "line_items[0][price_data][unit_amount]": Number(context.amount_cents),
+    "line_items[0][price_data][product_data][name]": "RIVT invoice",
+    "line_items[0][price_data][product_data][description]": "Secure bank payment",
+    "line_items[0][quantity]": "1",
+    [`metadata[${requestMetadataKey}]`]: context.id,
+    [`metadata[${subjectMetadataKey}]`]: subjectId,
+    "metadata[merchant_account_id]": context.merchant_account_id,
+    [`payment_intent_data[metadata][${requestMetadataKey}]`]: context.id,
+    [`payment_intent_data[metadata][${subjectMetadataKey}]`]: subjectId,
+    "payment_intent_data[metadata][merchant_account_id]": context.merchant_account_id,
+  };
+}
+
+function unresolvedCheckoutError() {
+  return new ApiError(
+    409,
+    "BANK_PAYMENT_LINK_RECONCILIATION_REQUIRED",
+    "This bank-payment link is still being reconciled. Retry creating the link before cancelling or sending it.",
+  );
 }
 
 async function invoicePaidCents(client, invoiceId) {
@@ -467,6 +706,11 @@ function eventPaymentUpdate(event) {
         },
         status: "disputed",
       };
+    case "charge.dispute.closed":
+      // A closed dispute can represent different financial outcomes. Keep the
+      // invoice locked as disputed until RIVT has a durable operator-reviewed
+      // resolution workflow instead of guessing from this event alone.
+      return null;
     case "charge.refunded": {
       const amount = Number(object.amount ?? 0);
       const refundedCents = Math.max(0, Number(object.amount_refunded ?? 0));
@@ -486,10 +730,13 @@ function eventPaymentUpdate(event) {
 function nextPaymentStatus(currentStatus, requestedStatus) {
   if (currentStatus === requestedStatus) return currentStatus;
   const allowed = {
-    created: new Set(["open", "processing", "paid", "failed", "expired"]),
-    open: new Set(["processing", "paid", "failed", "expired"]),
-    processing: new Set(["paid", "failed", "disputed"]),
-    paid: new Set(["failed", "disputed", "partially_refunded", "refunded"]),
+    // Stripe does not guarantee webhook order. Consequential charge states
+    // must win even if their event arrives before checkout/payment success.
+    created: new Set(["open", "processing", "paid", "failed", "expired", "disputed", "partially_refunded", "refunded"]),
+    open: new Set(["processing", "paid", "failed", "expired", "disputed", "partially_refunded", "refunded"]),
+    processing: new Set(["paid", "failed", "disputed", "partially_refunded", "refunded"]),
+    // A confirmed settlement cannot be erased by a late failure event.
+    paid: new Set(["disputed", "partially_refunded", "refunded"]),
     partially_refunded: new Set(["partially_refunded", "disputed", "refunded"]),
     failed: new Set(),
     expired: new Set(),
@@ -609,8 +856,11 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
     }
 
     const acceptedStatus = nextPaymentStatus(paymentRequest.status, update.status);
+    const acceptedRefundedCents = ["partially_refunded", "refunded"].includes(acceptedStatus)
+      ? Math.max(Number(paymentRequest.refunded_cents ?? 0), Number(update.refundedCents ?? 0))
+      : Number(paymentRequest.refunded_cents ?? 0);
     const stateChanged = acceptedStatus !== paymentRequest.status
-      || Number(update.refundedCents ?? 0) > Number(paymentRequest.refunded_cents ?? 0);
+      || acceptedRefundedCents > Number(paymentRequest.refunded_cents ?? 0);
     const paymentTable = paymentKind === "project"
       ? "project_invoice_payment_requests"
       : "tool_invoice_payment_requests";
@@ -619,8 +869,8 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
        SET status = $2,
            stripe_payment_intent_id = COALESCE($3, stripe_payment_intent_id),
            payment_method_type = COALESCE(payment_method_type, 'us_bank_account'),
-           failure_code = COALESCE($4, failure_code),
-           refunded_cents = GREATEST(refunded_cents, COALESCE($5, refunded_cents)),
+            failure_code = CASE WHEN $2 = 'failed' THEN COALESCE($4, failure_code) ELSE failure_code END,
+            refunded_cents = GREATEST(refunded_cents, $5),
            paid_at = CASE WHEN $2 = 'paid' THEN COALESCE(paid_at, now()) ELSE paid_at END,
            failed_at = CASE WHEN $2 = 'failed' THEN COALESCE(failed_at, now()) ELSE failed_at END,
            disputed_at = CASE WHEN $2 = 'disputed' THEN COALESCE(disputed_at, now()) ELSE disputed_at END,
@@ -632,8 +882,8 @@ async function processConnectEvent(database, event, requestId, createInAppNotifi
         paymentRequest.id,
         acceptedStatus,
         update.paymentIntentId ?? null,
-        update.failureCode ?? null,
-        update.refundedCents ?? null,
+        acceptedStatus === "failed" ? update.failureCode ?? null : null,
+        acceptedRefundedCents,
       ],
     );
     const nextRequest = updatedRequest.rows[0];
@@ -765,6 +1015,7 @@ export function registerStripeConnectWebhookRoute({
 }) {
   app.post(
     "/api/stripe/connect/webhook",
+    preventPaymentResponseCaching,
     createRequestContext,
     createRequestLogger(),
     express.raw({ type: "application/json", limit: "2mb" }),
@@ -803,9 +1054,41 @@ export function registerStripeConnectRoutes({
   requireV1Actor,
   writeRateLimit,
   publicPaymentRateLimit,
+  providerEvidenceRateLimit,
+  sourceCommit,
+  withTransaction,
   runIdempotentMutation,
   sendIdempotentResult,
 }) {
+  const requireProviderEvidenceProof = (request, _response, next) => {
+    const authorized = verifyStripeConnectRuntimeProof({
+      authorization: request.get("authorization"),
+      nonce: request.get("x-rivt-evidence-nonce"),
+      sourceCommit,
+      timestamp: request.get("x-rivt-evidence-timestamp"),
+    });
+    if (!authorized) {
+      next(new ApiError(401, "PROVIDER_EVIDENCE_UNAUTHORIZED", "Provider evidence authorization failed."));
+      return;
+    }
+    next();
+  };
+
+  app.post(
+    "/api/provider-evidence/stripe-connect/runtime",
+    requireProviderEvidenceProof,
+    providerEvidenceRateLimit,
+    asyncRoute(async (request, response) => {
+      response.json({
+        data: {
+          provider: "stripe_connect",
+          sourceCommit,
+        },
+        meta: { requestId: request.requestId },
+      });
+    }),
+  );
+
   app.get("/api/v1/payments/connect/status", requireAuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const config = connectConfig(appOrigin);
     let row = (await database.query(
@@ -895,19 +1178,19 @@ export function registerStripeConnectRoutes({
   app.post("/api/v1/payments/connect/dashboard", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const config = connectConfig(appOrigin);
     requireVerifiedActor(request.actor);
-    if (!config.configured) {
-      throw new ApiError(424, "STRIPE_CONNECT_PROVIDER_UNAVAILABLE", "Bank-payment account management is not configured yet.", {
-        provider: "stripe_connect",
-        mode: "setup_required",
-        missing: config.missing,
-      });
-    }
     const row = (await database.query(
       "SELECT * FROM stripe_connect_accounts WHERE account_id = $1 LIMIT 1",
       [request.actor.account.id],
     )).rows[0];
     if (!row) {
       throw new ApiError(409, "STRIPE_CONNECT_ONBOARDING_REQUIRED", "Set up bank payments before opening the Stripe account.");
+    }
+    if (!connectManagementAvailable(row, config)) {
+      throw new ApiError(424, "STRIPE_CONNECT_PROVIDER_UNAVAILABLE", "Bank-payment account management is temporarily unavailable.", {
+        provider: "stripe_connect",
+        mode: "setup_required",
+        missing: ["STRIPE_SECRET_KEY"],
+      });
     }
     const dashboardUrl = row.stripe_account_api_version === "v2"
       ? STRIPE_FULL_DASHBOARD_URL
@@ -961,7 +1244,25 @@ export function registerStripeConnectRoutes({
       });
     }
     const localId = validate(toolInvoiceLocalIdSchema, request.params.localId);
-    const result = await runIdempotentMutation(
+    let currentConnectRow = (await database.query(
+      "SELECT * FROM stripe_connect_accounts WHERE account_id = $1 LIMIT 1",
+      [request.actor.account.id],
+    )).rows[0] ?? null;
+    if (!currentConnectRow) {
+      throw new ApiError(409, "STRIPE_CONNECT_ONBOARDING_REQUIRED", "Finish bank-payment setup before creating a payment link.");
+    }
+    currentConnectRow = await syncConnectAccount(database, config, currentConnectRow);
+    const currentConnectStatus = mapConnectStatus(currentConnectRow, config);
+    if (!currentConnectStatus.ready) {
+      throw new ApiError(409, "STRIPE_CONNECT_NOT_READY", "Stripe is still reviewing this bank-payment account.", {
+        connect: currentConnectStatus,
+      });
+    }
+
+    // Commit the payment-request identity before contacting Stripe. This row is
+    // the durable provider idempotency identity even when the HTTP request key
+    // changes or the provider response is lost.
+    const reservation = await runIdempotentMutation(
       request,
       request.actor.account.id,
       `stripe_connect.tool_invoice_link:${localId}`,
@@ -984,11 +1285,52 @@ export function registerStripeConnectRoutes({
         if (record.status === "paid") {
           throw new ApiError(409, "TOOL_INVOICE_ALREADY_PAID", "This invoice is already marked paid.");
         }
+        const immutablePayment = (await client.query(
+          `SELECT *
+           FROM tool_invoice_payment_requests
+           WHERE tool_record_id = $1
+             AND status = ANY($2::text[])
+           ORDER BY created_at DESC
+           LIMIT 1
+           FOR UPDATE`,
+          [record.id, [...IMMUTABLE_INVOICE_PAYMENT_STATUSES]],
+        )).rows[0] ?? null;
+        if (immutablePayment && !immutablePayment.stripe_checkout_session_id) {
+          if (Number(immutablePayment.amount_cents) !== amountCents) {
+            throw new ApiError(
+              409,
+              "BANK_PAYMENT_AMOUNT_CHANGED",
+              "The invoice amount changed while its bank-payment link was being reconciled.",
+            );
+          }
+          return {
+            status: 200,
+            body: {
+              data: { paymentRequestId: immutablePayment.id, newlyReserved: false },
+              meta: { requestId: request.requestId },
+            },
+          };
+        }
+        if (immutablePayment?.status === "processing") {
+          throw new ApiError(
+            409,
+            "BANK_PAYMENT_PROCESSING",
+            "This ACH payment is processing. Wait for it to settle or fail before creating another payment request.",
+          );
+        }
+        if (immutablePayment) {
+          throw new ApiError(
+            409,
+            "INVOICE_PAYMENT_HISTORY_LOCKED",
+            "This invoice already has bank-payment history. Start a new invoice for a correction or additional amount.",
+          );
+        }
         const activeRequest = await client.query(
           `SELECT *
            FROM tool_invoice_payment_requests
            WHERE tool_record_id = $1 AND status = ANY($2::text[])
-           ORDER BY created_at DESC LIMIT 1`,
+           ORDER BY created_at DESC LIMIT 1
+           FOR UPDATE`,
           [record.id, [...ACTIVE_PAYMENT_STATUSES]],
         );
         if (activeRequest.rowCount) {
@@ -1003,19 +1345,18 @@ export function registerStripeConnectRoutes({
           return {
             status: 200,
             body: {
-              data: { paymentRequest: mapPaymentRequest(existing, { appOrigin }) },
-              meta: { requestId: request.requestId, existing: true },
+              data: { paymentRequestId: existing.id, newlyReserved: false },
+              meta: { requestId: request.requestId },
             },
           };
         }
-        let connectRow = (await client.query(
+        const connectRow = (await client.query(
           "SELECT * FROM stripe_connect_accounts WHERE account_id = $1 FOR UPDATE",
           [request.actor.account.id],
         )).rows[0] ?? null;
         if (!connectRow) {
           throw new ApiError(409, "STRIPE_CONNECT_ONBOARDING_REQUIRED", "Finish bank-payment setup before creating a payment link.");
         }
-        connectRow = await syncConnectAccount(client, config, connectRow);
         const connectStatus = mapConnectStatus(connectRow, config);
         if (!connectStatus.ready) {
           throw new ApiError(409, "STRIPE_CONNECT_NOT_READY", "Stripe is still reviewing this bank-payment account.", {
@@ -1031,57 +1372,90 @@ export function registerStripeConnectRoutes({
            RETURNING *`,
           [record.id, request.actor.account.id, connectRow.stripe_account_id, amountCents],
         )).rows[0];
-        const payload = record.payload && typeof record.payload === "object" ? record.payload : {};
-        const invoiceNumber = String(payload.invoiceNumber || record.title || "RIVT invoice").slice(0, 80);
-        const payTo = String(payload.payTo || "").slice(0, 160);
-        const recipientEmail = String(payload.recipientEmail || "").trim().toLowerCase();
-        let session;
-        try {
-          session = await stripeConnectRequest(config, "/checkout/sessions", {
-            mode: "payment",
-            customer_creation: "always",
-            success_url: `${config.appOrigin}/payment/complete?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${config.appOrigin}/payment/complete?cancelled=1`,
-            customer_email: z.email().safeParse(recipientEmail).success ? recipientEmail : undefined,
-            client_reference_id: paymentRequest.id,
-            "payment_method_types[0]": "us_bank_account",
-            "line_items[0][price_data][currency]": "usd",
-            "line_items[0][price_data][unit_amount]": amountCents,
-            "line_items[0][price_data][product_data][name]": `Invoice ${invoiceNumber}`,
-            "line_items[0][price_data][product_data][description]": payTo
-              ? `Payment to ${payTo}`
-              : "Invoice bank payment",
-            "line_items[0][quantity]": "1",
-            "metadata[tool_payment_request_id]": paymentRequest.id,
-            "metadata[tool_record_id]": record.id,
-            "metadata[merchant_account_id]": request.actor.account.id,
-            "payment_intent_data[metadata][tool_payment_request_id]": paymentRequest.id,
-            "payment_intent_data[metadata][tool_record_id]": record.id,
-            "payment_intent_data[metadata][merchant_account_id]": request.actor.account.id,
-          }, {
-            connectedAccountId: connectRow.stripe_account_id,
-            idempotencyKey: `rivt-tool-invoice-payment-${paymentRequest.id}`,
+        return {
+          status: 201,
+          body: {
+            data: { paymentRequestId: paymentRequest.id, newlyReserved: true },
+            meta: { requestId: request.requestId },
+          },
+        };
+      },
+    );
+
+    const paymentRequestId = reservation.body.data.paymentRequestId;
+    const context = (await database.query(
+      `SELECT tipr.*, tr.account_id, tr.deleted_at
+       FROM tool_invoice_payment_requests tipr
+       INNER JOIN tool_records tr ON tr.id = tipr.tool_record_id
+       WHERE tipr.id = $1
+         AND tr.account_id = $2
+         AND tr.record_type = 'invoice_draft'
+       LIMIT 1`,
+      [paymentRequestId, request.actor.account.id],
+    )).rows[0] ?? null;
+    if (!context || context.deleted_at) {
+      throw new ApiError(409, "TOOL_INVOICE_NOT_FOUND", "The saved invoice is no longer available for this payment link.");
+    }
+    if (context.status === "failed") {
+      throw new ApiError(502, "STRIPE_CONNECT_REQUEST_FAILED", "Stripe could not complete the bank-payment request.", {
+        failureCode: context.failure_code,
+      });
+    }
+
+    let saved = context;
+    if (!context.stripe_checkout_session_id && !["failed", "expired"].includes(context.status)) {
+      let session;
+      try {
+        session = assertCheckoutSession(await stripeConnectRequest(
+          config,
+          "/checkout/sessions",
+          checkoutSessionParams(context, config.appOrigin, "tool"),
+          {
+          connectedAccountId: context.stripe_connected_account_id,
+          idempotencyKey: `rivt-tool-invoice-payment-${context.id}`,
+          },
+        ));
+      } catch (error) {
+        const firstProviderAttempt = reservation.body.data.newlyReserved && !reservation.replayed;
+        if (firstProviderAttempt && !isAmbiguousCheckoutCreationFailure(error)) {
+          await withTransaction(async (client) => {
+            await client.query(
+              `UPDATE tool_invoice_payment_requests
+               SET status = 'failed', failure_code = $2,
+                   failed_at = now(), updated_at = now()
+               WHERE id = $1 AND status = 'created'`,
+              [context.id, checkoutCreationFailureCode(error)],
+            );
           });
-        } catch (error) {
-          await client.query(
-            `UPDATE tool_invoice_payment_requests
-             SET status = 'failed', failure_code = 'checkout_create_failed',
-                 failed_at = now(), updated_at = now()
-             WHERE id = $1`,
-            [paymentRequest.id],
-          );
-          throw error;
         }
-        const saved = (await client.query(
+        throw error;
+      }
+
+      saved = await withTransaction(async (client) => {
+        const locked = (await client.query(
+          `SELECT tipr.*
+           FROM tool_invoice_payment_requests tipr
+           INNER JOIN tool_records tr ON tr.id = tipr.tool_record_id
+           WHERE tipr.id = $1 AND tr.account_id = $2 AND tr.deleted_at IS NULL
+           FOR UPDATE OF tipr`,
+          [context.id, request.actor.account.id],
+        )).rows[0] ?? null;
+        if (!locked) throw new ApiError(409, "TOOL_INVOICE_NOT_FOUND", "The saved invoice is no longer available for this payment link.");
+        if (locked.stripe_checkout_session_id && locked.stripe_checkout_session_id !== session.id) {
+          throw new ApiError(409, "BANK_PAYMENT_RECONCILIATION_CONFLICT", "The payment link could not be reconciled safely.");
+        }
+        const firstReconciliation = !locked.stripe_checkout_session_id;
+        const acceptedStatus = nextPaymentStatus(locked.status, "open");
+        const reconciled = (await client.query(
           `UPDATE tool_invoice_payment_requests
-           SET stripe_checkout_session_id = $2,
-               checkout_url = $3,
-               expires_at = to_timestamp($4),
-               status = 'open',
+           SET stripe_checkout_session_id = COALESCE(stripe_checkout_session_id, $2),
+               checkout_url = COALESCE(checkout_url, $3),
+               expires_at = COALESCE(expires_at, to_timestamp($4)),
+               status = $5,
                updated_at = now()
            WHERE id = $1
            RETURNING *`,
-          [paymentRequest.id, session.id, session.url, Number(session.expires_at)],
+          [locked.id, session.id, session.url, Number(session.expires_at), acceptedStatus],
         )).rows[0];
         await client.query(
           `UPDATE tool_records
@@ -1090,39 +1464,46 @@ export function registerStripeConnectRoutes({
                  '{bankPayment}',
                  jsonb_build_object(
                    'paymentRequestId', $2::text,
-                   'status', 'open',
-                   'amountCents', $3::int,
+                   'status', $3::text,
+                   'amountCents', $4::int,
                    'updatedAt', now()
                  ),
                  true
                ),
                updated_at = now()
            WHERE id = $1`,
-          [record.id, saved.id, amountCents],
+          [reconciled.tool_record_id, reconciled.id, reconciled.status, Number(reconciled.amount_cents)],
         );
-        await client.query(
-          `INSERT INTO audit_events (
-             request_id, actor_account_id, action, subject_type, subject_id, metadata
-           )
-           VALUES ($1, $2, 'tool.invoice.bank_payment_link_created',
-             'tool_invoice_payment_request', $3, $4::jsonb)`,
-          [
-            request.requestId,
-            request.actor.account.id,
-            saved.id,
-            JSON.stringify({ toolRecordId: record.id, amountCents, currency: "usd" }),
-          ],
-        );
-        return {
-          status: 201,
-          body: {
-            data: { paymentRequest: mapPaymentRequest(saved, { appOrigin }) },
-            meta: { requestId: request.requestId },
-          },
-        };
+        if (firstReconciliation) {
+          await client.query(
+            `INSERT INTO audit_events (
+               request_id, actor_account_id, action, subject_type, subject_id, metadata
+             )
+             VALUES ($1, $2, 'tool.invoice.bank_payment_link_created',
+               'tool_invoice_payment_request', $3, $4::jsonb)`,
+            [
+              request.requestId,
+              request.actor.account.id,
+              reconciled.id,
+              JSON.stringify({ toolRecordId: reconciled.tool_record_id, amountCents: Number(reconciled.amount_cents), currency: "usd" }),
+            ],
+          );
+        }
+        return reconciled;
+      });
+    }
+
+    sendIdempotentResult(response, {
+      status: reservation.status,
+      body: {
+        data: { paymentRequest: mapPaymentRequest(saved, { appOrigin }) },
+        meta: {
+          requestId: reservation.body.meta.requestId,
+          existing: !reservation.body.data.newlyReserved,
+        },
       },
-    );
-    sendIdempotentResult(response, result);
+      replayed: reservation.replayed,
+    });
   }));
 
   app.post("/api/v1/tool-invoices/:localId/bank-payment-link/cancel", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
@@ -1152,6 +1533,9 @@ export function registerStripeConnectRoutes({
         }
         if (paymentRequest.status === "processing") {
           throw new ApiError(409, "BANK_PAYMENT_PROCESSING", "This ACH payment is already processing and cannot be cancelled in RIVT.");
+        }
+        if (paymentRequest.status === "created" && !paymentRequest.stripe_checkout_session_id) {
+          throw unresolvedCheckoutError();
         }
         if (paymentRequest.stripe_checkout_session_id) {
           await stripeConnectRequest(
@@ -1207,7 +1591,22 @@ export function registerStripeConnectRoutes({
       });
     }
     const invoiceId = validate(invoiceIdSchema, request.params.id);
-    const result = await runIdempotentMutation(
+    let currentConnectRow = (await database.query(
+      "SELECT * FROM stripe_connect_accounts WHERE account_id = $1 LIMIT 1",
+      [request.actor.account.id],
+    )).rows[0] ?? null;
+    if (!currentConnectRow) {
+      throw new ApiError(409, "STRIPE_CONNECT_ONBOARDING_REQUIRED", "Finish bank-payment setup before creating a payment link.");
+    }
+    currentConnectRow = await syncConnectAccount(database, config, currentConnectRow);
+    const currentConnectStatus = mapConnectStatus(currentConnectRow, config);
+    if (!currentConnectStatus.ready) {
+      throw new ApiError(409, "STRIPE_CONNECT_NOT_READY", "Stripe is still reviewing this bank-payment account.", {
+        connect: currentConnectStatus,
+      });
+    }
+
+    const reservation = await runIdempotentMutation(
       request,
       request.actor.account.id,
       `stripe_connect.invoice_link:${invoiceId}`,
@@ -1227,6 +1626,48 @@ export function registerStripeConnectRoutes({
           throw new ApiError(403, "PROJECT_INVOICE_AUTHOR_REQUIRED", "Only the invoice author can create its bank-payment link.");
         }
         if (invoice.status === "void") throw new ApiError(409, "PROJECT_INVOICE_VOID", "A void invoice cannot accept a bank payment.");
+        const immutablePayment = await client.query(
+          `SELECT *
+           FROM project_invoice_payment_requests
+           WHERE invoice_id = $1
+              AND status = ANY($2::text[])
+            ORDER BY created_at DESC
+            LIMIT 1
+            FOR UPDATE`,
+          [invoiceId, [...IMMUTABLE_INVOICE_PAYMENT_STATUSES]],
+        );
+        if (immutablePayment.rowCount) {
+          const unresolvedPayment = immutablePayment.rows[0];
+          if (!unresolvedPayment.stripe_checkout_session_id) {
+            return {
+              status: 200,
+              body: {
+                data: { paymentRequestId: unresolvedPayment.id, newlyReserved: false },
+                meta: { requestId: request.requestId },
+              },
+            };
+          }
+          const immutableStatus = unresolvedPayment.status;
+          if (immutableStatus === "processing") {
+            throw new ApiError(
+              409,
+              "BANK_PAYMENT_PROCESSING",
+              "A bank payment is processing. Wait for Stripe to confirm it before creating another payment request.",
+            );
+          }
+          if (immutableStatus === "disputed") {
+            throw new ApiError(
+              409,
+              "BANK_PAYMENT_DISPUTED",
+              "This invoice has an unresolved bank-payment dispute. Resolve it before creating another payment request.",
+            );
+          }
+          throw new ApiError(
+            409,
+            "INVOICE_PAYMENT_HISTORY_LOCKED",
+            "This invoice has settled or refunded bank-payment history. Keep it unchanged and create a new invoice for any new amount.",
+          );
+        }
         const paidCents = await invoicePaidCents(client, invoiceId);
         const balanceCents = Math.max(0, Number(invoice.total_cents) - paidCents);
         if (!balanceCents || invoice.status === "paid") {
@@ -1236,27 +1677,41 @@ export function registerStripeConnectRoutes({
         const activeRequest = await client.query(
           `SELECT * FROM project_invoice_payment_requests
            WHERE invoice_id = $1 AND status = ANY($2::text[])
-           ORDER BY created_at DESC LIMIT 1`,
+           ORDER BY created_at DESC LIMIT 1
+           FOR UPDATE`,
           [invoiceId, [...ACTIVE_PAYMENT_STATUSES]],
         );
         if (activeRequest.rowCount) {
           const existing = activeRequest.rows[0];
+          if (Number(existing.amount_cents) !== balanceCents) {
+            if (existing.status === "processing") {
+              throw new ApiError(
+                409,
+                "BANK_PAYMENT_PROCESSING",
+                "A bank payment is processing. Wait for it to settle or fail before changing this invoice balance.",
+              );
+            }
+            throw new ApiError(
+              409,
+              "BANK_PAYMENT_AMOUNT_CHANGED",
+              "The invoice balance changed. Cancel the existing bank-payment link before creating another.",
+            );
+          }
           return {
             status: 200,
             body: {
-              data: { paymentRequest: mapPaymentRequest(existing, { appOrigin }) },
-              meta: { requestId: request.requestId, existing: true },
+              data: { paymentRequestId: existing.id, newlyReserved: false },
+              meta: { requestId: request.requestId },
             },
           };
         }
-        let connectRow = (await client.query(
+        const connectRow = (await client.query(
           "SELECT * FROM stripe_connect_accounts WHERE account_id = $1 FOR UPDATE",
           [request.actor.account.id],
         )).rows[0] ?? null;
         if (!connectRow) {
           throw new ApiError(409, "STRIPE_CONNECT_ONBOARDING_REQUIRED", "Finish bank-payment setup before creating a payment link.");
         }
-        connectRow = await syncConnectAccount(client, config, connectRow);
         const connectStatus = mapConnectStatus(connectRow, config);
         if (!connectStatus.ready) {
           throw new ApiError(409, "STRIPE_CONNECT_NOT_READY", "Stripe is still reviewing this bank-payment account.", {
@@ -1279,82 +1734,120 @@ export function registerStripeConnectRoutes({
             balanceCents,
           ],
         )).rows[0];
-        let session;
-        try {
-          session = await stripeConnectRequest(config, "/checkout/sessions", {
-            mode: "payment",
-            customer_creation: "always",
-            success_url: `${config.appOrigin}/payment/complete?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${config.appOrigin}/payment/complete?cancelled=1`,
-            customer_email: invoice.recipient_email || undefined,
-            client_reference_id: paymentRequest.id,
-            "payment_method_types[0]": "us_bank_account",
-            "line_items[0][price_data][currency]": "usd",
-            "line_items[0][price_data][unit_amount]": balanceCents,
-            "line_items[0][price_data][product_data][name]": `Invoice ${invoice.invoice_number}`,
-            "line_items[0][price_data][product_data][description]": invoice.pay_to
-              ? `Payment to ${invoice.pay_to}`
-              : "Invoice bank payment",
-            "line_items[0][quantity]": "1",
-            "metadata[payment_request_id]": paymentRequest.id,
-            "metadata[invoice_id]": invoice.id,
-            "metadata[merchant_account_id]": request.actor.account.id,
-            "payment_intent_data[metadata][payment_request_id]": paymentRequest.id,
-            "payment_intent_data[metadata][invoice_id]": invoice.id,
-            "payment_intent_data[metadata][merchant_account_id]": request.actor.account.id,
-          }, {
-            connectedAccountId: connectRow.stripe_account_id,
-            idempotencyKey: `rivt-invoice-payment-${paymentRequest.id}`,
-          });
-        } catch (error) {
-          await client.query(
-            `UPDATE project_invoice_payment_requests
-             SET status = 'failed', failure_code = 'checkout_create_failed', failed_at = now(), updated_at = now()
-             WHERE id = $1`,
-            [paymentRequest.id],
-          );
-          throw error;
-        }
-        const saved = (await client.query(
-          `UPDATE project_invoice_payment_requests
-           SET stripe_checkout_session_id = $2,
-               checkout_url = $3,
-               expires_at = to_timestamp($4),
-               status = 'open',
-               updated_at = now()
-           WHERE id = $1
-           RETURNING *`,
-          [paymentRequest.id, session.id, session.url, Number(session.expires_at)],
-        )).rows[0];
-        await client.query(
-          `UPDATE project_invoices
-           SET status = CASE WHEN status = 'draft' THEN 'sent' ELSE status END,
-               sent_at = COALESCE(sent_at, now()),
-               updated_at = now()
-           WHERE id = $1`,
-          [invoice.id],
-        );
-        await client.query(
-          `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
-           VALUES ($1, $2, $3, 'project.invoice.bank_payment_link_created', 'project_invoice_payment_request', $4, $5::jsonb)`,
-          [
-            request.requestId,
-            request.actor.account.id,
-            invoice.organization_id,
-            saved.id,
-            JSON.stringify({ invoiceId, amountCents: balanceCents, currency: "usd" }),
-          ],
-        );
         return {
           status: 201,
           body: {
-            data: { paymentRequest: mapPaymentRequest(saved, { appOrigin }) },
+            data: { paymentRequestId: paymentRequest.id, newlyReserved: true },
             meta: { requestId: request.requestId },
           },
         };
       },
     );
-    sendIdempotentResult(response, result);
+
+    const paymentRequestId = reservation.body.data.paymentRequestId;
+    const context = (await database.query(
+      `SELECT pir.*, pr.organization_id, pi.created_by_account_id
+       FROM project_invoice_payment_requests pir
+       INNER JOIN project_invoices pi ON pi.id = pir.invoice_id
+       INNER JOIN projects pr ON pr.id = pir.project_id
+       INNER JOIN work_participants wp ON wp.active_work_id = pir.active_work_id
+       WHERE pir.id = $1 AND wp.account_id = $2
+       LIMIT 1`,
+      [paymentRequestId, request.actor.account.id],
+    )).rows[0] ?? null;
+    if (!context || context.created_by_account_id !== request.actor.account.id) {
+      throw new ApiError(404, "PROJECT_INVOICE_NOT_FOUND", "Project invoice not found.");
+    }
+    if (context.status === "failed") {
+      throw new ApiError(502, "STRIPE_CONNECT_REQUEST_FAILED", "Stripe could not complete the bank-payment request.", {
+        failureCode: context.failure_code,
+      });
+    }
+
+    let saved = context;
+    if (!context.stripe_checkout_session_id && !["failed", "expired"].includes(context.status)) {
+      let session;
+      try {
+        session = assertCheckoutSession(await stripeConnectRequest(
+          config,
+          "/checkout/sessions",
+          checkoutSessionParams(context, config.appOrigin, "project"),
+          {
+          connectedAccountId: context.stripe_connected_account_id,
+          idempotencyKey: `rivt-invoice-payment-${context.id}`,
+          },
+        ));
+      } catch (error) {
+        const firstProviderAttempt = reservation.body.data.newlyReserved && !reservation.replayed;
+        if (firstProviderAttempt && !isAmbiguousCheckoutCreationFailure(error)) {
+          await withTransaction(async (client) => {
+            await client.query(
+              `UPDATE project_invoice_payment_requests
+               SET status = 'failed', failure_code = $2,
+                   failed_at = now(), updated_at = now()
+               WHERE id = $1 AND status = 'created'`,
+              [context.id, checkoutCreationFailureCode(error)],
+            );
+          });
+        }
+        throw error;
+      }
+
+      saved = await withTransaction(async (client) => {
+        const locked = (await client.query(
+          `SELECT pir.*, pr.organization_id, pi.created_by_account_id
+           FROM project_invoice_payment_requests pir
+           INNER JOIN project_invoices pi ON pi.id = pir.invoice_id
+           INNER JOIN projects pr ON pr.id = pir.project_id
+           WHERE pir.id = $1 AND pi.created_by_account_id = $2
+           FOR UPDATE OF pir`,
+          [context.id, request.actor.account.id],
+        )).rows[0] ?? null;
+        if (!locked) throw new ApiError(404, "PROJECT_INVOICE_NOT_FOUND", "Project invoice not found.");
+        if (locked.stripe_checkout_session_id && locked.stripe_checkout_session_id !== session.id) {
+          throw new ApiError(409, "BANK_PAYMENT_RECONCILIATION_CONFLICT", "The payment link could not be reconciled safely.");
+        }
+        const firstReconciliation = !locked.stripe_checkout_session_id;
+        const acceptedStatus = nextPaymentStatus(locked.status, "open");
+        const reconciled = (await client.query(
+          `UPDATE project_invoice_payment_requests
+           SET stripe_checkout_session_id = COALESCE(stripe_checkout_session_id, $2),
+               checkout_url = COALESCE(checkout_url, $3),
+               expires_at = COALESCE(expires_at, to_timestamp($4)),
+               status = $5,
+               updated_at = now()
+           WHERE id = $1
+           RETURNING *`,
+          [locked.id, session.id, session.url, Number(session.expires_at), acceptedStatus],
+        )).rows[0];
+        if (firstReconciliation) {
+          await client.query(
+            `INSERT INTO audit_events (request_id, actor_account_id, organization_id, action, subject_type, subject_id, metadata)
+             VALUES ($1, $2, $3, 'project.invoice.bank_payment_link_created', 'project_invoice_payment_request', $4, $5::jsonb)`,
+            [
+              request.requestId,
+              request.actor.account.id,
+              locked.organization_id,
+              reconciled.id,
+              JSON.stringify({ invoiceId: reconciled.invoice_id, amountCents: Number(reconciled.amount_cents), currency: "usd" }),
+            ],
+          );
+        }
+        return reconciled;
+      });
+    }
+
+    sendIdempotentResult(response, {
+      status: reservation.status,
+      body: {
+        data: { paymentRequest: mapPaymentRequest(saved, { appOrigin }) },
+        meta: {
+          requestId: reservation.body.meta.requestId,
+          existing: !reservation.body.data.newlyReserved,
+        },
+      },
+      replayed: reservation.replayed,
+    });
   }));
 
   app.post("/api/v1/project-invoices/:id/bank-payment-link/cancel", requireAuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
@@ -1390,6 +1883,9 @@ export function registerStripeConnectRoutes({
         }
         if (paymentRequest.status === "processing") {
           throw new ApiError(409, "BANK_PAYMENT_PROCESSING", "This ACH payment is already processing and cannot be cancelled in RIVT.");
+        }
+        if (paymentRequest.status === "created" && !paymentRequest.stripe_checkout_session_id) {
+          throw unresolvedCheckoutError();
         }
         if (paymentRequest.stripe_checkout_session_id) {
           await stripeConnectRequest(
@@ -1431,25 +1927,75 @@ export function registerStripeConnectRoutes({
     sendIdempotentResult(response, result);
   }));
 
-  app.get("/pay/:requestId", publicPaymentRateLimit, asyncRoute(async (request, response) => {
+  app.get("/pay/:requestId", preventPaymentResponseCaching, publicPaymentRateLimit, asyncRoute(async (request, response) => {
     const requestId = validate(z.uuid(), request.params.requestId);
     const result = await database.query(
-      `SELECT status, checkout_url, stripe_checkout_session_id
-       FROM project_invoice_payment_requests
-       WHERE id = $1
+      `SELECT pir.status, pir.checkout_url, pir.stripe_checkout_session_id,
+              (
+                pi.id IS NOT NULL
+                AND pi.status <> 'void'
+                AND (
+                  pir.status NOT IN ('created', 'open', 'processing')
+                  OR pir.amount_cents = GREATEST(
+                    0,
+                    pi.total_cents
+                      - COALESCE((
+                        SELECT sum(payment.amount_cents)
+                        FROM project_invoice_payments payment
+                        WHERE payment.invoice_id = pi.id
+                      ), 0)
+                      - COALESCE((
+                        SELECT sum(
+                          CASE WHEN settled.status IN ('paid', 'partially_refunded')
+                            THEN settled.amount_cents - settled.refunded_cents
+                            ELSE 0
+                          END
+                        )
+                        FROM project_invoice_payment_requests settled
+                        WHERE settled.invoice_id = pi.id
+                      ), 0)
+                  )
+                )
+              ) AS invoice_valid
+       FROM project_invoice_payment_requests pir
+       LEFT JOIN project_invoices pi ON pi.id = pir.invoice_id
+       WHERE pir.id = $1
        UNION ALL
-       SELECT status, checkout_url, stripe_checkout_session_id
-       FROM tool_invoice_payment_requests
-       WHERE id = $1
+       SELECT tipr.status, tipr.checkout_url, tipr.stripe_checkout_session_id,
+              (
+                tr.id IS NOT NULL
+                AND tr.deleted_at IS NULL
+                AND tr.record_type = 'invoice_draft'
+                AND (
+                  tipr.status NOT IN ('created', 'open', 'processing')
+                  OR tipr.amount_cents = tr.amount_cents
+                )
+              ) AS invoice_valid
+       FROM tool_invoice_payment_requests tipr
+       LEFT JOIN tool_records tr ON tr.id = tipr.tool_record_id
+       WHERE tipr.id = $1
        LIMIT 1`,
       [requestId],
     );
     const payment = result.rows[0];
     if (!payment) throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
+    if (!payment.invoice_valid) {
+      throw new ApiError(
+        409,
+        "INVOICE_PAYMENT_OUT_OF_DATE",
+        "This payment link no longer matches the current invoice. Ask the sender for an updated invoice.",
+      );
+    }
+    if (payment.status === "created" && !payment.stripe_checkout_session_id) {
+      throw new ApiError(
+        409,
+        "BANK_PAYMENT_LINK_PREPARING",
+        "This bank-payment link is still being prepared. Ask the sender to retry creating it.",
+      );
+    }
     if (["created", "open"].includes(payment.status)
       && typeof payment.checkout_url === "string"
       && payment.checkout_url.startsWith("https://checkout.stripe.com/")) {
-      response.setHeader("Cache-Control", "no-store");
       response.redirect(303, payment.checkout_url);
       return;
     }
@@ -1462,13 +2008,17 @@ export function registerStripeConnectRoutes({
     response.redirect(303, completion.toString());
   }));
 
-  app.get("/api/v1/invoice-payments/:sessionId", publicPaymentRateLimit, asyncRoute(async (request, response) => {
-    const sessionId = String(request.params.sessionId ?? "").trim();
-    if (!/^cs_(?:test_|live_)?[A-Za-z0-9_]{12,200}$/.test(sessionId)) {
-      throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
-    }
-    const result = await database.query(
-      `SELECT pir.amount_cents, pir.refunded_cents, pir.currency, pir.status,
+  app.get(
+    "/api/v1/invoice-payments/:sessionId",
+    preventPaymentResponseCaching,
+    publicPaymentRateLimit,
+    asyncRoute(async (request, response) => {
+      const sessionId = String(request.params.sessionId ?? "").trim();
+      if (!/^cs_(?:test_|live_)?[A-Za-z0-9_]{12,200}$/.test(sessionId)) {
+        throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
+      }
+      const result = await database.query(
+        `SELECT pir.amount_cents, pir.refunded_cents, pir.currency, pir.status,
               pir.paid_at, pir.failed_at, pir.disputed_at, pir.refunded_at,
               pir.updated_at, pi.invoice_number, pi.pay_to
        FROM project_invoice_payment_requests pir
@@ -1484,46 +2034,58 @@ export function registerStripeConnectRoutes({
        INNER JOIN tool_records tr ON tr.id = tipr.tool_record_id
        WHERE tipr.stripe_checkout_session_id = $1
        LIMIT 1`,
-      [sessionId],
-    );
-    const row = result.rows[0];
-    if (!row) throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
-    response.json({
-      data: {
-        payment: {
-          invoiceNumber: row.invoice_number,
-          payTo: row.pay_to || "Invoice issuer",
-          amountCents: Number(row.amount_cents),
-          refundedCents: Number(row.refunded_cents),
-          currency: row.currency,
-          status: row.status,
-          paidAt: toIso(row.paid_at),
-          failedAt: toIso(row.failed_at),
-          disputedAt: toIso(row.disputed_at),
-          refundedAt: toIso(row.refunded_at),
-          updatedAt: toIso(row.updated_at),
+        [sessionId],
+      );
+      const row = result.rows[0];
+      if (!row) throw new ApiError(404, "INVOICE_PAYMENT_NOT_FOUND", "Invoice payment not found.");
+      response.json({
+        data: {
+          payment: {
+            invoiceNumber: row.invoice_number,
+            payTo: row.pay_to || "Invoice issuer",
+            amountCents: Number(row.amount_cents),
+            refundedCents: Number(row.refunded_cents),
+            currency: row.currency,
+            status: row.status,
+            paidAt: toIso(row.paid_at),
+            failedAt: toIso(row.failed_at),
+            disputedAt: toIso(row.disputed_at),
+            refundedAt: toIso(row.refunded_at),
+            updatedAt: toIso(row.updated_at),
+          },
         },
-      },
-      meta: { requestId: request.requestId },
-    });
-  }));
+        meta: { requestId: request.requestId },
+      });
+    }),
+  );
 }
 
 export const stripeConnectInternals = {
   ACTIVE_PAYMENT_STATUSES,
+  IMMUTABLE_INVOICE_PAYMENT_STATUSES,
   ACH_MAX_AMOUNT_CENTS,
   ACH_MIN_AMOUNT_CENTS,
   SETTLED_PAYMENT_STATUSES,
+  STRIPE_REQUEST_TIMEOUT_MS,
   assertAchAmount,
+  assertCheckoutSession,
+  checkoutCreationFailureCode,
+  checkoutSessionParams,
   connectConfig,
+  connectManagementAvailable,
   eventPaymentUpdate,
   mapConnectStatus,
   mapPaymentRequest,
   nextPaymentStatus,
   onboardingStatus,
+  isAmbiguousCheckoutCreationFailure,
   createV2AccountLinkPayload,
   createV2ConnectedAccountPayload,
   normalizeConnectAccount,
   providerContributionCents,
+  preventPaymentResponseCaching,
+  stripeConnectRequest,
+  stripeConnectV2Request,
+  stripeProviderRequest,
   v2DetailsSubmitted,
 };

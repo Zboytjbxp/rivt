@@ -1,0 +1,11 @@
+flowchart LR
+  User["Authenticated RIVT users"] --> App["RIVT application service"]
+  App --> DB["Production PostgreSQL"]
+  App --> Primary["Primary Railway buckets"]
+  DB --> Logical["Encrypted logical DB artifact"]
+  Logical --> Primary
+  Primary -. "Object keys and hashes only in DB artifact" .-> Logical
+  Operator["Operator with Railway access"] --> DB
+  Operator --> Primary
+  Failure["Account compromise, deletion, or provider failure"] --> DB
+  Failure --> Primary

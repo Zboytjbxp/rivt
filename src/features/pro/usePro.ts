@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getBillingStatus, type BillingStatus } from "../../lib/billing";
 
 const PRO_KEY = "rivt.pro.v1";
@@ -12,14 +12,16 @@ function readPro(): ProStatus {
   catch { return { active: false, activatedAt: null }; }
 }
 
-export function usePro() {
+export function usePro(accountId: string) {
   const [pro, setPro] = useState<ProStatus>(readPro);
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const accountIdRef = useRef(accountId);
 
   const refreshBilling = useCallback(async () => {
     try {
-      const status = await getBillingStatus();
+      const status = await getBillingStatus(accountId);
+      if (accountIdRef.current !== accountId) return null;
       setBilling(status);
       setPro({
         active: status.active || (ALLOW_LOCAL_PRO && readPro().active),
@@ -27,20 +29,23 @@ export function usePro() {
       });
       return status;
     } catch {
+      if (accountIdRef.current !== accountId) return null;
       const local = readPro();
       setBilling(null);
       setPro(local);
       return null;
     } finally {
-      setLoading(false);
+      if (accountIdRef.current === accountId) setLoading(false);
     }
-  }, []);
+  }, [accountId]);
 
   useEffect(() => {
+    const controller = new AbortController();
     let cancelled = false;
-    getBillingStatus()
+    accountIdRef.current = accountId;
+    getBillingStatus(accountId, controller.signal)
       .then((status) => {
-        if (cancelled) return;
+        if (cancelled || accountIdRef.current !== accountId) return;
         setBilling(status);
         setPro({
           active: status.active || (ALLOW_LOCAL_PRO && readPro().active),
@@ -48,15 +53,18 @@ export function usePro() {
         });
       })
       .catch(() => {
-        if (cancelled) return;
+        if (cancelled || accountIdRef.current !== accountId) return;
         setBilling(null);
         setPro(readPro());
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && accountIdRef.current === accountId) setLoading(false);
       });
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [accountId]);
 
   function activatePro() {
     if (!ALLOW_LOCAL_PRO) return false;

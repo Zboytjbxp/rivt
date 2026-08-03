@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - master
-      - "codex/**"
 
 permissions:
   contents: read
@@ -17,10 +16,12 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The serial PostgreSQL safety suite currently takes about 25 minutes.
+    # Keep a real ceiling without terminating the gate before it can finish.
+    timeout-minutes: 45
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16-alpine@sha256:57c72fd2a128e416c7fcc499958864df5301e940bca0a56f58fddf30ffc07777
         env:
           POSTGRES_USER: rivt_test
           POSTGRES_PASSWORD: rivt_test
@@ -35,19 +36,24 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql://rivt_test:rivt_test@127.0.0.1:5432/rivt_test
       PGSSL: disable
+      # postgres:16-alpine defaults to 100 total slots with 3 reserved.
+      RIVT_DB_MAX_CONNECTIONS: 97
 
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 22
+          node-version-file: ".nvmrc"
           cache: npm
 
       - name: Install locked dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Install browser
         run: npx playwright install --with-deps chromium
@@ -58,16 +64,18 @@ jobs:
       - name: Lint repository
         run: npm run lint
 
+      - name: Lint security-sensitive code
+        run: npm run lint:security
+
       - name: Run unit and integration tests
         run: npm run test
 
-      - name: Require current launch-readiness evidence
-        run: npm run launch:readiness -- --require-ready
+      - name: Run full browser test suite
+        id: browser-tests
+        run: npm run test:e2e
 
-      - name: Run fail-closed authentication browser test
-        run: node test/auth-fail-closed.e2e.mjs
-
-      - name: Run jobs and discovery browser test
+      - name: Annotate jobs and discovery browser failures
+        if: ${{ failure() && steps.browser-tests.outcome == 'failure' }}
         shell: bash
         run: |
           set +e
@@ -80,8 +88,48 @@ jobs:
           fi
           exit "$status"
 
-      - name: Run offline recovery browser test
-        run: node test/offline-recovery.e2e.mjs
+      - name: Check patch formatting
+        shell: bash
+        env:
+          RIVT_EVENT_NAME: ${{ github.event_name }}
+          RIVT_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          RIVT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RIVT_PUSH_BEFORE_SHA: ${{ github.event.before }}
+          RIVT_PUSH_HEAD_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          empty_tree="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+          zero_sha="0000000000000000000000000000000000000000"
+          if [[ "$RIVT_EVENT_NAME" == "pull_request" ]]; then
+            base_sha="$RIVT_PR_BASE_SHA"
+            head_sha="$RIVT_PR_HEAD_SHA"
+          else
+            base_sha="$RIVT_PUSH_BEFORE_SHA"
+            head_sha="$RIVT_PUSH_HEAD_SHA"
+            if [[ -z "$base_sha" || "$base_sha" == "$zero_sha" ]]; then
+              base_sha="$empty_tree"
+            fi
+          fi
+          git diff --check "$base_sha" "$head_sha"
+
+      - name: Require current launch-readiness evidence
+        id: launch_readiness
+        continue-on-error: true
+        run: npm run launch:readiness -- --require-ready
 
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Enforce launch-readiness result after verification
+        if: >-
+          always() &&
+          (github.event_name == 'push' || github.event.pull_request.base.ref == 'master')
+        shell: bash
+        env:
+          RIVT_LAUNCH_READINESS_OUTCOME: ${{ steps.launch_readiness.outcome }}
+        run: |
+          set -euo pipefail
+          if [[ "$RIVT_LAUNCH_READINESS_OUTCOME" != "success" ]]; then
+            echo "Launch readiness remains blocked. Review the earlier readiness step for the exact findings."
+            exit 1
+          fi

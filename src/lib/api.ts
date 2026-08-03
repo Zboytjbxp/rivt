@@ -26,10 +26,13 @@ export class RivtApiError extends Error {
 }
 
 export const RIVT_SESSION_EXPIRED_EVENT = "rivt:session-expired";
+export const RIVT_EXPECTED_ACCOUNT_HEADER = "X-RIVT-Expected-Account-Id";
 
-export function notifySessionExpired() {
+export function notifySessionExpired(accountId?: string) {
   if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(RIVT_SESSION_EXPIRED_EVENT));
+  window.dispatchEvent(new CustomEvent(RIVT_SESSION_EXPIRED_EVENT, {
+    detail: accountId ? { accountId } : undefined,
+  }));
 }
 
 export function requestKey() {
@@ -105,6 +108,7 @@ export function makeRequest<E extends RivtApiError>(
 ) {
   return async function request<T>(path: string, options: RequestInit = {}) {
     let response: Response;
+    const expectedAccountId = new Headers(options.headers).get(RIVT_EXPECTED_ACCOUNT_HEADER) ?? undefined;
     try {
       response = await fetchWithTimeout(apiPath(path), { credentials: "include", ...options });
     } catch (cause) {
@@ -117,7 +121,7 @@ export function makeRequest<E extends RivtApiError>(
     }
     const body = await response.json().catch(() => ({})) as ApiErrorBody & T;
     if (!response.ok) {
-      if (response.status === 401) notifySessionExpired();
+      if (response.status === 401) notifySessionExpired(expectedAccountId);
       throw factory(response.status, body);
     }
     return body;

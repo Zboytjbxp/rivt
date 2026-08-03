@@ -1,5 +1,178 @@
 # Gate A Requirements Traceability
 
+## Packet 98 - Protected incident-rehearsal workflow (candidate PR #19; source-only; no dispatch)
+
+- `GA-OPS-005` remains **Partial**. The candidate adds one manual-only,
+  protected-master, exact-source workflow whose run identity and four critical
+  steps match the source-bound Packet 97 incident-rehearsal adapter. It also
+  fails unless the operator attests that the controlled failure, human page,
+  role assignment, recovery, kill-switch decision, and decision log are
+  complete. A successful future run cannot independently prove those human
+  statements or replace review of the complete Scenario A record.
+- `GA-OPS-007` remains **Partial**. Source-contract tests lock the workflow to
+  one job, four exact critical steps, commit-pinned actions, a SHA-256-pinned
+  Railway CLI archive, read-only GitHub permissions, UUID-scoped remote
+  resources, an explicit protected SSH identity, a pinned Railway relay host
+  key, exact-source revalidation, private key/raw-output deletion, and the
+  absence of deployment, migration, backup, restore, SSH-key registration, or
+  provider-mutation commands. Before Node or database access, the remote guard independently
+  checks the runtime commit, project, environment, service, literal
+  `production` environment, and fixed `https://rivt.pro` origin. The live
+  Gate A smoke uses the read-only migration assertion. Focused workflow and
+  migration-safety tests pass 41/41; full local gates pass; and a fresh sealed
+  diff security review reports zero findings. PR #19 Gate A run `30821741994`
+  passed on exact implementation source
+  `d700980fb2dc63f05b1eded05f4fa801d13112b4`, including the disposable-
+  PostgreSQL integration and browser suites. Launch-readiness enforcement
+  remained correctly inapplicable because this packet targets the release-
+  candidate branch, not `master`.
+- `GA-OPS-008` remains **Partial**. This packet creates source code only. The
+  workflow has not been reviewed onto protected `master`, dispatched,
+  materialized into protected evidence revision `E`, approved in later
+  revision `A`, deployed, or used to clear the incident hold. The required
+  dedicated Railway workspace SSH public key and matching protected GitHub
+  private-key secret have not been created or approved by this packet, and no
+  provider evidence currently confirms that either credential or the
+  protected environment is configured.
+- `GA-OPS-009` remains **Blocker**. One rehearsal cannot prove redundancy,
+  failover, recovery, autoscaling, DDoS capacity, or launch readiness.
+- Requirement maturity does not change. `ACTIVE_LAUNCH_HOLD` remains active,
+  and no provider call, credential use, production-data action, workflow
+  dispatch, added cost, deployment, incident closure, ACH activation, or
+  launch is authorized.
+
+## Packet 97 - Provider-control contract hardening (accepted into release candidate)
+
+- `GA-OPS-004` remains **Blocker**. Six recovery controls are now declared in
+  checked-in source and pinned to exact adapter/provider identities. Dynamic
+  recovery status and the next restore due date can be materialized only from
+  exact fresh evidence. RIVT still has no selected or approved independent
+  recovery provider, retained off-Railway object copy, recurring schedule,
+  received missed-backup alert, or isolated restore proof.
+- `GA-OPS-005` remains **Partial**. Five incident controls are now similarly
+  source-bound. A read-only GitHub Actions adapter can verify one exact
+  protected-branch incident rehearsal. Paging remains blocked because a
+  provider trigger is not proof of downstream human receipt, and the private
+  backup route has no selected evidence provider.
+- `GA-OPS-007` remains **Partial**. Focused provider/materializer tests pass
+  41/41 with exact adapter/provider-substitution, stale/failed rehearsal,
+  dynamic recovery-status coverage, and fail-closed extreme-date handling.
+  Full local gates and independent diff security review pass with no
+  reportable candidate. Pull request #18 passed Gate A run `30811623328` and
+  merged into the release candidate as
+  `c8d1596d0a1dd371f3951fdf484cac8704391f38`. Release-candidate pull request
+  #16 then passed every engineering check in Gate A run `30812346351` and
+  stopped only at the intentional final launch-readiness enforcement.
+- `GA-OPS-008` remains **Partial**. Source policy now pins all 12 controls and
+  payment remains disabled, but no protected `E` evidence or later protected
+  `A` approval revision has been collected. Packet 97 is not merged to
+  `master` or deployed.
+- `GA-OPS-009` remains **Blocker**. This packet improves the evidence contract;
+  it does not prove capacity, redundancy, failover, recovery, provider
+  configuration, or launch readiness.
+- Readiness remains blocked with 21 findings led by `ACTIVE_LAUNCH_HOLD`.
+  Requirement maturity does not change. No provider call, production-data
+  action, deployment, added cost, hold clearance, ACH activation, incident
+  closure, or launch is authorized.
+
+## Packet 96 - Provider-evidence approval lifecycle (in progress)
+
+- `GA-OPS-004` remains **Blocker**. The candidate defines how six stable
+  recovery controls can be materialized from exact evidence and approved only
+  afterward; it does not create, validate, restore, retain, or schedule any
+  backup.
+- `GA-OPS-005` remains **Partial**. The candidate defines five stable incident
+  evidence controls and a separately protected post-evidence approval/hold
+  decision. A valid hold clearance can suppress only `ACTIVE_LAUNCH_HOLD`, not
+  any missing incident evidence or approval finding.
+- `GA-OPS-007` remains **Partial**. Build, application/security lint, 538/538
+  unit tests, the combined test command, four browser E2E journeys, diff
+  integrity, and a zero-vulnerability production dependency audit pass.
+  Independent review found and closed clean-runner dependency, hold-incident
+  binding, and E/A branch-protection gaps. Gate A run `30794141827` passed the
+  complete sequence with disposable PostgreSQL 16. Gate
+  A evaluates readiness on all PRs but enforces the result only at the actual
+  `master` merge/push boundary, so a release-candidate PR cannot bypass launch
+  readiness and cannot be made unreviewable merely because evidence collection
+  is a later packet.
+- `GA-OPS-008` remains **Partial**. The workflow candidate binds exact source,
+  evidence, and approval revisions, uses the read-only GitHub API to attest
+  that E/A report protected, and validates both roots before dependencies or
+  provider credentials. The protection flag does not by itself attest exact
+  reviewer/ruleset strength. The change is not merged to `master` or deployed
+  and creates no deployment evidence.
+- `GA-OPS-009` remains **Blocker**. A reachable, fail-closed approval lifecycle
+  is prerequisite control-plane work; it does not prove capacity, redundancy,
+  failure domains, recovery, provider configuration, or launch readiness.
+- Requirement maturity does not change. The checked-in operations policies do
+  not yet declare the full 12-control materializer contract, nine provider
+  adapters remain separate bounded work, and no protected `E` or `A` revision
+  has been created.
+- No merge to `master`, deployment, provider call, added cost, credential
+  access, production-data action, launch-hold clearance, Railway Stage 1, ACH
+  activation, incident closure, or public launch is authorized by this packet.
+
+## Packet 95 - Provider-evidence policy boundary (merged into release candidate)
+
+- `GA-OPS-004` remains **Blocker**. This packet does not create or validate
+  recovery evidence; it prevents later evidence from redefining pinned
+  recovery policy.
+- `GA-OPS-005` remains **Partial**. Incident policy remains subject to the
+  active launch hold and independent evidence and approval requirements.
+- `GA-OPS-007` gains a clean production build, application/security lint,
+  486/486 unit/frontend tests, all four browser E2E journeys, zero known
+  production dependency vulnerabilities, the non-reproducing original PoC,
+  and a clean independent change-aware security re-review. Pull-request Gate A
+  run `30788718976` additionally passes all 28 disposable-PostgreSQL
+  integration tests, the same four browser journeys, patch formatting, and
+  the production dependency audit. Documentation-only Gate A run
+  `30789376060` repeats the same pre-readiness pass. PR #15 merged into the
+  release-candidate branch as
+  `ce757652fa49d4592dcf6e13c4291cd8e4db18aa`. `GA-OPS-007` remains
+  **Partial** pending exact deployed-source evidence; both runs stop only at
+  the intentional final enforcement of the unchanged 21-item readiness block.
+- `GA-OPS-008` remains **Partial**. Packet 95 is not merged to `master` or
+  deployed and creates no deployment evidence.
+- `GA-OPS-009` remains **Blocker**. This authority-boundary fix does not prove
+  production hosting, redundancy, recovery, or launch readiness.
+- No merge, deployment, provider call, added cost, credential access,
+  production-data action, launch-hold clearance, Railway Stage 1, ACH
+  activation, or incident closure is authorized by this packet.
+
+## Packet 87 — Money-integrity containment (local verification)
+
+- `GA-FND-003` gains one authoritative amount boundary for each invoice path:
+  standalone customer documents use the account-owned tool record, while
+  accepted-work documents must match the participant-authorized project
+  invoice and its unpaid balance exactly.
+- `GA-FND-004` gains server-side refusal for deleted, void, mismatched,
+  processing, settled, externally paid, refunded, and disputed
+  invoice/payment combinations. Public payer redirects revalidate the current
+  invoice before forwarding to Stripe, and consequential out-of-order Stripe
+  events cannot erase settlement, refund, or dispute truth.
+- `GA-UX-005` gains honest Receivables and delivery behavior. New manual
+  `payment_record` writes are retired; older rows remain readable but cannot
+  contribute to current totals or claim settlement. A bank-link creation no
+  longer labels an invoice sent.
+- `GA-UX-006` gains content-bound invoice delivery: the provider retry
+  identity derives from the exact recipient and rendered document,
+  different-key concurrent sends serialize, and an identical lost-response
+  replay restores the truthful sent label without another email. Browser
+  writes cannot forge paid/sent state or provider metadata, provider delivery
+  requires an active verified account, and repeated status writes do not
+  duplicate project effects.
+- Local evidence: production build, full/security lint, 164 unit/frontend
+  tests, all three browser E2E journeys, Tools/Invoice, mobile-actions, and
+  Work-lifecycle rendered suites, dependency audit, and diff integrity pass.
+  A freshly reset disposable PostgreSQL 16.14 cluster passed all 22
+  integration tests, including all 19 database-backed suites, with zero
+  failures or skips. It was loopback-only, stopped, and removed after the
+  run; production and Railway were not used. Independent review found no
+  remaining code blocker.
+- No migration, production data, provider configuration, paid resource,
+  deployment, or live payment changed. Packet 87 remains launch-blocking until
+  merge, deployment, and exact-source acceptance pass.
+
 ## Operational Incident Addendum - 2026-07-29 Credential Containment
 
 - `GA-OPS-007` gains local Web Push retirement instrumentation: migration
@@ -2227,11 +2400,60 @@ Evidence must eventually link to implementation, automated tests, manual accepta
 | GA-OPS-001 | Build and lint gates pass | Verified | Production build and repository-wide ESLint pass locally and in GitHub Actions with zero errors or warnings. |
 | GA-OPS-002 | Direct production dependencies are declared and vulnerability gate passes | Verified | `fast-xml-parser` is direct, Multer is 2.2.0, all direct dependencies/devDependencies are exact-pinned in local source with `.nvmrc` set to Node 20, and `npm audit --omit=dev` reports zero vulnerabilities locally and in GitHub Actions. |
 | GA-OPS-003 | Health, readiness, and build version are distinct | Verified | Deployed health and authenticated readiness report dependencies, migration version, operational-control state, observability setup state, and exact source commit `6d8e276`. Public health exposes only non-secret monitoring status. |
-| GA-OPS-004 | Backup and timed restore drill pass | Verified | Timed isolated logical restore passed against temporary Railway target `Postgres-3Ei3` on 2026-06-20. A named backup-artifact restore also passed on 2026-06-21: `npm run backup:logical-artifact` created encrypted object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm` from 59 tables / 1,524 rows in 630 ms; `npm run restore:logical-artifact -- --apply-migrations` restored that object to isolated target `Postgres-_FQz`, applied nine migrations through `0009_durable_rate_limits`, restored 59 tables / 1,524 rows, verified table/column/sequence and strict manifest-count parity with zero diffs in 13,411 ms; `npm run restore:drill` then verified the isolated target in 1,862 ms. The temporary target was deleted, detached restore volumes were marked for deletion, and temporary restore variables were removed. `docs/operations/recovery-policy.json` now records this evidence and approves Gate A RPO 1440 minutes, RTO 240 minutes, 30-day backup retention, 30-day restore-drill cadence, next restore drill due `2026-07-21T04:18:59.000Z`, with founder and operations approval by Michael. |
+| GA-OPS-004 | Backup and timed restore drill pass | Blocker | Historical isolated database restores passed in June, and the approved 2026-08-02 refresh created one encrypted same-provider logical artifact for 109 tables and 8,811 rows. That refresh proves a current backup can be created but not that the exact artifact can be restored. It also does not independently retain or restore the referenced object bytes used by photos and attachments, and it does not prove scheduled, monitored recurrence. Packet 90 adds a content-digested v2 logical format and a guarded provider-neutral local recovery harness; those controls pass locally but are not provider or production recovery evidence. Keep `R-052` open. Exit requires restoration of the exact current artifact, independent retention and integrity-checked restoration of every required object byte, and approved/proved scheduled backups plus recurring restore drills. |
 | GA-OPS-005 | Structured logs, error monitoring, alerts, and incident routing | Partial | Packet 08 added structured JSON request/domain logs and request IDs. `npm run monitor:production` and the scheduled `Production Synthetic Check` workflow now verify public health, provider controls, and anonymous fail-closed routes from outside Railway; the workflow installs from lockfile, uploads monitor evidence, opens/updates a single GitHub incident issue on failure, and closes it after recovery. Source `6d8e276` adds Sentry-compatible error monitoring hooks for HTTP 500, startup failure, unhandled rejection, and uncaught exception capture; `/api/health` and authenticated `/api/readiness` expose redacted monitoring setup status. Railway deployment `eaa7409d` configures Sentry Cloud for the RIVT production service, live health reports `observability.errorMonitoring.mode=configured`, and Sentry accepted smoke event `RIVT Sentry smoke test` with HTTP 200. Sentry alert rule `Send a notification for high priority issues` is connected to project `node-express`, notifies suggested assignees or recently active members on every trigger, and triggered once for the smoke issue at 2026-06-22 02:38 UTC; this is accepted as the first pilot escalation route, with dedicated phone/SMS paging recommended before broader scale. Backup owner Anya Tingle is recorded with email and phone status recorded, without storing the phone number in the repo. Founder-provided support coverage is recorded as Monday-Saturday, 9:00 AM-5:00 PM, America/New_York. `docs/operations/incident-routing.json` is approved for the Gate A pilot route scope by Michael at `2026-06-22T03:09:36.0366141Z`. Scenario A rehearsal passed on 2026-06-22: `npm run monitor:production` passed locally, `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live` passed inside the Railway service with zero seed/demo findings and seven anonymous private-route checks, and Sentry accepted incident-rehearsal event `43fc7567f458490582db1f6642e2e0ea` with HTTP 200. Michael approved founder/support/legal-safety signoffs at `2026-06-22T03:48:04.1166525Z`, and `node scripts/incident-readiness-check.js --json` now reports `ready` with zero findings. Dedicated phone/SMS paging remains recommended before broader scale. |
 | GA-OPS-006 | Critical rate limits and upload abuse limits | Verified | Auth/write/upload limits now use PostgreSQL-backed `rate_limit_windows`, uploads retain MIME/size/count policy, domain quotas remain in workflow routes, and signup/mutation kill switches are live. Threshold tuning remains an operating task, not a launch blocker. |
 | GA-OPS-007 | Automated tests cover critical journeys and authorization | Partial | Unit/integration and Playwright journeys pass; local `TEST_DATABASE_URL` is configured against isolated `rivt_test` Postgres so `npm run test` now executes all 12 DB-backed integration tests locally with zero skips; disposable-Postgres auth/job/match authorization coverage passes in GitHub Actions. Packet 08 controllable progress now opens top-bar search, notifications, profile/account, and messages/inbox in local mocked E2E, and production smoke `ui-a11y-20260621062332-02b380` applied interaction audits to those same top-bar surfaces across the expanded viewport/text-scale matrix after fixing search, notifications, theme toggles, Inbox, and 200% text-scale overflow. Source `436b83f` expands `npm run test:e2e` so Home opens on desktop/mobile, `RIVT Daily` and `Availability radar` render, and a mocked server-backed profile availability update persists before continuing through Work, top-bar actions, Tools, and Records. A temporary rendered Playwright QA pass covered Shop Talk -> Trade News on desktop/mobile against the real local `/api/news` endpoint. Production `/api/news` was verified after deployment `7fe1c3ea-d5f4-48c4-b757-a46ff8ebc369` on source `4fe22bc` with zero Google favicon thumbnails, zero missing thumbnails, and zero missing source URLs; the later Trade News real-media deployment `4fb062bd-1c3e-474e-90df-fe42f4f2e1fa` on source `a59eb47` returned 30 live items with 24 article/feed thumbnails, 6 fallbacks, zero missing thumbnails, zero missing source URLs, and zero Google favicon thumbnails. Tools E2E opens Heavy 16th, Estimate builder, Invoice draft, and Material takeoff on desktop/mobile; Records E2E opens accepted-work project records, submits a field note, and loads a server report. Rendered Playwright QA at 390x844 and 1440x900 found no horizontal overflow or console errors for Tools and Records. Packet 08 UI system and shared-primitives passes also rendered Home, Work, Crew, Inbox, Tools, Records, and Profile at desktop/mobile breakpoints with no horizontal overflow and no console/page errors. Shop Talk command center source `4cef797` adds repeatable `npm run test:ui:shop-talk-news` coverage for Shop Talk and Trade News search, original-source links, no horizontal overflow, and console/page-error regression checks at desktop/mobile widths. Shop Talk reaction sources `1227e1c` and `13f7e2e` expand that command with regression coverage for one active thread reaction, one active answer reaction, reaction clearing, server-owned reaction API mocks, Social hub pulse visibility, accessible active labels, and live authenticated Railway-SSH reaction smoke; Shop Talk answer queue source `73f79ac` expands it with answer queue visibility, Answer now interaction, active answer-queue filtering, answer guidance, and skip-link screenshot-artifact regression coverage; Daily Engagement source `aeb23ca` expands it with Shop Talk reputation-path coverage; Trade News real-media source `a59eb47` expands it with real-media class checks and deterministic media rendering. Tools app surface source `ad5ff7d` adds repeatable `npm run test:ui:tools` coverage for Tools hub, Heavy 16th calculator, Estimate Builder, Invoice Draft, Material Takeoff, email/SMS draft affordances, material presets, no horizontal overflow, and console/page-error regression checks at desktop/mobile widths. Heavy 16th source `444fc96` expands E2E and `npm run test:ui:tools` to cover Spacing mode and rendered mode behavior across Length, Spacing, Cuts, and Hardware. Invoice Draft source `97d9da7` further expands `npm run test:ui:tools` for template save/load, recipient fields, draft email/SMS actions, printable invoice preview, no horizontal overflow, and console/page-error regression checks. Daily Engagement source `aeb23ca` expands `npm run test:ui:tools` for the Daily Log mini-app, field-note entry, checklist toggles, preview output, local draft save, no horizontal overflow, and console/page-error regression checks; Daily Log Records bridge source `d03f2a` expands it for `Records-ready`, accepted-work target copy, `Save to Records`, project timeline note creation against mocked authenticated APIs, local fallback, no horizontal overflow, and console/page-error regression checks. Source `9c614ac` adds `npm run smoke:daily-log-ui:live`, and split live run `daily-log-ui-20260622004926-05a797` passed with real invited accounts, real accepted work, real browser login, server-backed `Save to Records`, one verified project timeline note, and cleanup of two disposable accounts. Error monitoring source `6d8e276` adds unit coverage for setup-required status, DSN redaction, no-op unconfigured capture, sanitized Sentry-compatible delivery, public health redaction, and production monitor observability output. The source also passed `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm audit --omit=dev`, and `git diff --check`; server-owned reaction source `13f7e2e` passed the same local gate set plus `npm run smoke:shop-talk-reactions:live` and `npm run monitor:production`; source `6d8e276` passed `npm run monitor:production` live with observability evidence. Web Push generation source `21e534feef86958f58fda108f26c6184174d346d` adds 152 passing unit/frontend tests and 22 passing PostgreSQL 16 integration tests in GitHub Actions run `30577678020`; the workflow then stopped only at the intentional launch hold. Closeout source `922e94415ffd3bea3e2e6ac633705b91c283bb8b` passes build, lint, 158 unit/frontend tests, all three browser E2E journeys, and a zero-vulnerability dependency audit. Broader domains and physical/manual accessibility remain packet work. |
 | GA-OPS-008 | Deployed commit, migrations, flags, and rollback are recorded | Partial | Packet 00-08 commits, Railway deployment IDs, config changes, migration status, operational controls, smoke/hardening audit evidence, timed isolated logical restore evidence, named backup-artifact restore evidence, expanded UI smoke evidence, production UI-smoke regression fixes through source `4fe22bc`, Tools studio deployment `ac8d1f8d` on source `24c37ac`, Records workspace deployment `83c95b13` on source `1679aec`, UI system pass deployment `747f71f5` on source `8d90ef2`, shared UI primitives deployment `e3ad8e53` on source `b222917`, Tools primitive alignment deployment `b7740f77` on source `0680b8f`, Shop Talk command center deployment `f001843b` on source `4cef797`, Tools app surface deployment `14bb03aa` on source `ad5ff7d`, Heavy 16th multi-mode deployment `6bd7f24d` on source `444fc96`, Invoice Draft app upgrade deployment `58d6dca4` on source `97d9da7`, Shop Talk reaction/social pulse deployment `740dfd5a` on source `1227e1c`, Trade News real-media/mobile-layout deployment `4fb062bd` on source `a59eb47`, RIVT Daily home check-in deployment `f17fbcec` on source `436b83f`, Shop Talk answer queue deployment `d717edd7` on source `73f79ac`, Daily Engagement Loop deployment `63a4f5aa` on source `aeb23ca`, Daily Log Records bridge deployment `95973719` on source `d03f2a`, Daily Log live UI proof deployment `1c138a66` on source `9c614ac`, server-owned Shop Talk reactions deployment `718003b2` on source `13f7e2e` with migration `0011_shop_talk_reaction_events_immutable`, error monitoring readiness deployment `3260e837` on source `6d8e276`, Sentry provider configuration deployment `eaa7409d`, incident-readiness tooling, launch-ops checklist, incident rehearsal runbook, recovery-policy approval, incident-routing approval, incident-rehearsal pass, Gate A approval packet, founder/support/legal-safety approvals, and historical readiness evidence are recorded. Web Push closeout deployment `e4dbe7fb-5290-4732-b377-b164002217a7` serves exact source `922e94415ffd3bea3e2e6ac633705b91c283bb8b` with migration `0042_push_vapid_generation`; health, the 605 ms monitor, and the final `3/3` physical-device readiness gate pass. Sentry rotation deployment `c6ddf9c8-91a3-4953-a47c-70c72deb154e` serves exact source `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`; health, the 590 ms monitor, replacement event/alert proof, prior-key disable, and post-retirement event proof pass. Current exact-source launch readiness intentionally fails closed on `ACTIVE_LAUNCH_HOLD`; final incident synthesis, explicit forensic-limit acceptance, fresh Railway Stage 1 review/approval, and deeper manual accessibility remain open boundaries. |
+| GA-OPS-009 | Hosting capacity, redundancy, failover, and migration posture are evidenced | Blocker | Packet 92 records the decision to harden Railway before considering an AWS migration. Packets 92-94 add provider-neutral source controls for role separation, bounded database pools, leased maintenance, push attempt fencing, graceful shutdown, privacy-safe capacity telemetry, and fail-closed activation preflight. The consolidated candidate verifies those controls locally only. No new worker, replica, provider setting, load test, failover test, activation, deployment, or paid resource is claimed, and `R-055` remains open. After the credential incident closes and a fresh exact-source/cost approval is granted, exit requires a fresh provider snapshot, proved capacity and connection headroom, staged web/worker activation, verified alerts and rollback, bounded load/failure tests, and documented database failure-domain, recovery, and migration-trigger decisions. |
+
+## Traceability Addendum - 2026-08-02 Release-Candidate Consolidation
+
+- The historical `GA-OPS-007` row above records earlier test environments and
+  results. It is not current-candidate PostgreSQL evidence. This workstation
+  does not provide an authenticated PostgreSQL 16 acceptance target; the
+  pull-request Gate A disposable PostgreSQL service remains the current
+  candidate's database acceptance boundary.
+- `GA-FND-004` gains expected-account binding for onboarding profile drafts,
+  onboarding completion, the post-onboarding canonical refresh, and session
+  inventory/revocation. A mismatch fails with `ACCOUNT_CONTEXT_CHANGED`
+  before mutation. Browser assertions and database-backed cases are present
+  in source; the final disposable-PostgreSQL 16 result, deployment, and
+  physical two-account stale-tab check remain pending.
+- `GA-FND-006` and `GA-UX-005` gain a durable payment-request reservation
+  before Stripe Checkout creation, stable row-derived provider identity,
+  convergence across different client retry keys, retained ambiguous outcomes,
+  monotonic early-webhook finalization, and server-only Checkout URLs. This is
+  local candidate source and test coverage, not PostgreSQL 16, provider,
+  deployment, or real-payment evidence.
+- `GA-OPS-004` gains strict nonlocal TLS, read-only-role, encryption-key,
+  source-revision, artifact-version/digest, retention, newest-artifact, and
+  source/target-isolation controls. They do not restore the current provider
+  artifact or independently recover its referenced object corpus.
+- `GA-OPS-005` gains locally verified fixed-schema capacity and request telemetry
+  that classifies route families without retaining raw paths, query strings,
+  actor identifiers, or free text. The new stream is not deployed and does not
+  close the broader semantic-PII risk in `R-057`.
+- `GA-OPS-005` and `GA-OPS-008` also gain typed, source-bound provider receipts
+  plus a protected runtime-configuration proof path. Empty templates and
+  repository code are not live provider evidence; no approved provider run is
+  claimed.
+- `R-050` and `GA-OPS-007` gain a complete offline install contract: a public
+  Vite manifest binds the registered entry to every lazy feature chunk, both
+  theme lockups, and the field fonts; a partial or mixed-build cache cannot
+  activate. The production-build browser journey verifies zero missing
+  manifest assets and passed three consecutive focused installed-app reopens.
+- Code checkpoint `c936dd00fbe87db493e1ebeca142bbf50599eb9f`
+  passed production build, application/security lint, 477/477 unit/frontend
+  checks, all four browser E2E journeys, Tools/Trade News/mobile-actions/Work-
+  lifecycle UI smokes, the guarded local recovery harness, diff integrity, and
+  the zero-vulnerability production dependency audit. These are local checks;
+  the exact final pull-request head and disposable-PostgreSQL 16 aggregate must
+  still pass Gate A before review or merge.
+- `GA-OPS-008` records no new deployment. The consolidated branch has not been
+  merged or activated, the current production incident hold remains active,
+  and Packet 94's earlier branch CI and dated Railway observations are
+  historical evidence only.
 
 ## Traceability Addendum - 2026-06-22 Accessibility Boundary Progress
 

@@ -1,6 +1,9 @@
 # Gate A Execution Packets
 
-Run packets in order. A packet is one AI session or a small number of tightly controlled sessions. Do not combine packets to save time.
+Packet files in this directory are authoritative. Selected milestones are
+summarized below; follow the active-packet pointer in `BUILD_STATE.md` and run
+applicable packets in order. A packet is one AI session or a small number of
+tightly controlled sessions. Do not combine packets to save time.
 
 | Packet | Outcome |
 |---|---|
@@ -19,6 +22,19 @@ Run packets in order. A packet is one AI session or a small number of tightly co
 | 12 | Gate B daily use |
 | 13 | Workflow coherence and subtraction |
 | 14 | Field camera |
+| 87 — customer-payment acceptance (`87_CUSTOMER_PAYMENT_ACCEPTANCE.md`) | Live Contacts → Estimate → Invoice → Payment-path acceptance; physical-device and authorized ACH completion remain human-owned |
+| 87 — money-integrity containment (`87_MONEY_INTEGRITY_CONTAINMENT.md`) | Server-side invoice/payment consistency, retry, delivery, and monotonic provider-state containment |
+| 88 | Security and infrastructure hardening, recovery, and data-governance launch boundary |
+| 89 | Recovery closure design and lossless artifact contract |
+| 90 | Guarded provider-neutral local recovery harness |
+| 91 | Recovery activation decision and retention/key-custody boundary |
+| 92 | Railway production-posture decision and tunable hosting thresholds |
+| 93 | Railway replica, worker, migration, and connection safety |
+| 94 | Railway activation readiness, staged rollback, and exact-approval boundary |
+| 95 | Immutable launch-policy and mutable provider-evidence root separation; remediation of `csf_04e2d7dfe8fbe53f254d821c` |
+| 96 | Reachable three-revision `S -> E -> A` provider-evidence approval lifecycle without transferring policy authority to later roots |
+| 97 | Exact source-bound provider-control contract and fail-closed provider adapters |
+| 98 | Protected human-attested incident-rehearsal workflow and read-only exact-source smoke |
 
 Before each packet read:
 

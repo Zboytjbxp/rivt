@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "status": "approved",
+  "mode": "disabled",
+  "evidenceControl": {
+    "adapterId": "railway-stripe-disabled-payment",
+    "controlId": "bank-payment-provider-state",
+    "provider": "railway-stripe"
+  },
+  "desiredProviderState": {
+    "featureFlagVerifiedOff": true,
+    "providerDestinationScope": "connected_accounts",
+    "runtimeScopeAttestation": "unset",
+    "signedDeliveryVerified": false,
+    "enabled": false,
+    "configured": false,
+    "webhookConfigured": true,
+    "providerMode": "setup_required"
+  },
+  "approval": {
+    "status": "pending"
+  },
+  "notes": "RIVT policy keeps production invoice bank payments disabled. Fresh provider evidence and a later exact approval are required before launch; enabling ACH is a separate decision and approval."
+}

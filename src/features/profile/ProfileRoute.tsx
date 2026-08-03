@@ -2,10 +2,10 @@ import type { ThemeMode, TrialPlan } from "../../brandConfig";
 import type { AccessibilityPreferenceKey, AccessibilityPreferences, TextScale } from "../../app-shell/preferences";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import type { Role, Trade } from "../../types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ProfileHub, type AccountSessionSummary, type ProfileUpdateInput, type SettingsSection } from "./ProfileHub";
 import type { SafetyQuizResult } from "./training-data";
-import { apiPath, fetchWithTimeout } from "../../lib/api";
+import { apiPath, fetchWithTimeout, RIVT_EXPECTED_ACCOUNT_HEADER } from "../../lib/api";
 
 export type ProfileRouteView = "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings";
 
@@ -40,6 +40,7 @@ interface CanonicalAccountForProfileRoute {
 }
 
 interface ProfileRouteProps {
+  accountId: string;
   view: ProfileRouteView;
   initialSettingsSection?: SettingsSection;
   role: Role;
@@ -79,6 +80,7 @@ interface ProfileRouteProps {
 }
 
 export function ProfileRoute({
+  accountId,
   view,
   initialSettingsSection,
   role,
@@ -108,55 +110,87 @@ export function ProfileRoute({
   isDemo = false,
 }: ProfileRouteProps) {
   const [sessions, setSessions] = useState<AccountSessionSummary[]>([]);
+  const mountedRef = useRef(true);
+  const accountIdRef = useRef(accountId);
+  useEffect(() => {
+    mountedRef.current = true;
+    accountIdRef.current = accountId;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [accountId]);
 
-  const fetchAccountSessions = useCallback(async () => {
-    const response = await fetchWithTimeout(apiPath("/api/v1/sessions"), { credentials: "include" });
+  const isCurrentAccount = useCallback((originAccountId: string) => (
+    mountedRef.current && accountIdRef.current === originAccountId
+  ), []);
+
+  const fetchAccountSessions = useCallback(async (signal?: AbortSignal) => {
+    const response = await fetchWithTimeout(apiPath("/api/v1/sessions"), {
+      credentials: "include",
+      headers: { [RIVT_EXPECTED_ACCOUNT_HEADER]: accountId },
+      signal,
+    });
     const body = await response.json().catch(() => ({})) as {
       data?: { sessions?: AccountSessionSummary[] };
       error?: { message?: string };
     };
     if (!response.ok) throw new Error(body.error?.message || "Sessions could not be loaded.");
     return body.data?.sessions ?? [];
-  }, []);
+  }, [accountId]);
 
   useEffect(() => {
     if (isDemo) return;
+    const controller = new AbortController();
     let cancelled = false;
-    void fetchAccountSessions()
+    void fetchAccountSessions(controller.signal)
       .then((nextSessions) => { if (!cancelled) setSessions(nextSessions); })
       .catch(() => { if (!cancelled) setSessions([]); });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [fetchAccountSessions, isDemo]);
 
   async function revokeSession(sessionId: string) {
+    const originAccountId = accountId;
     const response = await fetchWithTimeout(apiPath(`/api/v1/sessions/${sessionId}`), {
       method: "DELETE",
       credentials: "include",
+      headers: { [RIVT_EXPECTED_ACCOUNT_HEADER]: originAccountId },
     });
     const body = await response.json().catch(() => ({})) as { data?: { current?: boolean }; error?: { message?: string } };
+    if (!isCurrentAccount(originAccountId)) return;
     if (!response.ok) throw new Error(body.error?.message || "Session could not be signed out.");
     if (body.data?.current) {
       onCurrentSessionRevoked();
       return;
     }
-    setSessions(await fetchAccountSessions());
+    const nextSessions = await fetchAccountSessions();
+    if (!isCurrentAccount(originAccountId)) return;
+    setSessions(nextSessions);
     onActivity("Device signed out", "That RIVT session can no longer access your account.", "success");
   }
 
   async function revokeOtherSessions() {
+    const originAccountId = accountId;
     const response = await fetchWithTimeout(apiPath("/api/v1/sessions/revoke-others"), {
       method: "POST",
       credentials: "include",
+      headers: { [RIVT_EXPECTED_ACCOUNT_HEADER]: originAccountId },
     });
     const body = await response.json().catch(() => ({})) as { data?: { revokedCount?: number }; error?: { message?: string } };
+    if (!isCurrentAccount(originAccountId)) return;
     if (!response.ok) throw new Error(body.error?.message || "Other sessions could not be signed out.");
-    setSessions(await fetchAccountSessions());
+    const nextSessions = await fetchAccountSessions();
+    if (!isCurrentAccount(originAccountId)) return;
+    setSessions(nextSessions);
     onActivity("Other devices signed out", `${body.data?.revokedCount ?? 0} other session${body.data?.revokedCount === 1 ? "" : "s"} revoked.`, "success");
   }
 
   return (
     <ProfileHub
       key={`${view}:${initialSettingsSection ?? "account"}`}
+      accountId={accountId}
       view={view}
       initialSettingsSection={initialSettingsSection}
       role={role}

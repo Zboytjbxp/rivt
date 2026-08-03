@@ -79,3 +79,30 @@ test("project invoice mapping counts only settled Stripe bank payments", () => {
   assert.equal(invoice.onlinePayments[0].status, "processing");
   assert.equal(invoice.onlinePayments[1].refundedCents, 2_000);
 });
+
+test("project invoice mapping exposes only the guarded RIVT payment URL", () => {
+  const invoice = mapProjectInvoice({
+    id: "invoice-guarded-link",
+    project_id: "project-1",
+    active_work_id: "work-1",
+    created_by_account_id: "account-1",
+    invoice_number: "RIVT-GUARDED",
+    status: "sent",
+    line_items: [],
+    source_estimate: {},
+    subtotal_cents: 5_000,
+    tax_cents: 0,
+    total_cents: 5_000,
+  }, [], [{
+    id: "payment-request-1",
+    invoice_id: "invoice-guarded-link",
+    amount_cents: 5_000,
+    refunded_cents: 0,
+    status: "open",
+    currency: "usd",
+    checkout_url: "https://checkout.stripe.com/c/pay/cs_test_guarded",
+  }], { appOrigin: "https://rivt.pro" });
+
+  assert.equal(invoice.onlinePayments[0].paymentUrl, "https://rivt.pro/pay/payment-request-1");
+  assert.equal("checkoutUrl" in invoice.onlinePayments[0], false);
+});

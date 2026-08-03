@@ -2,14 +2,37 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 import test from "node:test";
+import {
+  configureHttpServer,
+  createDependencyHealthProbe,
+  createGracefulShutdown,
+  serviceHealthReady,
+} from "../server/http-server-safety.js";
+import {
+  pruneExpiredIdempotencyKeys,
+  runLeasedDatabaseMaintenance,
+  startDatabaseMaintenance,
+} from "../server/database-maintenance.js";
 import { newsInternals } from "../server/news.js";
 import { newsContinuityInternals } from "../server/news-continuity.js";
+import {
+  createMultipartUploadLimits,
+  DEFAULT_MULTIPART_LIMITS,
+} from "../server/upload-safety.js";
+import {
+  DEFAULT_PROVIDER_TIMEOUT_MS,
+  MAX_PROVIDER_TIMEOUT_MS,
+  MIN_PROVIDER_TIMEOUT_MS,
+  providerAbortSignal,
+  providerTimeoutMs,
+} from "../server/provider-safety.js";
 import {
   createDurableRateLimiter,
   createOriginGuard,
   createRateLimiter,
   createRequireAuthenticatedUser,
   isAllowedOrigin,
+  loginEmailRateLimitSubject,
   parseCookies,
   readSessionId,
 } from "../server/security.js";
@@ -52,6 +75,207 @@ test("operator tooling cannot enumerate an entire Railway service environment", 
     [],
     `Executable tooling must request named Railway values instead of enumerating a full environment: ${offenders.join(", ")}`,
   );
+});
+
+test("Gate A does not duplicate pull-request verification on codex branch pushes", () => {
+  const workflow = readFileSync(
+    join(process.cwd(), ".github", "workflows", "gate-a.yml"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(workflow, /^\s*-\s*["']?codex\/\*\*["']?\s*$/m);
+});
+
+test("Gate A checks committed event changes for patch-formatting errors", () => {
+  const workflow = readFileSync(
+    join(process.cwd(), ".github", "workflows", "gate-a.yml"),
+    "utf8",
+  );
+
+  assert.match(workflow, /fetch-depth:\s*0/);
+  assert.match(workflow, /RIVT_EVENT_NAME:\s*\$\{\{ github\.event_name \}\}/);
+  assert.match(workflow, /RIVT_PR_BASE_SHA:\s*\$\{\{ github\.event\.pull_request\.base\.sha \}\}/);
+  assert.match(workflow, /RIVT_PR_HEAD_SHA:\s*\$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+  assert.match(workflow, /RIVT_PUSH_BEFORE_SHA:\s*\$\{\{ github\.event\.before \}\}/);
+  assert.match(workflow, /RIVT_PUSH_HEAD_SHA:\s*\$\{\{ github\.sha \}\}/);
+  assert.match(workflow, /empty_tree=["']4b825dc642cb6eb9a060e54bf8d69288fbee4904["']/);
+  assert.match(workflow, /zero_sha=["']0{40}["']/);
+  assert.match(workflow, /\[\[ -z ["']\$base_sha["'] \|\| ["']\$base_sha["'] == ["']\$zero_sha["'] \]\]/);
+  assert.match(workflow, /git diff --check ["']\$base_sha["'] ["']\$head_sha["']/);
+  assert.doesNotMatch(workflow, /^\s*run:\s*git diff --check\s*$/m);
+});
+
+test("Gate A reports readiness on candidate PRs but enforces it at the master boundary", () => {
+  const workflow = readFileSync(
+    join(process.cwd(), ".github", "workflows", "gate-a.yml"),
+    "utf8",
+  );
+  const readinessStep = workflow.indexOf("name: Require current launch-readiness evidence");
+  const enforcementStep = workflow.indexOf(
+    "name: Enforce launch-readiness result after verification",
+  );
+
+  assert.equal(readinessStep >= 0, true);
+  assert.equal(enforcementStep > readinessStep, true);
+  assert.match(workflow, /github\.event_name == 'push'/);
+  assert.match(workflow, /github\.event\.pull_request\.base\.ref == 'master'/);
+  assert.match(workflow, /RIVT_LAUNCH_READINESS_OUTCOME.*steps\.launch_readiness\.outcome/);
+  assert.match(workflow, /if \[\[ "\$RIVT_LAUNCH_READINESS_OUTCOME" != "success" \]\]/);
+});
+
+function flushAsyncWork() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
+test("multipart uploads bound files, fields, headers, and aggregate parts", () => {
+  const limits = createMultipartUploadLimits(10 * 1024 * 1024);
+
+  assert.deepEqual(limits, {
+    ...DEFAULT_MULTIPART_LIMITS,
+    fileSize: 10 * 1024 * 1024,
+  });
+  assert.equal(limits.files, 1);
+  assert.ok(limits.fields <= 8);
+  assert.ok(limits.parts <= 10);
+  assert.throws(() => createMultipartUploadLimits(0), /positive safe integer/);
+});
+
+test("outbound provider calls use a bounded timeout", () => {
+  assert.equal(providerTimeoutMs(""), DEFAULT_PROVIDER_TIMEOUT_MS);
+  assert.equal(providerTimeoutMs(String(MIN_PROVIDER_TIMEOUT_MS)), MIN_PROVIDER_TIMEOUT_MS);
+  assert.equal(providerTimeoutMs(String(MAX_PROVIDER_TIMEOUT_MS)), MAX_PROVIDER_TIMEOUT_MS);
+  assert.equal(providerTimeoutMs("999"), DEFAULT_PROVIDER_TIMEOUT_MS);
+  assert.equal(providerTimeoutMs("30001"), DEFAULT_PROVIDER_TIMEOUT_MS);
+  assert.equal(providerTimeoutMs("not-a-number"), DEFAULT_PROVIDER_TIMEOUT_MS);
+  assert.ok(providerAbortSignal("1500") instanceof AbortSignal);
+});
+
+test("database maintenance prunes expired idempotency rows in bounded batches", async () => {
+  const calls = [];
+  const database = {
+    async query(sql, params) {
+      calls.push({ sql, params });
+      return { rowCount: 3, rows: [{ id: "1" }, { id: "2" }, { id: "3" }] };
+    },
+  };
+
+  assert.equal(await pruneExpiredIdempotencyKeys(database, 50_000), 3);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].sql, /expires_at <= now\(\)/);
+  assert.match(calls[0].sql, /LIMIT \$1/);
+  assert.deepEqual(calls[0].params, [1_000]);
+});
+
+test("database maintenance starts once and can be stopped", async () => {
+  let calls = 0;
+  const client = {
+    async query(sql) {
+      if (sql === "BEGIN" || sql === "COMMIT") return { rows: [] };
+      if (/pg_try_advisory_xact_lock/i.test(sql)) return { rows: [{ acquired: true }] };
+      calls += 1;
+      return { rowCount: 0, rows: [] };
+    },
+    release() {},
+  };
+  const database = {
+    async connect() {
+      return client;
+    },
+  };
+
+  const stop = startDatabaseMaintenance(database, { intervalMs: 60_000 });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls, 1);
+  await stop();
+});
+
+test("database maintenance uses one cross-process advisory lease per overlapping cycle", async () => {
+  let lockHeld = false;
+  let releasePrune;
+  let firstPruneStarted;
+  const firstPruneReady = new Promise((resolve) => {
+    firstPruneStarted = resolve;
+  });
+  const pruneGate = new Promise((resolve) => {
+    releasePrune = resolve;
+  });
+  const clients = [];
+  const database = {
+    async connect() {
+      const client = {
+        released: false,
+        async query(sql) {
+          if (sql === "BEGIN") return { rows: [] };
+          if (/pg_try_advisory_xact_lock/i.test(sql)) {
+            if (lockHeld) return { rows: [{ acquired: false }] };
+            lockHeld = true;
+            return { rows: [{ acquired: true }] };
+          }
+          if (sql === "COMMIT" || sql === "ROLLBACK") {
+            lockHeld = false;
+            return { rows: [] };
+          }
+          throw new Error(`Unexpected SQL: ${sql}`);
+        },
+        release() {
+          this.released = true;
+        },
+      };
+      clients.push(client);
+      return client;
+    },
+  };
+
+  const first = runLeasedDatabaseMaintenance(database, {
+    prune: async () => {
+      firstPruneStarted();
+      await pruneGate;
+      return 3;
+    },
+  });
+  await firstPruneReady;
+  const second = await runLeasedDatabaseMaintenance(database, {
+    prune: async () => {
+      throw new Error("The second contender must not run maintenance.");
+    },
+  });
+  assert.equal(second.acquired, false);
+  assert.equal(second.pruned, 0);
+  assert.ok(second.durationMs >= 0);
+  releasePrune();
+  const winner = await first;
+  assert.equal(winner.acquired, true);
+  assert.equal(winner.pruned, 3);
+  assert.ok(winner.durationMs >= 0);
+  assert.ok(clients.every((client) => client.released));
+});
+
+test("database maintenance shutdown waits for the active leased cycle", async () => {
+  let resolveCycle;
+  let cycleStarted;
+  const started = new Promise((resolve) => {
+    cycleStarted = resolve;
+  });
+  const cycle = new Promise((resolve) => {
+    resolveCycle = resolve;
+  });
+  const stop = startDatabaseMaintenance({ query() {} }, {
+    intervalMs: 60_000,
+    runCycle: async () => {
+      cycleStarted();
+      return cycle;
+    },
+  });
+  await started;
+  let stopped = false;
+  const stopping = stop().then(() => {
+    stopped = true;
+  });
+  await flushAsyncWork();
+  assert.equal(stopped, false);
+  resolveCycle({ acquired: true, pruned: 0, durationMs: 1 });
+  await stopping;
+  assert.equal(stopped, true);
 });
 
 test("cookie parsing and session validation fail closed", () => {
@@ -143,15 +367,54 @@ test("rate limiter blocks after configured request count", () => {
   assert.equal(blocked.statusCode, 429);
 });
 
+test("in-memory rate limiter validates configuration and bounds actor cardinality", () => {
+  assert.throws(
+    () => createRateLimiter({ windowMs: 0, max: 1 }),
+    /windowMs must be a positive safe integer/,
+  );
+  assert.throws(
+    () => createRateLimiter({ windowMs: 60_000, max: Number.NaN }),
+    /max must be a positive safe integer/,
+  );
+
+  let now = 1_000;
+  const limiter = createRateLimiter({
+    windowMs: 60_000,
+    max: 1,
+    maxEntries: 2,
+    clock: () => now,
+    namespace: "bounded-test",
+  });
+  const hit = (ip) => {
+    const response = responseDouble();
+    let continued = false;
+    limiter({ ip, method: "GET", socket: {} }, response, () => { continued = true; });
+    return { continued, response };
+  };
+
+  assert.equal(hit("198.51.100.1").continued, true);
+  assert.equal(hit("198.51.100.1").response.statusCode, 429);
+  assert.equal(hit("198.51.100.2").continued, true);
+  assert.equal(hit("198.51.100.3").continued, true);
+  assert.equal(hit("198.51.100.1").continued, true);
+
+  now += 60_001;
+  assert.equal(hit("198.51.100.2").continued, true);
+});
+
 test("durable rate limiter uses shared storage and headers", async () => {
-  let count = 0;
+  let requestCount = 0;
   const database = {
-    async query(_sql, params) {
-      count += 1;
+    async query(sql, params) {
+      if (sql.includes("DELETE FROM rate_limit_windows")) {
+        assert.deepEqual(params, [250]);
+        return { rows: [] };
+      }
+      requestCount += 1;
       assert.equal(params[0], "durable-test");
       assert.equal(typeof params[1], "string");
       assert.equal(params[1].length, 64);
-      return { rows: [{ request_count: count, expires_at: new Date(Date.now() + 60_000) }] };
+      return { rows: [{ request_count: requestCount, expires_at: new Date(Date.now() + 60_000) }] };
     },
   };
   const limiter = createDurableRateLimiter({
@@ -174,6 +437,267 @@ test("durable rate limiter uses shared storage and headers", async () => {
   assert.equal(blocked.headers["RateLimit-Limit"], "2");
   assert.equal(blocked.headers["RateLimit-Remaining"], "0");
   assert.ok(Number(blocked.headers["Retry-After"]) >= 1);
+});
+
+test("durable rate limiter fails closed on invalid configuration", () => {
+  const database = { query: async () => ({ rows: [] }) };
+  const base = {
+    database,
+    databaseAvailable: () => true,
+    windowMs: 60_000,
+    max: 2,
+  };
+
+  assert.throws(() => createDurableRateLimiter({ ...base, windowMs: 0 }), /windowMs/);
+  assert.throws(() => createDurableRateLimiter({ ...base, max: Number.NaN }), /max/);
+  assert.throws(() => createDurableRateLimiter({ ...base, clock: "now" }), /clock/);
+  assert.throws(() => createDurableRateLimiter({ ...base, cleanupMaxBatches: 0 }), /cleanupMaxBatches/);
+  assert.throws(() => createDurableRateLimiter({ ...base, cleanupTimeBudgetMs: 0 }), /cleanupTimeBudgetMs/);
+  assert.throws(() => createDurableRateLimiter({ ...base, cleanupClock: "now" }), /cleanupClock/);
+});
+
+test("login email limiter normalizes and hashes the targeted account without exposing email", async () => {
+  const subjectHashes = [];
+  const database = {
+    async query(sql, params) {
+      if (sql.includes("DELETE FROM rate_limit_windows")) return { rows: [] };
+      subjectHashes.push(params[1]);
+      return { rows: [{ request_count: 1, expires_at: new Date(Date.now() + 60_000) }] };
+    },
+  };
+  const limiter = createDurableRateLimiter({
+    database,
+    databaseAvailable: () => true,
+    windowMs: 60_000,
+    max: 10,
+    namespace: "auth-login-account-test",
+    subject: loginEmailRateLimitSubject,
+  });
+
+  assert.equal(
+    loginEmailRateLimitSubject({ body: { email: "  Crew.Lead@Example.TEST " } }),
+    "login-email:crew.lead@example.test",
+  );
+  assert.equal(loginEmailRateLimitSubject({ body: {} }), "login-email:missing");
+
+  for (const email of [" Crew.Lead@Example.TEST ", "crew.lead@example.test", "other@example.test"]) {
+    await limiter({ body: { email }, headers: {}, socket: {} }, responseDouble(), () => {});
+  }
+
+  assert.equal(subjectHashes.length, 3);
+  assert.equal(subjectHashes[0], subjectHashes[1]);
+  assert.notEqual(subjectHashes[1], subjectHashes[2]);
+  for (const value of subjectHashes) {
+    assert.match(value, /^[0-9a-f]{64}$/);
+    assert.doesNotMatch(value, /example|crew|other/i);
+  }
+});
+
+test("durable limiter performs shared, infrequent, bounded expired-window cleanup", async () => {
+  let now = 1_000;
+  const cleanupQueries = [];
+  const database = {
+    async query(sql, params) {
+      if (sql.includes("DELETE FROM rate_limit_windows")) {
+        cleanupQueries.push({ sql, params });
+        return { rows: [] };
+      }
+      return { rows: [{ request_count: 1, expires_at: new Date(now + 60_000) }] };
+    },
+  };
+  const options = {
+    database,
+    databaseAvailable: () => true,
+    windowMs: 60_000,
+    max: 10,
+    cleanupIntervalMs: 60_000,
+    cleanupBatchSize: 3,
+    clock: () => now,
+  };
+  const firstLimiter = createDurableRateLimiter({ ...options, namespace: "cleanup-a" });
+  const secondLimiter = createDurableRateLimiter({ ...options, namespace: "cleanup-b" });
+  const request = { ip: "127.0.0.1", headers: {}, socket: {} };
+
+  await firstLimiter(request, responseDouble(), () => {});
+  await secondLimiter(request, responseDouble(), () => {});
+  assert.equal(cleanupQueries.length, 1);
+
+  now += 59_999;
+  await firstLimiter(request, responseDouble(), () => {});
+  assert.equal(cleanupQueries.length, 1);
+
+  now += 2;
+  await secondLimiter(request, responseDouble(), () => {});
+  assert.equal(cleanupQueries.length, 2);
+  for (const cleanup of cleanupQueries) {
+    assert.deepEqual(cleanup.params, [3]);
+    assert.match(cleanup.sql, /LIMIT \$1/);
+    assert.match(cleanup.sql, /target\.expires_at <= now\(\)/);
+  }
+});
+
+test("durable limiter drains multiple cleanup batches but caps work and retries backlog early", async () => {
+  let now = 1_000;
+  const cleanupQueries = [];
+  const database = {
+    async query(sql, params) {
+      if (sql.includes("DELETE FROM rate_limit_windows")) {
+        cleanupQueries.push({ sql, params });
+        return { rowCount: 3, rows: [] };
+      }
+      return { rows: [{ request_count: 1, expires_at: new Date(now + 60_000) }] };
+    },
+  };
+  const limiter = createDurableRateLimiter({
+    database,
+    databaseAvailable: () => true,
+    windowMs: 60_000,
+    max: 10,
+    cleanupIntervalMs: 15 * 60_000,
+    cleanupBatchSize: 3,
+    cleanupMaxBatches: 2,
+    cleanupTimeBudgetMs: 1_000,
+    cleanupClock: () => now,
+    clock: () => now,
+  });
+  const request = { ip: "127.0.0.1", headers: {}, socket: {} };
+
+  await limiter(request, responseDouble(), () => {});
+  await flushAsyncWork();
+  assert.equal(cleanupQueries.length, 2);
+
+  now += 59_999;
+  await limiter(request, responseDouble(), () => {});
+  assert.equal(cleanupQueries.length, 2);
+
+  now += 2;
+  await limiter(request, responseDouble(), () => {});
+  await flushAsyncWork();
+  assert.equal(cleanupQueries.length, 4);
+  for (const cleanup of cleanupQueries) {
+    assert.deepEqual(cleanup.params, [3]);
+    assert.match(cleanup.sql, /LIMIT \$1/);
+  }
+});
+
+test("durable limiter stops cleanup draining when its elapsed-time budget is spent", async () => {
+  let now = 1_000;
+  let cleanupNow = 0;
+  let cleanupQueries = 0;
+  const database = {
+    async query(sql) {
+      if (sql.includes("DELETE FROM rate_limit_windows")) {
+        cleanupQueries += 1;
+        cleanupNow += 6;
+        return { rowCount: 2, rows: [] };
+      }
+      return { rows: [{ request_count: 1, expires_at: new Date(now + 60_000) }] };
+    },
+  };
+  const limiter = createDurableRateLimiter({
+    database,
+    databaseAvailable: () => true,
+    windowMs: 60_000,
+    max: 10,
+    cleanupBatchSize: 2,
+    cleanupMaxBatches: 8,
+    cleanupTimeBudgetMs: 10,
+    cleanupClock: () => cleanupNow,
+    clock: () => now,
+  });
+
+  await limiter({ ip: "127.0.0.1", headers: {}, socket: {} }, responseDouble(), () => {});
+  await flushAsyncWork();
+
+  assert.equal(cleanupQueries, 2);
+});
+
+test("durable limiter cleanup stays off the request path and shares one in-flight drain", async () => {
+  let now = 1_000;
+  let cleanupQueries = 0;
+  let releaseCleanup;
+  const blockedCleanup = new Promise((resolve) => {
+    releaseCleanup = resolve;
+  });
+  const database = {
+    async query(sql) {
+      if (sql.includes("DELETE FROM rate_limit_windows")) {
+        cleanupQueries += 1;
+        return blockedCleanup;
+      }
+      return { rows: [{ request_count: 1, expires_at: new Date(now + 60_000) }] };
+    },
+  };
+  const limiter = createDurableRateLimiter({
+    database,
+    databaseAvailable: () => true,
+    windowMs: 60_000,
+    max: 10,
+    cleanupIntervalMs: 60_000,
+    cleanupBatchSize: 2,
+    cleanupMaxBatches: 2,
+    cleanupTimeBudgetMs: 1_000,
+    cleanupClock: () => now,
+    clock: () => now,
+  });
+  const request = { ip: "127.0.0.1", headers: {}, socket: {} };
+  let firstContinued = false;
+
+  const firstRequest = limiter(request, responseDouble(), () => {
+    firstContinued = true;
+  });
+  await flushAsyncWork();
+  const firstContinuedBeforeCleanup = firstContinued;
+  const cleanupQueriesAfterFirstRequest = cleanupQueries;
+
+  now += 60_001;
+  let secondContinued = false;
+  const secondRequest = limiter(request, responseDouble(), () => {
+    secondContinued = true;
+  });
+  await flushAsyncWork();
+  const secondContinuedWhileCleanupInFlight = secondContinued;
+  const cleanupQueriesWhileInFlight = cleanupQueries;
+
+  releaseCleanup({ rowCount: 0, rows: [] });
+  await Promise.all([firstRequest, secondRequest]);
+  await flushAsyncWork();
+
+  assert.equal(firstContinuedBeforeCleanup, true);
+  assert.equal(cleanupQueriesAfterFirstRequest, 1);
+  assert.equal(secondContinuedWhileCleanupInFlight, true);
+  assert.equal(cleanupQueriesWhileInFlight, 1);
+});
+
+test("account-targeted limiter preserves the generic throttling response", async () => {
+  let requestCount = 0;
+  const database = {
+    async query(sql) {
+      if (sql.includes("DELETE FROM rate_limit_windows")) return { rows: [] };
+      requestCount += 1;
+      return { rows: [{ request_count: requestCount, expires_at: new Date(Date.now() + 60_000) }] };
+    },
+  };
+  const limiter = createDurableRateLimiter({
+    database,
+    databaseAvailable: () => true,
+    windowMs: 60_000,
+    max: 1,
+    namespace: "auth-login-account-generic-test",
+    subject: loginEmailRateLimitSubject,
+  });
+  const request = { body: { email: "target@example.test" }, headers: {}, socket: {} };
+
+  await limiter(request, responseDouble(), () => {});
+  const blocked = responseDouble();
+  await limiter(request, blocked, () => assert.fail("limited account should not continue"));
+
+  assert.equal(blocked.statusCode, 429);
+  assert.deepEqual(blocked.body, {
+    ok: false,
+    error: "Too many requests. Try again shortly.",
+  });
+  assert.doesNotMatch(JSON.stringify(blocked.body), /target@example\.test/);
 });
 
 test("authenticated-user middleware rejects missing and unknown sessions", async () => {
@@ -720,4 +1244,228 @@ test("trade news tidies official resource titles", () => {
     "Florida Building Code Residential Advanced Course",
   );
   assert.equal(newsInternals._tidyResourceTitle("OSHA HVAC AND GFCI REQUIREMENTS"), "OSHA HVAC And GFCI Requirements");
+});
+
+test("service health requires live dependencies, session security, and completed migrations", () => {
+  assert.equal(serviceHealthReady({
+    dependenciesOk: true,
+    authSecurityOk: true,
+    migrationState: "ready",
+    requiredProviderOk: false,
+  }), false);
+  assert.equal(serviceHealthReady({
+    dependenciesOk: true,
+    authSecurityOk: true,
+    migrationState: "ready",
+  }), true);
+  assert.equal(serviceHealthReady({
+    dependenciesOk: false,
+    authSecurityOk: true,
+    migrationState: "ready",
+  }), false);
+  assert.equal(serviceHealthReady({
+    dependenciesOk: true,
+    authSecurityOk: false,
+    migrationState: "ready",
+  }), false);
+  assert.equal(serviceHealthReady({
+    dependenciesOk: true,
+    authSecurityOk: true,
+    migrationState: "pending",
+  }), false);
+});
+
+test("dependency health uses bounded live probes, coalesces traffic, and redacts failures", async () => {
+  let databaseCalls = 0;
+  let objectStorageCalls = 0;
+  let clock = 1_000;
+  const probeResults = [];
+  const probe = createDependencyHealthProbe({
+    databaseConfigured: true,
+    objectStorageConfigured: true,
+    probeDatabase: async () => {
+      databaseCalls += 1;
+    },
+    probeObjectStorage: async () => {
+      objectStorageCalls += 1;
+    },
+    timeoutMs: 50,
+    successCacheTtlMs: 1_000,
+    failureCacheTtlMs: 100,
+    now: () => clock,
+    onProbe: (result) => probeResults.push(result),
+  });
+
+  const [first, concurrent] = await Promise.all([probe(), probe()]);
+  assert.deepEqual(first, {
+    ok: true,
+    live: true,
+    database: "postgres",
+    objectStorage: "s3-compatible",
+  });
+  assert.deepEqual(concurrent, first);
+  assert.deepEqual(await probe(), first);
+  assert.equal(databaseCalls, 1);
+  assert.equal(objectStorageCalls, 1);
+
+  clock += 1_001;
+  await probe();
+  assert.equal(databaseCalls, 2);
+  assert.equal(objectStorageCalls, 2);
+  assert.deepEqual(probeResults, [
+    { databaseOk: true, objectStorageOk: true, durationMs: 0 },
+    { databaseOk: true, objectStorageOk: true, durationMs: 0 },
+  ]);
+
+  const failedProbe = createDependencyHealthProbe({
+    databaseConfigured: true,
+    objectStorageConfigured: true,
+    probeDatabase: async () => {
+      throw new Error("postgresql://user:secret@internal-db/rivt");
+    },
+    probeObjectStorage: async () => {
+      throw new Error("private-bucket-name");
+    },
+    timeoutMs: 50,
+    successCacheTtlMs: 1_000,
+    failureCacheTtlMs: 100,
+  });
+  const failed = await failedProbe();
+  assert.deepEqual(failed, {
+    ok: false,
+    live: true,
+    database: "unavailable",
+    objectStorage: "unavailable",
+  });
+  assert.doesNotMatch(JSON.stringify(failed), /secret|bucket|internal-db/);
+});
+
+test("dependency health reports missing configuration without provider requests", async () => {
+  let calls = 0;
+  const probe = createDependencyHealthProbe({
+    databaseConfigured: false,
+    objectStorageConfigured: false,
+    probeDatabase: async () => { calls += 1; },
+    probeObjectStorage: async () => { calls += 1; },
+    timeoutMs: 50,
+    successCacheTtlMs: 1_000,
+    failureCacheTtlMs: 100,
+  });
+  assert.deepEqual(await probe(), {
+    ok: false,
+    live: true,
+    database: "missing",
+    objectStorage: "missing",
+  });
+  assert.equal(calls, 0);
+});
+
+test("dependency health returns within its bound when a provider stalls", async () => {
+  let storageAbortObserved = false;
+  const probe = createDependencyHealthProbe({
+    databaseConfigured: true,
+    objectStorageConfigured: true,
+    probeDatabase: async () => {},
+    probeObjectStorage: (signal) => new Promise((resolve) => {
+      signal.addEventListener("abort", () => {
+        storageAbortObserved = true;
+        resolve();
+      }, { once: true });
+    }),
+    timeoutMs: 10,
+    successCacheTtlMs: 1_000,
+    failureCacheTtlMs: 100,
+  });
+
+  const startedAt = Date.now();
+  assert.deepEqual(await probe(), {
+    ok: false,
+    live: true,
+    database: "postgres",
+    objectStorage: "unavailable",
+  });
+  assert.equal(storageAbortObserved, true);
+  assert.ok(Date.now() - startedAt < 500);
+});
+
+test("HTTP server safety applies explicit bounded timeouts", () => {
+  const server = {};
+  assert.equal(configureHttpServer(server, {
+    requestTimeoutMs: 90_000,
+    headersTimeoutMs: 12_000,
+    keepAliveTimeoutMs: 4_000,
+    maxHeadersCount: 80,
+    maxRequestsPerSocket: 500,
+  }), server);
+  assert.equal(server.requestTimeout, 90_000);
+  assert.equal(server.headersTimeout, 12_000);
+  assert.equal(server.keepAliveTimeout, 4_000);
+  assert.equal(server.maxHeadersCount, 80);
+  assert.equal(server.maxRequestsPerSocket, 500);
+  assert.throws(
+    () => configureHttpServer({}, {
+      requestTimeoutMs: 5_000,
+      headersTimeoutMs: 6_000,
+      keepAliveTimeoutMs: 1_000,
+    }),
+    /cannot exceed/,
+  );
+});
+
+test("graceful shutdown is idempotent and closes resources once after draining", async () => {
+  let closeCallback;
+  let closeCalls = 0;
+  let idleCloseCalls = 0;
+  let resourceCloseCalls = 0;
+  const server = {
+    listening: true,
+    close(callback) {
+      closeCalls += 1;
+      closeCallback = callback;
+    },
+    closeIdleConnections() {
+      idleCloseCalls += 1;
+    },
+  };
+  const shutdown = createGracefulShutdown({
+    getServer: () => server,
+    closeResources: async () => {
+      resourceCloseCalls += 1;
+    },
+    timeoutMs: 100,
+  });
+
+  const first = shutdown("SIGTERM");
+  const second = shutdown("SIGINT");
+  assert.equal(first, second);
+  assert.equal(closeCalls, 1);
+  assert.equal(idleCloseCalls, 1);
+
+  closeCallback();
+  assert.deepEqual(await first, { forced: false, signal: "SIGTERM" });
+  assert.equal(resourceCloseCalls, 1);
+});
+
+test("graceful shutdown force-closes remaining sockets after its deadline", async () => {
+  let forceCloseCalls = 0;
+  let resourceCloseCalls = 0;
+  const server = {
+    listening: true,
+    close() {},
+    closeIdleConnections() {},
+    closeAllConnections() {
+      forceCloseCalls += 1;
+    },
+  };
+  const shutdown = createGracefulShutdown({
+    getServer: () => server,
+    closeResources: async () => {
+      resourceCloseCalls += 1;
+    },
+    timeoutMs: 5,
+  });
+
+  assert.deepEqual(await shutdown("SIGTERM"), { forced: true, signal: "SIGTERM" });
+  assert.equal(forceCloseCalls, 1);
+  assert.equal(resourceCloseCalls, 1);
 });

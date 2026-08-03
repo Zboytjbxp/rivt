@@ -15,10 +15,12 @@ if (!testDatabaseUrl) {
   process.env.EMAIL_FROM = "RIVT Test <noreply@example.test>";
   process.env.EMAIL_DELIVERY_MODE = "capture";
   process.env.AUTH_METADATA_PEPPER = "database-integration-test-pepper";
+  process.env.HEALTH_DEPENDENCY_PROBES_DISABLED = "true";
   process.env.AUTH_RATE_LIMIT = "10000";
-  process.env.S3_BUCKET = "";
-  process.env.S3_ACCESS_KEY_ID = "";
-  process.env.S3_SECRET_ACCESS_KEY = "";
+  process.env.S3_BUCKET = "rivt-integration-test";
+  process.env.S3_REGION = "us-east-1";
+  process.env.S3_ACCESS_KEY_ID = "integration-test-access-key";
+  process.env.S3_SECRET_ACCESS_KEY = "integration-test-secret-key";
 
   const { Pool } = pg;
   const database = new Pool({ connectionString: testDatabaseUrl, ssl: false });
@@ -65,7 +67,6 @@ if (!testDatabaseUrl) {
   }
 
   test("database-backed authorization boundaries", async (context) => {
-    await ensureDatabaseReady();
     const server = app.listen(0, "127.0.0.1");
     await new Promise((resolve) => server.once("listening", resolve));
     const address = server.address();
@@ -75,6 +76,21 @@ if (!testDatabaseUrl) {
       await closeDatabase();
       await database.end();
     });
+
+    const pendingHealth = await requestJson(baseUrl, "/api/health");
+    assert.equal(pendingHealth.response.status, 503);
+    assert.equal(pendingHealth.payload.ok, false);
+    assert.equal(pendingHealth.payload.migration.state, "pending");
+    assert.equal("error" in pendingHealth.payload.migration, false);
+
+    await ensureDatabaseReady();
+
+    const readyHealth = await requestJson(baseUrl, "/api/health");
+    assert.equal(readyHealth.response.status, 200);
+    assert.equal(readyHealth.payload.ok, true);
+    assert.equal(readyHealth.payload.migration.state, "ready");
+    assert.equal(readyHealth.payload.dependencies.live, false);
+    assert.equal("error" in readyHealth.payload.migration, false);
 
     const anonymous = await requestJson(baseUrl, "/api/app-state");
     assert.equal(anonymous.response.status, 401);
@@ -105,6 +121,12 @@ if (!testDatabaseUrl) {
     assert.deepEqual(canonicalAccount.payload.data.organizations, []);
     assert.equal(canonicalAccount.payload.meta.requestId, canonicalAccount.response.headers.get("x-request-id"));
 
+    const storageStatus = await requestJson(baseUrl, "/api/storage", { cookie: contractor.cookie });
+    assert.equal(storageStatus.response.status, 200);
+    assert.equal("records" in storageStatus.payload, false);
+    assert.equal(typeof storageStatus.payload.accountStorage.usedBytes, "number");
+    assert.equal(typeof storageStatus.payload.accountStorage.objectCount, "number");
+
     const contractorLegacyRead = await requestJson(baseUrl, "/api/app-state", { cookie: contractor.cookie });
     assert.equal(contractorLegacyRead.response.status, 410);
     assert.equal(contractorLegacyRead.payload.code, "LEGACY_APP_STATE_RETIRED");
@@ -121,6 +143,17 @@ if (!testDatabaseUrl) {
     });
     assert.equal(legacyInvoiceSend.response.status, 410);
     assert.equal(legacyInvoiceSend.payload.code, "LEGACY_INVOICE_SEND_RETIRED");
+
+    const legacyUploadWrite = await requestJson(baseUrl, "/api/uploads", {
+      method: "POST",
+      cookie: contractor.cookie,
+      body: {
+        kind: "unvalidated-legacy-upload",
+        name: "No generic upload path",
+      },
+    });
+    assert.equal(legacyUploadWrite.response.status, 410);
+    assert.equal(legacyUploadWrite.payload.code, "LEGACY_UPLOAD_WRITE_RETIRED");
 
     const clientError = await requestJson(baseUrl, "/api/client-errors", {
       method: "POST",

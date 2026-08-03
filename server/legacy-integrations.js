@@ -1,6 +1,3 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { randomUUID } from "node:crypto";
-
 function sendLegacyBridgeRetired(request, response, code, message) {
   response.status(410).json({
     ok: false,
@@ -12,21 +9,13 @@ function sendLegacyBridgeRetired(request, response, code, message) {
 
 export function registerLegacyIntegrationRoutes({
   app,
-  appSlug,
   database,
   requireAuthenticatedUser,
-  requireV1Actor,
   writeRateLimit,
-  uploadRateLimit,
-  upload,
   runWithDatabase,
   mapUploadRow,
   signedObjectUrl,
   signedUrlSeconds,
-  requireObjectStorage,
-  safeObjectName,
-  s3Client,
-  s3Bucket,
   integrationStatus,
   buildTwilioSmsStatus,
 }) {
@@ -112,65 +101,13 @@ export function registerLegacyIntegrationRoutes({
     });
   });
 
-  app.post("/api/uploads", requireAuthenticatedUser, requireV1Actor, uploadRateLimit, upload.single("file"), async (request, response, next) => {
-    if (!requireObjectStorage(response)) {
-      return;
-    }
-
-    if (!request.file) {
-      response.status(400).json({ ok: false, error: "A file field named `file` is required." });
-      return;
-    }
-
-    await runWithDatabase(response, next, async () => {
-      const scopeId = request.authUser.id;
-      const id = randomUUID();
-      const kind = request.body?.kind ?? "record";
-      const jobId = Number(request.body?.jobId);
-      const objectKey = `${safeObjectName(scopeId)}/${safeObjectName(kind)}/${new Date().toISOString().slice(0, 10)}/${id}-${safeObjectName(
-        request.file.originalname,
-      )}`;
-
-      await s3Client.send(
-        new PutObjectCommand({
-          Bucket: s3Bucket,
-          Key: objectKey,
-          Body: request.file.buffer,
-          ContentType: request.file.mimetype,
-          Metadata: {
-            originalName: request.file.originalname.slice(0, 256),
-            source: appSlug,
-          },
-        }),
-      );
-
-      const result = await database.query(
-        `
-          INSERT INTO uploads (
-            id, session_id, kind, name, job_id, notes, object_key, original_name, mime_type, size_bytes
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-          RETURNING *
-        `,
-        [
-          id,
-          scopeId,
-          kind,
-          request.body?.name ?? request.file.originalname,
-          Number.isFinite(jobId) ? jobId : null,
-          request.body?.notes ?? "",
-          objectKey,
-          request.file.originalname,
-          request.file.mimetype,
-          request.file.size,
-        ],
-      );
-
-      response.status(201).json({
-        ok: true,
-        upload: mapUploadRow(result.rows[0], await signedObjectUrl(objectKey)),
-      });
-    });
+  app.post("/api/uploads", requireAuthenticatedUser, (request, response) => {
+    sendLegacyBridgeRetired(
+      request,
+      response,
+      "LEGACY_UPLOAD_WRITE_RETIRED",
+      "Legacy generic uploads are retired. Use a current RIVT photo, message, profile, or document workflow.",
+    );
   });
 
   app.post("/api/identity/verify", requireAuthenticatedUser, writeRateLimit, (_request, response) => {

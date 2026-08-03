@@ -160,47 +160,59 @@ Gate A auth, write, and upload throttles use the PostgreSQL `rate_limit_windows`
 4. Record missing records, configuration, and repair actions.
 5. A successful backup job without restore proof does not close the requirement.
 
-Use the restore drill verifier after the isolated target has been provisioned and restored:
+Follow `docs/operations/PRODUCTION_BACKUP_RUNBOOK.md`. Gate A requires proof
+that a named, immutable backup object can be restored; a direct database copy
+does not satisfy that requirement.
 
-```text
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://..." npm run restore:drill
-```
-
-When comparing a restored target against a live or snapshot source, set a read-only source URL:
-
-```text
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" npm run restore:drill
-```
-
-The verifier refuses to run without `CONFIRM_RESTORE_TARGET_ISOLATED=true`, checks the migration ledger, requires migration `0009_durable_rate_limits`, verifies critical Gate A tables, counts rows, and measures duration. With `RESTORE_SOURCE_DATABASE_URL` set, row counts must match unless `RESTORE_STRICT_COMPARE=false` is explicitly set for a documented scrubbed/sampled restore.
-
-When native `pg_dump`/`psql` are unavailable to the operator, use the application-level logical copy helper from inside Railway private networking:
-
-```text
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" npm run restore:logical-copy -- --apply-migrations
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" npm run restore:drill
-```
-
-The logical copy helper applies migrations when requested, truncates the isolated target, disables user-defined triggers during the copy to avoid restore side effects, copies all public base tables in foreign-key order with batched inserts, restores sequence positions, and reports table/row counts and duration. It is acceptable evidence for isolated logical restore mechanics. It is not by itself proof that a specific backup artifact can be restored.
-
-Gate A requires proof that a named backup object can be restored. Create the encrypted logical backup artifact directly in managed storage:
+Create the encrypted logical backup artifact through the dedicated read-only
+backup role and independent protected destination:
 
 ```text
 npm run backup:logical-artifact
 ```
 
-The command reads from `BACKUP_DATABASE_URL` or `DATABASE_URL`, requires `BACKUP_ENCRYPTION_KEY` or `RIVT_BACKUP_ENCRYPTION_KEY`, uses the configured private S3-compatible bucket, writes an AES-256-GCM encrypted gzip JSON object under `backups/postgres/`, and prints only non-secret evidence: bucket, object key, source commit, table count, row count, and duration.
+The command requires `BACKUP_DATABASE_URL`, strict TLS verification with a CA,
+a dedicated read-only PostgreSQL role, a 32-byte backup encryption key, a full
+source commit, and a protected versioned destination. It fails closed if those
+controls or the object-retention contract cannot be verified.
+
+Verify the newest retained artifact without writing to the source or backup
+destination:
+
+```text
+npm run backup:verify
+```
+
+The verifier selects the newest eligible artifact, verifies its exact object
+version and retention, recomputes its digest, authenticates and decrypts it,
+and checks freshness and source binding. It does not create launch evidence by
+itself.
 
 Restore that named artifact into a freshly provisioned isolated target:
 
 ```text
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_BACKUP_S3_KEY="backups/postgres/<object>.json.gz.aes256gcm" npm run restore:logical-artifact -- --apply-migrations
-CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" npm run restore:drill
+CONFIRM_RESTORE_TARGET_ISOLATED=true RESTORE_DATABASE_URL="postgresql://restore-target" RESTORE_SOURCE_DATABASE_URL="postgresql://source" RESTORE_BACKUP_S3_KEY="<exact-object-key>" RESTORE_BACKUP_S3_VERSION_ID="<exact-version-id>" RESTORE_BACKUP_SHA256="<exact-sha256>" npm run restore:drill -- --apply-migrations
 ```
 
-The artifact restore command refuses to run without the isolated-target confirmation, applies migrations when requested, checks table and column parity against the backup artifact, disables user-defined triggers during replay, restores sequences, and fails by default if target counts differ from the backup manifest. Do not persist `RESTORE_DATABASE_URL`, `RESTORE_BACKUP_S3_KEY`, or `CONFIRM_RESTORE_TARGET_ISOLATED` as normal app service variables; pass them only for the one restore command.
+The drill refuses to run without explicit isolation confirmation, proves the
+source and target database identities differ, restores only the exact selected
+object version and digest, checks schema/content/sequence parity, and enforces
+the configured RTO. Never persist restore credentials or confirmation on the
+normal application service.
 
-Latest Packet 08 evidence: temporary Railway PostgreSQL target `Postgres-3Ei3` was migrated, populated with 59 public tables and 1,524 rows in 1,421 ms, strictly verified with migration `0009_durable_rate_limits`, zero pending migrations, zero source/target count diffs across critical Gate A tables, and a 220 ms verifier duration, then deleted. A named backup-artifact restore also passed on 2026-06-21: encrypted object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm` restored into isolated Railway target `Postgres-_FQz`, applied nine migrations through `0009_durable_rate_limits`, restored 59 public tables and 1,524 rows, verified strict manifest parity with zero diffs in 13,411 ms, passed `npm run restore:drill` in 1,862 ms, and then the temporary target was deleted.
+For no-cost local validation of the provider-neutral encrypted object recovery
+foundation, use only the guarded in-memory harness:
+
+```text
+RECOVERY_HARNESS_MODE=local-memory CONFIRM_RECOVERY_LOCAL_ONLY=true NODE_ENV=test npm run recovery:harness:local
+```
+
+The local harness has no cloud client, provider adapter, production-data read,
+or charge-bearing action. It exercises bounded encrypted copy, completion-last
+semantics, integrity verification, and isolated restore using injected memory
+stores. A pass is implementation evidence only: it does not restore the current
+production artifact or independently retained object bytes, and it does not
+close `R-052` or `GA-OPS-004`.
 
 ## Provider Outage
 

@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   ApiError,
@@ -52,8 +54,16 @@ test("pagination cursors round trip and fail closed", () => {
 
 test("security middleware denies framing and sends a restrictive CSP", async (t) => {
   const app = express();
-  app.use(createSecurityHeadersMiddleware());
+  app.use(createSecurityHeadersMiddleware({
+    analyticsEndpoints: [
+      "https://us.i.posthog.com/capture",
+      "javascript:alert(1)",
+    ],
+  }));
   app.get("/health", (_request, response) => response.json({ ok: true }));
+  app.get("/nonce", (_request, response) => {
+    response.type("html").send(`<script nonce="${response.locals.cspNonce}"></script>`);
+  });
   const server = app.listen(0, "127.0.0.1");
   await new Promise((resolve, reject) => {
     server.once("listening", resolve);
@@ -67,7 +77,50 @@ test("security middleware denies framing and sends a restrictive CSP", async (t)
   assert.equal(response.headers.get("x-frame-options"), "DENY");
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.match(response.headers.get("strict-transport-security") ?? "", /max-age=31536000/i);
-  assert.match(response.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+  assert.equal(
+    response.headers.get("permissions-policy"),
+    "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()",
+  );
+  const contentSecurityPolicy = response.headers.get("content-security-policy") ?? "";
+  assert.match(contentSecurityPolicy, /frame-ancestors 'none'/);
+  assert.match(contentSecurityPolicy, /script-src 'self' 'sha256-[^']+' 'nonce-[^']+'/);
+  assert.match(contentSecurityPolicy, /script-src-attr 'none'/);
+  assert.doesNotMatch(contentSecurityPolicy, /script-src[^;]*'unsafe-inline'/);
+  const styleSrcDirective = contentSecurityPolicy.split(";").find((directive) => directive.startsWith("style-src "));
+  assert.ok(styleSrcDirective);
+  assert.doesNotMatch(styleSrcDirective, /'unsafe-inline'/);
+  assert.doesNotMatch(contentSecurityPolicy, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
+  assert.doesNotMatch(contentSecurityPolicy, /\bwss:|sentry\.io/);
+  assert.match(contentSecurityPolicy, /connect-src[^;]*https:\/\/us\.i\.posthog\.com/);
+  assert.doesNotMatch(contentSecurityPolicy, /javascript:/);
+
+  for (const relativePath of [
+    "../public/landing.html",
+    "../public/legal/privacy.html",
+    "../public/legal/security.html",
+    "../public/legal/subcontractor-agreement.html",
+    "../public/legal/terms.html",
+  ]) {
+    const html = readFileSync(new URL(relativePath, import.meta.url), "utf8");
+    const inlineStyles = [...html.matchAll(/<style(?:\s[^>]*)?>([\s\S]*?)<\/style>/gi)];
+    assert.ok(inlineStyles.length > 0);
+    for (const [, inlineStyle] of inlineStyles) {
+      const inlineStyleHash = `'sha256-${createHash("sha256").update(inlineStyle).digest("base64")}'`;
+      assert.ok(contentSecurityPolicy.includes(inlineStyleHash));
+    }
+  }
+
+  const indexHtml = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const organizationJsonLd = indexHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/i)?.[1];
+  assert.ok(organizationJsonLd);
+  const organizationJsonLdHash = `'sha256-${createHash("sha256").update(organizationJsonLd).digest("base64")}'`;
+  assert.ok(contentSecurityPolicy.includes(organizationJsonLdHash));
+
+  const nonceResponse = await fetch(`http://127.0.0.1:${address.port}/nonce`);
+  const noncePolicy = nonceResponse.headers.get("content-security-policy") ?? "";
+  const nonce = noncePolicy.match(/'nonce-([^']+)'/)?.[1];
+  assert.ok(nonce);
+  assert.ok((await nonceResponse.text()).includes(`nonce="${nonce}"`));
 });
 
 test("server-owned expense export preserves cents and escapes CSV fields", () => {
@@ -129,6 +182,45 @@ test("invoice delivery refuses to advertise bank payment without a current link"
     }, { profile: { displayName: "RIVT Test Electric" } }),
     (error) => error instanceof ApiError && error.code === "INVOICE_PAYMENT_LINK_REQUIRED",
   );
+});
+
+test("invoice provider identity is stable for identical rendered content", () => {
+  const delivery = {
+    to: "Jordan@Example.Test",
+    subject: "Invoice INV-100",
+    text: "Total due: $125.00",
+    html: "<strong>Total due: $125.00</strong>",
+    attachments: [{ filename: "logo.png", content: "base64-logo" }],
+  };
+  const first = toolRecordInternals.stableDeliveryContentHash(delivery);
+  const repeated = toolRecordInternals.stableDeliveryContentHash({
+    ...delivery,
+    to: "jordan@example.test",
+  });
+  const changed = toolRecordInternals.stableDeliveryContentHash({
+    ...delivery,
+    text: "Total due: $126.00",
+  });
+  assert.match(first, /^[a-f0-9]{64}$/);
+  assert.equal(repeated, first);
+  assert.notEqual(changed, first);
+});
+
+test("invoice browser payload cannot supply server-owned delivery or payment truth", () => {
+  const cleaned = toolRecordInternals.stripServerOwnedInvoicePayload({
+    invoiceNumber: "INV-100",
+    delivery: { status: "sent", providerMessageId: "forged" },
+    bankPayment: { status: "paid", amountCents: 12_500 },
+  });
+  assert.deepEqual(cleaned, { invoiceNumber: "INV-100" });
+  assert.equal(toolRecordInternals.equivalentInvoicePayload(
+    { invoiceNumber: "INV-100", delivery: { status: "sent" } },
+    { bankPayment: { status: "paid" }, invoiceNumber: "INV-100" },
+  ), true);
+  assert.equal(toolRecordInternals.equivalentInvoicePayload(
+    { invoiceNumber: "INV-100" },
+    { invoiceNumber: "INV-101" },
+  ), false);
 });
 
 test("message send requires text or a managed staged attachment", () => {
