@@ -1,6 +1,6 @@
 # Gate A Requirements Traceability
 
-## Packet 98 - Protected incident-rehearsal workflow (candidate PR #19; source-only; no dispatch)
+## Packet 98 - Protected incident-rehearsal workflow (release candidate plus bounded credential configuration; no dispatch)
 
 - `GA-OPS-005` remains **Partial**. The candidate adds one manual-only,
   protected-master, exact-source workflow whose run identity and four critical
@@ -26,20 +26,32 @@
   PostgreSQL integration and browser suites. Launch-readiness enforcement
   remained correctly inapplicable because this packet targets the release-
   candidate branch, not `master`.
-- `GA-OPS-008` remains **Partial**. This packet creates source code only. The
-  workflow has not been reviewed onto protected `master`, dispatched,
-  materialized into protected evidence revision `E`, approved in later
-  revision `A`, deployed, or used to clear the incident hold. The required
-  dedicated Railway workspace SSH public key and matching protected GitHub
-  private-key secret have not been created or approved by this packet, and no
-  provider evidence currently confirms that either credential or the
-  protected environment is configured.
+- `GA-OPS-008` remains **Partial**. PR #19 merged into the release candidate as
+  `f5b42b68fd133f2880cd0e8792e98f2742bed8d3`. Under a later explicit bounded
+  approval, GitHub environment `production-rehearsal` was configured with
+  required reviewer `Zboytjbxp` and a `master`-only custom branch policy;
+  Railway workspace `zboytjbxp's Projects` received dedicated `ssh-ed25519`
+  key `rivt-production-rehearsal-20260803` with fingerprint
+  `SHA256:oOWKlKo88YhJsRDhUMJNNK6+wD2aGdYgRATtyS6+XVE`. The setup supplied the
+  generated private key to protected environment secret
+  `RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY`, and GitHub lists that secret name,
+  but GitHub does not expose its stored value; post-upload content, key-pair
+  matching, and exclusivity were not independently verified. Known temporary
+  local key files were deleted. Because `Zboytjbxp` is the sole administrator,
+  `prevent_self_review=false`; GitHub now reports `can_admins_bypass=false`, so
+  administrators cannot skip the configured protection rules. The reviewer
+  gate remains single-owner and is not independent approval. The workflow is
+  still absent from protected `master`, not deployed, and has zero runs. The
+  environment has no rehearsal
+  Railway token or exact source/resource variables. No protected evidence
+  revision `E`, later approval `A`, provider receipt, production-data action,
+  deployment, cost, or hold clearance is claimed.
 - `GA-OPS-009` remains **Blocker**. One rehearsal cannot prove redundancy,
   failover, recovery, autoscaling, DDoS capacity, or launch readiness.
-- Requirement maturity does not change. `ACTIVE_LAUNCH_HOLD` remains active,
-  and no provider call, credential use, production-data action, workflow
-  dispatch, added cost, deployment, incident closure, ACH activation, or
-  launch is authorized.
+- Requirement maturity does not change. `ACTIVE_LAUNCH_HOLD` remains active.
+  The expressly approved no-cost credential configuration does not authorize
+  production-data access, workflow dispatch, deployment, incident closure,
+  ACH activation, or launch.
 
 ## Packet 97 - Provider-control contract hardening (accepted into release candidate)
 
