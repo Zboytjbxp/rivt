@@ -12,9 +12,10 @@
 - `GA-OPS-007` remains **Partial**. Source-contract tests lock the workflow to
   one job, four exact critical steps, commit-pinned actions, a SHA-256-pinned
   Railway CLI archive, read-only GitHub permissions, UUID-scoped remote
-  resources, exact-source revalidation, private raw-output deletion, and the
-  absence of deployment, migration, backup, restore, or provider-mutation
-  commands. Before Node or database access, the remote guard independently
+  resources, an explicit protected SSH identity, a pinned Railway relay host
+  key, exact-source revalidation, private key/raw-output deletion, and the
+  absence of deployment, migration, backup, restore, SSH-key registration, or
+  provider-mutation commands. Before Node or database access, the remote guard independently
   checks the runtime commit, project, environment, service, literal
   `production` environment, and fixed `https://rivt.pro` origin. The live
   Gate A smoke uses the read-only migration assertion. Focused workflow and
@@ -25,7 +26,9 @@
 - `GA-OPS-008` remains **Partial**. This packet creates source code only. The
   workflow has not been reviewed onto protected `master`, dispatched,
   materialized into protected evidence revision `E`, approved in later
-  revision `A`, deployed, or used to clear the incident hold.
+  revision `A`, deployed, or used to clear the incident hold. The required
+  dedicated Railway workspace SSH public key and matching protected GitHub
+  private-key secret have not been created or approved by this packet.
 - `GA-OPS-009` remains **Blocker**. One rehearsal cannot prove redundancy,
   failover, recovery, autoscaling, DDoS capacity, or launch readiness.
 - Requirement maturity does not change. `ACTIVE_LAUNCH_HOLD` remains active,

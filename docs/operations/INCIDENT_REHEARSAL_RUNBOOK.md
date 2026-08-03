@@ -33,9 +33,22 @@ Before an authorized dispatch, independently confirm:
 - `RIVT_RAILWAY_PROJECT_ID`, `RIVT_RAILWAY_ENVIRONMENT_ID`, and
   `RIVT_RAILWAY_SERVICE_ID` identify only the intended production resources;
 - `RIVT_REHEARSAL_RAILWAY_TOKEN` is a narrowly controlled rehearsal
-  credential; and
+  credential;
+- the public half of a dedicated, non-passphrase rehearsal SSH identity is
+  registered with the intended Railway workspace, while the matching private
+  half exists only as protected environment secret
+  `RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY`;
+- the reviewed Railway relay ED25519 fingerprint remains
+  `SHA256:+S1xg92FrnHz6pY3bpkmh1OGtWQGNANXilPzlxA7B1g`; and
 - the operator has separately explained and received approval for the
   dispatch and any expected usage cost.
+
+Railway documents that a workspace SSH key grants access to every service in
+that workspace. Treat this as a high-impact production credential: use a
+dedicated key, keep the private half only in the protected GitHub environment,
+restrict reviewers, and rotate or remove it when the rehearsal path is retired.
+The checked-in workflow only consumes an already-approved identity; it does
+not register, replace, or delete a Railway key.
 
 The operator must complete the human exercise first, then truthfully confirm
 the workflow's required attestations and provide a bounded non-secret decision-

@@ -58,7 +58,14 @@ behavior was inappropriate for a workflow represented as non-mutating.
   persist credentials.
 - The Railway CLI is downloaded from one exact official release URL and its
   archive must match the pinned SHA-256 digest before extraction.
-- The dedicated Railway credential is scoped only to the remote-smoke step.
+- The dedicated Railway token and SSH private key are scoped only to the
+  remote-smoke step. The private key is materialized with mode `0600`, checked
+  as a usable non-passphrase identity, passed explicitly with
+  `--identity-file`, and deleted on exit.
+- The Railway relay is fixed to `ssh.railway.com` by the pinned CLI, and its
+  ED25519 host key is pinned in the workflow as
+  `SHA256:+S1xg92FrnHz6pY3bpkmh1OGtWQGNANXilPzlxA7B1g`; a changed relay key
+  fails closed until separately verified and reviewed.
 - Railway project, environment, and service identifiers must be UUIDs and
   must match the selected remote runtime before application code executes.
 - Raw production output is captured in private runner-temporary files,
@@ -86,7 +93,14 @@ The workflow cannot produce trusted evidence before it exists on protected
 `master` and production serves the same exact source. Before an authorized
 dispatch, the owner must independently confirm the `production-rehearsal`
 environment's required reviewers and branch restriction, its exact source and
-Railway resource variables, and its narrowly controlled Railway credential.
+Railway resource variables, and its narrowly controlled Railway token. The
+owner must also confirm that the public half of one dedicated, non-passphrase
+rehearsal key is registered as the intended Railway workspace key and that the
+matching private half exists only in the protected
+`RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY` environment secret. Railway documents
+that a workspace SSH key can access every service in that workspace, so this
+credential must be separately approved, access-controlled, and rotated. This
+source packet does not create, register, or store that external credential.
 
 The current master gate evaluates source-only readiness and cannot consume the
 later protected evidence revision `E` and approval revision `A`. Resolve that

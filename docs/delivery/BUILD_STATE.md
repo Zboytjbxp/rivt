@@ -81,9 +81,11 @@ decision.
   afterward. A stale or wrong active instance therefore fails closed.
 - GitHub permissions are read-only. Third-party actions are commit-pinned, the
   official Railway CLI archive is version- and SHA-256-pinned, checkout
-  credentials are not persisted, the Railway credential is scoped only to the
-  live-smoke step, raw production output is withheld and deleted, and no
-  workflow artifact is uploaded.
+  credentials are not persisted, and the Railway token plus a dedicated SSH
+  identity are scoped only to the live-smoke step. The SSH private key is
+  checked, written mode `0600`, passed explicitly, and deleted; the
+  `ssh.railway.com` ED25519 host key is pinned. Raw production output is
+  withheld and deleted, and no workflow artifact is uploaded.
 - The live Gate A smoke now checks migration history with the read-only
   `assertMigrationsCurrent()` path rather than the ledger-creating
   `migrationStatus()` path. The workflow performs no deployment, migration,
@@ -91,8 +93,11 @@ decision.
   production-data mutation.
 - A protected `production-rehearsal` environment with required review and a
   `master` restriction must be independently confirmed before any later
-  dispatch. No environment, variable, secret, provider resource, or run is
-  created by this packet.
+  dispatch. A separately approved dedicated Railway workspace SSH public key
+  and matching protected GitHub private-key secret must also be configured;
+  Railway documents that a workspace key can reach every service in the
+  workspace. No environment, variable, secret, SSH key, provider resource, or
+  run is created by this packet.
 - The workflow records an operator-attested human exercise plus exact automated
   observations; it does not independently prove that a person told the truth.
   The decision log, provider receipts, later approvals, and complete runbook
