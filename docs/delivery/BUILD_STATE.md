@@ -2,17 +2,47 @@
 
 Last updated: 2026-08-03 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Protected incident-rehearsal activation under the active production credential-containment hold; the protected environment and dedicated SSH identity are configured, but no rehearsal has been dispatched.
-Active packet: `docs/delivery/packets/98_INCIDENT_REHEARSAL_WORKFLOW.md`
-Repository branch: `codex/packet98-provider-configuration` (release-candidate base `f5b42b68fd133f2880cd0e8792e98f2742bed8d3`)
+Current phase: Emergency operator-output containment under the active production credential-containment hold; deployment, Stage 1, ACH activation, and public launch remain paused.
+Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
+Repository branch: `codex/operator-secret-output-containment` (Packet 98 head `87048577fe69ce78b9ae0c9fb04d4c94f2cba4b4`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
-Operational status: credential rotations and bounded provider reviews are
-complete, but the production incident is not formally closed. Launch and
-Railway Stage 1 remain paused pending final candidate review, exact-source
-provider/recovery evidence, explicit approvals, and launch-hold clearance.
+Operational status: a 2026-08-03 Railway configuration audit caused a new
+restricted-output exposure of current production credentials. No misuse
+indicator is known, but every affected class is again treated as compromised.
+Michael approved one-class-at-a-time emergency rotation with up to 30 minutes
+of cumulative interruption and a `$2` before-tax incremental-cost ceiling.
+No new provider rotation, deployment, ACH action, customer communication, or
+public-launch action is yet claimed. Launch and Railway Stage 1 remain paused.
+
+## Packet 99 operator secret-output containment - active; provider rotation pending
+
+- The recurrence is recorded without any secret value or credential-bearing
+  output.
+- The exact affected classes and bounded owner authorization are recorded in
+  the incident record.
+- Repository-level AI/operator instructions and an automated command-policy
+  guard are added as source-only recurrence prevention. The guard covers
+  tracked package scripts, root and `scripts/` executables, GitHub
+  workflows/actions, Dockerfiles, and Railway configuration and emits only
+  file paths plus rule identifiers.
+- Production build, full lint, security lint, 551 unit/frontend tests, four
+  non-database integration checks, all four browser E2E journeys, diff
+  integrity, and the production dependency audit pass. Twenty-three database
+  integration cases skipped because this isolated worktree has no
+  `TEST_DATABASE_URL`; no database-backed result is claimed.
+- A Windows CRLF checkout exposed a latent LF-only incident-workflow test;
+  the fixture loader now normalizes CRLF and the six focused workflow checks
+  pass on the Windows worktree.
+- Production rotation remains operationally pending in the approved order:
+  PostgreSQL, Stripe, Resend, Google OAuth, authentication/rate-limit peppers,
+  VAPID, and backup encryption.
+- `master` currently has no branch protection/ruleset, so the Packet 98
+  rehearsal's protected-branch guard cannot pass. No bypass is authorized.
+- The feature release remains separate from containment and is not authorized
+  by this packet.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source

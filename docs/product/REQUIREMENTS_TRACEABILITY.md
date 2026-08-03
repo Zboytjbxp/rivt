@@ -1,5 +1,28 @@
 # Gate A Requirements Traceability
 
+## Packet 99 - Operator secret-output containment (source only; rotation pending)
+
+- `GA-OPS-007` remains **Partial**. Root Codex and Claude instructions now
+  prohibit broad production-provider enumeration, and the collaboration
+  workflow routes Railway evidence through the sanitized snapshot path. A
+  tracked-source scanner covers package scripts, root and `scripts/`
+  executables, GitHub workflows/actions, Dockerfiles, and Railway config. It
+  reports only paths and rule identifiers. Focused policy coverage, production
+  build, application/security lint, 551 unit/frontend tests, four non-database
+  integration checks, four browser E2E journeys, diff integrity, and the
+  production dependency audit pass. Twenty-three database integration cases
+  were skipped because this isolated worktree has no `TEST_DATABASE_URL`; no
+  database-backed evidence is claimed.
+- `GA-OPS-008` remains **Partial**. The recurrence and exact owner-approved
+  boundaries are recorded without credential values. Every affected current
+  credential remains treated as compromised; no replacement, revocation,
+  provider proof, deployment, cost-bearing action, incident closure, or hold
+  clearance is claimed by this source packet.
+- Requirement maturity does not change. The repository guard reduces
+  recurrence from tracked automation but cannot prevent an unsafe command
+  entered outside the repository. Provider RBAC/workstation enforcement and
+  one-at-a-time rotations remain required.
+
 ## Packet 98 - Protected incident-rehearsal workflow (release candidate plus bounded credential configuration; no dispatch)
 
 - `GA-OPS-005` remains **Partial**. The candidate adds one manual-only,

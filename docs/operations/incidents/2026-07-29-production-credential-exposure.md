@@ -10,7 +10,7 @@
   was not recorded)
 - Declared at: `2026-07-29T21:42:25-04:00` (first formal repository
   declaration; any earlier verbal declaration is unverified)
-- Last updated: 2026-08-02 America/New_York
+- Last updated: 2026-08-03 America/New_York
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
   followed by authorization to continue the remaining incident work unless
@@ -36,6 +36,40 @@ incident commit at 21:42:25. The credential-containment worktree was created at
 but that repository event is not represented as the exact human detection
 moment.
 
+## 2026-08-03 recurrence
+
+During a separate read-only deployment-path audit on 2026-08-03, a prohibited
+broad Railway production-configuration command again returned rendered live
+credential values into restricted automation output. The command was stopped.
+No value from that output is reproduced in this record, source, tests, or
+evidence. No misuse indicator is currently known, but the affected current
+credentials are again treated as compromised and the prior rotation evidence
+does not close this recurrence.
+
+The name-only inventory identifies PostgreSQL, the shared Stripe live API
+credential, the billing and Connect webhook signing secrets, Resend, Google
+OAuth, the authentication metadata pepper, the VAPID private key, backup
+encryption, and the distinct rate-limit pepper. The inspected S3 settings were
+provider references rather than revealed access values. Public configuration
+identifiers are not classified as credentials. The existing
+`ACTIVE_LAUNCH_HOLD` remains active, and feature
+merges, release deployment, Railway Stage 1, new ACH activity, and public
+launch remain paused.
+
+Michael approved emergency one-class-at-a-time rotation on 2026-08-03 with an
+incremental cost ceiling of `$2` before tax and up to 30 minutes of cumulative
+interruption. The approval includes owner-controlled email, OAuth, and push
+proofs; no-charge Stripe deliveries that may create audit/idempotency rows; a
+rolled-back database validation; one fresh encrypted backup; one isolated
+restore; and revocation of old credentials only after replacements verify. It
+does not authorize ACH, real payments, customer communication, customer-data
+deletion, public launch, or feature-release deployment.
+
+The safe operational order is PostgreSQL, Stripe API and both webhook secrets,
+Resend, Google OAuth, distinct authentication/rate-limit peppers, VAPID, then
+backup encryption. Provider rotations and evidence are pending; this source
+record does not claim they occurred.
+
 ## Potentially exposed credential classes
 
 - PostgreSQL connection credential
@@ -47,9 +81,27 @@ moment.
 - Web Push VAPID private key
 - backup-encryption key
 - authentication metadata pepper
+- rate-limit pepper
 - Sentry ingestion DSN
 
-## Rotation status
+## 2026-08-03 recurrence rotation status
+
+| Credential class | Current status |
+|---|---|
+| PostgreSQL | Pending replacement and verification; current credential remains treated as compromised |
+| Stripe API, billing webhook, and Connect webhook | Pending one-at-a-time replacement and no-charge verification; current secrets remain treated as compromised |
+| Resend | Pending sending-only replacement and owner-controlled proof delivery |
+| Google OAuth | Pending same-client replacement and owner-controlled sign-in proof |
+| Authentication metadata and rate-limit peppers | Pending distinct replacements and runtime verification |
+| Web Push VAPID | Pending active/previous bridge rotation and owner-controlled physical-device proof |
+| Backup encryption | Pending active/previous rotation, one fresh encrypted artifact, and one isolated restore proof |
+| S3 application access | No new rotation triggered by this recurrence because only provider references, not access values, were returned |
+
+No 2026-08-03 replacement or retirement is complete until its new evidence is
+recorded below this table. Historical evidence from the earlier incident must
+not be read as closure of the recurrence.
+
+## Historical rotation status before the 2026-08-03 recurrence
 
 | Credential class | Status | Nonsecret evidence |
 |---|---|---|
