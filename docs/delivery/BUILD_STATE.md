@@ -56,7 +56,7 @@ deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
 
-## Packet 96 provider-evidence approval lifecycle - local implementation complete, PR CI pending
+## Packet 96 provider-evidence approval lifecycle - accepted for release-candidate merge
 
 - Packet 95 correctly separated immutable source policy `S` from later
   provider evidence `E`, but it left approvals in `S`. Because readiness
@@ -98,8 +98,9 @@ decision.
   diff integrity, and the production dependency audit with zero known
   vulnerabilities. The combined test command runs 4 database-independent
   integration cases and skips 23 PostgreSQL-backed cases because this isolated
-  worktree has no `TEST_DATABASE_URL`; pull-request CI remains responsible for
-  disposable PostgreSQL proof.
+  worktree has no `TEST_DATABASE_URL`. Gate A run `30794141827` supplied a
+  disposable PostgreSQL 16 service and passed the complete unit/integration,
+  browser, build, lint, formatting, and dependency-audit sequence.
 - `npm run launch:readiness -- --require-ready` remains intentionally blocked
   with 21 findings, including `ACTIVE_LAUNCH_HOLD`; the lifecycle fix makes a
   truthful future decision reachable but supplies none of the missing proof.
@@ -108,7 +109,8 @@ decision.
   Gate A enforced the intentionally blocked production-readiness result on a
   release-candidate PR. Gate A now still evaluates readiness on every PR, but
   enforces it only for a PR into `master` or a push to `master`; regression
-  coverage locks that release boundary. Corrected pull-request CI is pending.
+  coverage locks that release boundary. Corrected Gate A run `30794141827`
+  passed; Packet 96 is accepted for merge into the release candidate only.
 - Launch readiness remains blocked; no merge to `master`,
   deployment, provider call, credential access, production-data action, cost,
   hold clearance, Railway Stage 1, ACH activation, incident closure, or launch

@@ -14,8 +14,8 @@
   unit tests, the combined test command, four browser E2E journeys, diff
   integrity, and a zero-vulnerability production dependency audit pass.
   Independent review found and closed clean-runner dependency, hold-incident
-  binding, and E/A branch-protection gaps. Pull-request CI and its disposable
-  PostgreSQL integration proof remain required before packet acceptance. Gate
+  binding, and E/A branch-protection gaps. Gate A run `30794141827` passed the
+  complete sequence with disposable PostgreSQL 16. Gate
   A evaluates readiness on all PRs but enforces the result only at the actual
   `master` merge/push boundary, so a release-candidate PR cannot bypass launch
   readiness and cannot be made unreviewable merely because evidence collection

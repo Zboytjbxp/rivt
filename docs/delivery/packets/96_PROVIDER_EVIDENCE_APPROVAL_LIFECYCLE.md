@@ -96,9 +96,9 @@ Packet 96 is accepted only when:
 
 ## Current status
 
-**The local implementation and independent security review are complete; pull-
-request CI remains required before Packet 96 can be accepted into the release
-candidate. Review found and closed three bypass/failure paths: a preinstall
+**The local implementation, independent security review, and pull-request CI
+are complete, so Packet 96 is accepted for merge into the release candidate.
+Review found and closed three bypass/failure paths: a preinstall
 validator dependency that would fail on a clean runner, a hold decision not
 bound to the source incident, and missing machine attestation that the `E` and
 `A` branches are protected. Focused S/E/A coverage passes 133/133, the complete
@@ -106,7 +106,8 @@ unit suite passes 538/538, build and both lint gates pass, all four browser E2E
 journeys pass, and the production dependency audit reports zero known
 vulnerabilities. The combined integration command passes its available checks
 but skips 23 PostgreSQL-backed cases because this isolated worktree has no
-`TEST_DATABASE_URL`; PR CI must supply that disposable database proof.**
+`TEST_DATABASE_URL`; Gate A run `30794141827` supplied and passed that disposable
+PostgreSQL proof.**
 
 **No protected provider evidence or post-evidence approval has been collected.
 `npm run launch:readiness -- --require-ready` remains correctly blocked with 21
@@ -124,4 +125,5 @@ because the workflow enforced the intentionally blocked production-readiness
 result on a PR whose base was the release-candidate branch. Gate A now continues
 to evaluate and display readiness on every PR, but enforces success only on a
 PR into `master` or a push to `master`. This permits candidate assembly without
-weakening the actual release boundary. The corrected PR run is pending.
+weakening the actual release boundary. Corrected Gate A run `30794141827`
+passed all required code, database, browser, formatting, and dependency checks.
