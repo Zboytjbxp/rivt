@@ -14,7 +14,10 @@ import {
   encryptSnapshot,
   integrityForTables,
   insertBatch,
+  LOGICAL_BACKUP_FORMAT_V2,
+  LOGICAL_BACKUP_MANIFEST_FORMAT_V2,
   orderedTables,
+  POSTGRES_TEXT_ROW_ENCODING,
   previousBackupEncryptionSecret,
   rowsForTable,
   tableContentDigest,
@@ -316,7 +319,7 @@ test("logical restore preserves canonical PostgreSQL JSON text for a version-2 s
   await insertBatch(client, "records", columns, [{
     payload: '{"a": 1}',
     metadata: '"customer note"',
-  }]);
+  }], { rowEncoding: POSTGRES_TEXT_ROW_ENCODING });
 
   assert.deepEqual(captured.values, ['{"a": 1}', '"customer note"']);
 });
@@ -375,7 +378,7 @@ test("canonical table reads cast and alias quoted columns as PostgreSQL text", a
   ]);
   assert.match(capturedSql, /"id"::text AS "id"/);
   assert.match(capturedSql, /"odd""name"::text AS "odd""name"/);
-  assert.match(capturedSql, /FROM "public"\."odd-table"/);
+  assert.match(capturedSql, /FROM ONLY "public"\."odd-table"/);
   assert.deepEqual(rows, [{ id: "1", odd: null }]);
 });
 
@@ -445,11 +448,13 @@ test("v2 snapshot integrity is encrypted and aggregate digest is deterministic",
   const integrity = integrityForTables(tables);
   assert.equal(integrity.databaseDigest, databaseContentDigest(integrity.tableDigests));
   const v2Snapshot = {
-    format: "rivt-logical-backup-v2",
+    format: LOGICAL_BACKUP_FORMAT_V2,
+    rowEncoding: POSTGRES_TEXT_ROW_ENCODING,
     createdAt: "2026-07-29T00:00:00.000Z",
     sourceCommit: "abc1234",
     manifest: {
-      format: "rivt-logical-backup-manifest-v2",
+      format: LOGICAL_BACKUP_MANIFEST_FORMAT_V2,
+      rowEncoding: POSTGRES_TEXT_ROW_ENCODING,
       counts: { accounts: 1 },
       tableCount: 1,
       rowCount: 1,
