@@ -1,5 +1,42 @@
 # Gate A Requirements Traceability
 
+## Packet 96 - Provider-evidence approval lifecycle (in progress)
+
+- `GA-OPS-004` remains **Blocker**. The candidate defines how six stable
+  recovery controls can be materialized from exact evidence and approved only
+  afterward; it does not create, validate, restore, retain, or schedule any
+  backup.
+- `GA-OPS-005` remains **Partial**. The candidate defines five stable incident
+  evidence controls and a separately protected post-evidence approval/hold
+  decision. A valid hold clearance can suppress only `ACTIVE_LAUNCH_HOLD`, not
+  any missing incident evidence or approval finding.
+- `GA-OPS-007` remains **Partial**. Build, application/security lint, 538/538
+  unit tests, the combined test command, four browser E2E journeys, diff
+  integrity, and a zero-vulnerability production dependency audit pass.
+  Independent review found and closed clean-runner dependency, hold-incident
+  binding, and E/A branch-protection gaps. Gate A run `30794141827` passed the
+  complete sequence with disposable PostgreSQL 16. Gate
+  A evaluates readiness on all PRs but enforces the result only at the actual
+  `master` merge/push boundary, so a release-candidate PR cannot bypass launch
+  readiness and cannot be made unreviewable merely because evidence collection
+  is a later packet.
+- `GA-OPS-008` remains **Partial**. The workflow candidate binds exact source,
+  evidence, and approval revisions, uses the read-only GitHub API to attest
+  that E/A report protected, and validates both roots before dependencies or
+  provider credentials. The protection flag does not by itself attest exact
+  reviewer/ruleset strength. The change is not merged to `master` or deployed
+  and creates no deployment evidence.
+- `GA-OPS-009` remains **Blocker**. A reachable, fail-closed approval lifecycle
+  is prerequisite control-plane work; it does not prove capacity, redundancy,
+  failure domains, recovery, provider configuration, or launch readiness.
+- Requirement maturity does not change. The checked-in operations policies do
+  not yet declare the full 12-control materializer contract, nine provider
+  adapters remain separate bounded work, and no protected `E` or `A` revision
+  has been created.
+- No merge to `master`, deployment, provider call, added cost, credential
+  access, production-data action, launch-hold clearance, Railway Stage 1, ACH
+  activation, incident closure, or public launch is authorized by this packet.
+
 ## Packet 95 - Provider-evidence policy boundary (merged into release candidate)
 
 - `GA-OPS-004` remains **Blocker**. This packet does not create or validate

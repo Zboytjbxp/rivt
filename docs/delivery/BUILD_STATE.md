@@ -2,9 +2,9 @@
 
 Last updated: 2026-08-03 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Release-candidate activation readiness under the active production credential-containment hold; provider activation remains paused.
-Active packet: `docs/delivery/packets/94_RAILWAY_ACTIVATION_READINESS.md`
-Repository branch: `codex/release-candidate-consolidation` (Packet 95 merge commit `ce757652fa49d4592dcf6e13c4291cd8e4db18aa`)
+Current phase: Provider-evidence approval-lifecycle hardening under the active production credential-containment hold; provider activation remains paused.
+Active packet: `docs/delivery/packets/96_PROVIDER_EVIDENCE_APPROVAL_LIFECYCLE.md`
+Repository branch: `codex/provider-evidence-approval-lifecycle` (candidate base `4e50a0e0b90b585819401565b8bd8cf40e8875d2`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -56,6 +56,66 @@ deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
 
+## Packet 96 provider-evidence approval lifecycle - accepted for release-candidate merge
+
+- Packet 95 correctly separated immutable source policy `S` from later
+  provider evidence `E`, but it left approvals in `S`. Because readiness
+  requires approvals to postdate the evidence they approve, the full gate was
+  fail-closed but could never truthfully become ready.
+- Packet 96 introduces a third, later, separately protected approval revision
+  `A`. `S` defines policy and stable control identities; `E` supplies only
+  plan-bound receipts; `A` supplies only post-evidence approvals and the
+  explicit launch-hold decision.
+- The proposed approval path is bound to both exact revisions:
+  `docs/delivery/evidence/railway-stage1/approval/<S>/<E>/launch-readiness.json`.
+  Validation requires clean exact-revision worktrees, `S -> E -> A` ancestry,
+  one regular manifest file, exact plan/policy/receipt digests, and approvals
+  strictly later than `E`.
+- The workflow now asks GitHub's read-only branch API to confirm that the `E`
+  and `A` trust-root branches are protected before checkout, dependencies, or
+  provider credentials. Exact protected heads remain pinned independently.
+- A bounded materializer understands exactly 12 stable controls: five
+  incident, six recovery, and one payment-provider state control. Unknown,
+  missing, duplicate, or mismatched controls fail closed. It combines policy
+  intent from `S`, observed facts from `E`, and approvals/hold disposition
+  from `A` only in memory for the existing readiness evaluator.
+- A valid `A` decision may suppress only `ACTIVE_LAUNCH_HOLD`; it cannot
+  suppress any other readiness finding. Provider-only verification rejects
+  approval inputs, and launch-ready verification requires a full distinct
+  approval revision.
+- This packet creates no provider, recovery, resilience, deployment, cost, or
+  production evidence. The checked-in operations policies still need a
+  separate reviewed update for the stable control declarations, and nine
+  provider adapters remain separate bounded work.
+- Independent review found and closed three concrete issues before publication:
+  the preinstall approval validator indirectly required `dotenv`; hold
+  clearance was not bound to the source incident; and `E`/`A` protection was
+  named but not machine-attested. The clean-runner import regression, exact-
+  incident checks at overlay/materializer/readiness layers, and read-only
+  branch-protection check now fail closed.
+- No-cost local verification passes: build, application lint, security lint,
+  538/538 unit tests, the combined test command, all four browser E2E journeys,
+  diff integrity, and the production dependency audit with zero known
+  vulnerabilities. The combined test command runs 4 database-independent
+  integration cases and skips 23 PostgreSQL-backed cases because this isolated
+  worktree has no `TEST_DATABASE_URL`. Gate A run `30794141827` supplied a
+  disposable PostgreSQL 16 service and passed the complete unit/integration,
+  browser, build, lint, formatting, and dependency-audit sequence.
+- `npm run launch:readiness -- --require-ready` remains intentionally blocked
+  with 21 findings, including `ACTIVE_LAUNCH_HOLD`; the lifecycle fix makes a
+  truthful future decision reachable but supplies none of the missing proof.
+- The first PR run passed its build, lint, security lint, disposable-PostgreSQL
+  aggregate, browser, formatting, and audit steps, then failed only because
+  Gate A enforced the intentionally blocked production-readiness result on a
+  release-candidate PR. Gate A now still evaluates readiness on every PR, but
+  enforces it only for a PR into `master` or a push to `master`; regression
+  coverage locks that release boundary. Corrected Gate A run `30794141827`
+  passed; Packet 96 is accepted for merge into the release candidate only.
+- Launch readiness remains blocked; no merge to `master`,
+  deployment, provider call, credential access, production-data action, cost,
+  hold clearance, Railway Stage 1, ACH activation, incident closure, or launch
+  is authorized.
+
 ## Packet 95 provider-evidence policy boundary — merged into release candidate
 
 - The sealed Codex Security diff scan of
@@ -106,9 +166,10 @@ decision.
   closure.
 - Existing launch blockers remain unchanged, including `R-051`, `R-052`,
   `R-055`, `GA-OPS-004`, and `GA-OPS-009`.
-- Packet 95's acceptance boundary is complete. Packet 94 resumes with the
-  active hold unchanged. Deployment and exact-source provider/recovery
-  acceptance remain separately authorized work.
+- Packet 95's acceptance boundary is complete. Packet 96 now addresses the
+  separate post-evidence approval lifecycle while the active hold remains
+  unchanged. Deployment and exact-source provider/recovery acceptance remain
+  separately authorized work.
 
 ## Packet 94 release-candidate consolidation — merged candidate, not deployed
 

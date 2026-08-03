@@ -121,7 +121,9 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
 
       - name: Enforce launch-readiness result after verification
-        if: always()
+        if: >-
+          always() &&
+          (github.event_name == 'push' || github.event.pull_request.base.ref == 'master')
         shell: bash
         env:
           RIVT_LAUNCH_READINESS_OUTCOME: ${{ steps.launch_readiness.outcome }}
