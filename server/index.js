@@ -6440,6 +6440,7 @@ registerStripeConnectRoutes({
   publicPaymentRateLimit,
   providerEvidenceRateLimit,
   sourceCommit,
+  withTransaction,
   runIdempotentMutation,
   sendIdempotentResult,
 });

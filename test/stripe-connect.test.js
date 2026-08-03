@@ -462,3 +462,114 @@ test("tool invoices receive a short RIVT payment URL without exposing Stripe che
   assert.equal(payment.paymentUrl, "https://rivt.pro/pay/2c209df4-c27c-4d5d-a38a-140e57c8be94");
   assert.match(payment.checkoutUrl, /^https:\/\/checkout\.stripe\.com\//);
 });
+
+test("unreconciled reservations never expose a payable URL", () => {
+  const payment = stripeConnectInternals.mapPaymentRequest({
+    id: "2c209df4-c27c-4d5d-a38a-140e57c8be94",
+    tool_record_id: "6d317040-ffb5-426c-b125-1999753a2763",
+    amount_cents: 1249,
+    refunded_cents: 0,
+    currency: "usd",
+    status: "created",
+    checkout_url: null,
+  }, { appOrigin: "https://rivt.pro" });
+
+  assert.equal(payment.paymentUrl, null);
+  assert.equal(payment.checkoutUrl, null);
+});
+
+test("checkout failure classification fails closed for ambiguous provider outcomes", () => {
+  const classify = stripeConnectInternals.isAmbiguousCheckoutCreationFailure;
+  assert.equal(classify({ code: "STRIPE_CONNECT_TIMEOUT" }), true);
+  assert.equal(classify({ code: "STRIPE_CONNECT_UNAVAILABLE" }), true);
+  assert.equal(classify({ code: "STRIPE_CONNECT_INVALID_RESPONSE" }), true);
+  for (const providerStatus of [408, 409, 429, 500, 503]) {
+    assert.equal(classify({
+      code: "STRIPE_CONNECT_REQUEST_FAILED",
+      details: { providerStatus },
+    }), true);
+  }
+  assert.equal(classify({
+    code: "STRIPE_CONNECT_REQUEST_FAILED",
+    details: { providerStatus: 400, type: "idempotency_error" },
+  }), true);
+  assert.equal(classify({
+    code: "STRIPE_CONNECT_REQUEST_FAILED",
+    details: { providerStatus: 400, code: "idempotency_key_in_use" },
+  }), true);
+  assert.equal(classify({
+    code: "STRIPE_CONNECT_REQUEST_FAILED",
+    details: { providerStatus: 400, type: "invalid_request_error", code: "parameter_invalid" },
+  }), false);
+  assert.equal(classify({
+    code: "STRIPE_CONNECT_REQUEST_FAILED",
+    details: { providerStatus: 403, type: "invalid_request_error" },
+  }), false);
+});
+
+test("checkout payload is derived only from the durable reservation identity", () => {
+  const reservation = {
+    id: "2c209df4-c27c-4d5d-a38a-140e57c8be94",
+    tool_record_id: "6d317040-ffb5-426c-b125-1999753a2763",
+    merchant_account_id: "05810811-43ac-4f64-ab3f-64b434a0a1f1",
+    amount_cents: 1249,
+  };
+  const original = stripeConnectInternals.checkoutSessionParams({
+    ...reservation,
+    invoice_number: "INV-ORIGINAL",
+    recipient_email: "first@example.test",
+    pay_to: "Original Company",
+  }, "https://rivt.pro", "tool");
+  const afterMutableInvoiceEdits = stripeConnectInternals.checkoutSessionParams({
+    ...reservation,
+    invoice_number: "INV-EDITED",
+    recipient_email: "second@example.test",
+    pay_to: "Edited Company",
+  }, "https://rivt.pro", "tool");
+
+  assert.deepEqual(afterMutableInvoiceEdits, original);
+  assert.equal(original.client_reference_id, reservation.id);
+  assert.equal(original["line_items[0][price_data][unit_amount]"], 1249);
+  assert.equal(original["metadata[tool_payment_request_id]"], reservation.id);
+  assert.equal(original["payment_intent_data[metadata][tool_payment_request_id]"], reservation.id);
+  assert.equal(JSON.stringify(original).includes("example.test"), false);
+  assert.equal(JSON.stringify(original).includes("Original Company"), false);
+});
+
+test("project and tool checkout payloads keep distinct durable metadata", () => {
+  const common = {
+    id: "2c209df4-c27c-4d5d-a38a-140e57c8be94",
+    merchant_account_id: "05810811-43ac-4f64-ab3f-64b434a0a1f1",
+    amount_cents: 5000,
+  };
+  const project = stripeConnectInternals.checkoutSessionParams({
+    ...common,
+    invoice_id: "bde4a8ba-8514-49d8-a7a0-1f38a3484a91",
+  }, "https://rivt.pro", "project");
+  const tool = stripeConnectInternals.checkoutSessionParams({
+    ...common,
+    tool_record_id: "6d317040-ffb5-426c-b125-1999753a2763",
+  }, "https://rivt.pro", "tool");
+
+  assert.equal(project["metadata[payment_request_id]"], common.id);
+  assert.equal(project["metadata[invoice_id]"], "bde4a8ba-8514-49d8-a7a0-1f38a3484a91");
+  assert.equal(tool["metadata[tool_payment_request_id]"], common.id);
+  assert.equal(tool["metadata[tool_record_id]"], "6d317040-ffb5-426c-b125-1999753a2763");
+});
+
+test("checkout reconciliation validates the Stripe session before finalization", () => {
+  const session = {
+    id: "cs_test_1234567890abcdef",
+    url: "https://checkout.stripe.com/c/pay/cs_test_1234567890abcdef",
+    expires_at: 1_800_000_000,
+  };
+  assert.equal(stripeConnectInternals.assertCheckoutSession(session), session);
+  assert.throws(
+    () => stripeConnectInternals.assertCheckoutSession({ ...session, url: "https://evil.example/pay" }),
+    /incomplete bank-payment response/,
+  );
+  assert.throws(
+    () => stripeConnectInternals.assertCheckoutSession({ ...session, id: "not-a-session" }),
+    /incomplete bank-payment response/,
+  );
+});
