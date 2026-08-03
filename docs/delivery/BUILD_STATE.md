@@ -1,10 +1,10 @@
 # RIVT Build State
 
-Last updated: 2026-08-02 America/New_York
+Last updated: 2026-08-03 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Release-candidate consolidation under the active production credential-containment hold; provider activation remains paused.
-Active packet: `docs/delivery/packets/94_RAILWAY_ACTIVATION_READINESS.md`
-Repository branch: `codex/release-candidate-consolidation` (based on `origin/master` at `29e3c613f2eb95a6583b52c671275e5046dde0d3`)
+Current phase: Provider-evidence policy-boundary remediation under the active production credential-containment hold; provider activation remains paused.
+Active packet: `docs/delivery/packets/95_PROVIDER_EVIDENCE_POLICY_BOUNDARY.md`
+Repository branch: `codex/provider-evidence-policy-boundary` (based on release-candidate tip `f5e71b75c713c5a92eb20c8a1098009ca742c163`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -55,6 +55,45 @@ CI, fresh provider and cost evidence, separately authorized reviewed
 deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
+
+## Packet 95 provider-evidence policy boundary — locally verified, CI pending
+
+- The sealed Codex Security diff scan of
+  `29e3d3a5e8773ff66fb5f255190e979431583074..f5e71b75c713c5a92eb20c8a1098009ca742c163`
+  reviewed 78/78 paths and reported one Medium/P2 finding:
+  `csf_04e2d7dfe8fbe53f254d821c`.
+- The finding proved that the evidence overlay could rewrite incident and
+  recovery policy and have those values reach launch readiness outside the
+  provider-evidence plan.
+- Packet 95 removes policy authority from the overlay and separates a clean,
+  exact-source immutable policy root from a clean, exact-revision evidence
+  root. Policy and approvals come only from source; plan-bound receipts come
+  only from the protected overlay. Missing or untrusted roots block before
+  provider adapters and readiness.
+- Red-before-patch regressions reproduced incident-hold and recovery-target
+  rewrites. The original PoC no longer reaches its vulnerable assertion, and
+  split-root sink coverage proves an overlay policy copy cannot clear the
+  source hold. The payment-disabled invariant remains enforced.
+- Current local evidence passes the provider overlay/runner suites (66/66),
+  original packaged exploit reproduction, independent change-aware security
+  review, production build, application/security lint, 486/486 unit/frontend
+  tests, all four browser E2E journeys, diff integrity, and the production
+  dependency audit with zero known vulnerabilities. The exact `npm run test`
+  command exits zero; four database-independent integration checks pass and 23
+  PostgreSQL suites explicitly skip because the isolated worktree has no
+  `TEST_DATABASE_URL`. Disposable-PostgreSQL pull-request CI remains required.
+- `launch:readiness --require-ready` correctly remains blocked with 21 findings,
+  led by `ACTIVE_LAUNCH_HOLD`; Packet 95 neither suppresses nor clears them.
+- This packet is local and verified at its source boundary. It is not merged or deployed and
+  authorizes no provider call, added cost, credential access, production-data
+  action, launch-hold clearance, Railway Stage 1, ACH activation, or incident
+  closure.
+- Existing launch blockers remain unchanged, including `R-051`, `R-052`,
+  `R-055`, `GA-OPS-004`, and `GA-OPS-009`.
+- Next acceptance boundary: commit and push the owned branch, open a reviewed
+  pull request against the release-candidate branch, and obtain green
+  disposable-PostgreSQL CI while preserving the active hold. Only then may
+  Packet 95 be merged and Packet 94 consolidation resume.
 
 ## Packet 94 release-candidate consolidation — local only, not deployed
 
