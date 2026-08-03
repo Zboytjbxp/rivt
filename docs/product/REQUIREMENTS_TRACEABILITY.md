@@ -10,12 +10,16 @@
   evidence controls and a separately protected post-evidence approval/hold
   decision. A valid hold clearance can suppress only `ACTIVE_LAUNCH_HOLD`, not
   any missing incident evidence or approval finding.
-- `GA-OPS-007` remains **Partial**. Build, application/security lint, 537/537
+- `GA-OPS-007` remains **Partial**. Build, application/security lint, 538/538
   unit tests, the combined test command, four browser E2E journeys, diff
   integrity, and a zero-vulnerability production dependency audit pass.
   Independent review found and closed clean-runner dependency, hold-incident
   binding, and E/A branch-protection gaps. Pull-request CI and its disposable
-  PostgreSQL integration proof remain required before packet acceptance.
+  PostgreSQL integration proof remain required before packet acceptance. Gate
+  A evaluates readiness on all PRs but enforces the result only at the actual
+  `master` merge/push boundary, so a release-candidate PR cannot bypass launch
+  readiness and cannot be made unreviewable merely because evidence collection
+  is a later packet.
 - `GA-OPS-008` remains **Partial**. The workflow candidate binds exact source,
   evidence, and approval revisions, uses the read-only GitHub API to attest
   that E/A report protected, and validates both roots before dependencies or

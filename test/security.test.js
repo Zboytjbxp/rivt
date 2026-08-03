@@ -105,6 +105,24 @@ test("Gate A checks committed event changes for patch-formatting errors", () => 
   assert.doesNotMatch(workflow, /^\s*run:\s*git diff --check\s*$/m);
 });
 
+test("Gate A reports readiness on candidate PRs but enforces it at the master boundary", () => {
+  const workflow = readFileSync(
+    join(process.cwd(), ".github", "workflows", "gate-a.yml"),
+    "utf8",
+  );
+  const readinessStep = workflow.indexOf("name: Require current launch-readiness evidence");
+  const enforcementStep = workflow.indexOf(
+    "name: Enforce launch-readiness result after verification",
+  );
+
+  assert.equal(readinessStep >= 0, true);
+  assert.equal(enforcementStep > readinessStep, true);
+  assert.match(workflow, /github\.event_name == 'push'/);
+  assert.match(workflow, /github\.event\.pull_request\.base\.ref == 'master'/);
+  assert.match(workflow, /RIVT_LAUNCH_READINESS_OUTCOME.*steps\.launch_readiness\.outcome/);
+  assert.match(workflow, /if \[\[ "\$RIVT_LAUNCH_READINESS_OUTCOME" != "success" \]\]/);
+});
+
 function flushAsyncWork() {
   return new Promise((resolve) => setImmediate(resolve));
 }

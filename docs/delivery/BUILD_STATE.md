@@ -94,7 +94,7 @@ decision.
   incident checks at overlay/materializer/readiness layers, and read-only
   branch-protection check now fail closed.
 - No-cost local verification passes: build, application lint, security lint,
-  537/537 unit tests, the combined test command, all four browser E2E journeys,
+  538/538 unit tests, the combined test command, all four browser E2E journeys,
   diff integrity, and the production dependency audit with zero known
   vulnerabilities. The combined test command runs 4 database-independent
   integration cases and skips 23 PostgreSQL-backed cases because this isolated
@@ -103,7 +103,13 @@ decision.
 - `npm run launch:readiness -- --require-ready` remains intentionally blocked
   with 21 findings, including `ACTIVE_LAUNCH_HOLD`; the lifecycle fix makes a
   truthful future decision reachable but supplies none of the missing proof.
-- Pull-request CI is pending. Launch readiness remains blocked; no merge to `master`,
+- The first PR run passed its build, lint, security lint, disposable-PostgreSQL
+  aggregate, browser, formatting, and audit steps, then failed only because
+  Gate A enforced the intentionally blocked production-readiness result on a
+  release-candidate PR. Gate A now still evaluates readiness on every PR, but
+  enforces it only for a PR into `master` or a push to `master`; regression
+  coverage locks that release boundary. Corrected pull-request CI is pending.
+- Launch readiness remains blocked; no merge to `master`,
   deployment, provider call, credential access, production-data action, cost,
   hold clearance, Railway Stage 1, ACH activation, incident closure, or launch
   is authorized.

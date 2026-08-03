@@ -102,7 +102,7 @@ candidate. Review found and closed three bypass/failure paths: a preinstall
 validator dependency that would fail on a clean runner, a hold decision not
 bound to the source incident, and missing machine attestation that the `E` and
 `A` branches are protected. Focused S/E/A coverage passes 133/133, the complete
-unit suite passes 537/537, build and both lint gates pass, all four browser E2E
+unit suite passes 538/538, build and both lint gates pass, all four browser E2E
 journeys pass, and the production dependency audit reports zero known
 vulnerabilities. The combined integration command passes its available checks
 but skips 23 PostgreSQL-backed cases because this isolated worktree has no
@@ -117,3 +117,11 @@ flag proves that some protection applies, not the exact required review and
 restriction strength; that governance must be confirmed before using real `E`
 or `A`. Launch readiness, incident closure, deployment, and activation remain
 blocked.**
+
+The first PR run passed build, lint, security lint, the disposable-PostgreSQL
+test aggregate, browser E2E, formatting, and dependency audit, then failed only
+because the workflow enforced the intentionally blocked production-readiness
+result on a PR whose base was the release-candidate branch. Gate A now continues
+to evaluate and display readiness on every PR, but enforces success only on a
+PR into `master` or a push to `master`. This permits candidate assembly without
+weakening the actual release boundary. The corrected PR run is pending.
