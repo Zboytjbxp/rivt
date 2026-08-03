@@ -15,6 +15,7 @@ import {
 import { providerEvidenceIdentity } from "../scripts/repository-evidence.js";
 import {
   materializeProviderReadiness,
+  providerReadinessMaterializerContract,
 } from "../scripts/provider-readiness-materializer.js";
 import {
   providerEvidencePlanDigest,
@@ -110,12 +111,34 @@ function sourcePolicies() {
       ],
       rehearsals: [],
       evidenceControls: {
-        backupRoute: { controlId: "backup-support-route", routeId: "backup-support-route" },
-        syntheticMonitor: { controlId: "synthetic", destinationId: "synthetic" },
-        errorMonitoring: { controlId: "errors", destinationId: "errors" },
-        paging: { controlId: "paging", destinationId: "paging" },
+        backupRoute: {
+          adapterId: "adapter-backup-support-route",
+          controlId: "backup-support-route",
+          provider: "github-actions",
+          routeId: "backup-support-route",
+        },
+        syntheticMonitor: {
+          adapterId: "adapter-synthetic",
+          controlId: "synthetic",
+          destinationId: "synthetic",
+          provider: "github-actions",
+        },
+        errorMonitoring: {
+          adapterId: "adapter-errors",
+          controlId: "errors",
+          destinationId: "errors",
+          provider: "sentry-cloud",
+        },
+        paging: {
+          adapterId: "adapter-paging",
+          controlId: "paging",
+          destinationId: "paging",
+          provider: "sentry-cloud",
+        },
         rehearsal: {
+          adapterId: "adapter-rehearsal-2026-08-03",
           controlId: "rehearsal-2026-08-03",
+          provider: "railway-production",
           scenario: "public-health-provider-failure",
           commanderRoleId: "incident-commander",
         },
@@ -154,15 +177,26 @@ function sourcePolicies() {
       restoreDrillCadence: {
         days: 30,
         owner: "Michael",
-        nextDueAt: "2026-09-02T13:00:00.000Z",
       },
       evidenceControls: {
-        backupSchedule: { controlId: "backup-schedule" },
-        latestSuccessfulBackup: { controlId: "latest-successful-backup" },
-        missedBackupAlert: { controlId: "missed-backup-alert" },
-        backupRetention: { controlId: "backup-retention-enforcement" },
-        failureDomain: { controlId: "backup-failure-domain" },
-        latestNamedArtifactRestore: { controlId: "named-artifact-restore" },
+        backupSchedule: {
+          adapterId: "adapter-backup-schedule", controlId: "backup-schedule", provider: "railway",
+        },
+        latestSuccessfulBackup: {
+          adapterId: "adapter-latest-successful-backup", controlId: "latest-successful-backup", provider: "railway",
+        },
+        missedBackupAlert: {
+          adapterId: "adapter-missed-backup-alert", controlId: "missed-backup-alert", provider: "sentry-cloud",
+        },
+        backupRetention: {
+          adapterId: "adapter-backup-retention-enforcement", controlId: "backup-retention-enforcement", provider: "object-storage",
+        },
+        failureDomain: {
+          adapterId: "adapter-backup-failure-domain", controlId: "backup-failure-domain", provider: "independent-backup-host",
+        },
+        latestNamedArtifactRestore: {
+          adapterId: "adapter-named-artifact-restore", controlId: "named-artifact-restore", provider: "railway",
+        },
       },
       approvals: {
         founder: { status: "pending" },
@@ -173,7 +207,11 @@ function sourcePolicies() {
       version: 2,
       status: "approved",
       mode: "disabled",
-      evidenceControlId: "bank-payment-provider-state",
+      evidenceControl: {
+        adapterId: "adapter-bank-payment-provider-state",
+        controlId: "bank-payment-provider-state",
+        provider: "railway-stripe",
+      },
       desiredProviderState: {
         featureFlagVerifiedOff: true,
         providerDestinationScope: "connected_accounts",
@@ -380,6 +418,7 @@ function fixture() {
     verificationDurationMs: restore.verificationDurationMs,
     ...evidenceFields("named-artifact-restore", "completedAt"),
   };
+  recoveryPolicy.restoreDrillCadence.nextDueAt = "2026-09-02T13:09:00.000Z";
   recoveryPolicy.approvals = {
     founder: { status: "approved", approvedBy: "founder", approvedAt: approvalAt },
     operations: { status: "approved", approvedBy: "operations-owner", approvedAt: approvalAt },
@@ -485,6 +524,7 @@ test("materializes exact volatile evidence and later approvals without mutating 
   const result = materializeProviderReadiness(input);
 
   assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(input.plan.claims.length, 12);
   assert.deepEqual(input, before);
   assert.deepEqual(result.incidentConfig, input.expected.incidentConfig);
   assert.deepEqual(result.recoveryPolicy, input.expected.recoveryPolicy);
@@ -588,6 +628,118 @@ test("rejects plan, receipt, source, evidence, and approval binding changes", ()
     assert.equal(result.findingCodes.includes(code), true, `${code}: ${JSON.stringify(result)}`);
     assert.equal(Object.hasOwn(result, "incidentConfig"), false);
   }
+});
+
+test("checked-in source policies declare exactly 12 adapter- and provider-pinned controls", () => {
+  const readJson = (relativePath) => JSON.parse(fs.readFileSync(
+    new URL(`../${relativePath}`, import.meta.url),
+    "utf8",
+  ));
+  const incident = readJson("docs/operations/incident-routing.json");
+  const recovery = readJson("docs/operations/recovery-policy.json");
+  const payment = readJson("docs/operations/payment-provider-readiness.json");
+  const declared = [
+    ...Object.entries(incident.evidenceControls).map(([slot, control]) => ({
+      area: "incident", slot, control,
+    })),
+    ...Object.entries(recovery.evidenceControls).map(([slot, control]) => ({
+      area: "recovery", slot, control,
+    })),
+    { area: "payment", slot: "providerState", control: payment.evidenceControl },
+  ];
+
+  assert.equal(declared.length, 12);
+  assert.equal(new Set(declared.map(({ control }) => control.controlId)).size, 12);
+  for (const { area, slot, control } of declared) {
+    const contract = area === "payment"
+      ? providerReadinessMaterializerContract.payment
+      : providerReadinessMaterializerContract[area][slot];
+    assert.deepEqual(Object.keys(control).sort(), [...contract.sourceKeys].sort(), `${area}.${slot}`);
+    assert.match(control.adapterId, /^[a-z0-9][a-z0-9-]+$/u, `${area}.${slot}.adapterId`);
+    assert.match(control.provider, /^[a-z0-9][a-z0-9-]+$/u, `${area}.${slot}.provider`);
+  }
+  assert.equal(incident.launchHold.active, true);
+  assert.equal(payment.mode, "disabled");
+  assert.equal(Object.hasOwn(recovery.restoreDrillCadence, "nextDueAt"), false);
+});
+
+test("materializes recovery readiness status and next drill date only from fresh evidence", () => {
+  const input = fixture();
+  input.policies.recoveryPolicy.backupSchedule.status = "pending_evidence";
+  input.policies.recoveryPolicy.missedBackupAlert.status = "pending_evidence";
+  input.policies.recoveryPolicy.backupRetention.enforcement.status = "pending_evidence";
+  input.policies.recoveryPolicy.failureDomain.status = "pending_evidence";
+  input.approvalManifest.sourcePolicyDigest = sourcePolicyBundleDigest(input.policies);
+
+  const result = materializeProviderReadiness(input);
+  assert.equal(result.ok, true, JSON.stringify(result));
+  assert.equal(result.recoveryPolicy.backupSchedule.status, "configured");
+  assert.equal(result.recoveryPolicy.missedBackupAlert.status, "tested");
+  assert.equal(result.recoveryPolicy.backupRetention.enforcement.status, "verified");
+  assert.equal(result.recoveryPolicy.failureDomain.status, "independent");
+  assert.equal(
+    result.recoveryPolicy.restoreDrillCadence.nextDueAt,
+    "2026-09-02T13:09:00.000Z",
+  );
+});
+
+test("fails closed instead of throwing when a restore date cannot produce the next due date", () => {
+  const input = fixture();
+  const index = input.plan.claims.findIndex(
+    (claim) => claim.controlId === "named-artifact-restore",
+  );
+  const changed = {
+    ...input.plan.claims[index].expectedReceipt,
+    timestamp: "+275760-09-12T00:00:00.000Z",
+  };
+  input.plan.claims[index].expectedReceipt = changed;
+  input.plan.claims[index].evidenceSha256 = digest(changed);
+  input.evidenceRecords[index].receipt = structuredClone(changed);
+  input.evidenceRecords[index].sha256 = digest(changed);
+  refreshPlanBindings(input);
+
+  const result = materializeProviderReadiness(input);
+  assert.equal(result.ok, false);
+  assert.equal(
+    result.findingCodes.includes("MATERIALIZER_DERIVED_TIMESTAMP_INVALID"),
+    true,
+  );
+});
+
+test("rejects adapter and provider substitution even when E and A agree on the substitute", () => {
+  for (const field of ["adapterId", "provider"]) {
+    const input = fixture();
+    const index = input.plan.claims.findIndex((claim) => claim.controlId === "synthetic");
+    const substitute = field === "adapterId" ? "substituted-adapter" : "substituted-provider";
+    input.plan.claims[index][field] = substitute;
+    if (field === "provider") {
+      input.plan.claims[index].expectedReceipt.provider = substitute;
+      input.plan.claims[index].evidenceSha256 = digest(input.plan.claims[index].expectedReceipt);
+      input.evidenceRecords[index].receipt.provider = substitute;
+      input.evidenceRecords[index].sha256 = input.plan.claims[index].evidenceSha256;
+    }
+    refreshPlanBindings(input);
+
+    const result = materializeProviderReadiness(input);
+    assert.equal(result.ok, false, field);
+    assert.equal(
+      result.findingCodes.includes("MATERIALIZER_PLAN_SOURCE_BINDING_MISMATCH"),
+      true,
+      `${field}: ${JSON.stringify(result)}`,
+    );
+  }
+});
+
+test("legacy unbound payment control IDs fail closed", () => {
+  const input = fixture();
+  input.policies.paymentProviderPolicy.evidenceControlId =
+    input.policies.paymentProviderPolicy.evidenceControl.controlId;
+  delete input.policies.paymentProviderPolicy.evidenceControl;
+  input.approvalManifest.sourcePolicyDigest = sourcePolicyBundleDigest(input.policies);
+
+  const result = materializeProviderReadiness(input);
+  assert.equal(result.ok, false);
+  assert.equal(result.findingCodes.includes("MATERIALIZER_PAYMENT_CONTROL_SCHEMA_INVALID"), true);
 });
 
 test("rejects evidence that tries to override source policy semantics", () => {

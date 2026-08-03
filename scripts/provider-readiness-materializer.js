@@ -15,42 +15,64 @@ const commitPattern = /^[a-f0-9]{40}$/;
 const sha256Pattern = /^[a-f0-9]{64}$/;
 
 // These are the only stable source-policy controls this materializer understands.
-// S declares intent and the stable control IDs. E supplies only the listed observed
-// fields. A supplies only approvals and the launch-hold decision. Adding a control
-// requires an explicit code change instead of silently accepting a new receipt shape.
+// S declares intent plus the exact compiled adapter/provider binding. E supplies only
+// the listed observed fields. A supplies only approvals and the launch-hold decision.
+// Adding or substituting a control requires an explicit source-policy change instead
+// of silently accepting a new adapter, provider, or receipt shape from the evidence plan.
 export const providerReadinessMaterializerContract = Object.freeze({
   incident: Object.freeze({
     backupRoute: Object.freeze({
-      sourceKeys: Object.freeze(["controlId", "routeId"]),
+      sourceKeys: Object.freeze(["adapterId", "controlId", "provider", "routeId"]),
       type: "private-route-delivery-test",
     }),
     syntheticMonitor: Object.freeze({
-      sourceKeys: Object.freeze(["controlId", "destinationId"]),
+      sourceKeys: Object.freeze(["adapterId", "controlId", "destinationId", "provider"]),
       type: "synthetic-monitor-delivery-test",
     }),
     errorMonitoring: Object.freeze({
-      sourceKeys: Object.freeze(["controlId", "destinationId"]),
+      sourceKeys: Object.freeze(["adapterId", "controlId", "destinationId", "provider"]),
       type: "error-monitoring-ingestion-test",
     }),
     paging: Object.freeze({
-      sourceKeys: Object.freeze(["controlId", "destinationId"]),
+      sourceKeys: Object.freeze(["adapterId", "controlId", "destinationId", "provider"]),
       type: "paging-delivery-test",
     }),
     rehearsal: Object.freeze({
-      sourceKeys: Object.freeze(["commanderRoleId", "controlId", "scenario"]),
+      sourceKeys: Object.freeze([
+        "adapterId", "commanderRoleId", "controlId", "provider", "scenario",
+      ]),
       type: "incident-rehearsal-test",
     }),
   }),
   payment: Object.freeze({
+    sourceKeys: Object.freeze(["adapterId", "controlId", "provider"]),
     type: "provider-payment-state-verification",
   }),
   recovery: Object.freeze({
-    backupSchedule: Object.freeze({ type: "provider-backup-schedule" }),
-    latestSuccessfulBackup: Object.freeze({ type: "provider-backup-completion" }),
-    missedBackupAlert: Object.freeze({ type: "provider-alert-delivery-test" }),
-    backupRetention: Object.freeze({ type: "provider-retention-policy" }),
-    failureDomain: Object.freeze({ type: "provider-failure-domain-verification" }),
-    latestNamedArtifactRestore: Object.freeze({ type: "provider-restore-verification" }),
+    backupSchedule: Object.freeze({
+      sourceKeys: Object.freeze(["adapterId", "controlId", "provider"]),
+      type: "provider-backup-schedule",
+    }),
+    latestSuccessfulBackup: Object.freeze({
+      sourceKeys: Object.freeze(["adapterId", "controlId", "provider"]),
+      type: "provider-backup-completion",
+    }),
+    missedBackupAlert: Object.freeze({
+      sourceKeys: Object.freeze(["adapterId", "controlId", "provider"]),
+      type: "provider-alert-delivery-test",
+    }),
+    backupRetention: Object.freeze({
+      sourceKeys: Object.freeze(["adapterId", "controlId", "provider"]),
+      type: "provider-retention-policy",
+    }),
+    failureDomain: Object.freeze({
+      sourceKeys: Object.freeze(["adapterId", "controlId", "provider"]),
+      type: "provider-failure-domain-verification",
+    }),
+    latestNamedArtifactRestore: Object.freeze({
+      sourceKeys: Object.freeze(["adapterId", "controlId", "provider"]),
+      type: "provider-restore-verification",
+    }),
   }),
 });
 
@@ -149,6 +171,14 @@ function positive(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
+function addDaysTimestamp(value, days) {
+  const timestamp = Date.parse(value);
+  const nextTimestamp = timestamp + days * 24 * 60 * 60 * 1000;
+  if (!Number.isFinite(timestamp) || !Number.isFinite(nextTimestamp)) return null;
+  const nextDate = new Date(nextTimestamp);
+  return Number.isFinite(nextDate.getTime()) ? nextDate.toISOString() : null;
+}
+
 function fail(...codes) {
   return { ok: false, findingCodes: [...new Set(codes)].sort() };
 }
@@ -204,7 +234,12 @@ function collectControlDefinitions(incidentConfig, recoveryPolicy, paymentProvid
   } else {
     for (const [slot, contract] of Object.entries(providerReadinessMaterializerContract.incident)) {
       const control = incidentControls[slot];
-      if (!exactKeys(control, contract.sourceKeys) || !text(control.controlId)) {
+      if (
+        !exactKeys(control, contract.sourceKeys)
+        || !text(control.adapterId)
+        || !text(control.controlId)
+        || !text(control.provider)
+      ) {
         findingCodes.push("MATERIALIZER_INCIDENT_CONTROL_SCHEMA_INVALID");
       } else {
         definitions.push({ area: "incident", slot, type: contract.type, ...control });
@@ -218,7 +253,12 @@ function collectControlDefinitions(incidentConfig, recoveryPolicy, paymentProvid
   } else {
     for (const [slot, contract] of Object.entries(providerReadinessMaterializerContract.recovery)) {
       const control = recoveryControls[slot];
-      if (!exactKeys(control, ["controlId"]) || !text(control.controlId)) {
+      if (
+        !exactKeys(control, contract.sourceKeys)
+        || !text(control.adapterId)
+        || !text(control.controlId)
+        || !text(control.provider)
+      ) {
         findingCodes.push("MATERIALIZER_RECOVERY_CONTROL_SCHEMA_INVALID");
       } else {
         definitions.push({ area: "recovery", slot, type: contract.type, ...control });
@@ -226,14 +266,20 @@ function collectControlDefinitions(incidentConfig, recoveryPolicy, paymentProvid
     }
   }
 
-  if (!text(paymentProviderPolicy.evidenceControlId)) {
+  const paymentControl = paymentProviderPolicy.evidenceControl;
+  if (
+    !exactKeys(paymentControl, providerReadinessMaterializerContract.payment.sourceKeys)
+    || !text(paymentControl.adapterId)
+    || !text(paymentControl.controlId)
+    || !text(paymentControl.provider)
+  ) {
     findingCodes.push("MATERIALIZER_PAYMENT_CONTROL_SCHEMA_INVALID");
   } else {
     definitions.push({
       area: "payment",
       slot: "providerState",
       type: providerReadinessMaterializerContract.payment.type,
-      controlId: paymentProviderPolicy.evidenceControlId,
+      ...paymentControl,
     });
   }
   const counts = new Map();
@@ -286,6 +332,15 @@ function bindEvidence(definitions, plan, evidenceRecords) {
   for (const definition of definitions) {
     const claim = claimsByControl.get(definition.controlId);
     if (!claim) continue;
+    if (
+      claim.adapterId !== definition.adapterId
+      || claim.provider !== definition.provider
+      || claim.type !== definition.type
+      || claim.controlId !== definition.controlId
+    ) {
+      findingCodes.push("MATERIALIZER_PLAN_SOURCE_BINDING_MISMATCH");
+      continue;
+    }
     const record = recordsByPath.get(claim.evidencePath);
     if (!record) {
       findingCodes.push("MATERIALIZER_RECEIPT_MISSING");
@@ -487,7 +542,10 @@ function materializeEvidence(policies, definitions, bound) {
         continue;
       }
       if (definition.slot === "backupSchedule") {
-        Object.assign(recoveryPolicy.backupSchedule, recoveryEvidenceFields(entry, "verifiedAt"));
+        Object.assign(recoveryPolicy.backupSchedule, {
+          status: receipt.status,
+          ...recoveryEvidenceFields(entry, "verifiedAt"),
+        });
       } else if (definition.slot === "latestSuccessfulBackup") {
         recoveryPolicy.latestSuccessfulBackup = {
           status: receipt.status,
@@ -500,15 +558,20 @@ function materializeEvidence(policies, definitions, bound) {
       } else if (definition.slot === "missedBackupAlert") {
         Object.assign(
           recoveryPolicy.missedBackupAlert,
+          { status: receipt.status },
           recoveryEvidenceFields(entry, "lastTestedAt"),
         );
       } else if (definition.slot === "backupRetention") {
         Object.assign(
           recoveryPolicy.backupRetention.enforcement,
+          { status: receipt.status },
           recoveryEvidenceFields(entry, "verifiedAt"),
         );
       } else if (definition.slot === "failureDomain") {
-        Object.assign(recoveryPolicy.failureDomain, recoveryEvidenceFields(entry, "verifiedAt"));
+        Object.assign(recoveryPolicy.failureDomain, {
+          status: receipt.status,
+          ...recoveryEvidenceFields(entry, "verifiedAt"),
+        });
       } else {
         recoveryPolicy.latestNamedArtifactRestore = {
           status: receipt.status,
@@ -520,6 +583,15 @@ function materializeEvidence(policies, definitions, bound) {
           verificationDurationMs: receipt.verificationDurationMs,
           ...recoveryEvidenceFields(entry, "completedAt"),
         };
+        const cadenceDays = recoveryPolicy.restoreDrillCadence?.days;
+        if (positive(cadenceDays)) {
+          const nextDueAt = addDaysTimestamp(receipt.timestamp, cadenceDays);
+          if (!nextDueAt) {
+            findingCodes.push("MATERIALIZER_DERIVED_TIMESTAMP_INVALID");
+          } else {
+            recoveryPolicy.restoreDrillCadence.nextDueAt = nextDueAt;
+          }
+        }
       }
       readinessEvidence.recoveryEvidenceByPath[claim.evidencePath] = structuredClone(record);
       readinessEvidence.recoveryEvidenceSha256ByPath[claim.evidencePath] = claim.evidenceSha256;

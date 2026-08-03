@@ -2,9 +2,9 @@
 
 Last updated: 2026-08-03 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Provider-evidence approval-lifecycle hardening under the active production credential-containment hold; provider activation remains paused.
-Active packet: `docs/delivery/packets/96_PROVIDER_EVIDENCE_APPROVAL_LIFECYCLE.md`
-Repository branch: `codex/provider-evidence-approval-lifecycle` (candidate base `4e50a0e0b90b585819401565b8bd8cf40e8875d2`)
+Current phase: Provider-control contract hardening under the active production credential-containment hold; provider activation remains paused.
+Active packet: `docs/delivery/packets/97_PROVIDER_CONTROL_CONTRACT.md`
+Repository branch: `codex/provider-evidence-adapters` (candidate base `7655bff50a991bd82b2dfd7cf44676aac36e9a27`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -55,6 +55,44 @@ CI, fresh provider and cost evidence, separately authorized reviewed
 deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
 route items, strict preflight, and an explicit incident closure and launch-hold
 decision.
+
+## Packet 97 provider-control contract hardening - locally complete; PR CI required
+
+- The checked-in source policies now declare the exact five incident, six
+  recovery, and one disabled-payment evidence controls expected by the
+  Packet 96 materializer. Every control pins its reviewed adapter ID,
+  provider ID, receipt type, and stable control ID; a later evidence plan
+  cannot substitute those bindings.
+- The payment policy remains explicitly disabled. The recovery policy keeps
+  schedule, retention, failure-domain, and restore observations pending; a
+  future materialization can derive their statuses and the next restore due
+  date only from fresh, exact evidence.
+- A read-only GitHub Actions incident-rehearsal adapter is implemented. It
+  requires one active dedicated workflow, the protected default branch, the
+  exact source commit, an exact scenario/commander run title, one successful
+  rehearsal job, all four critical steps, and no failed or skipped non-post
+  step.
+- Sentry paging stays blocked because current provider APIs do not prove
+  downstream human delivery. Private backup-route delivery stays blocked
+  until a provider and safe evidence route are selected. Recovery controls
+  stay blocked until an independent backup provider, account, US region,
+  retention mode, custody model, and proof seams are approved.
+- Unsupported controls now return specific fail-closed reasons rather than
+  one ambiguous `ADAPTER_NOT_IMPLEMENTED` result.
+- Focused materializer/provider tests pass 41/41, including a fail-closed
+  extreme-date regression that prevents malformed restore evidence from
+  crashing the materializer. Full build, lint, unit/integration aggregate,
+  four-journey E2E, production-dependency audit, and diff-integrity gates pass.
+- Independent diff security review found no reportable candidate across the
+  provider runner or materializer. It confirmed the exact source/provider/run
+  bindings, evidence freshness and proof uniqueness, S/E/A authority split,
+  payment-disabled posture, and final `verification.ok && readiness.ok` gate.
+  Pull-request CI remains required before release-candidate merge.
+- The unchanged readiness evaluator remains blocked with 21 findings, led by
+  `ACTIVE_LAUNCH_HOLD`. No provider call, credential use, workflow dispatch,
+  production-data action, backup/restore, deployment, added cost, hold
+  clearance, ACH activation, incident closure, or launch is claimed or
+  authorized.
 
 ## Packet 96 provider-evidence approval lifecycle - accepted for release-candidate merge
 

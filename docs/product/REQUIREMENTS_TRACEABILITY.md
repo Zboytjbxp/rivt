@@ -1,5 +1,34 @@
 # Gate A Requirements Traceability
 
+## Packet 97 - Provider-control contract hardening (locally complete; PR CI required)
+
+- `GA-OPS-004` remains **Blocker**. Six recovery controls are now declared in
+  checked-in source and pinned to exact adapter/provider identities. Dynamic
+  recovery status and the next restore due date can be materialized only from
+  exact fresh evidence. RIVT still has no selected or approved independent
+  recovery provider, retained off-Railway object copy, recurring schedule,
+  received missed-backup alert, or isolated restore proof.
+- `GA-OPS-005` remains **Partial**. Five incident controls are now similarly
+  source-bound. A read-only GitHub Actions adapter can verify one exact
+  protected-branch incident rehearsal. Paging remains blocked because a
+  provider trigger is not proof of downstream human receipt, and the private
+  backup route has no selected evidence provider.
+- `GA-OPS-007` remains **Partial**. Focused provider/materializer tests pass
+  41/41 with exact adapter/provider-substitution, stale/failed rehearsal,
+  dynamic recovery-status coverage, and fail-closed extreme-date handling.
+  Full local gates and independent diff security review pass with no
+  reportable candidate; pull-request CI remains required before merge.
+- `GA-OPS-008` remains **Partial**. Source policy now pins all 12 controls and
+  payment remains disabled, but no protected `E` evidence or later protected
+  `A` approval revision has been collected.
+- `GA-OPS-009` remains **Blocker**. This packet improves the evidence contract;
+  it does not prove capacity, redundancy, failover, recovery, provider
+  configuration, or launch readiness.
+- Readiness remains blocked with 21 findings led by `ACTIVE_LAUNCH_HOLD`.
+  Requirement maturity does not change. No provider call, production-data
+  action, deployment, added cost, hold clearance, ACH activation, incident
+  closure, or launch is authorized.
+
 ## Packet 96 - Provider-evidence approval lifecycle (in progress)
 
 - `GA-OPS-004` remains **Blocker**. The candidate defines how six stable

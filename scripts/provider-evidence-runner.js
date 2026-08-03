@@ -59,6 +59,15 @@ const githubSyntheticWorkflowPath = ".github/workflows/production-synthetic.yml"
 const githubSyntheticIncidentMarker = "<!-- rivt-production-synthetic-incident -->";
 const githubSyntheticIncidentTitle = "Production synthetic check failing";
 const githubSyntheticResourcePattern = /^workflow:([1-9][0-9]{0,19}):issue:([1-9][0-9]{0,19})$/;
+const githubIncidentRehearsalWorkflowPath = ".github/workflows/incident-rehearsal.yml";
+const githubIncidentRehearsalJobName = "rehearsal";
+const githubIncidentRehearsalResourcePattern = /^workflow:([1-9][0-9]{0,19}):run:([1-9][0-9]{0,19})$/;
+const githubIncidentRehearsalCriticalSteps = Object.freeze([
+  "Check production health",
+  "Run production monitor",
+  "Run live Gate A smoke",
+  "Verify incident evidence",
+]);
 const railwayStripeResourcePattern = /^service:([A-Za-z0-9_-]{1,128}):event-destination:([A-Za-z0-9_-]{1,128})$/;
 const stripeConnectSnapshotEvents = Object.freeze([
   "charge.dispute.created",
@@ -94,8 +103,10 @@ function freezeAdapterDefinition(definition) {
   });
 }
 
-async function unsupportedProviderAdapter() {
-  return { status: "unsupported", reasonCode: "ADAPTER_NOT_IMPLEMENTED" };
+function unsupportedProviderAdapter(reasonCode) {
+  return async function unsupportedAdapter() {
+    return { status: "unsupported", reasonCode };
+  };
 }
 
 function failedProviderResult(reasonCode, status = "failed") {
@@ -368,6 +379,124 @@ export async function verifyGitHubProductionSyntheticEvidence(
     latestRunId: latestRun.id,
     recoveryRunId: run.id,
     sourceCommit: latestRun.head_sha,
+    workflowId: workflow.id,
+  });
+}
+
+function validGitHubIncidentRehearsalReceipt(receipt) {
+  return receipt?.schemaVersion === 1
+    && receipt.type === "incident-rehearsal-test"
+    && receipt.provider === "github-actions"
+    && receipt.status === "passed"
+    && boundedIdentifierPattern.test(receipt.scenario ?? "")
+    && boundedIdentifierPattern.test(receipt.commanderRoleId ?? "");
+}
+
+function isGitHubPostStep(step) {
+  return /^Post\s/u.test(step?.name ?? "") || step?.name === "Complete job";
+}
+
+export async function verifyGitHubIncidentRehearsalEvidence(
+  context,
+  { fetchFunction = globalThis.fetch } = {},
+) {
+  if (!validGitHubIncidentRehearsalReceipt(context?.receipt)) {
+    return failedProviderResult("PROVIDER_RECEIPT_UNSUPPORTED");
+  }
+  const resource = githubIncidentRehearsalResourcePattern.exec(
+    context?.claim?.scope?.resource ?? "",
+  );
+  if (!resource) return failedProviderResult("PROVIDER_SCOPE_INVALID");
+  const [, workflowId, runId] = resource;
+  const owner = encodeURIComponent(context.claim.scope.account);
+  const repoName = encodeURIComponent(context.claim.scope.project);
+  const branchName = context.claim.scope.environment;
+  const encodedBranchName = encodeURIComponent(branchName);
+  const repoBase = `/repos/${owner}/${repoName}`;
+  const [repositoryResult, branchResult, workflowResult, runResult, jobsResult] = await Promise.all([
+    githubJson(context, repoBase, fetchFunction),
+    githubJson(context, `${repoBase}/branches/${encodedBranchName}`, fetchFunction),
+    githubJson(context, `${repoBase}/actions/workflows/${workflowId}`, fetchFunction),
+    githubJson(context, `${repoBase}/actions/runs/${runId}`, fetchFunction),
+    githubJson(context, `${repoBase}/actions/runs/${runId}/jobs?filter=all&per_page=100`, fetchFunction),
+  ]);
+  const failedRequest = [
+    repositoryResult,
+    branchResult,
+    workflowResult,
+    runResult,
+    jobsResult,
+  ].find((result) => !result.ok);
+  if (failedRequest) return failedProviderResult(failedRequest.reasonCode);
+
+  const repository = repositoryResult.payload;
+  const branch = branchResult.payload;
+  const workflow = workflowResult.payload;
+  const run = runResult.payload;
+  const jobsPayload = jobsResult.payload;
+  const jobs = jobsPayload.jobs;
+  const expectedRunTitle = `Incident rehearsal: ${context.receipt.scenario} / ${context.receipt.commanderRoleId}`;
+  if (
+    repository.full_name?.toLowerCase()
+      !== `${context.claim.scope.account}/${context.claim.scope.project}`.toLowerCase()
+    || repository.default_branch !== branchName
+    || branch.name !== branchName
+    || branch.protected !== true
+    || String(workflow.id) !== workflowId
+    || workflow.path !== githubIncidentRehearsalWorkflowPath
+    || workflow.state !== "active"
+    || String(run.id) !== runId
+    || String(run.workflow_id) !== workflowId
+    || run.event !== "workflow_dispatch"
+    || run.status !== "completed"
+    || run.conclusion !== "success"
+    || run.display_title !== expectedRunTitle
+    || run.head_sha !== context.sourceCommit
+    || run.head_branch !== branchName
+    || run.head_repository?.full_name?.toLowerCase() !== repository.full_name.toLowerCase()
+    || run.updated_at !== context.receipt.timestamp
+    || !validTimestamp(run.updated_at, context.now, maximumProviderProofAgeMs)
+    || jobsPayload.total_count !== 1
+    || !Array.isArray(jobs)
+    || jobs.length !== 1
+  ) {
+    return failedProviderResult("PROVIDER_BINDING_MISMATCH");
+  }
+
+  const [job] = jobs;
+  const steps = job.steps;
+  if (
+    !/^[1-9][0-9]{0,19}$/.test(String(job.id ?? ""))
+    || String(job.run_id) !== runId
+    || job.head_sha !== context.sourceCommit
+    || job.name !== githubIncidentRehearsalJobName
+    || job.status !== "completed"
+    || job.conclusion !== "success"
+    || !Array.isArray(steps)
+    || steps.some((step) => (
+      !isGitHubPostStep(step)
+      && (step?.status !== "completed" || step?.conclusion !== "success")
+    ))
+    || githubIncidentRehearsalCriticalSteps.some((stepName) => (
+      steps.filter((step) => (
+        step?.name === stepName
+        && step.status === "completed"
+        && step.conclusion === "success"
+      )).length !== 1
+    ))
+  ) {
+    return failedProviderResult("PROVIDER_OBSERVATION_MISMATCH");
+  }
+
+  return verifiedProviderResult(context, {
+    adapter: "github-incident-rehearsal-v1",
+    branch: branch.name,
+    commanderRoleId: context.receipt.commanderRoleId,
+    criticalSteps: githubIncidentRehearsalCriticalSteps,
+    jobId: job.id,
+    runId: run.id,
+    scenario: context.receipt.scenario,
+    sourceCommit: run.head_sha,
     workflowId: workflow.id,
   });
 }
@@ -740,6 +869,10 @@ async function compiledRailwayStripeDisabledPaymentAdapter(context) {
   return verifyRailwayStripeDisabledPaymentEvidence(context);
 }
 
+async function compiledGitHubIncidentRehearsalAdapter(context) {
+  return verifyGitHubIncidentRehearsalEvidence(context);
+}
+
 export const compiledProviderAdapters = Object.freeze({
   "github-production-synthetic": freezeAdapterDefinition({
     allowedProviders: ["github-actions"],
@@ -757,55 +890,55 @@ export const compiledProviderAdapters = Object.freeze({
     allowedProviders: ["sentry"],
     allowedReceiptTypes: ["paging-delivery-test"],
     requiredCredentials: ["RIVT_EVIDENCE_SENTRY_TOKEN"],
-    verify: unsupportedProviderAdapter,
+    verify: unsupportedProviderAdapter("PROVIDER_DELIVERY_NOT_OBSERVABLE"),
   }),
   "private-route-delivery": freezeAdapterDefinition({
     allowedProviders: ["private-route-provider"],
     allowedReceiptTypes: ["private-route-delivery-test"],
     requiredCredentials: ["RIVT_EVIDENCE_PRIVATE_ROUTE_TOKEN"],
-    verify: unsupportedProviderAdapter,
+    verify: unsupportedProviderAdapter("PRIVATE_ROUTE_PROVIDER_REQUIRED"),
   }),
   "incident-rehearsal": freezeAdapterDefinition({
-    allowedProviders: ["incident-rehearsal"],
+    allowedProviders: ["github-actions"],
     allowedReceiptTypes: ["incident-rehearsal-test"],
-    requiredCredentials: [],
-    verify: unsupportedProviderAdapter,
+    requiredCredentials: ["RIVT_EVIDENCE_GITHUB_TOKEN"],
+    verify: compiledGitHubIncidentRehearsalAdapter,
   }),
   "backup-schedule": freezeAdapterDefinition({
     allowedProviders: ["backup-provider"],
     allowedReceiptTypes: ["provider-backup-schedule"],
     requiredCredentials: ["RIVT_EVIDENCE_BACKUP_TOKEN"],
-    verify: unsupportedProviderAdapter,
+    verify: unsupportedProviderAdapter("BACKUP_PROVIDER_SELECTION_REQUIRED"),
   }),
   "backup-completion": freezeAdapterDefinition({
     allowedProviders: ["backup-provider"],
     allowedReceiptTypes: ["provider-backup-completion"],
     requiredCredentials: ["RIVT_EVIDENCE_BACKUP_TOKEN"],
-    verify: unsupportedProviderAdapter,
+    verify: unsupportedProviderAdapter("BACKUP_PROVIDER_SELECTION_REQUIRED"),
   }),
   "backup-alert-delivery": freezeAdapterDefinition({
     allowedProviders: ["backup-provider"],
     allowedReceiptTypes: ["provider-alert-delivery-test"],
     requiredCredentials: ["RIVT_EVIDENCE_BACKUP_TOKEN"],
-    verify: unsupportedProviderAdapter,
+    verify: unsupportedProviderAdapter("BACKUP_ALERT_DELIVERY_SEAM_REQUIRED"),
   }),
   "backup-retention": freezeAdapterDefinition({
     allowedProviders: ["backup-provider"],
     allowedReceiptTypes: ["provider-retention-policy"],
     requiredCredentials: ["RIVT_EVIDENCE_BACKUP_TOKEN"],
-    verify: unsupportedProviderAdapter,
+    verify: unsupportedProviderAdapter("BACKUP_PROVIDER_SELECTION_REQUIRED"),
   }),
   "backup-failure-domain": freezeAdapterDefinition({
     allowedProviders: ["failure-domain-review"],
     allowedReceiptTypes: ["provider-failure-domain-verification"],
     requiredCredentials: [],
-    verify: unsupportedProviderAdapter,
+    verify: unsupportedProviderAdapter("BACKUP_FAILURE_DOMAIN_PROOF_REQUIRED"),
   }),
   "backup-restore": freezeAdapterDefinition({
     allowedProviders: ["restore-provider"],
     allowedReceiptTypes: ["provider-restore-verification"],
     requiredCredentials: ["RIVT_EVIDENCE_BACKUP_TOKEN"],
-    verify: unsupportedProviderAdapter,
+    verify: unsupportedProviderAdapter("BACKUP_RESTORE_PROOF_SEAM_REQUIRED"),
   }),
   "railway-stripe-disabled-payment": freezeAdapterDefinition({
     allowedProviders: ["railway-stripe"],

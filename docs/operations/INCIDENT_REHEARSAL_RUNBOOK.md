@@ -1,6 +1,6 @@
 # RIVT Incident Rehearsal Runbook
 
-Run this rehearsal before any named customer cohort and repeat it at least every 30 days during Gate A. The goal is to prove that RIVT can detect, triage, communicate, protect users, recover, and record evidence without improvising.
+Run this rehearsal before any named customer cohort and repeat it at least every 30 days during Gate A. The goal is to prove that RIVT can detect, triage, communicate, protect users, recover, and record evidence without improvising. The checked-in incident policy declares only the expected control. A real rehearsal result belongs in a separately protected provider-evidence revision and must be approved afterward; do not paste an observed result or a later approval into source policy.
 
 ## Rehearsal Preconditions
 
@@ -114,23 +114,29 @@ Copy this into `docs/delivery/DEPLOYMENT_LEDGER.md` or a dated incident note aft
 
 ## Updating The Gate
 
-After a passed rehearsal, update `docs/operations/incident-routing.json`:
+Do **not** edit `docs/operations/incident-routing.json` to claim that the
+rehearsal passed. That file is immutable source intent `S` and pins the exact
+control, adapter, provider, scenario, and commander role.
 
-```json
-{
-  "status": "passed",
-  "completedAt": "YYYY-MM-DDTHH:mm:ss.sssZ",
-  "scenario": "public-health-provider-failure",
-  "commander": "Name",
-  "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#incident-rehearsal---yyyy-mm-dd"
-}
-```
+After a separately authorized rehearsal:
 
-Then run:
+1. Preserve the GitHub Actions workflow/run identifiers and sanitized receipt
+   in the protected evidence revision `E` at the plan-bound path.
+2. Require the `incident-rehearsal` adapter to verify the active dedicated
+   workflow, protected default branch, exact source commit, exact
+   `workflow_dispatch` run title, one successful `rehearsal` job, and every
+   critical step.
+3. Record incident, recovery, and payment approvals plus any launch-hold
+   decision only in a later protected approval revision `A`. Approvals must
+   postdate `E` and bind the exact materialized configuration digests.
+4. Run the provider-evidence gate and then:
 
 ```text
 npm run incident:readiness -- --json
 npm run launch:readiness -- --json
 ```
 
-Only use `--require-ready` after provider, paging, support-hours, and approval fields are also complete.
+Only use `--require-ready` after every provider receipt, paging/private-route
+delivery proof, recovery control, post-evidence approval, and explicit
+launch-hold decision is complete. A green rehearsal alone cannot clear the
+hold or make RIVT launch-ready.
