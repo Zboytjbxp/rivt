@@ -57,7 +57,7 @@ import {
   applySnapshotToTarget,
   restoreLogicalBackupArtifact,
 } from "../scripts/restore-logical-backup-artifact.js";
-import { completeInventory } from "../scripts/restore-drill.js";
+import { completeInventory, verifyRestoreDrill } from "../scripts/restore-drill.js";
 import { backupKeyIdReceipt } from "../scripts/backup-key-id.js";
 
 const snapshot = {
@@ -658,6 +658,13 @@ test("restore accepts only explicit strict active and previous keys", () => {
   assert.throws(
     () => strictRestoreEncryptionSecrets({ BACKUP_ENCRYPTION_KEY: "human-passphrase" }),
     /exactly 32 random bytes/,
+  );
+  assert.throws(
+    () => strictRestoreEncryptionSecrets({
+      BACKUP_ENCRYPTION_KEY: active,
+      BACKUP_ENCRYPTION_KEY_PREVIOUS: active,
+    }),
+    /must be different/,
   );
 });
 
@@ -1358,16 +1365,52 @@ test("freshness verifier binds provider controls to the newest current version",
   assert.equal(result.versionId, "4_zversion");
   assert.equal(result.sha256, fixture.sha256);
 
-  const previousKeyResult = await verifyLogicalBackup({
-    env: {
-      ...destinationEnv,
-      BACKUP_ENCRYPTION_KEY: "2".repeat(64),
-      BACKUP_ENCRYPTION_KEY_PREVIOUS: "1".repeat(64),
-    },
-    now: () => currentTime,
-    s3ClientFactory: () => client,
-  });
-  assert.equal(previousKeyResult.ok, true);
+  assert.equal(result.encryptionKeyMode, "active-only");
+
+  await assert.rejects(
+    () => verifyLogicalBackup({
+      env: {
+        ...destinationEnv,
+        BACKUP_ENCRYPTION_KEY: "2".repeat(64),
+        BACKUP_ENCRYPTION_KEY_PREVIOUS: "1".repeat(64),
+      },
+      now: () => currentTime,
+      s3ClientFactory: () => client,
+    }),
+    (error) => error.code === "BACKUP_OBJECT_INVALID",
+  );
+});
+
+test("named restore drill rejects an artifact encrypted by the previous key", async () => {
+  const fixture = protectedArtifactFixture({ secret: "1".repeat(64) });
+  const restoreStorage = Object.fromEntries(
+    Object.entries(destinationEnv).map(([name, value]) => [name.replace("BACKUP_DESTINATION", "RESTORE_SOURCE"), value]),
+  );
+  let targetOpened = false;
+
+  await assert.rejects(
+    () => verifyRestoreDrill({
+      env: {
+        ...restoreStorage,
+        RESTORE_DATABASE_URL: "postgresql://restore:secret@restore.example.test/rivt",
+        RESTORE_SOURCE_DATABASE_URL: "postgresql://reader:secret@source.example.test/rivt",
+        CONFIRM_RESTORE_TARGET_ISOLATED: "true",
+        RESTORE_BACKUP_S3_KEY: "postgres/daily/artifact.json.gz.aes256gcm",
+        RESTORE_BACKUP_S3_VERSION_ID: "4_zversion",
+        RESTORE_BACKUP_SHA256: fixture.sha256,
+        BACKUP_ENCRYPTION_KEY: "2".repeat(64),
+        BACKUP_ENCRYPTION_KEY_PREVIOUS: "1".repeat(64),
+      },
+      applyMigrations: false,
+      s3ClientFactory: () => freshnessClientForFixture(fixture),
+      poolFactory: () => {
+        targetOpened = true;
+        throw new Error("target must remain unopened");
+      },
+    }),
+    (error) => error.code === "BACKUP_OBJECT_INVALID",
+  );
+  assert.equal(targetOpened, false);
 });
 
 test("freshness verifier rejects a forged protected envelope without exposing secret material", async () => {
@@ -1449,6 +1492,7 @@ test("newest backup selection and sanitized failures do not expose credentials o
     ageHours: 1,
     retentionDays: 30,
     retentionUntil: "2026-09-01T00:00:00.000Z",
+    encryptionKeyMode: "active-only",
     durationMs: 10,
   });
   const serializedSuccess = JSON.stringify(success);
@@ -1457,6 +1501,7 @@ test("newest backup selection and sanitized failures do not expose credentials o
   }
   assert.match(success.destinationIdentitySha256, /^[a-f0-9]{64}$/);
   assert.match(success.artifactIdentitySha256, /^[a-f0-9]{64}$/);
+  assert.equal(success.encryptionKeyMode, "active-only");
 });
 
 test("newest backup selection follows version pagination instead of trusting the first lexicographic page", async () => {

@@ -4,6 +4,7 @@ import {
   assertRestoreUsableSnapshot,
   decryptSnapshot,
   destinationS3Config,
+  encryptionKeyIdFromSecret,
   isDirectExecution,
   maxBackupAgeHoursFromEnv,
   newestBackupVersion,
@@ -26,6 +27,7 @@ export async function verifyLogicalBackup({
   const retentionDays = retentionDaysFromEnv(env);
   const maxAgeHours = maxBackupAgeHoursFromEnv(env);
   const encryptionSecrets = strictRestoreEncryptionSecrets(env);
+  const activeKeyId = encryptionKeyIdFromSecret(encryptionSecrets.active);
   const currentTime = now();
   const client = s3ClientFactory(destination);
   const protection = await verifyBucketProtection(client, destination, retentionDays);
@@ -42,11 +44,12 @@ export async function verifyLogicalBackup({
     key: newest.Key,
     versionId: newest.VersionId,
   }, {
+    expectedKeyId: activeKeyId,
     retentionDays,
     now: currentTime,
   });
   try {
-    const snapshot = decryptSnapshot(verified.envelope, encryptionSecrets);
+    const snapshot = decryptSnapshot(verified.envelope, encryptionSecrets.active);
     assertRestoreUsableSnapshot(snapshot, verified);
   } catch (error) {
     if (error instanceof BackupConfigurationError && error.code === "BACKUP_OBJECT_INVALID") throw error;
@@ -82,6 +85,7 @@ export async function verifyLogicalBackup({
     retentionUntil: verified.retentionUntil,
     retentionDays: verified.retentionDays,
     lifecycleRuleId: protection.lifecycleRuleId,
+    encryptionKeyMode: "active-only",
     durationMs: Date.now() - startedAt,
   };
 }

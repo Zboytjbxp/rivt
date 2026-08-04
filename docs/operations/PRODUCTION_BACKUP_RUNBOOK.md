@@ -105,10 +105,12 @@ for the selected provider immediately before approval.
    `BACKUP_ENCRYPTION_KEY_PREVIOUS`. Run `npm run backup:verify` through the
    freshness workflow with its separate
    monitor-reader provider credentials, not with the writer credential. It
-   must identify a current immutable version, recompute its digest,
-   AEAD-authenticate and decrypt it with the configured current/previous keys,
-   validate its restore structure and source-commit binding, and report age
-   <=14 hours. Only the sanitized receipt may be retained or published.
+   must identify a current immutable version, recompute its digest, require
+   that artifact's key identity to match the active key, AEAD-authenticate and
+   decrypt it with the active key only, validate its restore structure and
+   source-commit binding, and report age <=14 hours with
+   `encryptionKeyMode: active-only`. Only the sanitized receipt may be retained
+   or published.
 5. Confirm the job exited and no connection or process remains active.
 6. Let the next scheduled run complete before treating cadence as observed.
 
@@ -135,9 +137,13 @@ must be recorded separately.
    production/source database identity used by the isolation check.
 4. Set `CONFIRM_RESTORE_TARGET_ISOLATED=true` only after manually comparing the
    source and target host/port/database identities.
-5. Run `npm run restore:drill -- --apply-migrations` once. It invokes the exact
-   artifact restore and then verifies every supported public table, row count,
-   canonical content digest, and sequence in the same process.
+5. Run `npm run restore:drill -- --apply-migrations` once. The drill always
+   requires the selected artifact to match and decrypt with the active key;
+   an artifact requiring `BACKUP_ENCRYPTION_KEY_PREVIOUS` is rejected before
+   the target database is opened. It then verifies every supported public
+   table, row count, canonical content digest, and sequence in the same
+   process. Preserve only a sanitized receipt that reports
+   `encryptionKeyMode: active-only`.
 6. Record its separate measured restore, verification, and combined durations.
    Combined time must be <=240 minutes. Never substitute an operator-entered
    duration or disable strict comparison.
@@ -149,9 +155,12 @@ must be recorded separately.
 - Generate a new random 32-byte active key; never use a sentence/password.
 - Move the prior active value to `BACKUP_ENCRYPTION_KEY_PREVIOUS` only for the
   bounded compatibility window.
-- Create and restore-test a new artifact under the new key.
+- Create a new artifact under the new key, verify it in active-only mode, and
+  restore-test that exact version in the active-only restore drill.
 - Remove the prior key only after every retained artifact that still requires
   it has expired or an explicitly approved alternate recovery copy exists.
+  A verification or restore receipt reporting `active-or-previous` is not
+  evidence that qualifies the predecessor for removal.
 - Never store active and prior keys in source, documentation, artifacts, issue
   bodies, workflow output, or the web-service environment.
 

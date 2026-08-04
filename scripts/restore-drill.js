@@ -68,6 +68,7 @@ export async function verifyRestoreDrill({
   const restoreResult = await restoreLogicalBackupArtifact({
     env,
     applyMigrations,
+    requireActiveKey: true,
     poolFactory,
     ...(s3ClientFactory ? { s3ClientFactory } : {}),
   });

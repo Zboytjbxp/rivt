@@ -14,6 +14,7 @@ import {
   decryptSnapshot,
   diffCounts,
   diffTableDigests,
+  encryptionKeyIdFromSecret,
   enforceRecoveryRto,
   foreignKeyDependencies,
   insertBatch,
@@ -107,6 +108,7 @@ async function assertRuntimeRestoreIsolation(targetPool, protectedUrls, poolFact
 export async function restoreLogicalBackupArtifact({
   env = process.env,
   applyMigrations = process.argv.includes("--apply-migrations"),
+  requireActiveKey = false,
   poolFactory = poolFor,
   s3ClientFactory = s3ClientForConfig,
 } = {}) {
@@ -140,6 +142,9 @@ export async function restoreLogicalBackupArtifact({
   const retentionDays = retentionDaysFromEnv(env);
   const rtoMinutes = recoveryRtoMinutesFromEnv(env);
   const encryptionSecrets = strictRestoreEncryptionSecrets(env);
+  const expectedKeyId = requireActiveKey
+    ? encryptionKeyIdFromSecret(encryptionSecrets.active)
+    : undefined;
 
   const s3 = s3ClientFactory(source);
   await verifyBucketProtection(s3, source, retentionDays);
@@ -147,13 +152,16 @@ export async function restoreLogicalBackupArtifact({
     key: objectKey,
     versionId,
   }, {
+    ...(expectedKeyId ? { expectedKeyId } : {}),
     expectedSha256,
     retentionDays,
   });
-  const snapshot = decryptSnapshot(protectedArtifact.envelope, {
-    active: encryptionSecrets.active,
-    previous: encryptionSecrets.previous,
-  });
+  const snapshot = decryptSnapshot(
+    protectedArtifact.envelope,
+    requireActiveKey
+      ? encryptionSecrets.active
+      : { active: encryptionSecrets.active, previous: encryptionSecrets.previous },
+  );
   assertRestoreUsableSnapshot(snapshot, protectedArtifact);
 
   const targetPool = poolFactory(targetUrl);
@@ -233,6 +241,7 @@ export async function restoreLogicalBackupArtifact({
         contentDigest,
         contentDiffCount: contentDiffs.length,
         strictCounts: true,
+        encryptionKeyMode: requireActiveKey ? "active-only" : "active-or-previous",
         ...recoveryDurations,
         durationMs: recoveryDurations.combinedDurationMs,
       };

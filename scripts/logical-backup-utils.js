@@ -88,6 +88,7 @@ export function sanitizedSuccess(result) {
     "pendingMigrations",
     "strictCounts",
     "strictCompare",
+    "encryptionKeyMode",
     "contentDigest",
     "contentDiffCount",
   ];
@@ -947,9 +948,17 @@ export function requireStrictActiveBackupEncryptionSecret(env = process.env) {
 
 export function strictRestoreEncryptionSecrets(env = process.env) {
   const active = requireConfiguredEnv("BACKUP_ENCRYPTION_KEY", env);
-  strictEncryptionKeyFromSecret(active);
+  const activeKey = strictEncryptionKeyFromSecret(active);
   const previous = env.BACKUP_ENCRYPTION_KEY_PREVIOUS?.trim() ?? "";
-  if (previous) strictEncryptionKeyFromSecret(previous);
+  if (previous) {
+    const previousKey = strictEncryptionKeyFromSecret(previous);
+    if (crypto.timingSafeEqual(activeKey, previousKey)) {
+      throw new BackupConfigurationError(
+        "BACKUP_CONFIG_INVALID",
+        "BACKUP_ENCRYPTION_KEY and BACKUP_ENCRYPTION_KEY_PREVIOUS must be different keys.",
+      );
+    }
+  }
   return { active, previous };
 }
 
