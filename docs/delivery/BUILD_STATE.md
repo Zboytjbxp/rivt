@@ -2,9 +2,9 @@
 
 Last updated: 2026-08-04 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Emergency operator-output containment under the active production credential-containment hold; the feature release, Stage 1, ACH activation, and public launch remain paused.
+Current phase: Final release-candidate consolidation under the active production credential-containment hold; the feature release, Stage 1, ACH activation, and public launch remain paused.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
-Repository branch: `codex/operator-secret-output-containment` (Packet 98 head `87048577fe69ce78b9ae0c9fb04d4c94f2cba4b4`)
+Repository branch: `codex/final-release-candidate-20260804` (integration base and current live source `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b`; final candidate commit and verification pending)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -240,6 +240,29 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   rehearsal's protected-branch guard cannot pass. No bypass is authorized.
 - The feature release remains separate from containment and is not authorized
   by this packet.
+
+Backup-scheduler preparation is local and unactivated on
+`codex/backup-scheduler-config-hotfix`. The dedicated Railway config now points
+to a bounded scheduler wrapper rather than the web server: 45-minute default
+runtime, 60-minute maximum, graceful termination followed by forced stop, and
+a final bounded fallback if a child refuses to exit. Host shutdown signals are
+forwarded to the backup child, and a PostgreSQL advisory lock prevents
+duplicate runs. Backup creation also
+requires configured `SOURCE_COMMIT` to equal Railway's provider-set
+`RAILWAY_GIT_COMMIT_SHA` before any database or storage client opens. The
+runbook requires the custom `/railway.backup.json` path, no public domain,
+reviewed CPU/RAM limits, and records that this is PostgreSQL-only recovery;
+application photos/documents still need an independent immutable-backup
+packet. Local build, lint, security lint, 226 unit/frontend tests, all three
+browser E2E journeys, and production dependency audit pass. Three non-database
+integration checks passed and 20 PostgreSQL checks skipped because the clean
+worktree has no test-database credential; earlier Linux CI evidence does not
+substitute for final provider acceptance. Nothing in this preparation was
+merged, pushed, deployed, scheduled, connected to AWS, or billed. AWS account
+creation remains blocked under support case `178585620400417`. The approved
+provider plan explicitly excludes backup-object deletion, while the verifier
+requires a post-retention lifecycle rule; that rule needs a separate,
+plain-language deletion approval before scheduler activation.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
