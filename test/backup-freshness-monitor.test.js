@@ -232,8 +232,10 @@ test("workflow keeps verification, alert testing, and issue mutation separated a
   assert.match(workflow, /cron: "37 \* \* \* \*"/);
   assert.match(workflow, /queue: max/);
   assert.match(workflow, /environment: production-backup-monitor/);
-  assert.match(workflow, /ref: \$\{\{ vars\.BACKUP_EXPECTED_SOURCE_COMMIT \}\}/);
-  assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SOURCE_COMMIT"/);
+  assert.match(workflow, /ref: refs\/heads\/master/);
+  assert.match(workflow, /git merge-base --is-ancestor "\$EXPECTED_SOURCE_COMMIT" "\$protected_master_commit"/);
+  assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$protected_master_commit"/);
+  assert.doesNotMatch(workflow, /ref: \$\{\{ vars\.BACKUP_EXPECTED_SOURCE_COMMIT \}\}/);
   assert.match(workflow, /BACKUP_MONITOR_S3_ACCESS_KEY_ID/);
   assert.match(workflow, /BACKUP_MONITOR_S3_SECRET_ACCESS_KEY/);
   assert.match(workflow, /unset BACKUP_DESTINATION_S3_ENDPOINT[\s\S]*BACKUP_ENCRYPTION_KEY/);

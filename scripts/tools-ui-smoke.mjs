@@ -1676,15 +1676,21 @@ async function runToolsFlow(page, viewportName) {
   assert.equal(await page.getByLabel("Recipient phone").inputValue(), "", "a new invoice must not retain the prior recipient phone");
   await page.goto(`${baseUrl}/app/tools?tool=invoice&record=${encodeURIComponent(continuityInvoiceRecord.localId)}`, { waitUntil: "networkidle" });
   await page.getByRole("heading", { name: "Invoice", exact: true }).first().waitFor({ timeout: 15_000 });
-  await page.getByText("Loaded from your RIVT account.", { exact: true }).waitFor({ timeout: 15_000 });
+  const linkedDraftStatus = page.locator('.v2-tool-action-dock [data-save-state="saved"]');
+  await linkedDraftStatus.waitFor({ state: "attached", timeout: 15_000 });
+  assert.match(await linkedDraftStatus.textContent(), /Loaded from your RIVT account\./);
   const linkedInvoiceSteps = page.getByRole("navigation", { name: "Invoice draft steps" });
   await linkedInvoiceSteps.getByRole("button", { name: "2 Customer" }).click();
   assert.equal(await page.getByLabel("Bill to").inputValue(), "Continuity Customer", "a linked invoice URL should restore the selected account record");
   assert.equal(new URL(page.url()).searchParams.get("record"), continuityInvoiceRecord.localId, "the invoice URL should retain its document identity");
   await page.getByLabel("Bill to").fill("Continuity Customer Updated");
-  await page.getByText("Saved on this device. Save to sync these changes to your RIVT account.", { exact: true }).waitFor({ timeout: 15_000 });
+  const changedDraftStatus = page.locator('.v2-tool-action-dock [data-save-state="idle"]');
+  await changedDraftStatus.waitFor({ state: "attached", timeout: 15_000 });
+  assert.match(await changedDraftStatus.textContent(), /Saved on this device\. Save to sync these changes to your RIVT account\./);
   await page.getByLabel("Invoice actions").getByRole("button", { name: "Save draft", exact: true }).click();
-  await page.getByText("Draft saved to your RIVT account.", { exact: true }).waitFor({ timeout: 15_000 });
+  const savedDraftStatus = page.locator('.v2-tool-action-dock [data-save-state="saved"]');
+  await savedDraftStatus.waitFor({ state: "attached", timeout: 15_000 });
+  assert.match(await savedDraftStatus.textContent(), /Draft saved to your RIVT account\./);
   await page.waitForLoadState("networkidle");
   if (viewportName !== "se") {
     await page.goto(`${baseUrl}/app/tools?tool=invoice&activeWork=${activeWorkItem.id}`, { waitUntil: "networkidle" });
