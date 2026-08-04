@@ -34,7 +34,7 @@ const scope = Object.freeze({
 const incidentRehearsalWorkflow = fs.readFileSync(
   path.join(process.cwd(), ".github", "workflows", "incident-rehearsal.yml"),
   "utf8",
-);
+).replace(/\r\n/gu, "\n");
 const liveGateASmokeSource = fs.readFileSync(
   path.join(process.cwd(), "scripts", "live-gate-a-hardening.js"),
   "utf8",

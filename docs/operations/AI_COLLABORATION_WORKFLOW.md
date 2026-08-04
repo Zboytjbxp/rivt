@@ -188,6 +188,21 @@ Important distinction:
 
 ## Tooling Hygiene
 
+### Production provider output
+
+Every AI and operator must treat provider output as potentially secret-bearing.
+Do not enumerate, export, print, redirect, or capture a complete production
+environment. `railway environment config` and every `railway
+variable`/`railway variables` enumeration or export are prohibited against
+production, including read-only and JSON forms. Never put a credential in a
+CLI argument or shell command.
+
+Railway activation evidence must use the sanitized snapshot path documented in
+`RAILWAY_ACTIVATION_RUNBOOK.md`. A named credential change must occur one at a
+time through an authenticated provider or Railway form. If a secret appears in
+tool output, stop, do not repeat or store it, preserve the launch hold, and
+follow `CREDENTIAL_ROTATION_RUNBOOK.md`.
+
 If an AI-specific branch is reset or rebased onto fresh `origin/master`, old remote-tracking refs can create false alarms in local hooks.
 
 Before trusting a hook failure about commit ownership or verification:

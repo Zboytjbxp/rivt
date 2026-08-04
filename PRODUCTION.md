@@ -147,7 +147,7 @@ Production activation requires:
 
 1. Confirm the platform and every connected merchant can request the `us_bank_account_ach_payments` capability.
 2. Create a Connect webhook endpoint at `https://rivt.pro/api/stripe/connect/webhook` with events from connected accounts enabled.
-3. Subscribe to `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.dispute.created`, and `charge.refunded`.
+3. Subscribe to the nine Accounts v2 settlement events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.dispute.created`, and `charge.refunded`. Do not add legacy `account.updated` to this settlement destination; RIVT handles that event only for any retained Accounts v1 record, while current merchant readiness comes from the Accounts v2 configuration flow.
 4. Store that endpoint's signing secret in `STRIPE_CONNECT_WEBHOOK_SECRET`. Do not reuse `STRIPE_WEBHOOK_SECRET`.
 5. Exercise onboarding and one ACH lifecycle in Stripe test mode, including asynchronous success and failure, before setting `STRIPE_CONNECT_ACH_ENABLED=true` in production.
 6. After activation, verify the public payment return page discloses processing honestly and that signed events—not the browser redirect—change invoice paid state.
