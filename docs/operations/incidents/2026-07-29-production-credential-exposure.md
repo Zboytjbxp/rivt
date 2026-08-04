@@ -67,8 +67,8 @@ deletion, public launch, or feature-release deployment.
 
 The safe operational order is PostgreSQL, Stripe API and both webhook secrets,
 Resend, Google OAuth, distinct authentication/rate-limit peppers, VAPID, then
-backup encryption. Provider rotations and evidence are pending; this source
-record does not claim they occurred.
+backup encryption. Rotation is proceeding one class at a time; only the
+classes with fresh recurrence evidence below are claimed complete.
 
 ## Potentially exposed credential classes
 
@@ -89,7 +89,7 @@ record does not claim they occurred.
 | Credential class | Current status |
 |---|---|
 | PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
-| Stripe API, billing webhook, and Connect webhook | Live API key and billing webhook signing secret rotated and verified on 2026-08-03; the exposed July API key is expired and the billing predecessor completed Stripe's one-hour retirement window. The Connected-accounts webhook replacement is deployed and verified; its predecessor remains temporarily usable only through Stripe's bounded one-hour overlap and is not yet claimed retired |
+| Stripe API, billing webhook, and Connect webhook | Live API key plus both webhook signing secrets rotated and verified on 2026-08-03; the exposed API key is expired and both webhook predecessors completed Stripe's one-hour retirement window. Fresh post-retirement probes and exact-source monitoring passed |
 | Resend | Pending sending-only replacement and owner-controlled proof delivery |
 | Google OAuth | Pending same-client replacement and owner-controlled sign-in proof |
 | Authentication metadata and rate-limit peppers | Pending distinct replacements and runtime verification |
@@ -283,9 +283,9 @@ not be read as closure of the recurrence.
   its provider-defined one-hour predecessor-expiry window. The replacement
   moved directly from Stripe's one-time reveal into Railway's masked
   `STRIPE_CONNECT_WEBHOOK_SECRET` editor without being printed to chat, shell
-  output, logs, or this record. Exactly one Railway variable was staged. The
-  predecessor remains available only during the bounded provider overlap and
-  is not yet claimed retired.
+  output, logs, or this record. Exactly one Railway variable was staged. At
+  cutover, the predecessor remained available only during the bounded provider
+  overlap and was not claimed retired before that window elapsed.
 - **Exact-source application pickup:** Railway's automatic variable-change
   deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
   policy. Explicit deployment `6152da11-1323-47a9-a258-d9013f040522`
@@ -303,12 +303,15 @@ not be read as closure of the recurrence.
   private-route checks fail-closed. Invoice bank payments remained
   `enabled: false`, `configured: false`, `webhookConfigured: true`, and
   `setup_required`.
-- **Retirement and recovery:** predecessor retirement remains pending until
-  Stripe's one-hour overlap ends. Until then, recovery is to correct or reroll
-  the replacement while the predecessor still verifies signatures. After the
-  provider confirms expiry, a fresh unique signed probe and exact-source
-  production monitor must pass before recurrence rotation is marked complete;
-  the retired predecessor must never be restored.
+- **Retirement and recovery:** after the one-hour overlap ended, the provider
+  destination showed one active masked signing-secret slot and no predecessor
+  or pending-expiry state. Post-retirement probe
+  `evt_rivt_connect_webhook_post_retirement_probe_1785812006253` returned HTTP
+  200 with `received: true` and `duplicate: false`. The exact-source production
+  monitor then passed again with all seven anonymous private routes
+  fail-closed. The Connected-accounts predecessor is retired and must never be
+  restored; recovery from a future failure is another fresh roll, not the
+  exposed secret.
 - **Interruption and cost:** the prior production instance remained available
   while Railway built the exact-source replacement; no interruption was
   observed. No service, database, bucket, plan, payment, or recurring resource

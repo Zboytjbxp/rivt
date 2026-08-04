@@ -1,5 +1,42 @@
 # Deployment Ledger
 
+## 2026-08-03 - Stripe Connect Webhook Recurrence Rotation
+
+- Approval: Michael's explicit 2026-08-03 emergency credential-rotation
+  authorization allowed one-class-at-a-time provider changes, no-charge Stripe
+  test deliveries, up to 30 minutes of cumulative interruption, and less than
+  US$2 of incremental cost. It did not authorize ACH, a real payment, customer
+  communication, customer-data deletion, public launch, or the feature release.
+- Scope: the live Connected-accounts event destination
+  `we_1TzS8YIz6JDg8LdaXdJA6Dzm` for
+  `https://rivt.pro/api/stripe/connect/webhook` retained its snapshot payload,
+  API version `2026-06-24.dahlia`, and exact nine-event selection. Only
+  `STRIPE_CONNECT_WEBHOOK_SECRET` changed.
+- Deployment: the automatic variable-change deployment was skipped by the CI
+  wait policy. Explicit Railway deployment
+  `6152da11-1323-47a9-a258-d9013f040522` succeeded from unchanged production
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3`; no feature release was
+  deployed.
+- Cutover proof: pre-retirement event
+  `evt_rivt_connect_webhook_rotation_probe_1785808354434` was accepted exactly
+  once. After Stripe's one-hour overlap ended, the provider showed one active
+  masked signing-secret slot with no predecessor or pending-expiry state, and
+  post-retirement event
+  `evt_rivt_connect_webhook_post_retirement_probe_1785812006253` was accepted
+  exactly once. Both were deliberately unknown event types that can create
+  only their immutable webhook idempotency/audit rows.
+- Final evidence: the exact-source production monitor passed with PostgreSQL
+  and S3-compatible storage healthy, all seven anonymous private checks
+  fail-closed, and invoice bank payments still `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+- Interruption and cost: no interruption was observed. No service, database,
+  bucket, plan, payment, or recurring resource was created. Only ordinary
+  Railway redeploy usage applies within the existing approval; no exact
+  provider cost is claimed.
+- Recovery boundary: the exposed predecessor must never be restored. A future
+  recovery uses another fresh Stripe roll while preserving the exact reviewed
+  destination scope and keeping ACH disabled.
+
 ## 2026-08-02 - Approved Same-Provider Logical Backup Refresh
 
 - Approval: Michael explicitly approved one fresh encrypted production logical
