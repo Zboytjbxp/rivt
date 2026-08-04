@@ -2193,6 +2193,50 @@ async function loadProjectInvoiceById(client, invoiceId, actor, { forUpdate = fa
   return result.rows[0];
 }
 
+const PROJECT_INVOICE_IMMUTABLE_PAYMENT_STATUSES = [
+  "processing",
+  "paid",
+  "partially_refunded",
+  "refunded",
+  "disputed",
+];
+
+async function projectInvoicePaymentMutationLock(client, invoiceId) {
+  return (await client.query(
+    `SELECT status
+     FROM project_invoice_payment_requests
+     WHERE invoice_id = $1
+       AND status = ANY($2::text[])
+     ORDER BY created_at DESC
+     LIMIT 1
+     FOR UPDATE`,
+    [invoiceId, PROJECT_INVOICE_IMMUTABLE_PAYMENT_STATUSES],
+  )).rows[0] ?? null;
+}
+
+function assertProjectInvoicePaymentMutable(paymentLock, action) {
+  if (!paymentLock) return;
+  if (paymentLock.status === "processing") {
+    throw new ApiError(
+      409,
+      "BANK_PAYMENT_PROCESSING",
+      `A bank payment is processing. Wait for Stripe to confirm it before ${action}.`,
+    );
+  }
+  if (paymentLock.status === "disputed") {
+    throw new ApiError(
+      409,
+      "BANK_PAYMENT_DISPUTED",
+      `This invoice has an unresolved bank-payment dispute and cannot be ${action}.`,
+    );
+  }
+  throw new ApiError(
+    409,
+    "INVOICE_PAYMENT_HISTORY_LOCKED",
+    `This invoice has settled or refunded bank-payment history and cannot be ${action}. Keep it unchanged and create a new invoice for new work.`,
+  );
+}
+
 async function loadProjectBundle(client, project, actor) {
   const [entries, media, submissions, resolutions, invoices] = await Promise.all([
     client.query(
@@ -4937,29 +4981,64 @@ app.patch("/api/v1/project-invoices/:id", requireV1AuthenticatedUser, requireV1A
   const result = await runIdempotentMutation(request, request.actor.account.id, `projects.invoice.status:${invoiceId}:${input.status}`, async (client) => {
     const invoice = await loadProjectInvoiceById(client, invoiceId, request.actor, { forUpdate: true });
     if (invoice.created_by_account_id !== request.actor.account.id) throw new ApiError(403, "PROJECT_INVOICE_AUTHOR_REQUIRED", "Only the invoice author can change its status.");
+    if (invoice.status === input.status) {
+      const [mapped] = await mapProjectInvoicesWithPayments(client, [invoice]);
+      return {
+        status: 200,
+        body: {
+          data: { invoice: mapped },
+          meta: { requestId: request.requestId, existing: true },
+        },
+      };
+    }
     if (invoice.status === "paid" && input.status !== "paid") throw new ApiError(409, "PROJECT_INVOICE_ALREADY_PAID", "A paid invoice cannot be changed here.");
-    if (input.status === "void") {
-      const activeOnlinePayment = await client.query(
-        `SELECT status FROM project_invoice_payment_requests
-         WHERE invoice_id = $1 AND status IN ('created', 'open', 'processing')
-         LIMIT 1`,
-        [invoiceId],
+    if (invoice.status === "void") {
+      throw new ApiError(409, "PROJECT_INVOICE_VOID", "A void invoice cannot be reopened. Create a new invoice for any correction.");
+    }
+    assertProjectInvoicePaymentMutable(
+      await projectInvoicePaymentMutationLock(client, invoiceId),
+      "changed",
+    );
+    const externalPayment = await client.query(
+      `SELECT id
+       FROM project_invoice_payments
+       WHERE invoice_id = $1
+       ORDER BY id
+       LIMIT 1
+       FOR UPDATE`,
+      [invoiceId],
+    );
+    if (externalPayment.rowCount && input.status !== "sent") {
+      throw new ApiError(
+        409,
+        "INVOICE_PAYMENT_HISTORY_LOCKED",
+        "This invoice has recorded payment history and cannot be returned to draft or voided. Create a new invoice for corrections.",
       );
-      if (activeOnlinePayment.rowCount) {
-        throw new ApiError(
-          409,
-          activeOnlinePayment.rows[0].status === "processing" ? "BANK_PAYMENT_PROCESSING" : "BANK_PAYMENT_LINK_ACTIVE",
-          activeOnlinePayment.rows[0].status === "processing"
-            ? "This invoice has an ACH payment processing and cannot be voided."
-            : "Cancel the active bank-payment link before voiding this invoice.",
-        );
-      }
+    }
+    const activeOnlinePayment = await client.query(
+      `SELECT status FROM project_invoice_payment_requests
+       WHERE invoice_id = $1 AND status IN ('created', 'open')
+       ORDER BY created_at DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [invoiceId],
+    );
+    if (activeOnlinePayment.rowCount && input.status !== "sent") {
+      throw new ApiError(
+        409,
+        "BANK_PAYMENT_LINK_ACTIVE",
+        "Cancel the active bank-payment link before returning this invoice to draft or voiding it.",
+      );
     }
     const updated = await client.query(
       `UPDATE project_invoices
        SET status = $2,
-           sent_at = CASE WHEN $2 = 'sent' AND sent_at IS NULL THEN now() ELSE sent_at END,
-           voided_at = CASE WHEN $2 = 'void' THEN now() ELSE voided_at END,
+           sent_at = CASE
+             WHEN $2 = 'sent' THEN COALESCE(sent_at, now())
+             WHEN $2 = 'draft' THEN NULL
+             ELSE sent_at
+           END,
+           voided_at = CASE WHEN $2 = 'void' THEN now() ELSE NULL END,
            updated_at = now()
        WHERE id = $1
        RETURNING *`,
@@ -5002,19 +5081,22 @@ app.post("/api/v1/project-invoices/:id/payments", requireV1AuthenticatedUser, re
   const result = await runIdempotentMutation(request, request.actor.account.id, `projects.invoice.payment:${invoiceId}`, async (client) => {
     const invoice = await loadProjectInvoiceById(client, invoiceId, request.actor, { forUpdate: true });
     if (invoice.status === "void") throw new ApiError(409, "PROJECT_INVOICE_VOID", "A void invoice cannot receive a payment record.");
+    assertProjectInvoicePaymentMutable(
+      await projectInvoicePaymentMutationLock(client, invoiceId),
+      "changed by recording another payment",
+    );
     const activeOnlinePayment = await client.query(
       `SELECT status FROM project_invoice_payment_requests
-       WHERE invoice_id = $1 AND status IN ('created', 'open', 'processing')
+       WHERE invoice_id = $1 AND status IN ('created', 'open')
+       ORDER BY created_at DESC
        LIMIT 1`,
       [invoiceId],
     );
     if (activeOnlinePayment.rowCount) {
       throw new ApiError(
         409,
-        activeOnlinePayment.rows[0].status === "processing" ? "BANK_PAYMENT_PROCESSING" : "BANK_PAYMENT_LINK_ACTIVE",
-        activeOnlinePayment.rows[0].status === "processing"
-          ? "A bank payment is processing. Wait for Stripe to confirm it before recording another payment."
-          : "Cancel the active bank-payment link before recording an external payment.",
+        "BANK_PAYMENT_LINK_ACTIVE",
+        "Cancel the active bank-payment link before recording an external payment.",
       );
     }
     const paymentTotal = (await client.query(
@@ -5533,6 +5615,7 @@ registerToolRecordRoutes({
   runIdempotentMutation,
   sendIdempotentResult,
   sendTransactionalEmail,
+  createInAppNotification,
   loadDocumentBrandForDelivery: (actor) => loadDocumentBrandForDelivery(database, actor, {
     s3Client,
     s3Bucket,

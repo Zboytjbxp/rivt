@@ -1,5 +1,79 @@
 # Deployment Ledger
 
+## 2026-07-31 - Credential-Incident Provider Review Correction (No Deployment)
+
+- Branch/source: `codex/money-integrity-canonical-invoices` at source
+  `b0151bce6f481a4ccf39eb2726ba208066e874b4` before this documentation-only
+  correction.
+- Review completed: `2026-07-31T13:07:24.122Z` by Codex under Michael's
+  read-only incident authorization, against deployed production source
+  `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`.
+- Environment: read-only review of existing production/provider evidence; no
+  application deployment, provider configuration change, customer-data write,
+  payment, new service, or paid resource.
+- Reviewed/bounded: Stripe Workbench API/event/key/suspicious-activity views;
+  Resend's available 15-day API/email logs and key inventory; Sentry provider
+  audit/usage; Railway deployment history; retained PostgreSQL logs; and
+  aggregate read-only billing, subscription, entitlement, invoice, payment-
+  request, direct-payment, Connect, OAuth-identity, and audit-ledger state.
+- Result: no identified misuse indicator within the named retained bounds.
+  Stripe's platform-account view showed only the controlled replacement-key
+  account read, no `Your account` event in the bounded interval, and zero
+  suspicious-activity cases. Within the named aggregate production queries,
+  the only matching event rows were three documented rotation probes; no
+  additional application-recorded webhook row or nonzero consistency counter
+  was found. Resend showed the expected restriction check, proof delivery, and
+  older sends consistent with documented pre-exposure tests. These tables and
+  provider views cannot reconstruct an action they did not log or retain.
+- Stripe destination follow-up: at `2026-07-31T13:33:28.9236604Z`, the live
+  production destination inventory showed the ACH settlement destination scoped
+  to `Your account`; no `Connected accounts` destination was configured. The
+  selected destination's Event deliveries view reported `No event deliveries
+  found`, and its Overview reported total `0` for `This week`. This bounds the
+  current configured destination view; it does not prove that no Connect-side
+  activity occurred outside evidence Stripe retained or logged.
+- Railway administrator-history follow-up: completed read-only at
+  `2026-07-31T19:10:46.1221413Z` against the existing Pro workspace Audit Logs.
+  The complete `2026-07-29T16:00:00Z` through `2026-07-30T16:00:00Z` filtered
+  view was paged to its oldest entry. In the exact exposure window, the log
+  contained five `SSHSession.authenticated` events and nine
+  `Deployment.created` events, all attributed to the founder-controlled
+  account. No other actor,
+  variable/configuration change, credential regeneration, service/bucket/
+  volume change, or tunnel event appeared in-window. A representative
+  in-window SSH event matched the source IP and SSH-key fingerprint of a
+  controlled July 31 maintenance event, supporting but not proving same-
+  operator attribution. The documented database-password and bucket-
+  credential regenerations appear immediately after the repository upper
+  bound. No unexplained Railway administrator event was identified within the
+  retained reviewed window. Matching account/connection identity does not
+  prove that valid credentials were never compromised, and this review cannot
+  prove an action outside Railway's logged event set.
+- Google Cloud audit/activity follow-up: completed read-only at
+  `2026-07-31T19:32:50.0134267Z` under the founder-controlled support account
+  for project `rivt-499402`. An exact exposure-window Logs Explorer query from
+  `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` returned zero retained
+  entries across the Admin Activity, Data Access, System Event, and Policy
+  Denied log IDs. A separate post-window containment query through
+  `2026-07-30T15:00:00Z` returned nine Client Auth Configuration API events for
+  the same OAuth client: three `AddClientSecret`, three `UpdateClientSecret`,
+  and three `DeleteClientSecret`, all attributed to the founder-controlled
+  support account and consistent with the documented replacement/cleanup
+  sequence. No other actor or method appeared in that query. This bounds only
+  the queried retained audit entries; it does not prove no OAuth code/token
+  exchange, no action outside logged event types, or no historical access, and
+  it does not infer that Data Access logging was complete.
+- Correction: Michael's exact `2026-07-31T12:22:03.895Z` statement is preserved
+  in the incident record. Later review found its blanket provider-review premise
+  incomplete; only the PostgreSQL/direct-bucket historical limitation remains
+  valid closure evidence from that first statement.
+- Owner-decision follow-up: at `2026-07-31T19:39:34.5524830Z`, Michael accepted
+  the three unobservable VAPID, offline backup-key, and offline authentication-
+  pepper forensic limits. The exact statement is preserved in the incident
+  record. It does not prove no misuse, authorize deployment, or approve cost.
+- Launch/cost boundary: `ACTIVE_LAUNCH_HOLD` and the Railway Stage 1 pause remain
+  active. No prior cost/configuration approval is reused.
+
 ## 2026-07-31 - Sentry DSN Rotation and Retirement
 
 - Production source commit:
@@ -47,9 +121,9 @@
   preserves final-boundary Sentry redaction. The disabled prior key must never
   be restored; any rollback keeps the replacement DSN.
 - Launch boundary: Sentry credential rotation is closed. The broader incident
-  and `ACTIVE_LAUNCH_HOLD` remain open until the final provider-review
-  synthesis, explicit acceptance of unavailable historical PostgreSQL and
-  object-access evidence, and a fresh Railway Stage 1 re-review and approval.
+  and `ACTIVE_LAUNCH_HOLD` remain open. PostgreSQL/direct-bucket historical
+  limits and the three unobservable-secret decisions are valid owner-accepted
+  closure evidence; a fresh Railway Stage 1 re-review/approval remains open.
 
 ## 2026-07-30 - Web Push VAPID Generation Tracking
 

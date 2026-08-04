@@ -1,6 +1,6 @@
 # Production Credential Exposure - 2026-07-29
 
-- Status: containment in progress
+- Status: contained; forensic/provider review remains open
 - Severity: critical
 - Environment: Railway production
 - Incident owner: Michael
@@ -24,10 +24,17 @@ returned production environment-variable values into a restricted automation
 transcript. The temporary local output file was removed. No secret value is
 included in this record.
 
-No unauthorized use is currently known; provider and audit-log review remains
-open. Data-access and exfiltration impact is under investigation, and no
-conclusion has been reached. Because transcript confidentiality cannot be used
-as a security boundary, every exposed credential is treated as compromised.
+No unauthorized use is currently known. The bounded Stripe platform-account
+and configured production destination/delivery views, Resend, Sentry, Google
+Cloud audit/activity, Railway workspace audit/deployment history, application-
+ledger, and retained PostgreSQL evidence reviewed so far contain no identified
+misuse indicator within their named query and retention bounds.
+Historical
+successful PostgreSQL access and direct bucket reads cannot be reconstructed,
+and several application-generated secrets have no provider audit trail. RIVT
+therefore cannot prove that no historical access or exfiltration occurred.
+Because transcript confidentiality cannot be used as a security boundary,
+every exposed credential is treated as compromised.
 
 The detection window is bounded by a documented 19:01 Railway observation that
 explicitly read no credentials or variables and the first formal critical
@@ -271,9 +278,11 @@ moment.
   S3-compatible storage healthy, Sentry, Web Push, and Stripe Connect Accounts
   v2 configured, matching-job alerts enabled, operational controls open, and
   seven anonymous private-route checks closed.
-- VAPID rotation and previous-key retirement are complete. The broader
-  incident remains open for Sentry and the remaining bounded
-  provider/data-access review; Railway Stage 1 remains paused.
+- VAPID rotation and previous-key retirement are complete. At this stage of the
+  response, Sentry and the remaining bounded provider/data-access review were
+  still open. Sentry was completed later; the current open boundaries are
+  listed in the provider-review synthesis below. Railway Stage 1 remains
+  paused.
 
 ## Google OAuth callback evidence
 
@@ -384,8 +393,11 @@ moment.
   and fails if a Railway whole-environment enumeration command is introduced.
   The focused security suite passes 27/27.
 - This satisfies the technical-prevention follow-up for operator workflows.
-  It does not clear the incident or launch hold; provider rotations, bounded
-  access-log review, and final Stage 1 re-review remain open.
+  At this stage of the response, provider rotations and bounded access-log
+  review were still open. Rotations were completed later; the current open
+  boundaries are listed in the provider-review synthesis below. This work does
+  not clear the incident or launch hold, and final Stage 1 re-review remains
+  open.
 
 ## Structured-log containment evidence
 
@@ -474,9 +486,8 @@ moment.
   the most recent isolated CI run remains the 22/22 PostgreSQL integration
   proof recorded above.
 - Sentry credential rotation is complete. The broader incident and
-  `ACTIVE_LAUNCH_HOLD` remain open for the final provider-review synthesis,
-  explicit incident-owner acceptance of the historical PostgreSQL and object
-  storage forensic limits, and a fresh Railway Stage 1 re-review and approval.
+  `ACTIVE_LAUNCH_HOLD` remain open for a fresh Railway Stage 1 re-review and
+  approval.
 
 ## Bounded access-log review evidence
 
@@ -519,12 +530,88 @@ moment.
   that no-new-service application control from later provider/external
   immutable logging whose cost, privacy, residency, and retention have not
   been approved. No part of that proposed design is represented as implemented.
-- No misuse indicator has been identified in the evidence reviewed so far.
-  The bounded PostgreSQL error review is complete for the repository-backed
-  incident window, subject to the historical auditing limitation above. The
-  review remains open for provider logs and the unavoidable database/object-
-  storage forensic limitations. The incident is not represented as proof of
-  no access or no exfiltration.
+- No misuse indicator has been identified in the bounded evidence reviewed.
+  The PostgreSQL error review is complete for the repository-backed incident
+  window, subject to the historical auditing limitation above. Provider review
+  status and remaining blind spots are enumerated below. The incident is not
+  represented as proof of no access or no exfiltration.
+
+## Provider-review synthesis (bounded review complete; incident open)
+
+The exposure review window begins at the conservative repository bound
+`2026-07-29T23:01:00Z`. The conservative latest repository-evidence upper bound
+for the Stripe credential retirements is `2026-07-30T03:08:57Z`; the wider
+application-ledger review continues through the recorded owner-acceptance time
+`2026-07-31T12:22:03.895Z`.
+
+Codex completed the initial read-only review at `2026-07-31T13:07:24.122Z`,
+the Railway follow-up at `2026-07-31T19:10:46.1221413Z`, and the Google Cloud
+follow-up at `2026-07-31T19:32:50.0134267Z` under Michael's incident
+authorization against deployed production source
+`f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`. No provider setting, credential,
+customer record, payment, deployment, or paid resource was changed. Provider
+identifiers used for the review were the live-mode RIVT Stripe account
+`acct_1TnnyAIz6JDg8Lda`, Resend domain `rivt.pro`, Sentry project
+`node-express`, Google Cloud project `rivt-499402`, Railway service `RIVT`, and
+Railway bucket `83403a81-f912-431e-b0fc-40a238f347e8`.
+
+| Credential/provider | Evidence reviewed | Bounded result | Remaining limit/status |
+|---|---|---|---|
+| Stripe API, Billing, and Connect | Live-mode Workbench request and `Your account` event views, active-key and production-destination inventory, the selected ACH destination's Overview and Event deliveries views, suspicious-activity view, and aggregate read-only production billing/invoice/payment reconciliation | The only API request visible in the bounded incident window was the controlled replacement-key `GET /v1/account` at `2026-07-30T02:55:35Z` (July 29 EDT). No `Your account` event was visible from `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z`, and the suspicious-activity view contained zero cases. The production ACH destination is scoped to `Your account`; no `Connected accounts` destination is configured. Its Event deliveries view reported `No event deliveries found`, and its Overview reported total `0` for `This week`. Within the named aggregate database queries, the only matching event rows were one controlled billing rotation probe and two controlled unknown/no-charge Connect rotation probes; no additional webhook row, recorded billing/invoice audit action, or nonzero reconciliation counter was found. | **Reviewed/bounded for the platform account, current production destination inventory, selected-destination delivery view, and retained application tables.** The absence of a separate `Connected accounts` destination means there was no separate configured destination delivery view to inspect; it is not proof that no Connect-side activity occurred outside retained or logged evidence. |
+| Resend | Available 15-day API/email logs and active-key inventory, reviewed through `2026-07-31T13:07:24.122Z` | The retained window fully covers the incident interval. Its incident-window records are the expected sending-only key restriction check (`401`) and controlled delivery proof. Earlier visible sends predate exposure and are consistent with documented verification/UI tests. Exactly one sending-only replacement key remains. | **Reviewed/bounded.** No unexplained provider activity was found in the available log window. |
+| Sentry | Provider audit log, key inventory, event ingestion, alert proof, and 14-day usage | Only expected replacement-key creation/rename and prior-key disable actions were present; usage showed no significant spike and zero filtered, rate-limited, or invalid events. | **Reviewed/bounded.** An ingestion DSN does not provide proof that it was never copied or attempted elsewhere. |
+| Google OAuth | Credential inventory and controlled callbacks from the rotation; aggregate read-only application identity/login/transaction reconciliation; and Google Cloud Logs Explorer queries under the founder-controlled support account for project `rivt-499402` | The application ledger has zero Google identity creation/update or Google login during the exposure window, zero pending OAuth transactions, and one post-retirement login/update matching the controlled physical sign-in. The exact `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` query returned zero retained entries across the Admin Activity, Data Access, System Event, and Policy Denied log IDs. The post-window query through `2026-07-30T15:00:00Z` returned nine Client Auth Configuration API events for the same OAuth client: three `AddClientSecret`, three `UpdateClientSecret`, and three `DeleteClientSecret`, all attributed to the founder-controlled support account and consistent with the documented replacement/cleanup sequence. No other actor or method appeared in that query. | **Reviewed/bounded for the queried retained audit entries.** Zero matching entries does not prove no OAuth authorization-code or token exchange occurred, no action occurred outside the queried/logged event types, or no historical access occurred. The presence or completeness of Data Access logging is not inferred from the query. |
+| Railway | Pro workspace Audit Logs, paged through the complete `2026-07-29T16:00:00Z` through `2026-07-30T16:00:00Z` filtered view; representative event details; and secret-safe deployment evidence | In the exact `2026-07-29T23:01:00Z` through `2026-07-30T03:08:57Z` exposure window, Railway recorded five `SSHSession.authenticated` events and nine `Deployment.created` events. Every event was attributed to the founder-controlled Railway account; no other actor, variable/configuration change, credential regeneration, service/bucket/volume change, or tunnel event appears in-window. A representative in-window SSH event used the same source IP and SSH-key fingerprint as a controlled July 31 maintenance event, supporting but not proving same-operator attribution. Immediately after the repository upper bound, the same account performed the documented database-password and bucket-credential regenerations. | **Reviewed/bounded for retained workspace actions.** Railway documents that Pro workspace audit logs retain 30 days and cover project/service/deployment/variable/workspace changes. The workspace log does not establish the physical human behind a valid account/key/IP, supply a separate dashboard-login history in this view, or prove that an action outside Railway's logged event set did not occur. |
+| PostgreSQL | Retained platform logs plus aggregate read-only application/payment reconciliation | No authentication failure, `FATAL`, or `PANIC` record was found in the retained reviewed windows; canonical billing, invoice, payment-request, direct-payment, and Connect consistency counters were zero. | **Historical evidence unavailable; owner acceptance recorded.** Successful historical connections, reads, and writes cannot be reconstructed. |
+| Railway Bucket/object storage | Rotation continuity, stable object count/bytes, restore evidence, and controlled existing-object read | Rotation and continuity passed with no known customer-data loss. | **Historical evidence unavailable; owner acceptance recorded for direct reads.** Historical per-object direct reads cannot be reconstructed. |
+| Web Push VAPID private key | Rotation, retirement, outbox/readiness state, and three controlled physical-device deliveries | Current registrations and outbox state are clean and all controlled devices delivered through the active generation. | **Unobservable; owner acceptance recorded at `2026-07-31T19:39:34.5524830Z`.** There is no provider audit trail proving the exposed private key was not used outside RIVT. |
+| Backup-encryption key | Rotation, previous-key retirement, and controlled restore proofs | Active and retained artifacts restore successfully; the previous key is absent from runtime. | **Unobservable; owner acceptance recorded at `2026-07-31T19:39:34.5524830Z`.** Existing evidence cannot prove an encrypted artifact and exposed key were never copied or used offline. |
+| Authentication metadata pepper | Rotation and runtime/configuration verification | The replacement is active and the old value has no compatibility fallback. | **Unobservable; owner acceptance recorded at `2026-07-31T19:39:34.5524830Z`.** There is no provider ledger for offline correlation attempts using the exposed value. |
+
+This table completes the bounded provider/forensic review. It does not prove
+that no historical access, exfiltration, token exchange, or offline secret use
+occurred. The incident and launch hold remain open for the exact-source Railway
+Stage 1 re-review and approval.
+
+The aggregate database review used a repeatable-read, read-only transaction over
+the named billing, subscription, entitlement, invoice, payment-request,
+direct-payment, Connect, OAuth-identity, and audit tables. It selected counts and
+timestamps rather than raw payloads or customer identifiers. `billing_events`
+is an idempotency table rather than an append-only forensic ledger, duplicate
+deliveries may be discarded, and current-state tables cannot reconstruct a
+historical direct database mutation that left no retained row. A zero aggregate
+counter therefore means no inconsistency was present in the queried retained
+state; it is not proof that an action absent from those tables never occurred.
+
+## Incident-owner acceptance of forensic limits
+
+- At `2026-07-31T12:22:03.895Z`, incident owner Michael stated: "I accept that
+  all available provider evidence was reviewed and no misuse indicator was
+  found, but historical successful PostgreSQL access and direct bucket reads
+  cannot be reconstructed. RIVT cannot honestly prove that no historical access
+  or exfiltration occurred."
+- Later reconciliation found the statement's provider-review premise incomplete.
+  Therefore only its PostgreSQL/direct-bucket historical limitation remains
+  valid closure evidence. The overall conclusion also remains: RIVT makes no
+  claim that historical access or exfiltration did not occur.
+- This acceptance closes only the PostgreSQL/direct-bucket forensic-limit
+  requirement. It does not accept the VAPID, backup-key, or authentication-
+  pepper blind spots; reconstruct missing history; lower the incident severity;
+  close the incident; clear `ACTIVE_LAUNCH_HOLD`; authorize deployment; or
+  approve paid infrastructure work.
+- At `2026-07-31T19:39:34.5524830Z`, incident owner Michael stated: "I accept
+  these three forensic limits: RIVT cannot prove the retired VAPID private key
+  was never used outside RIVT; cannot prove an encrypted backup and retired
+  backup key were never copied and used offline; and cannot prove the retired
+  authentication metadata pepper was never used offline. This acceptance does
+  not prove no misuse occurred and does not authorize deployment or added
+  cost."
+- This second acceptance closes only the three named unobservable-secret owner-
+  decision requirements. It does not reconstruct missing evidence, prove that
+  no misuse occurred, close the incident, clear `ACTIVE_LAUNCH_HOLD`, authorize
+  deployment, or approve cost.
+- A fresh exact-source Railway Stage 1 re-review and approval remains required
+  before incident closure.
 
 ## Recovery plan
 
@@ -550,8 +637,9 @@ This incident remains open until:
   monitoring, and backup restore access are verified without printing secrets;
 - the existing backup artifact is still recoverable through the approved
   previous-key path;
-- provider, PostgreSQL, and object-access logs have been reviewed for
-  unauthorized access or exfiltration;
+- every row in the provider-review synthesis is either bounded as reviewed or
+  has a named owner decision, with incident-owner acceptance recorded for each
+  historical limit that cannot be reconstructed;
 - the incident record contains only nonsecret evidence and timestamps;
 - a follow-up prevents secret-bearing environment enumeration in operator
   workflows; and

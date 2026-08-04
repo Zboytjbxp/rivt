@@ -2,15 +2,44 @@
 
 Last updated: 2026-07-31 America/New_York
 Current gate: Gate B controlled engagement
-Current phase: Emergency production credential containment; feature activation paused.
-Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
-Repository branch: `master` (source: `codex/customer-documents-contact-import`)
+Current phase: Production credential containment and bounded provider review
+complete; local money-integrity containment open; feature activation paused.
+Active packet: `docs/delivery/packets/87_MONEY_INTEGRITY_CONTAINMENT.md`
+Repository branch: `codex/money-integrity-canonical-invoices` from current
+`origin/master`
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
-Operational status: launch and Railway Stage 1 are paused while production
-credential-exposure containment is in progress.
+Operational status: launch and Railway Stage 1 are paused while the final fresh
+exact-source Railway Stage 1 re-review and approval remain open.
+
+Current product packet: Packet 87 is implemented locally from exact current
+`origin/master` source
+`29e3c613f2eb95a6583b52c671275e5046dde0d3`. It fails closed when an invoice,
+project balance, or bank-payment request disagrees; invalidates payer
+redirects for deleted, void, or mismatched invoices; locks processing,
+settled, refunded, and disputed payment history; retires new manual
+`payment_record` writes while preserving older rows as read-only references;
+and records successful project-invoice email delivery atomically. Exact
+rendered content now supplies a stable provider retry identity, concurrent
+different-key sends serialize, and an identical replay restores a stale
+draft label without sending again. Browser writes cannot forge paid/sent
+state, delivery evidence, or bank-payment metadata; provider email requires
+an active verified account; void, external-payment, processing, settlement,
+refund, and dispute truth cannot be manually erased; and consequential
+out-of-order Stripe events remain monotonic. Production build, full/security
+lint, 164 unit/frontend tests, three browser E2E journeys, Tools/Invoice,
+mobile-actions, Work-lifecycle, dependency audit, and diff integrity pass.
+A freshly reset, disposable, loopback-only PostgreSQL 16.14 cluster passed all
+22 integration tests, including all 19 database-backed suites, with zero
+failures or skips; it was stopped and removed after the run, and neither
+production nor the older Railway test URL was used. Independent final review
+found no remaining Packet 87 code blocker. Commit, merge, deployment, and
+exact-source acceptance remain mandatory. The packet adds no migration and
+has not changed production data, provider configuration, paid resources, or
+the live application. The broader incident and `ACTIVE_LAUNCH_HOLD` remain in
+force.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
@@ -45,9 +74,20 @@ outbox. This closes the Web Push key-retirement acceptance boundary without
 clearing the broader incident or `ACTIVE_LAUNCH_HOLD`. Sentry provider audit
 and usage views now also show only the expected rotation actions, 20 accepted
 errors in 14 days, zero filtered, rate-limited, or invalid events, and no
-significant spike. The remaining exit work is final evidence synthesis,
-explicit acceptance of the known historical database/object-storage forensic
-gaps, and a fresh Railway Stage 1 re-review and approval.
+significant spike. Bounded Stripe platform-account and configured production
+destination/delivery views, Resend provider records, Railway workspace
+audit/deployment history, and aggregate read-only production money ledgers
+were also reviewed with no identified misuse indicator. Michael's exact
+`2026-07-31T12:22:03.895Z` statement is preserved in the incident record; later
+review found its blanket provider-review premise incomplete, so only its
+PostgreSQL/direct-bucket historical limitation remains valid closure evidence.
+The bounded Google Cloud audit/activity review is complete with no identified
+misuse indicator in the queried retained entries. Direct VAPID misuse, offline
+backup-key use, and offline authentication-pepper use remain unobservable; at
+`2026-07-31T19:39:34.5524830Z`, Michael explicitly accepted those three
+forensic limits without claiming no misuse and without authorizing deployment
+or cost. The remaining exit work is a fresh Railway Stage 1 re-review and
+approval.
 
 ## Active operational incident - Production credential exposure
 
@@ -55,7 +95,7 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   values into a restricted automation transcript on 2026-07-29. No secret is
   recorded in repository evidence, and no unauthorized use is currently known.
   All exposed credential classes are nevertheless treated as compromised.
-- Packet 86 remains the active product packet. The separately approved Railway
+- Packet 87 remains the active product packet. The separately approved Railway
   Stage 1 activation is paused and its approval cannot be reused after this
   incident hotfix or any credential change.
 - A narrow compatibility hotfix was prepared from exact production source
@@ -203,9 +243,15 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   `/api/health` returned `ok: true`, `/api/auth/providers` reported Google
   configured, and `npm run monitor:production` passed against build
   `04f13e006cae545a33002d2225f90ab0d8b7e9c9`. Google OAuth secret rotation is
-  complete. Final incident evidence synthesis, explicit forensic-limit
-  acceptance, and the fresh Railway Stage 1 review remain open, so the
-  overall incident and launch hold are not cleared.
+  complete. The owner statement is preserved verbatim in the incident record;
+  its PostgreSQL/direct-bucket historical limitation is the only part used as
+  valid closure evidence. The Google Cloud review found no identified misuse
+  indicator within the queried retained audit entries, while explicitly not
+  proving that no OAuth token exchange or unlogged action occurred. Michael's
+  later exact statement accepts the three named unobservable-secret forensic
+  limits without claiming no misuse or authorizing deployment/cost. The fresh
+  Railway Stage 1 review remains open, so the overall incident and launch hold
+  are not cleared.
 - The incident-remediation source was fast-forwarded to `master` and Railway
   deployment `e12e66b2-9701-44d6-b57f-8e12fe436738` succeeded on exact commit
   `5d14ba9cf6efce81b1f503fe64ecfd6837261e43`. This activates the final-boundary
@@ -278,19 +324,52 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   `OA5Z6SQY` delayed its queue. Exact-source public health passed and the
   production monitor passed in 645 ms. A secret-safe production-container
   check found `SENTRY_DSN` present and the legacy `ERROR_MONITORING_DSN` alias
-  absent, but replacement-key creation, ingestion/alert proof, and old-key
-  retirement remain provider-side launch blockers.
+  absent. At that earlier deployment boundary, replacement-key creation,
+  ingestion/alert proof, and old-key retirement were still blockers; those
+  Sentry actions were completed later as recorded in the current incident
+  summary above.
 - Incident timing is now recorded without false precision: repository evidence
   bounds detection between 19:01 and 21:42:25 America/New_York on July 29, and
   the first formal critical declaration occurred at 21:42:25. Containment work
   was already underway by the 21:19:41 hotfix-worktree creation.
-- A first bounded, read-only access review found no identified misuse signal in
+- A bounded, read-only access review found no identified misuse signal in
   the current RIVT HTTP window, current application audit ledger, or
   post-rotation PostgreSQL authentication logs. It also documented the honest
   forensic boundary: historical successful PostgreSQL reads/writes were not
-  audited, and Railway Buckets provide no per-object access history. Earlier
-  provider review stays open; no claim of “no access” or “no exfiltration” is
-  made.
+  audited, and Railway Buckets provide no per-object access history. Available
+  Stripe platform-account and configured production destination/delivery,
+  Resend, Sentry, Railway workspace audit/deployment, and application-ledger
+  evidence has now been reviewed with no identified misuse indicator. The
+  Railway Pro workspace audit log was paged through the complete date-filtered
+  view. In the exact exposure window it recorded five
+  `SSHSession.authenticated` events and nine `Deployment.created` events, all
+  attributed to the founder-controlled account, with no other actor or
+  variable/credential/resource change. One representative in-window SSH audit
+  event used the same source IP and SSH-key fingerprint as a controlled July 31
+  maintenance session. This is bounded retained workspace-action
+  evidence, not proof of the physical human behind valid credentials or of an
+  action Railway did not log.
+  The owner's exact statement is preserved; later review found its blanket
+  provider-review premise incomplete, so only its successful-PostgreSQL/direct-
+  bucket historical limitation remains valid closure evidence. No claim of no
+  access or no exfiltration is made. The bounded Google Cloud audit/activity
+  review is complete with no identified misuse indicator in the queried
+  retained entries; it does not prove no OAuth token exchange or action outside
+  logged event types. VAPID, backup-key, and authentication-pepper offline
+  misuse remain unobservable; Michael explicitly accepted those three forensic
+  limits at `2026-07-31T19:39:34.5524830Z` without claiming no misuse or
+  authorizing deployment/cost. Railway Stage 1 re-review remains open.
+- Aggregate read-only production money reconciliation from the conservative
+  exposure start through the owner-acceptance timestamp found three matching
+  controlled rotation-probe rows, no additional application-recorded webhook
+  row or billing/invoice audit action, and no nonzero canonical invoice,
+  payment-request, Connect, or entitlement consistency counter. Stripe's
+  platform-account Workbench view showed only the controlled replacement-key
+  account read in the bounded interval, no `Your account` event in the bounded
+  interval, and zero suspicious-activity cases. Resend's available 15-day logs
+  contain the expected restriction check, controlled proof delivery, and older
+  sends consistent with documented pre-exposure tests. These retained tables
+  and views cannot reconstruct an action they did not log or retain.
 - PostgreSQL error classification is now complete across the immediately
   preceding deployment from 23:00 UTC through credential cutover and the
   replacement deployment through 13:04 UTC. Every error-shaped record maps to
