@@ -42,8 +42,10 @@ which is why the independent hourly freshness alarm is mandatory.
   `npm run restore:logical-artifact -- --apply-migrations`
 - Evidentiary restore plus verification, run once:
   `npm run restore:drill -- --apply-migrations`
-- Independent monitor command: `npm run backup:verify`. Scheduling and alert
-  routing require separate reviewed provider configuration and approval.
+- Independent monitor command: `npm run backup:monitor`, invoked by
+  `.github/workflows/backup-freshness.yml`. The workflow captures command
+  output privately, validates a strict sanitized receipt, and never publishes
+  raw provider output or uploads it as an artifact.
 
 The job exits after one snapshot. A process that remains active is a failed run,
 because Railway will skip the next scheduled execution.
@@ -82,8 +84,24 @@ After that explicit approval, the selected provider setup must:
    command to `npm run backup:logical-artifact`, give it no public domain, and
    set the 12-hour schedule. Record and review the provider-owned configuration
    before activation; this repository packet does not create it.
-7. Add the monitor's read-only provider values/secrets to the protected GitHub
-   `production` environment and require an owner approval for changes.
+7. Add the monitor's read-only provider values/secrets to the dedicated GitHub
+   `production-backup-monitor` environment. Restrict that environment to
+   `master` and owner-controlled configuration changes, but do not require a
+   reviewer on each job run: per-run review would block the hourly unattended
+   alarm and withhold its secrets. Use `BACKUP_MONITOR_S3_ACCESS_KEY_ID` and
+   `BACKUP_MONITOR_S3_SECRET_ACCESS_KEY`; the key may list/read/head only the
+   exact backup prefix and may not write, overwrite, lock, retain, or delete.
+8. Set the `production-backup-monitor` environment variable
+   `BACKUP_EXPECTED_SOURCE_COMMIT` to the reviewed 40-character production
+   source commit. Set the nonsecret repository Actions variable
+   `RIVT_BACKUP_ALERT_GITHUB_LOGIN` to the owner who physically receives the
+   incident notification; reconciliation intentionally has no access to the
+   secret-bearing environment. The workflow checks out that exact commit and
+   requires the artifact source binding to equal it. Because the artifact's
+   `SOURCE_COMMIT` is supplied by the scheduler environment, acceptance also
+   requires separate provider evidence that the running scheduler deployment
+   really uses that immutable commit; metadata equality alone is not source
+   provenance.
 
 Historical free-tier estimates are not a current quote or spending
 authorization. Recalculate storage, requests, retrieval, provider egress,
@@ -99,10 +117,10 @@ for the selected provider immediately before approval.
    The freshness verifier cannot pass before the first artifact exists.
 3. Run one backup. Do not paste raw keys, object identifiers, digests, database
    URLs, or encryption material into tickets or public logs.
-4. Map the protected GitHub `production` environment secret holding the active
+4. Map the dedicated monitor environment secret holding the active
    key into the runtime variable `BACKUP_ENCRYPTION_KEY`; only during an
    approved rotation, map the prior secret into
-   `BACKUP_ENCRYPTION_KEY_PREVIOUS`. Run `npm run backup:verify` through the
+   `BACKUP_ENCRYPTION_KEY_PREVIOUS`. Run `npm run backup:monitor` through the
    freshness workflow with its separate
    monitor-reader provider credentials, not with the writer credential. It
    must identify a current immutable version, recompute its digest, require
@@ -116,13 +134,17 @@ for the selected provider immediately before approval.
 
 ## Missed-backup alarm acceptance
 
-1. Run the GitHub workflow's `alert_test=true` path. It does not read or change
-   any backup object.
-2. Confirm the exact bot-owned incident issue opens and the private backup
+1. Run the GitHub workflow's `alert_test=true` path. That job receives no
+   checkout, environment, provider credential, or encryption key, and it does
+   not read or change any backup object.
+2. Confirm the exact title/marker/label/author-matched bot-owned incident issue
+   opens or reopens, and the private backup
    owner physically receives the alert.
 3. Record only the sanitized workflow URL/time/result in repository evidence.
 4. Run a normal successful verification and confirm automation closes only the
-   exact owned issue.
+   exact owned issue. An alert-test run must never close it. More than one
+   exact owned issue is an ambiguous state and must fail closed without issue
+   mutation.
 
 An issue existing in GitHub is not proof a human received it. Physical receipt
 must be recorded separately.
@@ -158,7 +180,9 @@ must be recorded separately.
 - Create a new artifact under the new key, verify it in active-only mode, and
   restore-test that exact version in the active-only restore drill.
 - Remove the prior key only after every retained artifact that still requires
-  it has expired or an explicitly approved alternate recovery copy exists.
+  it has expired, or after the owner explicitly accepts losing RIVT's ability
+  to restore those artifacts and designates a newly created, active-key-only,
+  isolated-restore-verified artifact as the recovery point.
   A verification or restore receipt reporting `active-or-previous` is not
   evidence that qualifies the predecessor for removal.
 - Never store active and prior keys in source, documentation, artifacts, issue

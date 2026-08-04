@@ -9,6 +9,7 @@ import {
   maxBackupAgeHoursFromEnv,
   newestBackupVersion,
   retentionDaysFromEnv,
+  requiredSourceCommit,
   s3ClientForConfig,
   sanitizedFailure,
   sanitizedSuccess,
@@ -26,6 +27,7 @@ export async function verifyLogicalBackup({
   const destination = destinationS3Config(env);
   const retentionDays = retentionDaysFromEnv(env);
   const maxAgeHours = maxBackupAgeHoursFromEnv(env);
+  const expectedSourceCommit = requiredSourceCommit(env, "BACKUP_EXPECTED_SOURCE_COMMIT");
   const encryptionSecrets = strictRestoreEncryptionSecrets(env);
   const activeKeyId = encryptionKeyIdFromSecret(encryptionSecrets.active);
   const currentTime = now();
@@ -48,6 +50,12 @@ export async function verifyLogicalBackup({
     retentionDays,
     now: currentTime,
   });
+  if (verified.sourceCommit !== expectedSourceCommit) {
+    throw new BackupConfigurationError(
+      "BACKUP_SOURCE_MISMATCH",
+      "The newest protected backup source does not match BACKUP_EXPECTED_SOURCE_COMMIT.",
+    );
+  }
   try {
     const snapshot = decryptSnapshot(verified.envelope, encryptionSecrets.active);
     assertRestoreUsableSnapshot(snapshot, verified);
@@ -81,7 +89,7 @@ export async function verifyLogicalBackup({
     createdAt: verified.createdAt,
     uploadedAt: verified.uploadedAt,
     sourceCommit: verified.sourceCommit,
-    ageHours: Number(Math.max(ageHours, createdAgeHours).toFixed(3)),
+    ageHours: Number(Math.max(0, ageHours, createdAgeHours).toFixed(3)),
     retentionUntil: verified.retentionUntil,
     retentionDays: verified.retentionDays,
     lifecycleRuleId: protection.lifecycleRuleId,

@@ -1356,7 +1356,11 @@ test("freshness verifier binds provider controls to the newest current version",
   const currentTime = new Date("2026-08-01T13:00:00.000Z").getTime();
   const client = freshnessClientForFixture(fixture);
   const result = await verifyLogicalBackup({
-    env: { ...destinationEnv, BACKUP_ENCRYPTION_KEY: "1".repeat(64) },
+    env: {
+      ...destinationEnv,
+      BACKUP_ENCRYPTION_KEY: "1".repeat(64),
+      BACKUP_EXPECTED_SOURCE_COMMIT: fixture.sourceCommit,
+    },
     now: () => currentTime,
     s3ClientFactory: () => client,
   });
@@ -1373,11 +1377,46 @@ test("freshness verifier binds provider controls to the newest current version",
         ...destinationEnv,
         BACKUP_ENCRYPTION_KEY: "2".repeat(64),
         BACKUP_ENCRYPTION_KEY_PREVIOUS: "1".repeat(64),
+        BACKUP_EXPECTED_SOURCE_COMMIT: fixture.sourceCommit,
       },
       now: () => currentTime,
       s3ClientFactory: () => client,
     }),
     (error) => error.code === "BACKUP_OBJECT_INVALID",
+  );
+});
+
+test("freshness verifier fails closed without a valid trusted source binding", async () => {
+  const fixture = protectedArtifactFixture();
+  const base = {
+    ...destinationEnv,
+    BACKUP_ENCRYPTION_KEY: "1".repeat(64),
+  };
+  for (const BACKUP_EXPECTED_SOURCE_COMMIT of [undefined, "abc123", "G".repeat(40)]) {
+    await assert.rejects(
+      () => verifyLogicalBackup({
+        env: { ...base, BACKUP_EXPECTED_SOURCE_COMMIT },
+        now: () => new Date("2026-08-01T13:00:00.000Z").getTime(),
+        s3ClientFactory: () => freshnessClientForFixture(fixture),
+      }),
+      (error) => error.code === "BACKUP_CONFIG_INVALID",
+    );
+  }
+});
+
+test("freshness verifier rejects an otherwise valid artifact from another source revision", async () => {
+  const fixture = protectedArtifactFixture();
+  await assert.rejects(
+    () => verifyLogicalBackup({
+      env: {
+        ...destinationEnv,
+        BACKUP_ENCRYPTION_KEY: "1".repeat(64),
+        BACKUP_EXPECTED_SOURCE_COMMIT: "c".repeat(40),
+      },
+      now: () => new Date("2026-08-01T13:00:00.000Z").getTime(),
+      s3ClientFactory: () => freshnessClientForFixture(fixture),
+    }),
+    (error) => error.code === "BACKUP_SOURCE_MISMATCH",
   );
 });
 
@@ -1432,7 +1471,11 @@ test("freshness verifier rejects a forged protected envelope without exposing se
 
   await assert.rejects(
     () => verifyLogicalBackup({
-      env: { ...destinationEnv, BACKUP_ENCRYPTION_KEY: secret },
+      env: {
+        ...destinationEnv,
+        BACKUP_ENCRYPTION_KEY: secret,
+        BACKUP_EXPECTED_SOURCE_COMMIT: forgedFixture.sourceCommit,
+      },
       now: () => new Date("2026-08-01T13:00:00.000Z").getTime(),
       s3ClientFactory: () => freshnessClientForFixture(forgedFixture),
     }),
@@ -1452,7 +1495,11 @@ test("freshness verifier rejects an authenticated payload that is not structural
   });
   await assert.rejects(
     () => verifyLogicalBackup({
-      env: { ...destinationEnv, BACKUP_ENCRYPTION_KEY: "1".repeat(64) },
+      env: {
+        ...destinationEnv,
+        BACKUP_ENCRYPTION_KEY: "1".repeat(64),
+        BACKUP_EXPECTED_SOURCE_COMMIT: malformedFixture.sourceCommit,
+      },
       now: () => new Date("2026-08-01T13:00:00.000Z").getTime(),
       s3ClientFactory: () => freshnessClientForFixture(malformedFixture),
     }),

@@ -47,6 +47,8 @@ export function sanitizedFailure(error, mode) {
     "BACKUP_NOT_FRESH",
     "BACKUP_OBJECT_INVALID",
     "BACKUP_PROVIDER_CHECK_FAILED",
+    "BACKUP_SOURCE_MISMATCH",
+    "BACKUP_ALERT_TEST",
     "BACKUP_RESTORE_FAILED",
     "BACKUP_RTO_EXCEEDED",
   ]);
@@ -59,6 +61,8 @@ export function sanitizedFailure(error, mode) {
     BACKUP_NOT_FRESH: "No sufficiently recent protected backup was found.",
     BACKUP_OBJECT_INVALID: "The named backup artifact did not pass integrity and retention checks.",
     BACKUP_PROVIDER_CHECK_FAILED: "The backup provider could not be verified.",
+    BACKUP_SOURCE_MISMATCH: "The newest protected backup was created by an unexpected source revision.",
+    BACKUP_ALERT_TEST: "The backup freshness alert test was requested.",
     BACKUP_RESTORE_FAILED: "The isolated restore did not complete successfully.",
     BACKUP_RTO_EXCEEDED: "The restore and verification exceeded the approved recovery time objective.",
     BACKUP_OPERATION_FAILED: "The backup operation failed.",
@@ -247,10 +251,10 @@ export function s3ClientForConfig(config) {
   });
 }
 
-export function requiredSourceCommit(env = process.env) {
-  const sourceCommit = requireConfiguredEnv("SOURCE_COMMIT", env).toLowerCase();
+export function requiredSourceCommit(env = process.env, name = "SOURCE_COMMIT") {
+  const sourceCommit = requireConfiguredEnv(name, env).toLowerCase();
   if (!/^[a-f0-9]{40}$/.test(sourceCommit)) {
-    throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "SOURCE_COMMIT must be a full 40-character Git commit SHA.");
+    throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", `${name} must be a full 40-character Git commit SHA.`);
   }
   return sourceCommit;
 }

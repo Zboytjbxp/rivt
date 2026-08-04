@@ -1,0 +1,325 @@
+name: Backup Freshness Monitor
+
+on:
+  workflow_dispatch:
+    inputs:
+      alert_test:
+        description: Open the owned backup incident without reading the provider
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "37 * * * *"
+
+permissions: {}
+
+concurrency:
+  group: production-backup-freshness
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  validate_invocation:
+    name: Validate invocation
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+    steps:
+      - name: Require the canonical repository and master branch
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_REPOSITORY: ${{ github.repository }}
+          EVENT_REF: ${{ github.ref }}
+          ALERT_TEST: ${{ inputs.alert_test }}
+        run: |
+          set -euo pipefail
+          test "$EVENT_REPOSITORY" = "Zboytjbxp/rivt"
+          test "$EVENT_REF" = "refs/heads/master"
+          test "$EVENT_NAME" = "schedule" || test "$EVENT_NAME" = "workflow_dispatch"
+      - id: mode
+        name: Select the bounded monitor mode
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          ALERT_TEST: ${{ inputs.alert_test }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" && "$ALERT_TEST" == "true" ]]; then
+            echo "mode=alert_test" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=verify" >> "$GITHUB_OUTPUT"
+          fi
+
+  verify:
+    name: Verify newest immutable backup
+    needs: validate_invocation
+    if: needs.validate_invocation.outputs.mode == 'verify'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    environment: production-backup-monitor
+    outputs:
+      ok: ${{ steps.monitor.outputs.ok }}
+      error_code: ${{ steps.monitor.outputs.error_code }}
+    steps:
+      - name: Check out the reviewed production source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ vars.BACKUP_EXPECTED_SOURCE_COMMIT }}
+          persist-credentials: false
+
+      - name: Require the checked-out commit to match the protected source binding
+        shell: bash
+        env:
+          EXPECTED_SOURCE_COMMIT: ${{ vars.BACKUP_EXPECTED_SOURCE_COMMIT }}
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_COMMIT"
+
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked production dependencies without lifecycle scripts
+        run: npm ci --omit=dev --ignore-scripts --no-audit --no-fund
+
+      - id: monitor
+        name: Verify the newest immutable backup without publishing raw output
+        continue-on-error: true
+        shell: bash
+        env:
+          BACKUP_DESTINATION_S3_ENDPOINT: ${{ vars.BACKUP_DESTINATION_S3_ENDPOINT }}
+          BACKUP_DESTINATION_S3_REGION: ${{ vars.BACKUP_DESTINATION_S3_REGION }}
+          BACKUP_DESTINATION_S3_BUCKET: ${{ vars.BACKUP_DESTINATION_S3_BUCKET }}
+          BACKUP_DESTINATION_S3_PREFIX: ${{ vars.BACKUP_DESTINATION_S3_PREFIX }}
+          BACKUP_DESTINATION_S3_FORCE_PATH_STYLE: ${{ vars.BACKUP_DESTINATION_S3_FORCE_PATH_STYLE }}
+          BACKUP_DESTINATION_S3_ACCESS_KEY_ID: ${{ secrets.BACKUP_MONITOR_S3_ACCESS_KEY_ID }}
+          BACKUP_DESTINATION_S3_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_MONITOR_S3_SECRET_ACCESS_KEY }}
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+          BACKUP_EXPECTED_SOURCE_COMMIT: ${{ vars.BACKUP_EXPECTED_SOURCE_COMMIT }}
+          BACKUP_RETENTION_DAYS: "30"
+          BACKUP_MAX_AGE_HOURS: "14"
+        run: |
+          set -euo pipefail
+          umask 077
+          receipt="$RUNNER_TEMP/backup-monitor-receipt.json"
+          receipt_error="$RUNNER_TEMP/backup-monitor-receipt-error.log"
+          safe="$RUNNER_TEMP/backup-monitor-safe.json"
+          set +e
+          timeout 8m node scripts/backup-freshness-monitor.js >"$receipt" 2>&1
+          monitor_status=$?
+          set -e
+          unset BACKUP_DESTINATION_S3_ENDPOINT \
+            BACKUP_DESTINATION_S3_REGION \
+            BACKUP_DESTINATION_S3_BUCKET \
+            BACKUP_DESTINATION_S3_PREFIX \
+            BACKUP_DESTINATION_S3_FORCE_PATH_STYLE \
+            BACKUP_DESTINATION_S3_ACCESS_KEY_ID \
+            BACKUP_DESTINATION_S3_SECRET_ACCESS_KEY \
+            BACKUP_ENCRYPTION_KEY \
+            BACKUP_EXPECTED_SOURCE_COMMIT \
+            BACKUP_RETENTION_DAYS \
+            BACKUP_MAX_AGE_HOURS
+          set +e
+          node scripts/backup-freshness-receipt.js <"$receipt" >"$safe" 2>"$receipt_error"
+          receipt_status=$?
+          set -e
+          if [[ ! -s "$safe" ]]; then
+            printf '%s\n' '{"ok":false,"errorCode":"BACKUP_OPERATION_FAILED"}' >"$safe"
+            receipt_status=1
+          fi
+          ok="$(node -e 'const fs=require("fs"); const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(r.ok === true ? "true" : "false")' "$safe")"
+          error_code="$(node -e 'const fs=require("fs"); const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(typeof r.errorCode === "string" ? r.errorCode : "NONE")' "$safe")"
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          echo "error_code=$error_code" >> "$GITHUB_OUTPUT"
+          if [[ "$monitor_status" -ne 0 || "$receipt_status" -ne 0 || "$ok" != "true" ]]; then
+            exit 1
+          fi
+
+      - name: Fail closed when verification did not pass
+        if: always() && steps.monitor.outcome != 'success'
+        run: exit 1
+
+  alert_test:
+    name: Exercise alert route
+    needs: validate_invocation
+    if: needs.validate_invocation.outputs.mode == 'alert_test'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions: {}
+    outputs:
+      ok: ${{ steps.route.outputs.ok }}
+      error_code: ${{ steps.route.outputs.error_code }}
+    steps:
+      - id: route
+        name: Request the alert route without source, environment, or secrets
+        run: |
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+          echo "error_code=BACKUP_ALERT_TEST" >> "$GITHUB_OUTPUT"
+
+  reconcile_incident:
+    name: Reconcile owned incident
+    needs:
+      - validate_invocation
+      - verify
+      - alert_test
+    if: always() && needs.validate_invocation.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - name: Reconcile only the exact bot-owned backup incident
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          MONITOR_MODE: ${{ needs.validate_invocation.outputs.mode }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          VERIFY_OK: ${{ needs.verify.outputs.ok }}
+          VERIFY_ERROR_CODE: ${{ needs.verify.outputs.error_code }}
+          ALERT_TEST_ERROR_CODE: ${{ needs.alert_test.outputs.error_code }}
+          BACKUP_ALERT_OWNER: ${{ vars.RIVT_BACKUP_ALERT_GITHUB_LOGIN }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const title = "Production backup freshness check failing";
+            const marker = "<!-- rivt-backup-freshness-incident:v1 -->";
+            const label = "ops:backup-freshness";
+            const bot = "github-actions[bot]";
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const mode = process.env.MONITOR_MODE;
+            const verificationPassed = mode === "verify"
+              && process.env.VERIFY_RESULT === "success"
+              && process.env.VERIFY_OK === "true";
+            const allowedCodes = new Set([
+              "BACKUP_ALERT_TEST",
+              "BACKUP_CONFIG_INVALID",
+              "BACKUP_DESTINATION_UNSAFE",
+              "BACKUP_NOT_FRESH",
+              "BACKUP_OBJECT_INVALID",
+              "BACKUP_OPERATION_FAILED",
+              "BACKUP_PROVIDER_CHECK_FAILED",
+              "BACKUP_SOURCE_MISMATCH",
+            ]);
+            const requestedCode = mode === "alert_test"
+              ? process.env.ALERT_TEST_ERROR_CODE
+              : process.env.VERIFY_ERROR_CODE;
+            const errorCode = allowedCodes.has(requestedCode)
+              ? requestedCode
+              : "BACKUP_OPERATION_FAILED";
+            const safeSummaries = {
+              BACKUP_ALERT_TEST: "Owner-requested backup alert route test.",
+              BACKUP_CONFIG_INVALID: "Backup monitor configuration is invalid.",
+              BACKUP_DESTINATION_UNSAFE: "Backup destination protection did not verify.",
+              BACKUP_NOT_FRESH: "No protected backup is inside the freshness window.",
+              BACKUP_OBJECT_INVALID: "The newest backup artifact did not pass integrity checks.",
+              BACKUP_OPERATION_FAILED: "The backup monitor did not complete safely.",
+              BACKUP_PROVIDER_CHECK_FAILED: "The backup provider could not be verified.",
+              BACKUP_SOURCE_MISMATCH: "The newest backup source revision is not the approved revision.",
+            };
+            if (mode !== "verify" && mode !== "alert_test") {
+              throw new Error("Unrecognized monitor mode.");
+            }
+            if (!process.env.BACKUP_ALERT_OWNER) {
+              throw new Error("RIVT_BACKUP_ALERT_GITHUB_LOGIN is required.");
+            }
+
+            const allIssues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "all",
+              per_page: 100,
+            });
+            const owned = allIssues.filter((issue) =>
+              !issue.pull_request
+              && issue.title === title
+              && issue.body?.includes(marker)
+              && issue.labels?.some((entry) => (typeof entry === "string" ? entry : entry.name) === label)
+              && issue.user?.login === bot
+              && issue.user?.type === "Bot"
+            );
+            if (owned.length > 1) {
+              throw new Error("Multiple bot-owned backup incidents exist; refusing ambiguous mutation.");
+            }
+            const existing = owned[0];
+
+            if (verificationPassed) {
+              if (existing?.state === "open") {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: existing.number,
+                  body: `Backup freshness verification recovered: ${runUrl}`,
+                });
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number: existing.number,
+                  state: "closed",
+                  state_reason: "completed",
+                });
+              }
+              return;
+            }
+
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name: label });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: label,
+                color: "b60205",
+                description: "RIVT production backup freshness incident",
+              });
+            }
+            const body = [
+              marker,
+              "",
+              "RIVT's independent production backup freshness check requires owner attention.",
+              "",
+              `Run: ${runUrl}`,
+              `Monitor code: ${errorCode}`,
+              `Safe summary: ${safeSummaries[errorCode]}`,
+              "",
+              "Immediate response:",
+              "1. Keep the launch hold active.",
+              "2. Inspect the private provider configuration and sanitized workflow result.",
+              "3. Do not remove a previous backup key until a new active-key artifact verifies and restores exactly.",
+              "4. Let only a later normal successful verification close this incident.",
+              "",
+            ].join("\n");
+            if (existing) {
+              await github.rest.issues.update({
+                owner,
+                repo,
+                issue_number: existing.number,
+                state: "open",
+                title,
+                body,
+                labels: [label],
+                assignees: [process.env.BACKUP_ALERT_OWNER],
+              });
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: `Backup monitor requires attention: ${runUrl}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels: [label],
+                assignees: [process.env.BACKUP_ALERT_OWNER],
+              });
+            }
