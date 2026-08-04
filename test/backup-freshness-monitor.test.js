@@ -258,3 +258,21 @@ test("workflow keeps verification, alert testing, and issue mutation separated a
     assert.equal(alertJob.includes(forbidden), false, `alert-test contains ${forbidden}`);
   }
 });
+
+test("dedicated Railway backup config runs only the bounded scheduled backup job", () => {
+  const configPath = fileURLToPath(new URL("../railway.backup.json", import.meta.url));
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+
+  assert.equal(config.build.builder, "NIXPACKS");
+  assert.equal(config.build.buildCommand, "npm run build");
+  assert.equal(config.deploy.startCommand, "npm run backup:logical-artifact");
+  assert.equal(config.deploy.numReplicas, 1);
+  assert.equal(config.deploy.restartPolicyType, "NEVER");
+  assert.equal(config.deploy.restartPolicyMaxRetries, null);
+  assert.equal(config.deploy.cronSchedule, "7 */12 * * *");
+  assert.equal(config.deploy.overlapSeconds, 0);
+  assert.equal(config.deploy.drainingSeconds, 0);
+  assert.equal(config.deploy.startCommand.includes("npm start"), false);
+  assert.equal(config.deploy.healthcheckPath, undefined);
+  assert.equal(config.deploy.preDeployCommand, undefined);
+});
