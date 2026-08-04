@@ -87,8 +87,8 @@ function timeSessionToServerInput(session: TimeSession) {
   };
 }
 
-export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
-  const { isPro } = usePro();
+export function TimeTrackerTool({ accountId, activeJob, jobs }: { accountId: string; activeJob: Job | null; jobs: Job[] }) {
+  const { isPro } = usePro(accountId);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [sessions, setSessions] = useState<TimeSession[]>(readTimeSessions);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
@@ -279,7 +279,7 @@ export function TimeTrackerTool({ activeJob, jobs }: { activeJob: Job | null; jo
           <EmptyState className="v2-tools-empty" icon={<Clock size={20} />} title="No sessions yet" description="Clock in to start tracking time against a job." compact />
         )}
       </Panel>
-      {upgradeOpen && <UpgradeModal reason="Full time-history access" onClose={() => setUpgradeOpen(false)} />}
+      {upgradeOpen && <UpgradeModal accountId={accountId} reason="Full time-history access" onClose={() => setUpgradeOpen(false)} />}
     </div>
   );
 }

@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "status": "draft",
+  "activationStage": "split",
+  "approval": {
+    "approved": false,
+    "approvedBy": null,
+    "approvedAt": null,
+    "expiresAt": null,
+    "approvedPlanSha256": null,
+    "oneTimeMaximumUsd": null,
+    "incrementalMonthlyMaximumUsd": null,
+    "totalMonthlyApprovedCeilingUsd": null,
+    "testDurationMinutes": null,
+    "maximumWorkerUnavailableMinutes": null
+  },
+  "activationWindow": {
+    "plannedTestDurationMinutes": null,
+    "plannedWorkerUnavailableMinutes": null
+  },
+  "source": {
+    "preparedImplementationCommit": null,
+    "candidateCommit": null,
+    "liveCommitBefore": null,
+    "rollbackCommit": null
+  },
+  "railway": {
+    "environmentName": null,
+    "region": null,
+    "connectedBranch": null,
+    "autodeployMode": null,
+    "effectiveConfigSource": null,
+    "serverlessDisabled": null,
+    "overlapSeconds": null,
+    "billingCycleStartsAt": null,
+    "billingCycleEndsAt": null,
+    "services": [
+      {
+        "name": "web",
+        "configPath": null,
+        "role": "web",
+        "startCommand": null,
+        "preDeployCommand": null,
+        "healthcheckPath": null,
+        "renderedReplicaCount": null,
+        "region": null,
+        "volumeAttached": null,
+        "serverlessDisabled": null,
+        "pushRequired": null,
+        "drainingSeconds": null,
+        "deploymentTrigger": null,
+        "configurationHash": null
+      },
+      {
+        "name": "worker",
+        "configPath": null,
+        "role": "worker",
+        "startCommand": null,
+        "preDeployCommand": null,
+        "healthcheckPath": null,
+        "renderedReplicaCount": null,
+        "region": null,
+        "volumeAttached": null,
+        "serverlessDisabled": null,
+        "pushRequired": null,
+        "drainingSeconds": null,
+        "deploymentTrigger": null,
+        "configurationHash": null
+      }
+    ]
+  },
+  "database": {
+    "privateEndpointConfirmed": null,
+    "endpointMode": null,
+    "poolerClientLimit": null,
+    "observedGlobalUsableConnections": null,
+    "observedEffectiveConnections": null,
+    "declaredMaxConnections": null,
+    "migrationOwner": null,
+    "maximumConcurrentMigrationProcesses": null,
+    "expandContractCompatibleWithRollback": null,
+    "steadyStateTopology": {
+      "candidateWebReplicas": null,
+      "webPoolMax": null,
+      "candidateWorkerReplicas": null,
+      "workerPoolMax": null,
+      "migrationProcesses": null,
+      "migratePoolMax": null,
+      "reservedConnections": null,
+      "oldCombinedReplicas": null,
+      "oldCombinedPoolMax": null
+    },
+    "transitionTopology": {
+      "candidateWebReplicas": null,
+      "webPoolMax": null,
+      "candidateWorkerReplicas": null,
+      "workerPoolMax": null,
+      "migrationProcesses": null,
+      "migratePoolMax": null,
+      "reservedConnections": null,
+      "oldCombinedReplicas": null,
+      "oldCombinedPoolMax": null
+    },
+    "plannedSteadyStateConnections": null,
+    "plannedTransitionPeakConnections": null
+  },
+  "push": {
+    "webPublicKeyFingerprint": null,
+    "workerPublicKeyFingerprint": null,
+    "webSubjectFingerprint": null,
+    "workerSubjectFingerprint": null
+  },
+  "recovery": {
+    "checkpointIdRedacted": null,
+    "checkpointCreatedAt": null,
+    "maximumCheckpointAgeHours": null,
+    "restoreProcedureReviewed": null,
+    "rollbackSchemaCompatible": null
+  },
+  "monitoring": {
+    "publicUptimeConfigured": null,
+    "workerHeartbeatConfigured": null,
+    "pushBacklogAlertConfigured": null,
+    "deadLetterAlertConfigured": null,
+    "resourceAlertsConfigured": null,
+    "alertReceiverTested": null,
+    "onCallOwner": null
+  },
+  "cost": {
+    "oneTimeActivationEstimateUsd": null,
+    "currentMonthActualUsd": null,
+    "currentMonthEstimateBeforeUsd": null,
+    "currentCycleIncrementalEstimateUsd": null,
+    "stagedEstimateUsd": null,
+    "stagedEstimateIncludesOneTimeActivation": null,
+    "retainedMonthlyCostUsd": null,
+    "agentUsageUsd": null,
+    "agentMonthlyLimitUsd": null,
+    "providerHardLimitVerified": null,
+    "providerEnforcedHardLimitUsd": null,
+    "providerHardLimitScope": null,
+    "providerHardLimitCanStopWorkspace": null,
+    "fullWorkspaceOutageMechanismAccepted": null,
+    "agentLimitRecordedSeparately": null,
+    "residualCostRiskAccepted": null,
+    "manualStopAtUsd": null
+  },
+  "rollback": {
+    "owner": null,
+    "deploymentIdFingerprint": null,
+    "deploymentActionVisible": null,
+    "rebuildFallbackReady": null
+  },
+  "providerSnapshotBinding": {
+    "source": "railway_cli_status_v1",
+    "artifactSha256": null,
+    "observedAt": null,
+    "projectIdFingerprint": null,
+    "environmentIdFingerprint": null,
+    "currentWebServiceIdFingerprint": null,
+    "currentWebDeploymentIdFingerprint": null,
+    "liveHealth": {
+      "checkedAt": null,
+      "statusCode": null,
+      "sourceCommit": null,
+      "migrationVersion": null
+    }
+  },
+  "operatorControlReviewBinding": {
+    "source": "operator_activation_control_review_v1",
+    "artifactSha256": null,
+    "reviewedAt": null,
+    "reviewedBy": null
+  }
+}

@@ -72,6 +72,30 @@ function createMemoryStorage(initial = {}) {
   };
 }
 
+test("boot shell keeps executable scripts and styles external for strict CSP", () => {
+  const html = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const serviceWorker = readFileSync(new URL("../public/sw.js", import.meta.url), "utf8");
+  const inlineExecutableScripts = [...html.matchAll(/<script(?![^>]*\bsrc=)(?![^>]*type=["']application\/ld\+json["'])[^>]*>[\s\S]*?<\/script>/gi)];
+
+  assert.equal(inlineExecutableScripts.length, 0);
+  assert.match(html, /href="\/rivt-boot\.css"/);
+  assert.match(html, /src="\/rivt-boot\.js"/);
+  assert.match(html, /src="\/rivt-service-worker\.js"/);
+  assert.match(serviceWorker, /ROOT_SHELL_ASSETS\.has\(url\.pathname\)/);
+});
+
+test("unsigned query-string reports cannot render branded RIVT sign-off", () => {
+  const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+  const serverSource = readFileSync(new URL("../server/index.js", import.meta.url), "utf8");
+  const landingHtml = readFileSync(new URL("../public/landing.html", import.meta.url), "utf8");
+
+  assert.doesNotMatch(appSource, /ReportViewer/);
+  assert.doesNotMatch(appSource, /searchParams\.get\(["']report["']\)/i);
+  assert.match(serverSource, /Legacy report links are retired/);
+  assert.doesNotMatch(serverSource, /RIVT field report|Open a field report shared through RIVT/);
+  assert.doesNotMatch(landingHtml, /Client report share link/);
+});
+
 test("offline recovery policy isolates accounts, coalesces drafts, and bounds retries and photos", async () => {
   const {
     OFFLINE_QUEUE_MAX_PHOTOS,
@@ -553,6 +577,16 @@ test("production entry point self-hosts fonts", () => {
   assert.match(entry, /\/assets\/fonts\/instrument-sans-latin\.woff2/);
 });
 
+test("production update notice is compact, dismissible, and self-clearing", () => {
+  const entry = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  const updateScript = readFileSync(new URL("../public/rivt-service-worker.js", import.meta.url), "utf8");
+  const bootStyles = readFileSync(new URL("../public/rivt-boot.css", import.meta.url), "utf8");
+
+  assert.match(entry, /id="rivt-update-dismiss"/);
+  assert.match(entry, /aria-label="Dismiss update notice"/);
+  assert.match(updateScript, /window\.setTimeout\(hideUpdateNotice,\s*15_000\)/);
+  assert.match(bootStyles, /min-width:\s*44px;\s*min-height:\s*44px/);
+});
 test("Home active-work summary hands off to one exact workspace when the project pulse is unavailable", async () => {
   const { TradeFeed } = await loadModule("/src/features/home/TradeFeed.tsx");
   const activeWork = {
@@ -842,5 +876,34 @@ test("Shop Talk composer defaults trade from selected community before poster tr
   assert.equal(
     inferCommunityDefaultTrade({ slug: "jacksonville-trades", name: "Jacksonville Trades", meta: "Local work and referrals" }, "Plumbing"),
     "Plumbing",
+  );
+});
+
+test("account-owned child callbacks stay bound to the identity generation that rendered them", () => {
+  const appSource = readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+
+  assert.match(
+    appSource,
+    /onJobLoaded=\{\(job\) => \{\s*if \(!isCurrentAccountGeneration\(renderedAccountScope\)\) return;\s*handleJobLoaded\(job\);/,
+  );
+  assert.match(
+    appSource,
+    /onOfferAccepted=\{\(nextWork\) => \{\s*if \(!isCurrentAccountGeneration\(renderedAccountScope\)\) return;\s*mergeActiveWorkRecord\(nextWork\);/,
+  );
+  assert.match(
+    appSource,
+    /onSaved=\{\(job, published\) => \{\s*if \(!isCurrentAccountGeneration\(renderedAccountScope\)\) return;\s*handleJobSaved\(job, published\);/,
+  );
+  assert.match(
+    appSource,
+    /onCommunityCreated=\{\(community\) => \{\s*if \(!isCurrentAccountGeneration\(renderedAccountScope\)\) return;\s*handleCommunityCreated\(community\);/,
+  );
+  assert.match(
+    appSource,
+    /const serverAccountRequest = !isGuest && authUser && onboardingComplete[\s\S]*?if \(serverAccountRequest && !isCurrentAccountGeneration\(serverAccountRequest\)\) return;[\s\S]*?setCommunityPosts/,
+  );
+  assert.match(
+    appSource,
+    /refreshedAccount\.id !== expectedAccountId[\s\S]*?canonicalAccountIdRef\.current !== expectedAccountId/,
   );
 });

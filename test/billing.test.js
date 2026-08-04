@@ -45,6 +45,44 @@ test("mapBillingStatus only exposes active pro entitlements", () => {
   assert.equal(inactive.plan, "free");
 });
 
+test("billing event retention excludes customer PII and full provider payloads", () => {
+  const minimized = billingInternals.minimizedBillingEventPayload({
+    id: "evt_123",
+    type: "checkout.session.completed",
+    api_version: "2026-02-25.clover",
+    created: 1_722_000_000,
+    data: {
+      object: {
+        id: "cs_123",
+        object: "checkout.session",
+        client_reference_id: "account-123",
+        customer: "cus_123",
+        subscription: "sub_123",
+        status: "complete",
+        payment_status: "paid",
+        customer_details: {
+          email: "private@example.com",
+          name: "Private Customer",
+          address: { line1: "123 Private Street" },
+        },
+      },
+    },
+  });
+
+  assert.deepEqual(minimized, {
+    apiVersion: "2026-02-25.clover",
+    created: 1_722_000_000,
+    objectId: "cs_123",
+    objectType: "checkout.session",
+    accountId: "account-123",
+    customerId: "cus_123",
+    subscriptionId: "sub_123",
+    status: "complete",
+    paymentStatus: "paid",
+  });
+  assert.doesNotMatch(JSON.stringify(minimized), /private@example|Private Customer|Private Street/);
+});
+
 test("subscription period end supports current Stripe item-level payloads", () => {
   assert.equal(billingInternals.subscriptionPeriodEnd({ current_period_end: 123 }), 123);
   assert.equal(billingInternals.subscriptionPeriodEnd({

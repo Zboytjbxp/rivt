@@ -200,6 +200,20 @@ object version and digest, checks schema/content/sequence parity, and enforces
 the configured RTO. Never persist restore credentials or confirmation on the
 normal application service.
 
+For no-cost local validation of the provider-neutral encrypted object recovery
+foundation, use only the guarded in-memory harness:
+
+```text
+RECOVERY_HARNESS_MODE=local-memory CONFIRM_RECOVERY_LOCAL_ONLY=true NODE_ENV=test npm run recovery:harness:local
+```
+
+The local harness has no cloud client, provider adapter, production-data read,
+or charge-bearing action. It exercises bounded encrypted copy, completion-last
+semantics, integrity verification, and isolated restore using injected memory
+stores. A pass is implementation evidence only: it does not restore the current
+production artifact or independently retained object bytes, and it does not
+close `R-052` or `GA-OPS-004`.
+
 ## Provider Outage
 
 1. Identify provider, affected capability, first failure, and user impact.

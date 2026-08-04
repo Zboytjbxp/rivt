@@ -1,4 +1,4 @@
-import { apiPath, fetchWithTimeout, notifySessionExpired } from "./api";
+import { apiPath, fetchWithTimeout, notifySessionExpired, RIVT_EXPECTED_ACCOUNT_HEADER } from "./api";
 
 export const OFFLINE_QUEUE_CHANGED_EVENT = "rivt:offline-queue-changed";
 export const OFFLINE_QUEUE_MAX_PHOTOS = 25;
@@ -9,7 +9,13 @@ export const OFFLINE_QUEUE_STALE_DAYS = 30;
 const DB_NAME = "rivt-offline-recovery";
 const DB_VERSION = 1;
 const STORE_NAME = "operations";
-const runningFlushes = new Map<string, Promise<OfflineFlushResult>>();
+
+interface RunningOfflineFlush {
+  controller: AbortController;
+  task: Promise<OfflineFlushResult>;
+}
+
+const runningFlushes = new Map<string, RunningOfflineFlush>();
 
 export type OfflineOperationKind =
   | "workspace_record_create"
@@ -316,17 +322,19 @@ function fileFromPayload(file: OfflineFilePayload) {
   });
 }
 
-async function sendOperation(operation: OfflineOperation) {
+async function sendOperation(operation: OfflineOperation, signal: AbortSignal) {
   let path: string;
   let options: RequestInit;
+  const expectedAccountHeader = { [RIVT_EXPECTED_ACCOUNT_HEADER]: operation.accountId };
   if (operation.kind === "workspace_record_create") {
     const payload = operation.payload as OfflineWorkspaceRecordPayload;
     path = `/api/v1/projects/${encodeURIComponent(payload.projectId)}/workspace-records`;
     options = {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": operation.idempotencyKey },
+      headers: { "Content-Type": "application/json", "Idempotency-Key": operation.idempotencyKey, ...expectedAccountHeader },
       body: JSON.stringify(payload.input),
+      signal,
     };
   } else if (operation.kind === "daily_log_upsert") {
     const payload = operation.payload as OfflineDailyLogPayload;
@@ -334,8 +342,9 @@ async function sendOperation(operation: OfflineOperation) {
     options = {
       method: "POST",
       credentials: "include",
-      headers: { "Content-Type": "application/json", "Idempotency-Key": operation.idempotencyKey },
+      headers: { "Content-Type": "application/json", "Idempotency-Key": operation.idempotencyKey, ...expectedAccountHeader },
       body: JSON.stringify(payload.input),
+      signal,
     };
   } else if (operation.kind === "project_media_upload") {
     const payload = operation.payload as OfflineProjectMediaPayload;
@@ -348,8 +357,9 @@ async function sendOperation(operation: OfflineOperation) {
     options = {
       method: "POST",
       credentials: "include",
-      headers: { "Idempotency-Key": operation.idempotencyKey },
+      headers: { "Idempotency-Key": operation.idempotencyKey, ...expectedAccountHeader },
       body: form,
+      signal,
     };
   } else if (operation.kind === "album_photo_upload") {
     const payload = operation.payload as OfflineAlbumPhotoPayload;
@@ -362,34 +372,38 @@ async function sendOperation(operation: OfflineOperation) {
     options = {
       method: "POST",
       credentials: "include",
-      headers: { "Idempotency-Key": operation.idempotencyKey },
+      headers: { "Idempotency-Key": operation.idempotencyKey, ...expectedAccountHeader },
       body: form,
+      signal,
     };
   } else {
-    return { status: 422, message: "This RIVT version cannot sync this saved item." };
+    return { status: 422, code: "OFFLINE_OPERATION_UNSUPPORTED", message: "This RIVT version cannot sync this saved item." };
   }
 
   try {
     const response = await fetchWithTimeout(apiPath(path), options, isOfflinePhotoKind(operation.kind) ? 60_000 : undefined);
-    const body = await response.json().catch(() => ({})) as { error?: { message?: string } };
-    if (response.status === 401) notifySessionExpired();
+    const body = await response.json().catch(() => ({})) as { error?: { code?: string; message?: string } };
+    if (response.status === 401 && !signal.aborted) notifySessionExpired(operation.accountId);
     return {
       status: response.status,
+      code: body.error?.code ?? "",
       message: response.ok ? "" : body.error?.message ?? "RIVT could not sync this saved item.",
     };
   } catch (error) {
     const status = typeof error === "object" && error && "status" in error ? Number(error.status) : 0;
     return {
       status: Number.isFinite(status) ? status : 0,
+      code: signal.aborted ? "OFFLINE_FLUSH_CANCELLED" : "",
       message: error instanceof Error ? error.message : "Connection problem - this item is still saved on this device.",
     };
   }
 }
 
-async function flushAccount(accountId: string, force: boolean): Promise<OfflineFlushResult> {
+async function flushAccount(accountId: string, force: boolean, signal: AbortSignal): Promise<OfflineFlushResult> {
   const result: OfflineFlushResult = { synced: 0, queued: 0, failed: 0, conflicted: 0 };
   const operations = await listOfflineOperations(accountId);
   for (const operation of operations) {
+    if (signal.aborted) break;
     if (operation.status === "conflicted" || (operation.status === "failed" && !force)) {
       result[operation.status === "conflicted" ? "conflicted" : "failed"] += 1;
       continue;
@@ -404,12 +418,41 @@ async function flushAccount(accountId: string, force: boolean): Promise<OfflineF
     operation.lastError = null;
     await putOperation(operation);
     emitChanged();
+    if (signal.aborted) {
+      operation.status = "queued";
+      operation.nextAttemptAt = null;
+      await putOperation(operation);
+      emitChanged();
+      result.queued += 1;
+      break;
+    }
 
-    const response = await sendOperation(operation);
+    const response = await sendOperation(operation, signal);
+    if (signal.aborted || response.code === "OFFLINE_FLUSH_CANCELLED") {
+      operation.status = "queued";
+      operation.updatedAt = new Date().toISOString();
+      operation.nextAttemptAt = null;
+      operation.lastError = null;
+      await putOperation(operation);
+      emitChanged();
+      result.queued += 1;
+      break;
+    }
     if (response.status >= 200 && response.status < 300) {
       await removeOfflineOperation(operation.id);
       result.synced += 1;
       continue;
+    }
+
+    if (response.code === "ACCOUNT_CONTEXT_CHANGED") {
+      operation.status = "queued";
+      operation.updatedAt = new Date().toISOString();
+      operation.nextAttemptAt = null;
+      operation.lastError = "Sign in to the account that saved this item before syncing it.";
+      await putOperation(operation);
+      emitChanged();
+      result.queued += 1;
+      break;
     }
 
     const status = offlineFailureStatus(response.status);
@@ -430,13 +473,18 @@ async function flushAccount(accountId: string, force: boolean): Promise<OfflineF
 
 export function flushOfflineQueue(accountId: string, options: { force?: boolean } = {}) {
   const existing = runningFlushes.get(accountId);
-  if (existing) return existing;
-  const task = flushAccount(accountId, Boolean(options.force)).finally(() => {
-    runningFlushes.delete(accountId);
+  if (existing) return existing.task;
+  const controller = new AbortController();
+  const task = flushAccount(accountId, Boolean(options.force), controller.signal).finally(() => {
+    if (runningFlushes.get(accountId)?.task === task) runningFlushes.delete(accountId);
     emitChanged();
   });
-  runningFlushes.set(accountId, task);
+  runningFlushes.set(accountId, { controller, task });
   return task;
+}
+
+export function cancelOfflineQueueFlush(accountId: string) {
+  runningFlushes.get(accountId)?.controller.abort();
 }
 
 export async function retryOfflineOperation(id: string, accountId: string) {

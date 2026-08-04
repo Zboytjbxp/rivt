@@ -1,7 +1,7 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
 import pg from "pg";
-import { migrationStatus } from "../server/migrations.js";
+import { assertMigrationsCurrent } from "../server/migrations.js";
 
 const baseUrl = process.env.RIVT_SMOKE_BASE_URL ?? "https://rivt.pro";
 const databaseUrl = process.env.DATABASE_URL?.trim();
@@ -152,7 +152,7 @@ try {
     assert.equal(result.response.status, 401, `${path} must fail closed for anonymous users.`);
   }
 
-  const migrations = await migrationStatus(pool);
+  const migrations = await assertMigrationsCurrent(pool);
   assert.equal(migrations.pending.length, 0);
   assert.ok(migrations.applied.some((migration) => migration.version === 8), "Migration 0008 must be applied.");
   assert.ok(migrations.applied.some((migration) => migration.version === 9), "Migration 0009 must be applied.");

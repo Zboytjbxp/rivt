@@ -3,17 +3,24 @@ interface ClientErrorContext {
   componentStack?: string | null;
 }
 
+function redactSensitiveText(value: unknown) {
+  return String(value ?? "")
+    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[REDACTED_EMAIL]")
+    .replace(/\bBearer\s+[A-Za-z0-9._~+/=-]+\b/gi, "Bearer [REDACTED]")
+    .replace(/([?&](?:token|signature|sig|key|code|x-amz-[^=&#\s]+)=)[^&#\s]+/gi, "$1[REDACTED]");
+}
+
 function errorDetails(error: unknown) {
   if (error instanceof Error) {
     return {
       name: error.name || "Error",
-      message: error.message || "Unknown client error",
-      stack: error.stack || "",
+      message: redactSensitiveText(error.message || "Unknown client error"),
+      stack: redactSensitiveText(error.stack || ""),
     };
   }
   return {
     name: "NonError",
-    message: String(error ?? "Unknown client error"),
+    message: redactSensitiveText(error ?? "Unknown client error"),
     stack: "",
   };
 }

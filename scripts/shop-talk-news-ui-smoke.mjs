@@ -12,6 +12,7 @@ const projectRoot = process.cwd();
 const viteBin = path.join(projectRoot, "node_modules", "vite", "bin", "vite.js");
 const screenshotDir = path.join(os.tmpdir(), "rivt-shop-talk-news-pass");
 const reactionStorageKey = "rivt-shop-talk-reactions-v1";
+const newsFixtureNow = Date.parse("2026-07-30T12:00:00.000Z");
 const reactionLedger = new Map();
 
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
@@ -324,7 +325,8 @@ async function waitForServer() {
 
 async function configurePage(page, { legacyDeviceChoices = false } = {}) {
   await page.route("https://fonts.googleapis.com/**", (route) => route.fulfill({ status: 200, contentType: "text/css", body: "" }));
-  await page.addInitScript(({ storageKey, legacy }) => {
+  await page.addInitScript(({ storageKey, legacy, fixedNow }) => {
+    Date.now = () => fixedNow;
     window.localStorage.removeItem(storageKey);
     for (const key of Object.keys(window.localStorage)) {
       if (key.startsWith("rivt.news.")) window.localStorage.removeItem(key);
@@ -334,7 +336,7 @@ async function configurePage(page, { legacyDeviceChoices = false } = {}) {
       window.localStorage.setItem("rivt.news.followedTrades.v1", JSON.stringify(["Electrical"]));
       window.localStorage.setItem("rivt.news.savedUrls.v1", JSON.stringify(["https://www.osha.gov/heat-exposure?utm_source=device"]));
     }
-  }, { storageKey: reactionStorageKey, legacy: legacyDeviceChoices });
+  }, { storageKey: reactionStorageKey, legacy: legacyDeviceChoices, fixedNow: newsFixtureNow });
   reactionLedger.clear();
   await page.route("http://127.0.0.1:8787/api/**", (route) =>
     route.fulfill({

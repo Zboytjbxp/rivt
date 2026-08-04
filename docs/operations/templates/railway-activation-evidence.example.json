@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "status": "draft",
+  "activationStage": "split",
+  "recordedAt": null,
+  "recordedBy": null,
+  "bindings": {
+    "activationPlanArtifactSha256": null,
+    "approvedPlanSha256": null,
+    "providerSnapshotArtifactSha256": null,
+    "operatorControlReviewArtifactSha256": null
+  },
+  "source": {
+    "candidateCommit": null,
+    "liveCommitBefore": null,
+    "rollbackCommit": null
+  },
+  "activationWindow": {
+    "startedAt": null,
+    "completedAt": null,
+    "observedWorkerUnavailableMinutes": null
+  },
+  "deployments": {
+    "web": {
+      "deploymentIdFingerprint": null,
+      "sourceCommit": null,
+      "status": null,
+      "healthCheckedAt": null,
+      "healthStatusCode": null,
+      "migrationVersion": null
+    },
+    "worker": {
+      "deploymentIdFingerprint": null,
+      "sourceCommit": null,
+      "status": null,
+      "readinessCheckedAt": null,
+      "heartbeatCheckedAt": null
+    }
+  },
+  "verification": {
+    "webHealthPassed": null,
+    "workerHeartbeatPassed": null,
+    "pushDeliveryPassed": null,
+    "databaseConnectionCeilingPassed": null,
+    "rollbackStillAvailable": null
+  },
+  "costReconciliation": {
+    "currentMonthActualUsd": null,
+    "currentMonthEstimateBeforeUsd": null,
+    "currentCycleIncrementalEstimateUsd": null,
+    "oneTimeActivationEstimateUsd": null,
+    "stagedEstimateUsd": null,
+    "stagedEstimateIncludesOneTimeActivation": null,
+    "agentUsageUsd": null,
+    "agentMonthlyLimitUsd": null,
+    "retainedMonthlyCostUsd": null,
+    "withinApprovedCeiling": null
+  },
+  "outcome": {
+    "accepted": null,
+    "rolledBack": null,
+    "rollbackReason": null,
+    "notes": null
+  }
+}

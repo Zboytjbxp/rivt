@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { apiPath, fetchWithTimeout } from "../../lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiPath, fetchWithTimeout, RIVT_EXPECTED_ACCOUNT_HEADER } from "../../lib/api";
 
 export type PushPermission = "default" | "granted" | "denied";
 
@@ -9,6 +9,21 @@ type PushConfig = {
   vapidGeneration?: string | null;
   subscriptionCount: number;
 };
+
+let pushSubscriptionMutationTail: Promise<void> = Promise.resolve();
+
+async function serializePushSubscriptionAccess<T>(operation: () => Promise<T>): Promise<T> {
+  const previous = pushSubscriptionMutationTail;
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  pushSubscriptionMutationTail = previous.then(() => gate);
+  await previous;
+  try {
+    return await operation();
+  } finally {
+    release();
+  }
+}
 
 function supported() {
   return typeof window !== "undefined"
@@ -96,29 +111,46 @@ async function responseError(response: Response, fallback: string) {
   return new Error(body.error?.message || fallback);
 }
 
-async function fetchPushConfig(): Promise<PushConfig> {
-  const response = await fetchWithTimeout(apiPath("/api/v1/push/config"), { credentials: "include" });
+function accountHeaders(accountId: string, headers?: HeadersInit) {
+  const next = new Headers(headers);
+  next.set(RIVT_EXPECTED_ACCOUNT_HEADER, accountId);
+  return next;
+}
+
+async function fetchPushConfig(accountId: string, signal?: AbortSignal): Promise<PushConfig> {
+  const response = await fetchWithTimeout(apiPath("/api/v1/push/config"), {
+    credentials: "include",
+    headers: accountHeaders(accountId),
+    signal,
+  });
   if (!response.ok) throw await responseError(response, "Device alert setup could not be checked.");
   const body = await response.json() as { data: PushConfig };
   return body.data;
 }
 
-async function registerSubscription(subscription: PushSubscription, vapidGeneration: string | null) {
+async function registerSubscription(
+  accountId: string,
+  subscription: PushSubscription,
+  vapidGeneration: string | null,
+  signal?: AbortSignal,
+) {
   const response = await fetchWithTimeout(apiPath("/api/v1/push-subscriptions"), {
     method: "POST",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: accountHeaders(accountId, { "Content-Type": "application/json" }),
     body: JSON.stringify({ ...subscription.toJSON(), vapidGeneration }),
+    signal,
   });
   if (!response.ok) throw await responseError(response, "This device could not be registered for alerts.");
 }
 
-async function removeSubscription(endpoint: string) {
+async function removeSubscription(accountId: string, endpoint: string, signal?: AbortSignal) {
   const response = await fetchWithTimeout(apiPath("/api/v1/push-subscriptions"), {
     method: "DELETE",
     credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: accountHeaders(accountId, { "Content-Type": "application/json" }),
     body: JSON.stringify({ endpoint }),
+    signal,
   });
   if (!response.ok) throw await responseError(response, "This device could not be removed from alerts.");
 }
@@ -127,25 +159,36 @@ async function replaceMismatchedSubscription(
   registration: ServiceWorkerRegistration,
   subscription: PushSubscription,
   publicKey: string,
+  accountId: string,
+  signal: AbortSignal,
+  isCurrent: () => boolean,
 ) {
   if (subscriptionUsesPublicKey(subscription, publicKey)) return subscription;
   const previousEndpoint = subscription.endpoint;
   const previousApplicationServerKey = subscription.options?.applicationServerKey?.slice(0) ?? null;
   const unsubscribed = await subscription.unsubscribe();
+  if (!isCurrent() || signal.aborted) throw new Error("ACCOUNT_CONTEXT_CHANGED");
   if (!unsubscribed) return subscription;
-  await removeSubscription(previousEndpoint).catch(() => {});
+  await removeSubscription(accountId, previousEndpoint, signal).catch((error) => {
+    if (!isCurrent() || signal.aborted) throw error;
+  });
+  if (!isCurrent() || signal.aborted) throw new Error("ACCOUNT_CONTEXT_CHANGED");
   try {
-    return await registration.pushManager.subscribe({
+    const next = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
     });
+    if (!isCurrent() || signal.aborted) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+    return next;
   } catch (error) {
-    if (previousApplicationServerKey) {
+    if (previousApplicationServerKey && isCurrent() && !signal.aborted) {
       try {
-        return await registration.pushManager.subscribe({
+        const restored = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: previousApplicationServerKey,
         });
+        if (!isCurrent() || signal.aborted) throw new Error("ACCOUNT_CONTEXT_CHANGED", { cause: error });
+        return restored;
       } catch {
         // Surface the active-key replacement failure after the continuity attempt also fails.
       }
@@ -155,9 +198,11 @@ async function replaceMismatchedSubscription(
 }
 
 export function usePushNotifications({
+  accountId = null,
   enabled = true,
   restoreOnMount = true,
 }: {
+  accountId?: string | null;
   enabled?: boolean;
   restoreOnMount?: boolean;
 } = {}) {
@@ -175,43 +220,117 @@ export function usePushNotifications({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const mountedRef = useRef(true);
+  const accountIdRef = useRef(accountId);
+  const accountEpochRef = useRef(0);
+  const actionControllerRef = useRef<AbortController | null>(null);
+  const actionEpochRef = useRef(0);
 
   useEffect(() => {
+    mountedRef.current = true;
+    accountIdRef.current = accountId;
+    accountEpochRef.current += 1;
+    actionControllerRef.current?.abort();
+    return () => {
+      mountedRef.current = false;
+      accountEpochRef.current += 1;
+      actionControllerRef.current?.abort();
+    };
+  }, [accountId]);
+
+  const captureAccountScope = useCallback(() => {
+    return { accountId, epoch: accountEpochRef.current };
+  }, [accountId]);
+
+  const accountScopeIsCurrent = useCallback((scope: { accountId: string | null; epoch: number }) => {
+    return mountedRef.current
+      && Boolean(scope.accountId)
+      && accountIdRef.current === scope.accountId
+      && accountEpochRef.current === scope.epoch;
+  }, []);
+
+  function beginAction() {
+    actionControllerRef.current?.abort();
+    const controller = new AbortController();
+    actionControllerRef.current = controller;
+    actionEpochRef.current += 1;
+    return { controller, epoch: actionEpochRef.current };
+  }
+
+  function actionIsCurrent(
+    scope: { accountId: string | null; epoch: number },
+    action: { controller: AbortController; epoch: number },
+  ) {
+    return accountScopeIsCurrent(scope)
+      && !action.controller.signal.aborted
+      && actionControllerRef.current === action.controller
+      && actionEpochRef.current === action.epoch;
+  }
+
+  useEffect(() => {
+    const scope = captureAccountScope();
+    const controller = new AbortController();
     let cancelled = false;
     async function hydrate() {
-      if (!enabled) {
+      if (!enabled || !scope.accountId) {
         setLoading(false);
         return;
       }
+      const originAccountId = scope.accountId;
+      setLoading(true);
+      setError(null);
+      setNotice(null);
+      setSubscribed(false);
       try {
-        const config = await fetchPushConfig();
-        if (cancelled) return;
+        const config = await fetchPushConfig(originAccountId, controller.signal);
+        if (cancelled || !accountScopeIsCurrent(scope)) return;
         setProviderConfigured(config.configured);
         setPublicKey(config.publicKey);
         setVapidGeneration(config.vapidGeneration ?? null);
         if (!supported() || requiresHomeScreenInstall || !config.configured) return;
         const registration = await navigator.serviceWorker.ready;
-        let current = await registration.pushManager.getSubscription();
-        if (cancelled) return;
-        if (restoreOnMount && current && config.publicKey) {
-          current = await replaceMismatchedSubscription(registration, current, config.publicKey);
-        }
+        if (cancelled || !accountScopeIsCurrent(scope)) return;
+        const current = await serializePushSubscriptionAccess(async () => {
+          if (cancelled || !accountScopeIsCurrent(scope)) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+          let subscription = await registration.pushManager.getSubscription();
+          if (cancelled || !accountScopeIsCurrent(scope)) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+          if (restoreOnMount && subscription && config.publicKey) {
+            subscription = await replaceMismatchedSubscription(
+              registration,
+              subscription,
+              config.publicKey,
+              originAccountId,
+              controller.signal,
+              () => !cancelled && accountScopeIsCurrent(scope),
+            );
+          }
+          if (cancelled || !accountScopeIsCurrent(scope)) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+          if (restoreOnMount && subscription && config.publicKey) {
+            await registerSubscription(
+              originAccountId,
+              subscription,
+              verifiedSubscriptionGeneration(subscription, config.publicKey, config.vapidGeneration ?? null),
+              controller.signal,
+            );
+          }
+          return subscription;
+        });
+        if (cancelled || !accountScopeIsCurrent(scope)) return;
         setSubscribed(Boolean(current));
-        if (restoreOnMount && current && config.publicKey) {
-          await registerSubscription(
-            current,
-            verifiedSubscriptionGeneration(current, config.publicKey, config.vapidGeneration ?? null),
-          );
-        }
       } catch (caught) {
-        if (!cancelled) setError(caught instanceof Error ? caught.message : "Device alerts could not be checked.");
+        if (!cancelled && accountScopeIsCurrent(scope)) {
+          setError(caught instanceof Error ? caught.message : "Device alerts could not be checked.");
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && accountScopeIsCurrent(scope)) setLoading(false);
       }
     }
     void hydrate();
-    return () => { cancelled = true; };
-  }, [enabled, requiresHomeScreenInstall, restoreOnMount]);
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [accountId, accountScopeIsCurrent, captureAccountScope, enabled, requiresHomeScreenInstall, restoreOnMount]);
 
   async function requestAndSubscribe() {
     if (requiresHomeScreenInstall) {
@@ -226,11 +345,16 @@ export function usePushNotifications({
       setError("Background device alerts are temporarily unavailable.");
       return;
     }
+    const scope = captureAccountScope();
+    if (!scope.accountId) return;
+    const originAccountId = scope.accountId;
+    const action = beginAction();
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
       const result = await Notification.requestPermission();
+      if (!actionIsCurrent(scope, action)) return;
       setPermission(result as PushPermission);
       if (result !== "granted") {
         setError(result === "denied"
@@ -239,28 +363,50 @@ export function usePushNotifications({
         return;
       }
       const registration = await navigator.serviceWorker.ready;
-      let existing = await registration.pushManager.getSubscription();
-      if (existing) {
-        existing = await replaceMismatchedSubscription(registration, existing, publicKey);
-      }
-      const subscription = existing ?? await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
+      if (!actionIsCurrent(scope, action)) return;
+      await serializePushSubscriptionAccess(async () => {
+        if (!actionIsCurrent(scope, action)) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+        let existing = await registration.pushManager.getSubscription();
+        if (!actionIsCurrent(scope, action)) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+        if (existing) {
+          existing = await replaceMismatchedSubscription(
+            registration,
+            existing,
+            publicKey,
+            originAccountId,
+            action.controller.signal,
+            () => actionIsCurrent(scope, action),
+          );
+        }
+        const subscription = existing ?? await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
+        });
+        if (!actionIsCurrent(scope, action)) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+        await registerSubscription(
+          originAccountId,
+          subscription,
+          verifiedSubscriptionGeneration(subscription, publicKey, vapidGeneration),
+          action.controller.signal,
+        );
       });
-      await registerSubscription(
-        subscription,
-        verifiedSubscriptionGeneration(subscription, publicKey, vapidGeneration),
-      );
+      if (!actionIsCurrent(scope, action)) return;
       setSubscribed(true);
       setNotice("Device alerts are on for this browser.");
     } catch (caught) {
+      if (!actionIsCurrent(scope, action)) return;
       setError(caught instanceof Error ? caught.message : "Device alerts could not be enabled.");
     } finally {
-      setBusy(false);
+      if (actionIsCurrent(scope, action)) setBusy(false);
+      if (actionControllerRef.current === action.controller) actionControllerRef.current = null;
     }
   }
 
   async function sendTestNotification() {
+    const scope = captureAccountScope();
+    if (!scope.accountId) return;
+    const originAccountId = scope.accountId;
+    const action = beginAction();
     setBusy(true);
     setError(null);
     setNotice(null);
@@ -268,38 +414,57 @@ export function usePushNotifications({
       const response = await fetchWithTimeout(apiPath("/api/v1/push/test"), {
         method: "POST",
         credentials: "include",
+        headers: accountHeaders(originAccountId),
+        signal: action.controller.signal,
       });
+      if (!actionIsCurrent(scope, action)) return;
       if (!response.ok) throw await responseError(response, "The test alert could not be queued.");
       const payload = await response.json() as { data?: { queued?: boolean } };
+      if (!actionIsCurrent(scope, action)) return;
       if (!payload.data?.queued) {
         throw new Error("Account notices are off. Turn them on before sending a test alert.");
       }
       setNotice("Test alert queued. It should arrive in a few seconds.");
     } catch (caught) {
+      if (!actionIsCurrent(scope, action)) return;
       setError(caught instanceof Error ? caught.message : "The test alert could not be queued.");
     } finally {
-      setBusy(false);
+      if (actionIsCurrent(scope, action)) setBusy(false);
+      if (actionControllerRef.current === action.controller) actionControllerRef.current = null;
     }
   }
 
   async function unsubscribe() {
+    const scope = captureAccountScope();
+    if (!scope.accountId) return;
+    const originAccountId = scope.accountId;
+    const action = beginAction();
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
       const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      if (subscription) {
-        const endpoint = subscription.endpoint;
-        await subscription.unsubscribe();
-        await removeSubscription(endpoint).catch(() => {});
-      }
+      if (!actionIsCurrent(scope, action)) return;
+      await serializePushSubscriptionAccess(async () => {
+        if (!actionIsCurrent(scope, action)) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+        const subscription = await registration.pushManager.getSubscription();
+        if (!actionIsCurrent(scope, action)) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+        if (subscription) {
+          const endpoint = subscription.endpoint;
+          await subscription.unsubscribe();
+          if (!actionIsCurrent(scope, action)) throw new Error("ACCOUNT_CONTEXT_CHANGED");
+          await removeSubscription(originAccountId, endpoint, action.controller.signal);
+        }
+      });
+      if (!actionIsCurrent(scope, action)) return;
       setSubscribed(false);
       setNotice("Device alerts are off for this browser.");
     } catch (caught) {
+      if (!actionIsCurrent(scope, action)) return;
       setError(caught instanceof Error ? caught.message : "Device alerts could not be turned off.");
     } finally {
-      setBusy(false);
+      if (actionIsCurrent(scope, action)) setBusy(false);
+      if (actionControllerRef.current === action.controller) actionControllerRef.current = null;
     }
   }
 
@@ -321,12 +486,14 @@ export function usePushNotifications({
   };
 }
 
-export async function disablePushForCurrentDevice() {
+export async function disablePushForCurrentDevice(accountId: string) {
   if (!supported()) return;
   const registration = await navigator.serviceWorker.ready;
-  const subscription = await registration.pushManager.getSubscription();
-  if (!subscription) return;
-  const endpoint = subscription.endpoint;
-  await subscription.unsubscribe();
-  await removeSubscription(endpoint).catch(() => {});
+  await serializePushSubscriptionAccess(async () => {
+    const subscription = await registration.pushManager.getSubscription();
+    if (!subscription) return;
+    const endpoint = subscription.endpoint;
+    await subscription.unsubscribe();
+    await removeSubscription(accountId, endpoint).catch(() => {});
+  });
 }

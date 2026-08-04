@@ -228,7 +228,7 @@ test("incident body uses only static text, validated URLs, and allowlisted codes
 
 test("workflow keeps verification, alert testing, and issue mutation separated and fail closed", () => {
   const workflowPath = fileURLToPath(new URL("../.github/workflows/backup-freshness.yml", import.meta.url));
-  const workflow = fs.readFileSync(workflowPath, "utf8");
+  const workflow = fs.readFileSync(workflowPath, "utf8").replace(/\r\n/g, "\n");
   assert.match(workflow, /cron: "37 \* \* \* \*"/);
   assert.match(workflow, /queue: max/);
   assert.match(workflow, /environment: production-backup-monitor/);

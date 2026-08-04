@@ -124,9 +124,12 @@ Preferred path:
 
 1. AI works on its own branch
 2. AI pushes that branch
-3. other AI or Michael reviews from that branch
-4. branch is merged to `master`
-5. Railway deploys from `master`
+3. AI opens or updates a pull request from that branch into `master`; a branch
+   push by itself does not run the repository's disposable-PostgreSQL Gate A CI
+4. Gate A verifies the pull-request head with its disposable PostgreSQL service
+5. other AI or Michael reviews from that branch and pull request
+6. branch is merged to `master`
+7. Railway deploys from `master`
 
 Avoid GitHub squash merges when mixed AI authorship matters.
 
@@ -184,6 +187,21 @@ Important distinction:
 - production proof should reference the live build commit, not assumptions
 
 ## Tooling Hygiene
+
+### Production provider output
+
+Every AI and operator must treat provider output as potentially secret-bearing.
+Do not enumerate, export, print, redirect, or capture a complete production
+environment. `railway environment config` and every `railway
+variable`/`railway variables` enumeration or export are prohibited against
+production, including read-only and JSON forms. Never put a credential in a
+CLI argument or shell command.
+
+Railway activation evidence must use the sanitized snapshot path documented in
+`RAILWAY_ACTIVATION_RUNBOOK.md`. A named credential change must occur one at a
+time through an authenticated provider or Railway form. If a secret appears in
+tool output, stop, do not repeat or store it, preserve the launch hold, and
+follow `CREDENTIAL_ROTATION_RUNBOOK.md`.
 
 If an AI-specific branch is reset or rebased onto fresh `origin/master`, old remote-tracking refs can create false alarms in local hooks.
 

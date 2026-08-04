@@ -28,7 +28,7 @@
   Zap,
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFocusTrap } from "../../app-shell/useFocusTrap";
 import { usePro } from "../pro/usePro";
 import {
@@ -115,6 +115,7 @@ interface CanonicalProfileDetails extends Omit<ProfileUpdateInput, "displayName"
 }
 
 interface ProfileHubProps {
+  accountId: string;
   view: "Trust & Legal" | "Safety & Training" | "Reviews" | "Feedback" | "Settings";
   initialSettingsSection?: SettingsSection;
   role: Role;
@@ -988,7 +989,7 @@ function DocumentStyleChooser({
   );
 }
 
-function PushNotificationsCard() {
+function PushNotificationsCard({ accountId }: { accountId: string }) {
   const {
     isAppleMobile,
     permission,
@@ -1004,7 +1005,7 @@ function PushNotificationsCard() {
     requestAndSubscribe,
     sendTestNotification,
     unsubscribe,
-  } = usePushNotifications({ restoreOnMount: false });
+  } = usePushNotifications({ accountId, restoreOnMount: false });
 
   const status = deviceAlertStatus({
     loading,
@@ -1063,13 +1064,32 @@ function PushNotificationsCard() {
   );
 }
 
-function PlanCard() {
-  const { isPro, activatedAt, billing, billingLoading, refreshBilling } = usePro();
+function PlanCard({ accountId }: { accountId: string }) {
+  const { isPro, activatedAt, billing, billingLoading, refreshBilling } = usePro(accountId);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [portalState, setPortalState] = useState<"idle" | "opening">("idle");
   const [subscriptionAction, setSubscriptionAction] = useState<"idle" | "cancelling" | "resuming">("idle");
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [billingMessage, setBillingMessage] = useState<{ kind: "success" | "warning"; text: string } | null>(null);
+  const mountedRef = useRef(true);
+  const accountIdRef = useRef(accountId);
+  const portalControllerRef = useRef<AbortController | null>(null);
+  const subscriptionControllerRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    mountedRef.current = true;
+    accountIdRef.current = accountId;
+    return () => {
+      mountedRef.current = false;
+      portalControllerRef.current?.abort();
+      subscriptionControllerRef.current?.abort();
+    };
+  }, [accountId]);
+
+  function actionStillCurrent(originAccountId: string, signal?: AbortSignal) {
+    return mountedRef.current
+      && accountIdRef.current === originAccountId
+      && !signal?.aborted;
+  }
 
   const providerReady = billing ? billing.provider.checkoutConfigured : true;
   const activeThroughLabel = activatedAt
@@ -1093,6 +1113,7 @@ function PlanCard() {
       return;
     }
 
+    const controller = new AbortController();
     let cancelled = false;
     let timeout: ReturnType<typeof setTimeout> | null = null;
     let attempts = 0;
@@ -1116,7 +1137,7 @@ function PlanCard() {
       if (checkoutSessionId) {
         try {
           setBillingMessage({ kind: "success", text: "Payment confirmed. Finalizing RIVT Pro access..." });
-          const result = await reconcileStripeCheckout(checkoutSessionId);
+          const result = await reconcileStripeCheckout(accountId, checkoutSessionId, controller.signal);
           if (cancelled) return;
           if (result.billing.active) {
             await refreshBilling();
@@ -1143,28 +1164,43 @@ function PlanCard() {
     void pollBilling();
     return () => {
       cancelled = true;
+      controller.abort();
       if (timeout) clearTimeout(timeout);
     };
-  }, [refreshBilling]);
+  }, [accountId, refreshBilling]);
 
   async function openBillingPortal() {
+    const originAccountId = accountId;
+    const controller = new AbortController();
+    portalControllerRef.current?.abort();
+    portalControllerRef.current = controller;
     setPortalState("opening");
     setBillingMessage(null);
     try {
-      const portal = await startBillingPortal();
+      const portal = await startBillingPortal(originAccountId, controller.signal);
+      if (!actionStillCurrent(originAccountId, controller.signal)) return;
       window.location.href = portal.url;
     } catch (error) {
+      if (!actionStillCurrent(originAccountId, controller.signal)) return;
       setBillingMessage({ kind: "warning", text: error instanceof BillingApiError ? "Billing management is temporarily unavailable. Try again in a moment." : "Billing portal is not available yet." });
       setPortalState("idle");
+    } finally {
+      if (portalControllerRef.current === controller) portalControllerRef.current = null;
     }
   }
 
   async function handleCancelSubscription() {
+    const originAccountId = accountId;
+    const controller = new AbortController();
+    subscriptionControllerRef.current?.abort();
+    subscriptionControllerRef.current = controller;
     setSubscriptionAction("cancelling");
     setBillingMessage(null);
     try {
-      const result = await cancelSubscription();
+      const result = await cancelSubscription(originAccountId, controller.signal);
+      if (!actionStillCurrent(originAccountId, controller.signal)) return;
       await refreshBilling();
+      if (!actionStillCurrent(originAccountId, controller.signal)) return;
       setConfirmCancel(false);
       const paidThrough = result.billing.activeUntil
         ? new Date(result.billing.activeUntil).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
@@ -1176,24 +1212,34 @@ function PlanCard() {
           : "Cancellation scheduled. Your RIVT Pro subscription will not renew.",
       });
     } catch (error) {
+      if (!actionStillCurrent(originAccountId, controller.signal)) return;
       setBillingMessage({ kind: "warning", text: error instanceof Error ? error.message : "Could not cancel the subscription right now." });
     } finally {
-      setSubscriptionAction("idle");
+      if (actionStillCurrent(originAccountId, controller.signal)) setSubscriptionAction("idle");
+      if (subscriptionControllerRef.current === controller) subscriptionControllerRef.current = null;
     }
   }
 
   async function handleResumeSubscription() {
+    const originAccountId = accountId;
+    const controller = new AbortController();
+    subscriptionControllerRef.current?.abort();
+    subscriptionControllerRef.current = controller;
     setSubscriptionAction("resuming");
     setBillingMessage(null);
     try {
-      await resumeSubscription();
+      await resumeSubscription(originAccountId, controller.signal);
+      if (!actionStillCurrent(originAccountId, controller.signal)) return;
       await refreshBilling();
+      if (!actionStillCurrent(originAccountId, controller.signal)) return;
       setConfirmCancel(false);
       setBillingMessage({ kind: "success", text: "Your RIVT Pro subscription will continue." });
     } catch (error) {
+      if (!actionStillCurrent(originAccountId, controller.signal)) return;
       setBillingMessage({ kind: "warning", text: error instanceof Error ? error.message : "Could not resume the subscription right now." });
     } finally {
-      setSubscriptionAction("idle");
+      if (actionStillCurrent(originAccountId, controller.signal)) setSubscriptionAction("idle");
+      if (subscriptionControllerRef.current === controller) subscriptionControllerRef.current = null;
     }
   }
 
@@ -1288,12 +1334,13 @@ function PlanCard() {
         </>
       )}
       {billingMessage && <p className={billingMessage.kind === "success" ? "v2-plan-success" : "v2-plan-warning"}>{billingMessage.text}</p>}
-      {upgradeOpen && <UpgradeModal onClose={() => setUpgradeOpen(false)} />}
+      {upgradeOpen && <UpgradeModal accountId={accountId} onClose={() => setUpgradeOpen(false)} />}
     </div>
   );
 }
 
 export function ProfileHub({
+  accountId,
   view,
   initialSettingsSection,
   role,
@@ -1809,7 +1856,7 @@ export function ProfileHub({
               <span>Notifications</span>
               <strong>In-app alert preferences</strong>
             </header>
-            <PushNotificationsCard />
+            <PushNotificationsCard accountId={accountId} />
             <p className="v2-notification-boundary">
               Alert categories control the RIVT notification bell and any enabled device alerts.
             </p>
@@ -1964,7 +2011,7 @@ export function ProfileHub({
               <span>Subscription</span>
               <strong>Plan</strong>
             </header>
-            <PlanCard />
+            <PlanCard accountId={accountId} />
           </section>
         ) : null}
 
