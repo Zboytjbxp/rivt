@@ -15,16 +15,17 @@ indicator is known, but every affected class is again treated as compromised.
 Michael approved one-class-at-a-time emergency rotation with up to 30 minutes
 of cumulative interruption and a `$2` before-tax incremental-cost ceiling.
 PostgreSQL, the Stripe live API key, both Stripe webhook secrets, Resend,
-Google OAuth, and the distinct rate-limit pepper are closed for this recurrence.
+Google OAuth, and both independent pepper classes are closed for this recurrence.
 The Google rotation preserved the existing project, web client, origin,
 redirect, and client ID; owner-controlled sign-ins passed before predecessor
 disablement, after disablement, and after deletion, and provider inventory
 shows exactly one enabled secret. The new dedicated `RATE_LIMIT_PEPPER` removes
-the limiter's former fallback to `AUTH_METADATA_PEPPER`; exact-source monitoring
-and two bounded durable-limiter probes passed. ACH remains disabled. The
-authentication metadata pepper remains separately pending and still requires
-its own replacement and runtime verification. Launch and Railway Stage 1 remain
-paused.
+the limiter's former fallback to `AUTH_METADATA_PEPPER`; its bounded durable-
+limiter probes passed. The independent authentication metadata replacement kept
+the existing owner session valid, issued a new authenticated owner session
+through Google OAuth, and passed exact-source monitoring. ACH remains disabled.
+Web Push VAPID and backup encryption remain pending. Launch and Railway Stage 1
+remain paused.
 
 ## Packet 99 operator secret-output containment - active; provider rotation pending
 
@@ -52,9 +53,8 @@ paused.
   pass on the Windows worktree.
 - Production rotation continues one class at a time. PostgreSQL, the Stripe
   live API key, both Stripe webhooks, Resend, Google OAuth, and the distinct
-  rate-limit pepper are closed for this recurrence. The authentication metadata
-  pepper, VAPID, and backup encryption remain pending. The authentication
-  metadata pepper has no compatibility overlap and is not claimed complete.
+  authentication metadata and rate-limit peppers are closed for this
+  recurrence. VAPID and backup encryption remain pending.
 - The Connect cutover changed only `STRIPE_CONNECT_WEBHOOK_SECRET`. Automatic
   deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
   policy; exact-source deployment `6152da11-1323-47a9-a258-d9013f040522`
@@ -116,7 +116,28 @@ paused.
   `GET /api/public/jobs?limit=1` probes returned HTTP 200 with durable limiter
   limit `90`, remaining `89` then `88`, and the same reset. Focused
   security/authentication tests passed 60/60 and `npm run lint:security` passed.
-  This closes only `RATE_LIMIT_PEPPER`; `AUTH_METADATA_PEPPER` remains pending.
+  This closes only `RATE_LIMIT_PEPPER`; the independent authentication-metadata
+  closure is recorded separately below.
+- A fresh independent `AUTH_METADATA_PEPPER` replaced the prior value with no
+  previous-value overlap and no rollback. No value, suffix, hash, fingerprint,
+  OAuth state, nonce, or challenge is recorded. Automatic deployment
+  `21316a72-8c11-4579-bc9b-c188f5d1e47d` was skipped; explicit exact-source
+  deployment `16b0deb5-d5f5-4812-afec-70de53a33575` succeeded from unchanged
+  production commit `29e3c613f2eb95a6583b52c671275e5046dde0d3`
+  with image digest
+  `sha256:5471d1280f330d2b1be7bbfc068a8dda7be5ee77ec491fc669c99f4ebada6b69`.
+  The production synthetic monitor passed with authentication, session
+  security, and Google OAuth configured; the existing owner session remained
+  valid, and a fresh owner-controlled Google OAuth sign-in returned
+  authenticated to `rivt.pro`, proving new session issuance. ACH remained
+  `enabled: false`, `configured: false`, `webhookConfigured: true`, and
+  `setup_required`. Railway's masked name-only inventory showed exactly one
+  `AUTH_METADATA_PEPPER` row and exactly one `RATE_LIMIT_PEPPER` row without
+  proving provider version history. Two post-cutover public-job probes returned
+  HTTP 200 with durable limiter limit `90`, remaining `89` then `88`, and the
+  same reset. Focused security/authentication tests passed 60/60 and
+  `npm run lint:security` passed. Both independent pepper classes are closed for
+  this recurrence; VAPID and backup encryption remain pending.
 - `master` currently has no branch protection/ruleset, so the Packet 98
   rehearsal's protected-branch guard cannot pass. No bypass is authorized.
 - The feature release remains separate from containment and is not authorized
@@ -589,9 +610,9 @@ decision.
 - Before the 2026-08-03 recurrence, the authentication metadata pepper had been
   rotated with no previous-value compatibility fallback, and that historical
   exact-source deployment was healthy. The recurrence exposed the then-current
-  value again, so `AUTH_METADATA_PEPPER` remains pending independent
-  replacement and runtime verification; the historical rotation is not current
-  recurrence closure.
+  value again, so the historical rotation alone is not current recurrence
+  closure. The fresh independent recurrence replacement and new-session proof
+  are recorded in the current Packet 99 evidence above.
 - Web Push VAPID rotation is complete. The incident owner confirmed a real
   alert reached an already opted-in owner-controlled physical device through
   the transition bridge. Both previous-key variables were then removed;

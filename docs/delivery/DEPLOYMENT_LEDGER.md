@@ -1,5 +1,49 @@
 # Deployment Ledger
 
+## 2026-08-03 - Authentication Metadata Pepper Recurrence Rotation
+
+- Approval: Michael's explicit 2026-08-03 emergency credential-rotation
+  authorization covered one-class-at-a-time replacement of the authentication
+  metadata and rate-limit peppers, exact-source redeployment, up to 30 minutes
+  of cumulative interruption, and less than US$2 of incremental cost. It did
+  not authorize ACH, a real payment, customer communication, customer-data
+  deletion, public launch, or the feature release.
+- Scope and cutover: a fresh independent `AUTH_METADATA_PEPPER` replaced the
+  prior value. There was no previous-value overlap and no rollback was used. No
+  value, suffix, hash, fingerprint, OAuth state, nonce, or challenge is
+  recorded.
+- Deployment: automatic variable deployment
+  `21316a72-8c11-4579-bc9b-c188f5d1e47d` was skipped by the CI wait policy.
+  Explicit Railway deployment `16b0deb5-d5f5-4812-afec-70de53a33575`
+  succeeded from unchanged production source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:5471d1280f330d2b1be7bbfc068a8dda7be5ee77ec491fc669c99f4ebada6b69`;
+  no feature release was deployed.
+- Runtime evidence: the exact-source production synthetic monitor passed with
+  authentication, session security, and Google OAuth configured. Invoice bank
+  payments remained `enabled: false`, `configured: false`,
+  `webhookConfigured: true`, and `setup_required`. The existing owner session
+  remained valid.
+- New-session evidence: a fresh owner-controlled Google OAuth sign-in completed
+  and returned authenticated to `rivt.pro`, proving new session issuance after
+  cutover. No OAuth state, nonce, challenge, authorization code, token, or
+  cookie is retained in this evidence.
+- Final separation inventory: Railway's masked name-only inventory showed
+  exactly one `AUTH_METADATA_PEPPER` row and exactly one `RATE_LIMIT_PEPPER`
+  row. This is current configuration evidence only; no provider version history
+  is claimed.
+- Independent limiter continuity: two post-cutover
+  `GET /api/public/jobs?limit=1` requests returned HTTP 200 with durable limiter
+  limit `90`, remaining `89` then `88`, and the same reset. This shows the
+  independently configured rate-limit pepper continued to drive one shared
+  active limiter window.
+- Focused gates: 60/60 focused security/authentication tests passed and
+  `npm run lint:security` passed.
+- Remaining boundary: both pepper classes are independently configured and
+  closed for the recurrence. VAPID and backup encryption remain pending, and
+  the incident, `ACTIVE_LAUNCH_HOLD`, and public-launch prohibition remain in
+  force.
+
 ## 2026-08-03 - Rate-Limit Pepper Recurrence Rotation
 
 - Approval: Michael's explicit 2026-08-03 emergency credential-rotation

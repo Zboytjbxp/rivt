@@ -92,8 +92,8 @@ classes with fresh recurrence evidence below are claimed complete.
 | Stripe API, billing webhook, and Connect webhook | Live API key plus both webhook signing secrets rotated and verified on 2026-08-03; the exposed API key is expired and both webhook predecessors completed Stripe's one-hour retirement window. Fresh post-retirement probes and exact-source monitoring passed |
 | Resend | Rotated and verified on 2026-08-03; the sending-only `rivt.pro` replacement delivered owner-controlled proofs before and after predecessor deletion, the owner confirmed both receipts, and provider inventory shows exactly one replacement key |
 | Google OAuth | Rotated and verified on 2026-08-03; the same production web client retained its reviewed origin and callback, owner-controlled sign-ins passed before disablement, after disablement, and after deletion, and provider inventory shows exactly one enabled secret |
-| Authentication metadata pepper | Pending independent replacement and runtime verification |
-| Rate-limit pepper | Rotated and verified on 2026-08-03; production now uses a fresh dedicated value instead of falling back to the authentication metadata pepper, exact-source monitoring and two bounded public-job limiter probes passed, and the authentication metadata pepper remains separately pending |
+| Authentication metadata pepper | Rotated and verified on 2026-08-03; a fresh independent value replaced the prior value without overlap, exact-source monitoring passed, the existing owner session remained valid, and a fresh owner-controlled Google OAuth sign-in returned authenticated through new session issuance |
+| Rate-limit pepper | Rotated and verified on 2026-08-03; production now uses a fresh dedicated value instead of falling back to the authentication metadata pepper, exact-source monitoring and bounded public-job limiter probes passed before and after the independent authentication-pepper cutover, and final masked inventory shows one row for each separate pepper |
 | Web Push VAPID | Pending active/previous bridge rotation and owner-controlled physical-device proof |
 | Backup encryption | Pending active/previous rotation, one fresh encrypted artifact, and one isolated restore proof |
 | S3 application access | No new rotation triggered by this recurrence because only provider references, not access values, were returned |
@@ -433,11 +433,48 @@ not be read as closure of the recurrence.
   window after the dedicated-pepper cutover.
 - **Focused verification:** the focused security/authentication suite passed
   all 60 tests, and `npm run lint:security` passed.
-- **Remaining boundary:** this closes only the rate-limit-pepper class for the
-  recurrence. `AUTH_METADATA_PEPPER` remains configured for its separate
-  authentication-metadata purpose and still requires its own replacement and
-  runtime verification. The prior shared fallback must not be represented as a
-  completed authentication-pepper rotation.
+- **Separation boundary:** this section closes only the rate-limit-pepper class
+  for the recurrence. Authentication-metadata closure is separately evidenced
+  below; the former shared fallback is not represented as proof of that
+  independent rotation.
+
+### Authentication metadata pepper recurrence rotation evidence - 2026-08-03
+
+- **Independent replacement:** a fresh independent `AUTH_METADATA_PEPPER`
+  replaced the prior value. There was no previous-value overlap and no rollback
+  was used. No value, suffix, hash, fingerprint, OAuth state, nonce, or
+  challenge is recorded.
+- **Exact-source cutover:** Railway's automatic variable deployment
+  `21316a72-8c11-4579-bc9b-c188f5d1e47d` was skipped by the CI wait policy.
+  Explicit deployment `16b0deb5-d5f5-4812-afec-70de53a33575` succeeded from
+  unchanged production source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:5471d1280f330d2b1be7bbfc068a8dda7be5ee77ec491fc669c99f4ebada6b69`.
+  No feature release was deployed.
+- **Runtime proof:** the exact-source production synthetic monitor passed with
+  authentication, session security, and Google OAuth configured. Invoice bank
+  payments remained `enabled: false`, `configured: false`,
+  `webhookConfigured: true`, and `setup_required`. The existing owner session
+  remained valid.
+- **New-session proof:** a fresh owner-controlled Google OAuth sign-in completed
+  and returned authenticated to `rivt.pro`, proving new session issuance after
+  the no-overlap cutover. No OAuth state, nonce, challenge, authorization code,
+  token, or cookie is retained in this evidence.
+- **Final separation inventory:** Railway's masked name-only inventory showed
+  exactly one `AUTH_METADATA_PEPPER` row and exactly one `RATE_LIMIT_PEPPER`
+  row. This proves the current two-variable configuration only; it does not
+  establish provider version history.
+- **Independent limiter continuity:** two post-cutover
+  `GET /api/public/jobs?limit=1` requests returned HTTP 200. Their durable
+  limiter headers reported limit `90`, remaining `89` then `88`, and the same
+  reset value, showing the separately configured rate-limit pepper continued
+  to drive one shared active limiter window.
+- **Focused verification:** the focused security/authentication suite passed
+  all 60 tests, and `npm run lint:security` passed.
+- **Remaining boundary:** both pepper classes are now independently configured
+  and closed for the 2026-08-03 recurrence. Web Push VAPID and backup encryption
+  remain pending; this evidence does not close the broader incident, clear
+  `ACTIVE_LAUNCH_HOLD`, or authorize launch.
 
 ## Historical rotation status before the 2026-08-03 recurrence
 
@@ -615,9 +652,9 @@ not be read as closure of the recurrence.
   value removed the exposed value from active use. Exact-source production
   health remained green.
 - The later 2026-08-03 recurrence exposed the then-current authentication
-  metadata pepper again. The historical replacement above does not close that
-  recurrence; `AUTH_METADATA_PEPPER` remains pending independent replacement
-  and runtime verification.
+  metadata pepper again. The historical replacement above did not close that
+  recurrence; the independent recurrence replacement and new-session proof are
+  recorded in the current evidence section above.
 - The broader incident remains open and Railway Stage 1 remains paused.
 
 ## Google OAuth credential rotation evidence
@@ -979,10 +1016,9 @@ credential during application rollback.
 Completed containment and rotation evidence above remains required history.
 The still-open exit boundary is:
 
-- complete and verify the still-pending 2026-08-03 recurrence rotations for
-  `AUTH_METADATA_PEPPER`, Web Push VAPID, and backup encryption; the completed
-  dedicated `RATE_LIMIT_PEPPER` rotation does not close any of those separate
-  classes;
+- complete and verify the still-pending 2026-08-03 recurrence rotations for Web
+  Push VAPID and backup encryption; both pepper classes are independently
+  rotated and no longer part of this open item;
 - finish the consolidated release-candidate forward-port, then obtain a final
   independent exact-source review and disposable-PostgreSQL CI evidence for
   that exact documentation-inclusive candidate; historical branch SHAs, scan
