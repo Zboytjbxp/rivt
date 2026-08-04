@@ -1,5 +1,47 @@
 # Deployment Ledger
 
+## 2026-08-03 - Google OAuth Recurrence Rotation
+
+- Approval: Michael's explicit 2026-08-03 emergency credential-rotation
+  authorization allowed one-class-at-a-time provider changes,
+  owner-controlled OAuth tests, up to 30 minutes of cumulative interruption,
+  and less than US$2 of incremental cost. It did not authorize ACH, a real
+  payment, customer communication, customer-data deletion, public launch, or
+  the feature release.
+- Unchanged provider boundary: production remained on Google Cloud project
+  `rivt-499402`, owned by `support@rivt.pro`, and existing OAuth web client
+  `Web client 1` with client ID
+  `723503499133-chk58c9so5otflgl33o4b8nljok7io02.apps.googleusercontent.com`.
+  Authorized origin `https://rivt.pro` and redirect
+  `https://rivt.pro/api/auth/google/callback` were unchanged. No second client
+  or provider project was created.
+- Deployment: the same-client replacement was added at 2026-08-03 11:23:53 PM
+  EDT and only Railway variable `GOOGLE_CLIENT_SECRET` changed. Automatic
+  variable deployment `2e3c8ed3-3a2d-4cf7-aa8b-d54780ad69d2` was skipped by
+  the CI wait policy. Explicit Railway deployment
+  `c00add12-8048-4407-8e6f-9880a357eed8` succeeded from unchanged production
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:5af9fd1934e0d4f4185633e8d4ae151a7448fed8604f0bf5d72de28fcb00a99f`;
+  no feature release was deployed.
+- Proof and retirement: the linked owner-controlled `zboytjbxp@gmail.com`
+  account completed a fresh sign-in and successful return to `rivt.pro` before
+  predecessor disablement. The predecessor created July 30 at 7:08:18 AM EDT
+  was then disabled, and a second fresh sign-in passed. It was deleted only
+  after that disabled-state proof, and a third fresh sign-in passed after
+  deletion.
+- Final provider evidence: inventory showed exactly one enabled secret on the
+  unchanged production web client. The deleted predecessor must never be
+  restored; future recovery requires another fresh same-client replacement.
+- Runtime evidence: exact-source production monitoring passed before and after
+  retirement. PostgreSQL and S3-compatible storage remained healthy,
+  anonymous private checks remained fail-closed, and invoice bank payments
+  remained `enabled: false`, `configured: false`,
+  `webhookConfigured: true`, and `setup_required`.
+- Interruption and cost: no interruption was observed. No service, database,
+  bucket, plan, payment, OAuth client, or recurring resource was created. Only
+  ordinary Railway redeploy usage applies within the approved ceiling; no
+  exact provider cost is claimed.
+
 ## 2026-08-03 - Resend Recurrence Rotation
 
 - Approval: Michael's explicit 2026-08-03 emergency credential-rotation

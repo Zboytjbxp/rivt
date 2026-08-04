@@ -91,7 +91,7 @@ classes with fresh recurrence evidence below are claimed complete.
 | PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
 | Stripe API, billing webhook, and Connect webhook | Live API key plus both webhook signing secrets rotated and verified on 2026-08-03; the exposed API key is expired and both webhook predecessors completed Stripe's one-hour retirement window. Fresh post-retirement probes and exact-source monitoring passed |
 | Resend | Rotated and verified on 2026-08-03; the sending-only `rivt.pro` replacement delivered owner-controlled proofs before and after predecessor deletion, the owner confirmed both receipts, and provider inventory shows exactly one replacement key |
-| Google OAuth | Pending same-client replacement and owner-controlled sign-in proof |
+| Google OAuth | Rotated and verified on 2026-08-03; the same production web client retained its reviewed origin and callback, owner-controlled sign-ins passed before disablement, after disablement, and after deletion, and provider inventory shows exactly one enabled secret |
 | Authentication metadata and rate-limit peppers | Pending distinct replacements and runtime verification |
 | Web Push VAPID | Pending active/previous bridge rotation and owner-controlled physical-device proof |
 | Backup encryption | Pending active/previous rotation, one fresh encrypted artifact, and one isolated restore proof |
@@ -363,6 +363,46 @@ not be read as closure of the recurrence.
   database, bucket, plan, payment, or recurring resource was created. Only
   ordinary Railway redeploy usage applies within the approved `$2` ceiling;
   no exact provider cost is claimed.
+- **Approval boundary:** this action did not enable ACH, attempt a real payment,
+  contact a customer, delete customer data, launch publicly, or deploy the
+  feature release.
+
+### Google OAuth recurrence rotation evidence - 2026-08-03
+
+- **Provider and unchanged client boundary:** the existing Google Cloud project
+  `rivt-499402`, owned by `support@rivt.pro`, retained existing OAuth web client
+  `Web client 1` and client ID
+  `723503499133-chk58c9so5otflgl33o4b8nljok7io02.apps.googleusercontent.com`.
+  Authorized origin `https://rivt.pro` and redirect
+  `https://rivt.pro/api/auth/google/callback` were unchanged. No new OAuth
+  client, origin, redirect, provider project, or account was created.
+- **Cutover:** Google added the same-client replacement at 2026-08-03 11:23:53
+  PM EDT. Only Railway variable `GOOGLE_CLIENT_SECRET` changed. Railway's
+  automatic variable deployment `2e3c8ed3-3a2d-4cf7-aa8b-d54780ad69d2` was
+  skipped by the CI wait policy. Explicit exact-source redeployment
+  `c00add12-8048-4407-8e6f-9880a357eed8` succeeded from unchanged production
+  commit `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:5af9fd1934e0d4f4185633e8d4ae151a7448fed8604f0bf5d72de28fcb00a99f`.
+  No feature release was deployed.
+- **Pre-retirement proof:** the owner-controlled linked account
+  `zboytjbxp@gmail.com` completed a fresh Google sign-in and returned
+  successfully to `rivt.pro` while both same-client secrets were enabled.
+- **Disablement proof:** predecessor secret created 2026-07-30 7:08:18 AM EDT
+  was disabled only after the replacement passed the first sign-in. The same
+  owner-controlled linked account then completed another fresh Google sign-in
+  and returned successfully to `rivt.pro` while the predecessor was disabled.
+- **Deletion and final proof:** the predecessor was deleted only after the
+  disabled-state proof passed. A third fresh owner-controlled Google sign-in
+  then returned successfully to `rivt.pro`. Final provider inventory showed
+  exactly one enabled secret on the unchanged production web client. The
+  deleted predecessor must never be restored.
+- **Runtime boundary:** the exact-source production monitor passed before and
+  after retirement. Invoice bank payments remained `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+- **Interruption and cost:** no interruption was observed. No service,
+  database, bucket, plan, payment, OAuth client, or recurring resource was
+  created. Only ordinary Railway redeploy usage applies within the approved
+  `$2` ceiling; no exact provider cost is claimed.
 - **Approval boundary:** this action did not enable ACH, attempt a real payment,
   contact a customer, delete customer data, launch publicly, or deploy the
   feature release.

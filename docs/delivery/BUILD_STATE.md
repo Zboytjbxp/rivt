@@ -14,13 +14,15 @@ restricted-output exposure of current production credentials. No misuse
 indicator is known, but every affected class is again treated as compromised.
 Michael approved one-class-at-a-time emergency rotation with up to 30 minutes
 of cumulative interruption and a `$2` before-tax incremental-cost ceiling.
-PostgreSQL, the Stripe live API key, both Stripe webhook secrets, and Resend
-are closed for this recurrence. The Resend replacement is sending-only and
-restricted to `rivt.pro`; owner-controlled messages were delivered and
-owner-confirmed before and after predecessor deletion, and provider inventory
-shows exactly one replacement key. Exact-source monitoring passed and ACH
-remains disabled. Google OAuth is the next credential class. Launch and
-Railway Stage 1 remain paused.
+PostgreSQL, the Stripe live API key, both Stripe webhook secrets, Resend, and
+Google OAuth are closed for this recurrence. The Google rotation preserved the
+existing project, web client, origin, redirect, and client ID; owner-controlled
+sign-ins passed before predecessor disablement, after disablement, and after
+deletion, and provider inventory shows exactly one enabled secret. Exact-source
+monitoring passed and ACH remains disabled. Authentication and rate-limit
+peppers are next, but their no-overlap replacement requires fresh explicit
+owner approval before either value changes. Launch and Railway Stage 1 remain
+paused.
 
 ## Packet 99 operator secret-output containment - active; provider rotation pending
 
@@ -47,9 +49,10 @@ Railway Stage 1 remain paused.
   the fixture loader now normalizes CRLF and the six focused workflow checks
   pass on the Windows worktree.
 - Production rotation continues one class at a time. PostgreSQL, the Stripe
-  live API key, both Stripe webhooks, and Resend are closed for this
-  recurrence. Google OAuth, authentication/rate-limit peppers, VAPID, and
-  backup encryption remain pending.
+  live API key, both Stripe webhooks, Resend, and Google OAuth are closed for
+  this recurrence. Authentication/rate-limit peppers, VAPID, and backup
+  encryption remain pending. The two pepper changes have no compatibility
+  overlap and require fresh explicit owner approval before execution.
 - The Connect cutover changed only `STRIPE_CONNECT_WEBHOOK_SECRET`. Automatic
   deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
   policy; exact-source deployment `6152da11-1323-47a9-a258-d9013f040522`
@@ -76,6 +79,25 @@ Railway Stage 1 remain paused.
   was deleted only after the first proof, and provider inventory now shows
   exactly one replacement key. Exact-source monitoring passed before and after
   retirement. Invoice bank payments remain `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+- The Google OAuth cutover retained project `rivt-499402`, existing web client
+  `Web client 1`, client ID
+  `723503499133-chk58c9so5otflgl33o4b8nljok7io02.apps.googleusercontent.com`,
+  authorized origin `https://rivt.pro`, and redirect
+  `https://rivt.pro/api/auth/google/callback`. Only
+  `GOOGLE_CLIENT_SECRET` changed. Automatic deployment
+  `2e3c8ed3-3a2d-4cf7-aa8b-d54780ad69d2` was skipped by the CI wait policy;
+  exact-source deployment `c00add12-8048-4407-8e6f-9880a357eed8` succeeded
+  from unchanged production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:5af9fd1934e0d4f4185633e8d4ae151a7448fed8604f0bf5d72de28fcb00a99f`.
+  The linked owner-controlled `zboytjbxp@gmail.com` account completed fresh
+  production Google sign-ins before predecessor disablement, after
+  disablement, and after deletion. The predecessor created July 30 at 7:08:18
+  AM EDT was disabled only after the first proof and deleted only after the
+  second. Final provider inventory shows exactly one enabled secret on the
+  unchanged web client. Exact-source monitoring passed before and after
+  retirement; invoice bank payments remain `enabled: false`,
   `configured: false`, `webhookConfigured: true`, and `setup_required`.
 - `master` currently has no branch protection/ruleset, so the Packet 98
   rehearsal's protected-branch guard cannot pass. No bypass is authorized.
