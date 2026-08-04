@@ -89,7 +89,7 @@ record does not claim they occurred.
 | Credential class | Current status |
 |---|---|
 | PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
-| Stripe API, billing webhook, and Connect webhook | Live API key rotated and verified on 2026-08-03; the exposed July API key is expired. Billing and Connect webhook signing-secret replacements remain pending and continue to be treated as compromised |
+| Stripe API, billing webhook, and Connect webhook | Live API key and billing webhook signing secret rotated and verified on 2026-08-03; the exposed July API key is expired and the billing predecessor completed Stripe's one-hour retirement window. The Connected-accounts webhook signing-secret replacement remains pending and continues to be treated as compromised |
 | Resend | Pending sending-only replacement and owner-controlled proof delivery |
 | Google OAuth | Pending same-client replacement and owner-controlled sign-in proof |
 | Authentication metadata and rate-limit peppers | Pending distinct replacements and runtime verification |
@@ -201,6 +201,65 @@ not be read as closure of the recurrence.
 - **Approval boundary:** this action did not rotate either webhook signing
   secret, enable ACH, attempt a real payment, contact a customer, delete customer
   data, launch publicly, or deploy the feature release.
+
+### Stripe billing-webhook recurrence rotation evidence — 2026-08-03
+
+- **Provider and scope:** Stripe live account `acct_1TnnyAIz6JDg8Lda`, billing
+  event destination `we_1TnpZWIz6JDg8LdahYHPwX0o`, endpoint
+  `https://rivt.pro/api/stripe/webhook`, `Your account` scope, and the four
+  subscription-billing events `checkout.session.completed`,
+  `customer.subscription.created`, `customer.subscription.updated`, and
+  `customer.subscription.deleted`. Only Railway variable
+  `STRIPE_WEBHOOK_SECRET` changed. No signing-secret value or secret-derived
+  fingerprint is recorded.
+- **Operator and authority:** Codex operated the signed-in Stripe and Railway
+  interfaces under Michael's explicit 2026-08-03 emergency rotation approval.
+  Cutover verification began at approximately 20:24 EDT (`2026-08-04T00:24Z`),
+  and post-retirement verification completed at approximately 21:37 EDT
+  (`2026-08-04T01:37Z`).
+- **Overlap and cutover:** Stripe rolled the destination signing secret with
+  its provider-defined one-hour predecessor-expiry window. The replacement
+  moved directly from Stripe's one-time reveal into Railway's masked
+  `STRIPE_WEBHOOK_SECRET` editor without being printed to chat, shell output,
+  logs, or this record. Only that named variable was staged. The previous
+  secret remained available only through Stripe's bounded overlap while the
+  replacement was deployed and tested.
+- **Exact-source application pickup:** Railway's automatic variable-change
+  deployment `5642fb82-505a-43c6-bda3-626ffff52b52` was skipped by the CI wait
+  policy. Explicit redeployment `7bb9c3d5-b048-47d0-b33d-30905452dbf6`
+  succeeded from unchanged production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`; no feature release was
+  deployed.
+- **Runtime proof:** public `GET /api/health` returned HTTP 200 with `ok: true`,
+  migration `0042_push_vapid_generation` ready, PostgreSQL and S3-compatible
+  storage, and the exact expected source. Before predecessor expiry, locally
+  signed unknown event
+  `evt_rivt_billing_webhook_rotation_probe_1785803272580` returned HTTP 200,
+  `received: true`, and `duplicate: false`. After the one-hour retirement
+  window, the same bounded proof with event
+  `evt_rivt_billing_webhook_post_retirement_probe_1785807472571` again returned
+  HTTP 200, `received: true`, and `duplicate: false`. Each proof created only
+  its named immutable `billing_events` replay/audit row; neither event type can
+  update a customer, subscription, invoice, payment, or Stripe object.
+  `npm run monitor:production` passed after cutover and after retirement with
+  all seven anonymous private-route checks fail-closed. Invoice bank payments
+  remained `enabled: false`, `configured: false`, `webhookConfigured: true`,
+  and `setup_required`.
+- **Retirement and recovery:** the selected Stripe one-hour expiry elapsed
+  before the final proof. The provider page then exposed the normal active
+  signing-secret controls and a fresh roll flow with no pending-expiry state.
+  Before retirement, recovery was to correct or reroll the replacement while
+  the predecessor still verified signatures. After retirement, the
+  last-known-good source may be redeployed, but the retired predecessor must
+  not be restored.
+- **Interruption and cost:** the prior production instance remained available
+  while Railway built the exact-source replacement; no interruption was
+  observed. No service, database, bucket, plan, payment, or recurring resource
+  was created. Stripe quoted no charge for the roll, and only ordinary Railway
+  redeploy usage applies within the approved `$2` ceiling.
+- **Approval boundary:** this action did not rotate the Connected-accounts
+  webhook, enable ACH, attempt a real payment, contact a customer, delete
+  customer data, launch publicly, or deploy the feature release.
 
 ## Historical rotation status before the 2026-08-03 recurrence
 
