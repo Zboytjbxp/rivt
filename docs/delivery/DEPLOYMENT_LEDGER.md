@@ -6,15 +6,24 @@
   `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 added
   source-only backup tooling; it did not activate or prove backup recurrence.
 - Release candidate `codex/final-release-candidate-20260804` is at
-  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`, containing integration merge
+  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` in draft PR #25, containing integration merge
   `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge
   `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. The candidate pins Node 22.
 - No release-candidate deployment ID exists or is claimed. No scheduler
   service, independent backup provider, recurring artifact, or isolated
   current-artifact restore was activated or proved.
 - ACH remains disabled and `ACTIVE_LAUNCH_HOLD` remains active.
-  `GA-OPS-004` and `GA-OPS-009` remain blockers. Final exact-candidate gate
-  counts and readiness are pending.
+  `GA-OPS-004` and `GA-OPS-009` remain blockers. Exact-candidate local results
+  are: build, application/security/public-documentation lint, all 617 unit and
+  precheck tests, four browser E2E journeys, all four required UI smokes,
+  dependency audit with zero known vulnerabilities, and diff integrity pass.
+  The integration aggregate reports 27 cases: four pass and 23 skip because
+  local `TEST_DATABASE_URL` is absent. Launch readiness remains blocked with
+  exactly 21 findings. Draft PR #25 Gate A Safety run `30955179943` completed
+  with 14/14 pretest safety checks, 603/603 unit tests, 28/28 disposable-
+  PostgreSQL integration tests, and 4/4 browser E2E journeys passing. The job
+  exited 1 only at the required launch-readiness enforcement because those 21
+  operational blockers remain open. This entry is not a deployment record.
 
 ## 2026-08-04 - Resend Restricted-Output Recurrence Re-Rotation and Retirement
 

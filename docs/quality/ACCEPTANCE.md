@@ -2,7 +2,37 @@
 
 Gate A is approved only with automated and manual evidence against production-like infrastructure. Screenshots alone are insufficient.
 
-## Current Evidence Snapshot - 2026-06-30
+## Current Evidence Snapshot - 2026-08-04
+
+Draft PR #25 binds the un-deployed Node 22 release candidate to exact source
+`aa5b5361374bce0ae51d71cbe4b6d8031a605c61`. Local evidence on that source is:
+
+- `npm run build` passes.
+- `npm run lint`, `npm run lint:security`, and `npm run lint:public-docs` pass.
+- All 617 unit and precheck tests pass.
+- The integration aggregate reports 27 cases: four pass and 23 skip because
+  local `TEST_DATABASE_URL` is absent.
+- All four browser E2E journeys pass.
+- Tools, Shop Talk / Trade News, mobile actions, and Work lifecycle UI smokes
+  pass.
+- `npm audit --omit=dev` reports zero known vulnerabilities.
+- `git diff --check` passes.
+- `npm run launch:readiness -- --require-ready` remains blocked with exactly 21
+  findings.
+
+Draft PR #25 Gate A Safety run `30955179943` supplies the database-backed
+candidate proof: 14/14 pretest safety checks, 603/603 unit tests, 28/28
+disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys pass.
+The workflow's final exit 1 is the required launch-readiness refusal because
+the 21 operational findings above remain open; it is not a code or test
+failure.
+Production and `origin/master` remain at
+`7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. No candidate deployment,
+provider activation, scheduler, independent restore, topology proof, ACH
+activation, incident closure, launch-hold clearance, or public-launch approval
+is claimed. `GA-OPS-004` and `GA-OPS-009` remain blockers.
+
+## Historical Evidence Snapshot - 2026-06-30
 
 Gate A machine readiness is approved for the recorded incident, recovery, support, and legal/safety scopes. Physical-device and deeper manual accessibility evidence remains the next non-machine launch-quality boundary before broader rollout.
 

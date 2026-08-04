@@ -23,15 +23,19 @@
   `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 provides
   source-only backup tooling and does not prove recurrence or restore.
 - Release candidate `codex/final-release-candidate-20260804` is at
-  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`, containing integration merge
+  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` in draft PR #25, containing integration merge
   `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge
   `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. It pins Node 22 and has not
   been deployed.
 - Backup recurrence is still pending. No scheduler service, independent
   provider, recurring artifact, or isolated current-artifact restore is
   activated or proved. ACH remains disabled and `ACTIVE_LAUNCH_HOLD` remains
-  active. `GA-OPS-004` and `GA-OPS-009` remain blockers; final gate counts and
-  readiness are pending.
+  active. `GA-OPS-004` and `GA-OPS-009` remain blockers. Exact-candidate local
+  engineering gates pass, and launch readiness remains blocked with exactly 21
+  findings. Draft PR #25 Gate A Safety run `30955179943` completed with 14/14
+  pretest safety checks, 603/603 unit tests, 28/28 disposable-PostgreSQL
+  integration tests, and 4/4 browser E2E journeys passing. The final exit 1 is
+  the required refusal to clear those 21 operational blockers.
 
 ## Summary
 

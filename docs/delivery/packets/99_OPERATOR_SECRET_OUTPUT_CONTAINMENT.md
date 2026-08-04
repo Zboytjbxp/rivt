@@ -21,15 +21,20 @@ known, but transcript confidentiality is not accepted as a security boundary.
   `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 is
   source-only backup tooling, not recurrence or restore proof.
 - Release candidate `codex/final-release-candidate-20260804` is at
-  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`, containing merge
+  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` in draft PR #25, containing merge
   `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge
   `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. It pins Node 22 and is not
   deployed.
 - Backup recurrence remains pending. No scheduler service, independent backup
   provider, recurring artifact, or isolated current-artifact restore is
   activated or proved. ACH is disabled, `ACTIVE_LAUNCH_HOLD` is active,
-  `GA-OPS-004` and `GA-OPS-009` remain blockers, and final gate counts plus
-  readiness are pending.
+  `GA-OPS-004` and `GA-OPS-009` remain blockers. Exact-candidate local
+  engineering gates pass, launch readiness remains blocked with exactly 21
+  findings, and draft PR #25 Gate A Safety run `30955179943` supplies the
+  database-backed proof: 14/14 pretest safety checks, 603/603 unit tests, 28/28
+  disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys pass.
+  The final exit 1 is the intended launch-readiness refusal for the 21 open
+  operational blockers.
 
 ## Source scope
 
@@ -93,10 +98,18 @@ must never reinstall material exposed in the transcript.
 ## Verification
 
 - Historical Packet 99 checks are preserved in the release evidence history.
-- Final build, lint, security, database-backed integration, browser,
-  dependency, and diff results for exact candidate
-  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86` plus the documentation patch are
-  pending. No final count or readiness result is claimed here.
+- Exact local verification for candidate
+  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` passes production build;
+  application, security, and public-documentation lint; 617/617 unit and
+  precheck tests; all four browser E2E journeys; all four required UI smokes;
+  the production dependency audit with zero known vulnerabilities; and diff
+  integrity. The integration aggregate reports 27 cases, with four passing and
+  23 skipped because local `TEST_DATABASE_URL` is absent. Launch readiness is
+  blocked with exactly 21 findings. PR #25 Gate A Safety run `30955179943`
+  adds the database-backed final-candidate result: 14/14 pretest safety checks,
+  603/603 unit tests, 28/28 disposable-PostgreSQL integration tests, and 4/4
+  browser E2E journeys pass. Its final exit 1 is the required launch-readiness
+  refusal for those 21 operational blockers.
 
 These are source checks only. They do not replace provider evidence or
 owner-controlled proofs. The remaining recurrence boundary is a fresh

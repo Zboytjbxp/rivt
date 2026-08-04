@@ -13,8 +13,15 @@ exact materialized configuration.
 ## Current Gate Status
 
 - Public launch is blocked by an active credential-containment launch hold.
-- Launch readiness currently reports 21 findings, not merely missing
-  founder/support/legal-safety approvals.
+- Exact release candidate `aa5b5361374bce0ae51d71cbe4b6d8031a605c61`
+  in draft PR #25 passes the recorded local engineering gates. Launch readiness
+  still reports exactly 21 findings, not merely missing founder/support/legal-
+  safety approvals.
+- PR #25 Gate A Safety run `30955179943` supplies database-backed candidate
+  proof: 14/14 pretest safety checks, 603/603 unit tests, 28/28 disposable-
+  PostgreSQL integration tests, and 4/4 browser E2E journeys pass. The final
+  exit 1 is the required launch-readiness refusal for the 21 open operational
+  findings, not a code or test failure.
 - Incident, recovery, and disabled-payment controls are declared in source,
   but fresh protected `E` receipts and later protected `A` approvals do not
   exist.
