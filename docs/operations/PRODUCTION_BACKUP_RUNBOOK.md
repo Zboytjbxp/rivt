@@ -48,15 +48,24 @@ which is why the independent hourly freshness alarm is mandatory.
 The job exits after one snapshot. A process that remains active is a failed run,
 because Railway will skip the next scheduled execution.
 
-## Provider setup boundary
+## Provider selection and setup boundary
 
-Do not perform these steps until the founder approves the quoted provider cost
-and names the operator:
+No independent recovery provider is selected or approved. The current design
+recommends AWS S3 Versioning plus Object Lock in a separately administered US
+account; Backblaze B2 was an earlier alternative and is not the active plan.
+Do not create an account, bucket, service, key, schedule, or retained object
+until the founder receives and approves one exact proposal naming the provider,
+account owner, US region, retention/deletion mode, access and key-custody roles,
+one-time cost ceiling, monthly cost ceiling, rollback, and isolated restore
+test.
 
-1. Create a private Backblaze B2 bucket with versioning/Object Lock enabled at
-   creation time.
-2. Set default Object Lock to **COMPLIANCE, 30 days**. Governance mode is not
-   sufficient.
+After that explicit approval, the selected provider setup must:
+
+1. Create a private bucket with versioning and provider-enforced Object
+   Lock/WORM retention enabled at creation time.
+2. Apply the separately approved retention mode and period. Do not use
+   COMPLIANCE mode until its irreversible retention and cost consequences are
+   understood and approved.
 3. Add one exact-prefix lifecycle rule that expires current and noncurrent
    versions only after the 30-day retention floor.
 4. Create three restricted application keys: backup writer, monitor reader,
@@ -76,9 +85,10 @@ and names the operator:
 7. Add the monitor's read-only provider values/secrets to the protected GitHub
    `production` environment and require an owner approval for changes.
 
-At the 2026-08-01 inventory size, the independent copy is expected to remain
-inside B2's 10 GB free storage allowance; Railway charges only the small cron
-compute and outbound bytes. This estimate is not a spending authorization.
+Historical free-tier estimates are not a current quote or spending
+authorization. Recalculate storage, requests, retrieval, provider egress,
+Railway egress/compute, monitoring, restore, taxes, and retained-version growth
+for the selected provider immediately before approval.
 
 ## First-backup acceptance
 
@@ -89,10 +99,11 @@ compute and outbound bytes. This estimate is not a spending authorization.
    The freshness verifier cannot pass before the first artifact exists.
 3. Run one backup. Do not paste raw keys, object identifiers, digests, database
    URLs, or encryption material into tickets or public logs.
-4. Store the active key as the protected GitHub `production` environment secret
-   `RIVT_BACKUP_ENCRYPTION_KEY` and, only during an approved rotation, store the
-   prior key as `RIVT_BACKUP_ENCRYPTION_KEY_PREVIOUS`. Run `npm run
-   backup:verify` through the freshness workflow with its separate
+4. Map the protected GitHub `production` environment secret holding the active
+   key into the runtime variable `BACKUP_ENCRYPTION_KEY`; only during an
+   approved rotation, map the prior secret into
+   `BACKUP_ENCRYPTION_KEY_PREVIOUS`. Run `npm run backup:verify` through the
+   freshness workflow with its separate
    monitor-reader provider credentials, not with the writer credential. It
    must identify a current immutable version, recompute its digest,
    AEAD-authenticate and decrypt it with the configured current/previous keys,
