@@ -90,7 +90,7 @@ classes with fresh recurrence evidence below are claimed complete.
 |---|---|
 | PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
 | Stripe API, billing webhook, and Connect webhook | Live API key plus both webhook signing secrets rotated and verified on 2026-08-03; the exposed API key is expired and both webhook predecessors completed Stripe's one-hour retirement window. Fresh post-retirement probes and exact-source monitoring passed |
-| Resend | Pending sending-only replacement and owner-controlled proof delivery |
+| Resend | Rotated and verified on 2026-08-03; the sending-only `rivt.pro` replacement delivered owner-controlled proofs before and after predecessor deletion, the owner confirmed both receipts, and provider inventory shows exactly one replacement key |
 | Google OAuth | Pending same-client replacement and owner-controlled sign-in proof |
 | Authentication metadata and rate-limit peppers | Pending distinct replacements and runtime verification |
 | Web Push VAPID | Pending active/previous bridge rotation and owner-controlled physical-device proof |
@@ -317,6 +317,52 @@ not be read as closure of the recurrence.
   observed. No service, database, bucket, plan, payment, or recurring resource
   was created. Stripe quoted no charge for the roll, and only ordinary Railway
   redeploy usage applies within the approved `$2` ceiling.
+- **Approval boundary:** this action did not enable ACH, attempt a real payment,
+  contact a customer, delete customer data, launch publicly, or deploy the
+  feature release.
+
+### Resend recurrence rotation evidence - 2026-08-03
+
+- **Provider and scope:** the replacement key is named
+  `RIVT Production Sending - August 2026 Recurrence`, has Sending access only,
+  and is restricted to the verified `rivt.pro` domain. Only Railway variable
+  `RESEND_API_KEY` changed. No credential value, token prefix, or
+  secret-derived fingerprint is recorded.
+- **Operator and authority:** Codex operated the signed-in Resend and Railway
+  interfaces under Michael's explicit 2026-08-03 emergency rotation approval.
+  The action used only owner-controlled email proofs and did not contact a
+  customer.
+- **Cutover:** the replacement value moved directly from Resend's one-time
+  reveal into Railway's masked variable editor without being printed to chat,
+  shell output, logs, or this record. Railway's automatic variable deployment
+  `62614aa2-fea0-417a-adab-21f560faecbb` was skipped by the CI wait policy.
+  Explicit exact-source redeployment
+  `7a0873cf-d1db-4a26-8687-0475c7b1ce7a` succeeded from unchanged production
+  commit `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:8074916995723690145064cce772902039c084c69be416e92b72359fe2d5d033`.
+  No feature release was deployed.
+- **Pre-retirement proof:** deployed production sent owner-only proof
+  `rivt-resend-recurrence-pre-retirement-1785812675006`, Resend message
+  `e2f24752-f016-413e-b949-56107fac0b82`. Resend reported it delivered at
+  2026-08-03 11:04 PM EDT, and Michael confirmed receipt before predecessor
+  deletion.
+- **Retirement and inventory:** after the replacement and first proof verified,
+  predecessor `RIVT Production rotation 2026-07-29`, provider resource
+  `c79cf180-6401-484d-9389-ac262444a8a1`, was deleted. Resend inventory then
+  showed exactly one key: the named August replacement with Sending access and
+  the `rivt.pro` restriction. The deleted predecessor must never be restored.
+- **Post-retirement proof:** deployed production sent owner-only proof
+  `rivt-resend-recurrence-post-retirement-1785813474437`, Resend message
+  `cf7ef6c1-5648-49e9-b829-fd1b2cca0839`. Resend reported it delivered at
+  2026-08-03 11:17 PM EDT, and Michael confirmed receipt after predecessor
+  deletion.
+- **Runtime boundary:** the exact-source production monitor passed before and
+  after retirement. Invoice bank payments remained `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+- **Interruption and cost:** no interruption was observed. No service,
+  database, bucket, plan, payment, or recurring resource was created. Only
+  ordinary Railway redeploy usage applies within the approved `$2` ceiling;
+  no exact provider cost is claimed.
 - **Approval boundary:** this action did not enable ACH, attempt a real payment,
   contact a customer, delete customer data, launch publicly, or deploy the
   feature release.

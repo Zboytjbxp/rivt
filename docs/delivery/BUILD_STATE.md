@@ -14,11 +14,13 @@ restricted-output exposure of current production credentials. No misuse
 indicator is known, but every affected class is again treated as compromised.
 Michael approved one-class-at-a-time emergency rotation with up to 30 minutes
 of cumulative interruption and a `$2` before-tax incremental-cost ceiling.
-PostgreSQL, the Stripe live API key, and both Stripe webhook recurrence
-rotations are complete. The Stripe Connect predecessor completed its bounded
-one-hour retirement window; a fresh post-retirement signed no-charge probe and
-the exact-source production monitor passed. ACH remains disabled. Resend is the
-next credential class. Launch and Railway Stage 1 remain paused.
+PostgreSQL, the Stripe live API key, both Stripe webhook secrets, and Resend
+are closed for this recurrence. The Resend replacement is sending-only and
+restricted to `rivt.pro`; owner-controlled messages were delivered and
+owner-confirmed before and after predecessor deletion, and provider inventory
+shows exactly one replacement key. Exact-source monitoring passed and ACH
+remains disabled. Google OAuth is the next credential class. Launch and
+Railway Stage 1 remain paused.
 
 ## Packet 99 operator secret-output containment - active; provider rotation pending
 
@@ -45,9 +47,9 @@ next credential class. Launch and Railway Stage 1 remain paused.
   the fixture loader now normalizes CRLF and the six focused workflow checks
   pass on the Windows worktree.
 - Production rotation continues one class at a time. PostgreSQL, the Stripe
-  live API key, and both Stripe webhooks are closed for this recurrence.
-  Resend, Google OAuth, authentication/rate-limit peppers, VAPID, and backup
-  encryption remain pending.
+  live API key, both Stripe webhooks, and Resend are closed for this
+  recurrence. Google OAuth, authentication/rate-limit peppers, VAPID, and
+  backup encryption remain pending.
 - The Connect cutover changed only `STRIPE_CONNECT_WEBHOOK_SECRET`. Automatic
   deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
   policy; exact-source deployment `6152da11-1323-47a9-a258-d9013f040522`
@@ -62,6 +64,19 @@ next credential class. Launch and Railway Stage 1 remain paused.
   once, and the exact-source production monitor passed again.
   Invoice bank payments remain `enabled: false`, `configured: false`, and
   `setup_required`.
+- The Resend cutover changed only `RESEND_API_KEY`. Automatic deployment
+  `62614aa2-fea0-417a-adab-21f560faecbb` was skipped by the CI wait policy;
+  exact-source deployment `7a0873cf-d1db-4a26-8687-0475c7b1ce7a` succeeded
+  from unchanged production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:8074916995723690145064cce772902039c084c69be416e92b72359fe2d5d033`.
+  The sending-only replacement is restricted to `rivt.pro`. Resend marked the
+  pre-retirement proof delivered at 11:04 PM EDT and the post-retirement proof
+  delivered at 11:17 PM EDT; Michael confirmed receipt of both. The predecessor
+  was deleted only after the first proof, and provider inventory now shows
+  exactly one replacement key. Exact-source monitoring passed before and after
+  retirement. Invoice bank payments remain `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
 - `master` currently has no branch protection/ruleset, so the Packet 98
   rehearsal's protected-branch guard cannot pass. No bypass is authorized.
 - The feature release remains separate from containment and is not authorized

@@ -1,5 +1,48 @@
 # Deployment Ledger
 
+## 2026-08-03 - Resend Recurrence Rotation
+
+- Approval: Michael's explicit 2026-08-03 emergency credential-rotation
+  authorization allowed one-class-at-a-time provider changes, owner-controlled
+  email proofs, up to 30 minutes of cumulative interruption, and less than
+  US$2 of incremental cost. It did not authorize ACH, a real payment, customer
+  communication, customer-data deletion, public launch, or the feature release.
+- Scope: replacement `RIVT Production Sending - August 2026 Recurrence` has
+  Sending access only and is restricted to verified domain `rivt.pro`. Only
+  Railway variable `RESEND_API_KEY` changed; no secret value or token prefix is
+  recorded.
+- Deployment: automatic variable deployment
+  `62614aa2-fea0-417a-adab-21f560faecbb` was skipped by the CI wait policy.
+  Explicit Railway deployment `7a0873cf-d1db-4a26-8687-0475c7b1ce7a`
+  succeeded from unchanged production source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:8074916995723690145064cce772902039c084c69be416e92b72359fe2d5d033`;
+  no feature release was deployed.
+- Pre-retirement proof: owner-only proof
+  `rivt-resend-recurrence-pre-retirement-1785812675006`, message
+  `e2f24752-f016-413e-b949-56107fac0b82`, was marked delivered by Resend at
+  11:04 PM EDT and confirmed received by Michael.
+- Retirement: predecessor `RIVT Production rotation 2026-07-29`, provider
+  resource `c79cf180-6401-484d-9389-ac262444a8a1`, was deleted only after the
+  replacement proved delivery. Provider inventory then showed exactly one key,
+  the restricted sending-only August replacement.
+- Post-retirement proof: owner-only proof
+  `rivt-resend-recurrence-post-retirement-1785813474437`, message
+  `cf7ef6c1-5648-49e9-b829-fd1b2cca0839`, was marked delivered by Resend at
+  11:17 PM EDT and confirmed received by Michael.
+- Final evidence: exact-source monitoring passed before and after retirement.
+  PostgreSQL and S3-compatible storage remained healthy, anonymous private
+  checks remained fail-closed, and invoice bank payments remained
+  `enabled: false`, `configured: false`, `webhookConfigured: true`, and
+  `setup_required`.
+- Interruption and cost: no interruption was observed. No service, database,
+  bucket, plan, payment, or recurring resource was created. Only ordinary
+  Railway redeploy usage applies within the approved ceiling; no exact provider
+  cost is claimed.
+- Recovery boundary: the deleted predecessor must never be restored. Future
+  recovery must use another fresh least-privilege key restricted to the verified
+  sending domain.
+
 ## 2026-08-03 - Stripe Connect Webhook Recurrence Rotation
 
 - Approval: Michael's explicit 2026-08-03 emergency credential-rotation
