@@ -18,6 +18,8 @@ import pg from "pg";
 export const MIN_BACKUP_RETENTION_DAYS = 30;
 export const DEFAULT_BACKUP_MAX_AGE_HOURS = 14;
 export const DEFAULT_RECOVERY_RTO_MINUTES = 240;
+export const DEFAULT_BACKUP_JOB_TIMEOUT_MINUTES = 45;
+export const MAX_BACKUP_JOB_TIMEOUT_MINUTES = 60;
 export const MAX_ENCRYPTED_BACKUP_BYTES = 512 * 1024 * 1024;
 export const MAX_DECOMPRESSED_BACKUP_BYTES = 1024 * 1024 * 1024;
 export const LOGICAL_BACKUP_FORMAT_V2 = "rivt-logical-backup-v2";
@@ -51,6 +53,9 @@ export function sanitizedFailure(error, mode) {
     "BACKUP_ALERT_TEST",
     "BACKUP_RESTORE_FAILED",
     "BACKUP_RTO_EXCEEDED",
+    "BACKUP_JOB_TIMEOUT",
+    "BACKUP_ALREADY_RUNNING",
+    "BACKUP_JOB_INTERRUPTED",
   ]);
   const errorCode = safeCodes.has(error?.code) ? error.code : "BACKUP_OPERATION_FAILED";
   const safeMessages = {
@@ -61,10 +66,13 @@ export function sanitizedFailure(error, mode) {
     BACKUP_NOT_FRESH: "No sufficiently recent protected backup was found.",
     BACKUP_OBJECT_INVALID: "The named backup artifact did not pass integrity and retention checks.",
     BACKUP_PROVIDER_CHECK_FAILED: "The backup provider could not be verified.",
-    BACKUP_SOURCE_MISMATCH: "The newest protected backup was created by an unexpected source revision.",
+    BACKUP_SOURCE_MISMATCH: "The backup source revision did not match the expected running revision.",
     BACKUP_ALERT_TEST: "The backup freshness alert test was requested.",
     BACKUP_RESTORE_FAILED: "The isolated restore did not complete successfully.",
     BACKUP_RTO_EXCEEDED: "The restore and verification exceeded the approved recovery time objective.",
+    BACKUP_JOB_TIMEOUT: "The scheduled backup exceeded its maximum runtime and was stopped.",
+    BACKUP_ALREADY_RUNNING: "Another logical backup is already running.",
+    BACKUP_JOB_INTERRUPTED: "The scheduled backup was stopped before it completed.",
     BACKUP_OPERATION_FAILED: "The backup operation failed.",
   };
   return { ok: false, mode, errorCode, message: safeMessages[errorCode] };
@@ -256,7 +264,58 @@ export function requiredSourceCommit(env = process.env, name = "SOURCE_COMMIT") 
   if (!/^[a-f0-9]{40}$/.test(sourceCommit)) {
     throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", `${name} must be a full 40-character Git commit SHA.`);
   }
+  const railwayRuntime = [
+    "RAILWAY_PROJECT_ID",
+    "RAILWAY_ENVIRONMENT_ID",
+    "RAILWAY_SERVICE_ID",
+    "RAILWAY_DEPLOYMENT_ID",
+  ].some((variableName) => Boolean(env[variableName]?.trim()));
+  const railwayCommit = env.RAILWAY_GIT_COMMIT_SHA?.trim().toLowerCase();
+  if (railwayRuntime && !railwayCommit) {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      "RAILWAY_GIT_COMMIT_SHA is required for a Railway backup runtime.",
+    );
+  }
+  if (railwayCommit) {
+    if (!/^[a-f0-9]{40}$/.test(railwayCommit)) {
+      throw new BackupConfigurationError(
+        "BACKUP_CONFIG_INVALID",
+        "RAILWAY_GIT_COMMIT_SHA must be a full 40-character Git commit SHA.",
+      );
+    }
+    if (sourceCommit !== railwayCommit) {
+      throw new BackupConfigurationError(
+        "BACKUP_SOURCE_MISMATCH",
+        "SOURCE_COMMIT does not match the Railway deployment commit.",
+      );
+    }
+  }
   return sourceCommit;
+}
+
+export function backupJobTimeoutMsFromEnv(env = process.env) {
+  const minutes = positiveInteger(
+    env.BACKUP_JOB_TIMEOUT_MINUTES,
+    "BACKUP_JOB_TIMEOUT_MINUTES",
+    DEFAULT_BACKUP_JOB_TIMEOUT_MINUTES,
+  );
+  if (minutes > MAX_BACKUP_JOB_TIMEOUT_MINUTES) {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      `BACKUP_JOB_TIMEOUT_MINUTES cannot exceed ${MAX_BACKUP_JOB_TIMEOUT_MINUTES}.`,
+    );
+  }
+  return minutes * 60_000;
+}
+
+export async function acquireLogicalBackupLock(client) {
+  const result = await client.query(
+    "SELECT pg_try_advisory_lock(hashtextextended('rivt-logical-backup-v2', 0)) AS acquired",
+  );
+  if (result.rows?.[0]?.acquired !== true) {
+    throw new BackupConfigurationError("BACKUP_ALREADY_RUNNING", "Another logical backup session holds the lock.");
+  }
 }
 
 export function retentionDaysFromEnv(env = process.env) {

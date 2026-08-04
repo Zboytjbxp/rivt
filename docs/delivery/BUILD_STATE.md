@@ -1,6 +1,6 @@
 # RIVT Build State
 
-Last updated: 2026-07-31 America/New_York
+Last updated: 2026-08-04 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Emergency production credential containment; feature activation paused.
 Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
@@ -11,6 +11,29 @@ Production incident hotfix commit:
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
+
+Backup-scheduler preparation is local and unactivated on
+`codex/backup-scheduler-config-hotfix`. The dedicated Railway config now points
+to a bounded scheduler wrapper rather than the web server: 45-minute default
+runtime, 60-minute maximum, graceful termination followed by forced stop, and
+a final bounded fallback if a child refuses to exit. Host shutdown signals are
+forwarded to the backup child, and a PostgreSQL advisory lock prevents
+duplicate runs. Backup creation also
+requires configured `SOURCE_COMMIT` to equal Railway's provider-set
+`RAILWAY_GIT_COMMIT_SHA` before any database or storage client opens. The
+runbook requires the custom `/railway.backup.json` path, no public domain,
+reviewed CPU/RAM limits, and records that this is PostgreSQL-only recovery;
+application photos/documents still need an independent immutable-backup
+packet. Local build, lint, security lint, 226 unit/frontend tests, all three
+browser E2E journeys, and production dependency audit pass. Three non-database
+integration checks passed and 20 PostgreSQL checks skipped because the clean
+worktree has no test-database credential; earlier Linux CI evidence does not
+substitute for final provider acceptance. Nothing in this preparation was
+merged, pushed, deployed, scheduled, connected to AWS, or billed. AWS account
+creation remains blocked under support case `178585620400417`. The approved
+provider plan explicitly excludes backup-object deletion, while the verifier
+requires a post-retention lifecycle rule; that rule needs a separate,
+plain-language deletion approval before scheduler activation.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source

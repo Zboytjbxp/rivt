@@ -26,6 +26,12 @@ must all agree with the final deployed source.
 - Immutable retention: at least 30 days in COMPLIANCE mode.
 - Failure domain: backup copy outside Railway.
 
+These targets currently cover the PostgreSQL database only. Project photos,
+documents, and other objects in the application `S3_*` bucket do **not** yet
+have an independently administered immutable copy. Database recovery must not
+be described as complete RIVT disaster recovery until application-object
+backup and restore evidence exists as a separately reviewed packet.
+
 The recommended schedule is `7 */12 * * *` (UTC). The seven-minute offset
 avoids the top-of-hour deployment/maintenance crowd. Railway may start cron
 jobs a few minutes late and skips a new run if the prior run is still active,
@@ -34,9 +40,17 @@ which is why the independent hourly freshness alarm is mandatory.
 ## Prepared source contract
 
 - Dedicated private scheduler service, pinned to the reviewed full source
-  commit. Its provider-owned configuration is intentionally not stored in this
-  packet.
-- Backup command: `npm run backup:logical-artifact`
+  commit. The bounded build, command, restart, and 12-hour schedule contract is
+  stored in `/railway.backup.json`. The Railway service must explicitly use
+  that custom config path; the public RIVT web service must continue using
+  `/railway.json`. Service binding, source selection, secrets, and activation
+  remain provider-owned configuration and are not created by this packet.
+- Scheduled backup command: `npm run backup:scheduled`. It launches the
+  one-shot logical-backup process with a 45-minute default hard deadline and a
+  non-overridable 60-minute ceiling. Host shutdown signals are forwarded to
+  the child. A timed-out or interrupted child is terminated, escalated when
+  needed, and bounded by a final fallback so the cron job cannot hang forever.
+- Low-level one-shot backup command: `npm run backup:logical-artifact`
 - Read-only verification: `npm run backup:verify`
 - Low-level exact-artifact restore primitive (diagnostics only):
   `npm run restore:logical-artifact -- --apply-migrations`
@@ -49,27 +63,32 @@ which is why the independent hourly freshness alarm is mandatory.
 
 The job exits after one snapshot. A process that remains active is a failed run,
 because Railway will skip the next scheduled execution.
+The backup also takes a PostgreSQL advisory lock before opening its read-only
+snapshot, so a second manual or duplicate-service run fails instead of doing
+the same work concurrently.
 
 ## Provider selection and setup boundary
 
-No independent recovery provider is selected or approved. The current design
-recommends AWS S3 Versioning plus Object Lock in a separately administered US
-account; Backblaze B2 was an earlier alternative and is not the active plan.
-Do not create an account, bucket, service, key, schedule, or retained object
-until the founder receives and approves one exact proposal naming the provider,
-account owner, US region, retention/deletion mode, access and key-custody roles,
-one-time cost ceiling, monthly cost ceiling, rollback, and isolated restore
-test.
+The founder approved AWS S3 in `us-east-1` as the independent recovery
+provider, owned through `support@rivt.pro`, with a private bucket, Versioning,
+30-day Object Lock COMPLIANCE retention, least-privilege credentials, and the
+recorded one-time and monthly cost ceilings. Backblaze B2 was an earlier
+alternative and is not the active plan. AWS account creation is currently
+blocked under support case `178585620400417`; no AWS account, bucket, key,
+schedule, or retained object exists from this preparation. Automatic or manual
+deletion of retained backup objects remains outside the approval.
 
-After that explicit approval, the selected provider setup must:
+When the provider account is available, the approved setup must:
 
 1. Create a private bucket with versioning and provider-enforced Object
    Lock/WORM retention enabled at creation time.
-2. Apply the separately approved retention mode and period. Do not use
-   COMPLIANCE mode until its irreversible retention and cost consequences are
-   understood and approved.
-3. Add one exact-prefix lifecycle rule that expires current and noncurrent
-   versions only after the 30-day retention floor.
+2. Apply the approved 30-day COMPLIANCE retention. Treat that retention as
+   irreversible: neither RIVT nor AWS can shorten it or delete a locked version
+   during the retention window.
+3. Do not configure lifecycle deletion under the current approval. Before
+   activation, obtain a separate explicit approval for one exact-prefix rule
+   that may expire current and noncurrent versions only after the 30-day
+   retention floor; the verifier intentionally fails closed without that rule.
 4. Create three restricted application keys: backup writer, monitor reader,
    and restore reader. The monitor cannot write or delete; the writer cannot
    administer retention; the restore key is not stored on the web service.
@@ -81,9 +100,16 @@ After that explicit approval, the selected provider setup must:
    restore paths can prove the runtime PostgreSQL cluster identity; if the
    provider removes that permission, the job must fail closed.
 6. Create a private scheduler service from the reviewed full commit, set its
-   command to `npm run backup:logical-artifact`, give it no public domain, and
-   set the 12-hour schedule. Record and review the provider-owned configuration
-   before activation; this repository packet does not create it.
+   custom config file path to `/railway.backup.json`, and give it no public
+   domain. Before activation, confirm the rendered deployment details show
+   `npm run backup:scheduled`, `7 */12 * * *`, one replica, no
+   healthcheck, and restart policy `NEVER`. Also confirm the public RIVT web
+   service still uses `/railway.json`. Set `BACKUP_JOB_TIMEOUT_MINUTES=45` and
+   set conservative provider CPU/RAM limits no higher than 1 vCPU and 1 GB for
+   the first measured run; changing those limits requires a reviewed cost and
+   capacity update. Record and review the provider-owned source binding,
+   variables, limits, and resulting deployment before activation; the
+   repository config does not create or activate the service.
 7. Add the monitor's read-only provider values/secrets to the dedicated GitHub
    `production-backup-monitor` environment. Restrict that environment to
    `master` and owner-controlled configuration changes, but do not require a
@@ -93,7 +119,10 @@ After that explicit approval, the selected provider setup must:
    exact backup prefix and may not write, overwrite, lock, retain, or delete.
 8. Set the `production-backup-monitor` environment variable
    `BACKUP_EXPECTED_SOURCE_COMMIT` to the reviewed 40-character production
-   source commit. Set the nonsecret repository Actions variable
+   source commit. The scheduler's `SOURCE_COMMIT` must equal Railway's
+   provider-set `RAILWAY_GIT_COMMIT_SHA`; backup creation fails before reading
+   PostgreSQL or writing storage when those values differ or when Railway does
+   not supply a deployment SHA. Set the nonsecret repository Actions variable
    `RIVT_BACKUP_ALERT_GITHUB_LOGIN` to the owner who physically receives the
    incident notification; reconciliation intentionally has no access to the
    secret-bearing environment. The workflow checks out that exact commit and
@@ -130,6 +159,9 @@ for the selected provider immediately before approval.
    `encryptionKeyMode: active-only`. Only the sanitized receipt may be retained
    or published.
 5. Confirm the job exited and no connection or process remains active.
+   Confirm its measured duration stayed below the configured 45-minute hard
+   deadline and its peak resource use stayed within the reviewed provider
+   limits.
 6. Let the next scheduled run complete before treating cadence as observed.
 
 ## Missed-backup alarm acceptance
