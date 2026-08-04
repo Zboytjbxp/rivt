@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import { EventEmitter } from "node:events";
 import { Readable } from "node:stream";
 import test from "node:test";
 import { gunzipSync, gzipSync } from "node:zlib";
 import {
   BackupConfigurationError,
+  acquireLogicalBackupLock,
+  backupJobTimeoutMsFromEnv,
   ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
   LOGICAL_BACKUP_FORMAT_V2,
   LOGICAL_BACKUP_MANIFEST_FORMAT_V2,
@@ -59,6 +62,7 @@ import {
 } from "../scripts/restore-logical-backup-artifact.js";
 import { completeInventory, verifyRestoreDrill } from "../scripts/restore-drill.js";
 import { backupKeyIdReceipt } from "../scripts/backup-key-id.js";
+import { runScheduledLogicalBackup } from "../scripts/run-scheduled-logical-backup.js";
 
 const snapshot = {
   format: "rivt-logical-backup-v1",
@@ -685,7 +689,30 @@ test("backup key-id helper emits only the nonsecret active-key fingerprint", () 
 
 test("backup evidence requires a full source commit and bounded policy thresholds", () => {
   assert.equal(requiredSourceCommit({ SOURCE_COMMIT: "A".repeat(40) }), "a".repeat(40));
+  assert.equal(requiredSourceCommit({
+    SOURCE_COMMIT: "A".repeat(40),
+    RAILWAY_GIT_COMMIT_SHA: "a".repeat(40),
+    RAILWAY_SERVICE_ID: "service-id",
+  }), "a".repeat(40));
   assert.throws(() => requiredSourceCommit({ SOURCE_COMMIT: "abc1234" }), /full 40-character/);
+  assert.throws(
+    () => requiredSourceCommit({ SOURCE_COMMIT: "a".repeat(40), RAILWAY_SERVICE_ID: "service-id" }),
+    (error) => error.code === "BACKUP_CONFIG_INVALID",
+  );
+  assert.throws(
+    () => requiredSourceCommit({
+      SOURCE_COMMIT: "a".repeat(40),
+      RAILWAY_GIT_COMMIT_SHA: "b".repeat(40),
+      RAILWAY_SERVICE_ID: "service-id",
+    }),
+    (error) => error.code === "BACKUP_SOURCE_MISMATCH",
+  );
+  assert.equal(backupJobTimeoutMsFromEnv({}), 45 * 60_000);
+  assert.equal(backupJobTimeoutMsFromEnv({ BACKUP_JOB_TIMEOUT_MINUTES: "60" }), 60 * 60_000);
+  assert.throws(
+    () => backupJobTimeoutMsFromEnv({ BACKUP_JOB_TIMEOUT_MINUTES: "61" }),
+    /cannot exceed 60/,
+  );
   assert.equal(retentionDaysFromEnv({}), 30);
   assert.throws(() => retentionDaysFromEnv({ BACKUP_RETENTION_DAYS: "29" }), /at least 30/);
   assert.equal(maxBackupAgeHoursFromEnv({}), 14);
@@ -699,6 +726,203 @@ test("backup evidence requires a full source commit and bounded policy threshold
     rtoMinutes: 240,
   });
   assert.throws(() => enforceRecoveryRto(14_400_000, 1, 240), (error) => error.code === "BACKUP_RTO_EXCEEDED");
+});
+
+test("logical backup advisory lock fails closed when another run holds it", async () => {
+  await acquireLogicalBackupLock({
+    async query(sql) {
+      assert.match(sql, /pg_try_advisory_lock/);
+      return { rows: [{ acquired: true }] };
+    },
+  });
+  await assert.rejects(
+    () => acquireLogicalBackupLock({ async query() { return { rows: [{ acquired: false }] }; } }),
+    (error) => error.code === "BACKUP_ALREADY_RUNNING",
+  );
+});
+
+test("scheduled backup wrapper passes through success and stops a run after its deadline", async () => {
+  const successfulChild = new EventEmitter();
+  successfulChild.kill = () => true;
+  let spawnCall;
+  const success = runScheduledLogicalBackup({
+    env: { SAFE: "value" },
+    timeoutMs: 1_000,
+    spawnImpl(command, args, options) {
+      spawnCall = { command, args, options };
+      queueMicrotask(() => successfulChild.emit("exit", 0, null));
+      return successfulChild;
+    },
+  });
+  assert.deepEqual(await success, { ok: true });
+  assert.equal(spawnCall.command, process.execPath);
+  assert.equal(spawnCall.args.length, 1);
+  assert.match(spawnCall.args[0], /create-logical-backup-artifact\.js$/);
+  assert.deepEqual(spawnCall.options.env, { SAFE: "value" });
+  assert.equal(spawnCall.options.stdio, "inherit");
+
+  const timedOutChild = new EventEmitter();
+  const signals = [];
+  timedOutChild.kill = (signal) => {
+    signals.push(signal);
+    if (signal === "SIGTERM") queueMicrotask(() => timedOutChild.emit("exit", null, signal));
+    return true;
+  };
+  await assert.rejects(
+    () => runScheduledLogicalBackup({
+      env: {},
+      timeoutMs: 5,
+      terminationGraceMs: 5,
+      spawnImpl: () => timedOutChild,
+    }),
+    (error) => error.code === "BACKUP_JOB_TIMEOUT",
+  );
+  assert.deepEqual(signals, ["SIGTERM"]);
+
+  const uncooperativeChild = new EventEmitter();
+  const escalatedSignals = [];
+  uncooperativeChild.kill = (signal) => {
+    escalatedSignals.push(signal);
+    if (signal === "SIGKILL") queueMicrotask(() => uncooperativeChild.emit("exit", null, signal));
+    return true;
+  };
+  await assert.rejects(
+    () => runScheduledLogicalBackup({
+      env: {},
+      timeoutMs: 5,
+      terminationGraceMs: 5,
+      spawnImpl: () => uncooperativeChild,
+    }),
+    (error) => error.code === "BACKUP_JOB_TIMEOUT",
+  );
+  assert.deepEqual(escalatedSignals, ["SIGTERM", "SIGKILL"]);
+});
+
+test("scheduled backup wrapper bounds failed termination and forwards host shutdown signals", async () => {
+  const stuckChild = new EventEmitter();
+  const stuckSignals = [];
+  let stuckChildUnrefCount = 0;
+  stuckChild.kill = (signal) => {
+    stuckSignals.push(signal);
+    if (signal === "SIGTERM") {
+      queueMicrotask(() => stuckChild.emit("error", new Error("simulated kill failure")));
+    }
+    return false;
+  };
+  stuckChild.unref = () => {
+    stuckChildUnrefCount += 1;
+  };
+  await assert.rejects(
+    () => runScheduledLogicalBackup({
+      env: {},
+      timeoutMs: 5,
+      terminationGraceMs: 5,
+      spawnImpl: () => stuckChild,
+      signalSource: new EventEmitter(),
+    }),
+    (error) => error.code === "BACKUP_JOB_TIMEOUT",
+  );
+  assert.deepEqual(stuckSignals, ["SIGTERM", "SIGKILL"]);
+  assert.equal(stuckChildUnrefCount, 1);
+  assert.equal(stuckChild.listenerCount("error"), 0);
+  assert.equal(stuckChild.listenerCount("exit"), 0);
+
+  const signalSource = new EventEmitter();
+  const interruptedChild = new EventEmitter();
+  const interruptedSignals = [];
+  interruptedChild.kill = (signal) => {
+    interruptedSignals.push(signal);
+    queueMicrotask(() => interruptedChild.emit("exit", null, signal));
+    return true;
+  };
+  const interrupted = runScheduledLogicalBackup({
+    env: {},
+    timeoutMs: 1_000,
+    terminationGraceMs: 5,
+    spawnImpl: () => interruptedChild,
+    signalSource,
+  });
+  signalSource.emit("SIGINT");
+  await assert.rejects(interrupted, (error) => error.code === "BACKUP_JOB_INTERRUPTED");
+  assert.deepEqual(interruptedSignals, ["SIGINT"]);
+  assert.equal(signalSource.listenerCount("SIGINT"), 0);
+  assert.equal(signalSource.listenerCount("SIGTERM"), 0);
+});
+
+test("scheduled backup wrapper reports spawn, nonzero, and unexpected-signal failures", async () => {
+  const spawnFailureChild = new EventEmitter();
+  spawnFailureChild.kill = () => true;
+  const spawnFailure = new Error("spawn failed");
+  const spawnResult = runScheduledLogicalBackup({
+    env: {},
+    timeoutMs: 1_000,
+    spawnImpl: () => {
+      queueMicrotask(() => spawnFailureChild.emit("error", spawnFailure));
+      return spawnFailureChild;
+    },
+    signalSource: new EventEmitter(),
+  });
+  await assert.rejects(spawnResult, (error) => error === spawnFailure);
+
+  const nonzeroChild = new EventEmitter();
+  nonzeroChild.kill = () => true;
+  const nonzeroResult = runScheduledLogicalBackup({
+    env: {},
+    timeoutMs: 1_000,
+    spawnImpl: () => {
+      queueMicrotask(() => nonzeroChild.emit("exit", 2, null));
+      return nonzeroChild;
+    },
+    signalSource: new EventEmitter(),
+  });
+  await assert.rejects(
+    nonzeroResult,
+    (error) => error.childReportedFailure === true && /\(2\)/.test(error.message),
+  );
+
+  const signaledChild = new EventEmitter();
+  signaledChild.kill = () => true;
+  const signaledResult = runScheduledLogicalBackup({
+    env: {},
+    timeoutMs: 1_000,
+    spawnImpl: () => {
+      queueMicrotask(() => signaledChild.emit("exit", null, "SIGABRT"));
+      return signaledChild;
+    },
+    signalSource: new EventEmitter(),
+  });
+  await assert.rejects(
+    signaledResult,
+    (error) => error.childReportedFailure === true && /SIGABRT/.test(error.message),
+  );
+});
+
+test("backup creation rejects Railway source mismatch before opening database or storage clients", async () => {
+  let databaseOpened = false;
+  let storageOpened = false;
+  await assert.rejects(
+    () => createLogicalBackupArtifact({
+      env: {
+        ...destinationEnv,
+        BACKUP_DATABASE_URL: "postgresql://backup_reader:secret@db.example.test/rivt",
+        BACKUP_ENCRYPTION_KEY: "1".repeat(64),
+        SOURCE_COMMIT: "a".repeat(40),
+        RAILWAY_GIT_COMMIT_SHA: "b".repeat(40),
+        RAILWAY_SERVICE_ID: "service-id",
+      },
+      poolFactory() {
+        databaseOpened = true;
+        throw new Error("database should not open");
+      },
+      s3ClientFactory() {
+        storageOpened = true;
+        throw new Error("storage should not open");
+      },
+    }),
+    (error) => error.code === "BACKUP_SOURCE_MISMATCH",
+  );
+  assert.equal(databaseOpened, false);
+  assert.equal(storageOpened, false);
 });
 
 test("backup snapshot starts repeatable-read and refuses a role with any write capability", async () => {
@@ -1026,9 +1250,11 @@ test("bucket protection requires versioning, COMPLIANCE default retention, and a
 
 test("backup creation reads one repeatable snapshot with a read-only role and uploads a unique protected version", async () => {
   const queries = [];
+  const lifecycle = [];
   const client = {
     async query(sql) {
       queries.push(sql);
+      if (sql.includes("pg_try_advisory_lock")) return { rows: [{ acquired: true }] };
       if (sql.includes("FROM pg_roles")) {
         return {
           rows: [{
@@ -1057,12 +1283,15 @@ test("backup creation reads one repeatable snapshot with a read-only role and up
       if (sql.includes("information_schema.sequences")) return { rows: [] };
       return { rows: [] };
     },
-    release() {},
+    release() { lifecycle.push("client-release"); },
   };
   let poolEnded = false;
   const pool = {
     async connect() { return client; },
-    async end() { poolEnded = true; },
+    async end() {
+      poolEnded = true;
+      lifecycle.push("pool-end");
+    },
   };
   let putInput;
   const s3 = {
@@ -1086,14 +1315,17 @@ test("backup creation reads one repeatable snapshot with a read-only role and up
           }],
         };
         case "PutObjectCommand":
+          lifecycle.push("upload");
           putInput = command.input;
           return { VersionId: "protected-version" };
-        case "HeadObjectCommand": return {
-          VersionId: "protected-version",
-          LastModified: new Date("2026-08-01T12:00:01.000Z"),
-          ObjectLockMode: "COMPLIANCE",
-          ObjectLockRetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
-        };
+        case "HeadObjectCommand":
+          lifecycle.push("upload-verified");
+          return {
+            VersionId: "protected-version",
+            LastModified: new Date("2026-08-01T12:00:01.000Z"),
+            ObjectLockMode: "COMPLIANCE",
+            ObjectLockRetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
+          };
         default: throw new Error(`Unexpected command ${command.constructor.name}`);
       }
     },
@@ -1114,9 +1346,11 @@ test("backup creation reads one repeatable snapshot with a read-only role and up
   assert.match(result.key, /^postgres\/daily\/2026-08-01T12-00-00\.000Z-a{40}-[a-f0-9-]+\.json\.gz\.aes256gcm$/);
   assert.equal(putInput.IfNoneMatch, "*");
   assert.equal(putInput.ObjectLockMode, "COMPLIANCE");
-  assert.equal(queries[0], "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
+  assert.match(queries[0], /pg_try_advisory_lock/);
+  assert.equal(queries[1], "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
   assert.equal(queries.at(-1), "COMMIT");
   assert.equal(poolEnded, true);
+  assert.deepEqual(lifecycle, ["upload", "upload-verified", "client-release", "pool-end"]);
 });
 
 test("protected backup upload is unique, versioned, digest-bound, and COMPLIANCE locked", async () => {

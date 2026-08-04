@@ -2,6 +2,23 @@
 
 ## Operational Incident Addendum - 2026-07-29 Credential Containment
 
+- `GA-OPS-004` gains unactivated scheduler hardening on
+  `codex/backup-scheduler-config-hotfix`: the private Railway config invokes a
+  bounded child-process wrapper with a 45-minute default and 60-minute ceiling,
+  forwards host shutdown signals and fails within a bounded fallback even when
+  a child refuses to exit,
+  rejects duplicate runs through a PostgreSQL advisory lock, and fails before
+  opening database or storage clients unless `SOURCE_COMMIT` matches Railway's
+  provider-set `RAILWAY_GIT_COMMIT_SHA`. The runbook requires an explicit
+  `/railway.backup.json` service binding, no public domain, and reviewed
+  CPU/RAM limits. This is source preparation only—not merge, deployment,
+  schedule, backup evidence, or complete disaster recovery. Application
+  object storage remains outside this PostgreSQL backup design and requires a
+  separate reviewed recovery packet. AWS account creation remains blocked, and
+  the current approval excludes backup-object deletion; because provider
+  verification requires a post-retention lifecycle rule, activation also needs
+  a separate explicit lifecycle-deletion approval.
+
 - `GA-OPS-007` gains local Web Push retirement instrumentation: migration
   `0042_push_vapid_generation` preserves legacy subscriptions as unknown,
   constrains non-null values to nonsecret 64-character SHA-256 fingerprints,
