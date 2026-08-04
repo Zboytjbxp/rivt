@@ -14,8 +14,11 @@ restricted-output exposure of current production credentials. No misuse
 indicator is known, but every affected class is again treated as compromised.
 Michael approved one-class-at-a-time emergency rotation with up to 30 minutes
 of cumulative interruption and a `$2` before-tax incremental-cost ceiling.
-No new provider rotation, deployment, ACH action, customer communication, or
-public-launch action is yet claimed. Launch and Railway Stage 1 remain paused.
+PostgreSQL, the Stripe live API key, and the billing webhook recurrence
+rotations are complete. The Stripe Connect replacement is deployed and passes
+signed no-charge proof; its predecessor remains inside Stripe's bounded
+one-hour overlap and is not yet claimed retired. ACH remains disabled. Launch
+and Railway Stage 1 remain paused.
 
 ## Packet 99 operator secret-output containment - active; provider rotation pending
 
@@ -36,9 +39,20 @@ public-launch action is yet claimed. Launch and Railway Stage 1 remain paused.
 - A Windows CRLF checkout exposed a latent LF-only incident-workflow test;
   the fixture loader now normalizes CRLF and the six focused workflow checks
   pass on the Windows worktree.
-- Production rotation remains operationally pending in the approved order:
-  PostgreSQL, Stripe, Resend, Google OAuth, authentication/rate-limit peppers,
-  VAPID, and backup encryption.
+- Production rotation continues one class at a time. PostgreSQL, the Stripe
+  live API key, and the billing webhook are closed for this recurrence. The
+  Connect cutover is verified and awaits predecessor expiry plus a final
+  post-retirement proof. Resend, Google OAuth, authentication/rate-limit
+  peppers, VAPID, and backup encryption remain pending.
+- The Connect cutover changed only `STRIPE_CONNECT_WEBHOOK_SECRET`. Automatic
+  deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
+  policy; exact-source deployment `6152da11-1323-47a9-a258-d9013f040522`
+  succeeded on production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`. Public health and the production
+  monitor passed. Signed no-charge probe
+  `evt_rivt_connect_webhook_rotation_probe_1785808354434` was accepted once.
+  Invoice bank payments remain `enabled: false`, `configured: false`, and
+  `setup_required`.
 - `master` currently has no branch protection/ruleset, so the Packet 98
   rehearsal's protected-branch guard cannot pass. No bypass is authorized.
 - The feature release remains separate from containment and is not authorized

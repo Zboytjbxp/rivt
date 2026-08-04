@@ -89,7 +89,7 @@ record does not claim they occurred.
 | Credential class | Current status |
 |---|---|
 | PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
-| Stripe API, billing webhook, and Connect webhook | Live API key and billing webhook signing secret rotated and verified on 2026-08-03; the exposed July API key is expired and the billing predecessor completed Stripe's one-hour retirement window. The Connected-accounts webhook signing-secret replacement remains pending and continues to be treated as compromised |
+| Stripe API, billing webhook, and Connect webhook | Live API key and billing webhook signing secret rotated and verified on 2026-08-03; the exposed July API key is expired and the billing predecessor completed Stripe's one-hour retirement window. The Connected-accounts webhook replacement is deployed and verified; its predecessor remains temporarily usable only through Stripe's bounded one-hour overlap and is not yet claimed retired |
 | Resend | Pending sending-only replacement and owner-controlled proof delivery |
 | Google OAuth | Pending same-client replacement and owner-controlled sign-in proof |
 | Authentication metadata and rate-limit peppers | Pending distinct replacements and runtime verification |
@@ -260,6 +260,63 @@ not be read as closure of the recurrence.
 - **Approval boundary:** this action did not rotate the Connected-accounts
   webhook, enable ACH, attempt a real payment, contact a customer, delete
   customer data, launch publicly, or deploy the feature release.
+
+### Stripe Connect-webhook recurrence rotation evidence - 2026-08-03
+
+- **Provider and scope:** Stripe live account `acct_1TnnyAIz6JDg8Lda`,
+  Connected-accounts destination `we_1TzS8YIz6JDg8LdaXdJA6Dzm`, endpoint
+  `https://rivt.pro/api/stripe/connect/webhook`, snapshot payload, API version
+  `2026-06-24.dahlia`, and these nine events:
+  `charge.dispute.created`, `charge.refunded`,
+  `checkout.session.async_payment_failed`,
+  `checkout.session.async_payment_succeeded`, `checkout.session.completed`,
+  `checkout.session.expired`, `payment_intent.payment_failed`,
+  `payment_intent.processing`, and `payment_intent.succeeded`. Only Railway
+  variable `STRIPE_CONNECT_WEBHOOK_SECRET` changed. No signing-secret value or
+  secret-derived fingerprint is recorded.
+- **Operator and authority:** Codex operated the signed-in Stripe and Railway
+  interfaces under Michael's explicit 2026-08-03 emergency rotation approval.
+  Railway recorded the staged-variable deployment at
+  `2026-08-04T01:48:59.147Z`; cutover proof completed at approximately 21:54
+  EDT (`2026-08-04T01:54Z`).
+- **Overlap and cutover:** Stripe rolled the destination signing secret with
+  its provider-defined one-hour predecessor-expiry window. The replacement
+  moved directly from Stripe's one-time reveal into Railway's masked
+  `STRIPE_CONNECT_WEBHOOK_SECRET` editor without being printed to chat, shell
+  output, logs, or this record. Exactly one Railway variable was staged. The
+  predecessor remains available only during the bounded provider overlap and
+  is not yet claimed retired.
+- **Exact-source application pickup:** Railway's automatic variable-change
+  deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
+  policy. Explicit deployment `6152da11-1323-47a9-a258-d9013f040522`
+  succeeded from unchanged production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`; no feature release was
+  deployed.
+- **Runtime proof:** public `GET /api/health` returned HTTP 200 with `ok: true`,
+  migration `0042_push_vapid_generation` ready, PostgreSQL and S3-compatible
+  storage, and the exact expected source. Locally signed unknown event
+  `evt_rivt_connect_webhook_rotation_probe_1785808354434` returned HTTP 200,
+  `received: true`, and `duplicate: false`. It created only its named immutable
+  `stripe_connect_events` idempotency/audit row; its deliberately unknown type
+  cannot update an account, invoice, payment, refund, dispute, or Stripe
+  object. `npm run monitor:production` passed with all seven anonymous
+  private-route checks fail-closed. Invoice bank payments remained
+  `enabled: false`, `configured: false`, `webhookConfigured: true`, and
+  `setup_required`.
+- **Retirement and recovery:** predecessor retirement remains pending until
+  Stripe's one-hour overlap ends. Until then, recovery is to correct or reroll
+  the replacement while the predecessor still verifies signatures. After the
+  provider confirms expiry, a fresh unique signed probe and exact-source
+  production monitor must pass before recurrence rotation is marked complete;
+  the retired predecessor must never be restored.
+- **Interruption and cost:** the prior production instance remained available
+  while Railway built the exact-source replacement; no interruption was
+  observed. No service, database, bucket, plan, payment, or recurring resource
+  was created. Stripe quoted no charge for the roll, and only ordinary Railway
+  redeploy usage applies within the approved `$2` ceiling.
+- **Approval boundary:** this action did not enable ACH, attempt a real payment,
+  contact a customer, delete customer data, launch publicly, or deploy the
+  feature release.
 
 ## Historical rotation status before the 2026-08-03 recurrence
 
