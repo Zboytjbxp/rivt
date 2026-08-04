@@ -1,5 +1,21 @@
 # Deployment Ledger
 
+## 2026-08-04 - Release-Candidate Source Reconciliation (No Deployment)
+
+- Production and `origin/master` remain at exact source
+  `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 added
+  source-only backup tooling; it did not activate or prove backup recurrence.
+- Release candidate `codex/final-release-candidate-20260804` is at
+  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`, containing integration merge
+  `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge
+  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. The candidate pins Node 22.
+- No release-candidate deployment ID exists or is claimed. No scheduler
+  service, independent backup provider, recurring artifact, or isolated
+  current-artifact restore was activated or proved.
+- ACH remains disabled and `ACTIVE_LAUNCH_HOLD` remains active.
+  `GA-OPS-004` and `GA-OPS-009` remain blockers. Final exact-candidate gate
+  counts and readiness are pending.
+
 ## 2026-08-04 - Resend Restricted-Output Recurrence Re-Rotation and Retirement
 
 - Approval and exact scope: Michael's explicit 2026-08-03 emergency
@@ -224,8 +240,8 @@
   source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
   `sha256:5af9fd1934e0d4f4185633e8d4ae151a7448fed8604f0bf5d72de28fcb00a99f`;
   no feature release was deployed.
-- Proof and retirement: the linked owner-controlled `zboytjbxp@gmail.com`
-  account completed a fresh sign-in and successful return to `rivt.pro` before
+- Proof and retirement: the owner-controlled linked Google account completed a
+  fresh sign-in and successful return to `rivt.pro` before
   predecessor disablement. The predecessor created July 30 at 7:08:18 AM EDT
   was then disabled, and a second fresh sign-in passed. It was deleted only
   after that disabled-state proof, and a third fresh sign-in passed after
@@ -2340,7 +2356,7 @@ Add one entry per staging/production deployment.
 
 - Environment: Production (`https://rivt.pro`)
 - Date/time/timezone: 2026-06-22 03:48:04 UTC / 2026-06-21 23:48:04 America/New_York
-- Approver: Michael
+- Approver role: founder-role
 - Approval scope: founder, support, and legal/safety Gate A signoffs for the controlled named-cohort pilot readiness package.
 - Evidence: `docs/operations/GATE_A_APPROVAL_PACKET.md`; `docs/operations/incident-routing.json`
 - Source repository/branch: `Zboytjbxp/rivt`, `master`
@@ -2357,9 +2373,9 @@ Add one entry per staging/production deployment.
 - Environment: Production (`https://rivt.pro`)
 - Started at: `2026-06-22T03:14:00Z`
 - Ended at: `2026-06-22T03:31:05.8720277Z`
-- Incident commander: Michael
-- Backup owner: Anya Tingle
-- Support communicator: Michael / `support@rivt.pro`
+- Incident commander role: founder-incident-commander
+- Backup owner role: backup-incident-owner
+- Support communicator role: founder-support-owner / `support@rivt.pro`
 - Production source commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b`
 - Alert destination tested: Sentry Cloud project `4511606746185728` accepted rehearsal event `43fc7567f458490582db1f6642e2e0ea` with HTTP 200; the high-priority Sentry issue alert rule was previously verified on `RIVT Sentry smoke test` at 2026-06-22 02:38 UTC.
 - Paging destination tested: Sentry high-priority issue alert route remains the first pilot escalation route; dedicated phone/SMS paging is still recommended before broader scale.
@@ -2381,9 +2397,9 @@ Add one entry per staging/production deployment.
 - Environment: Production (`https://rivt.pro`)
 - Started at: `2026-06-22T03:14:00Z`
 - Ended at: `2026-06-22T03:20:29.5545352Z`
-- Incident commander: Michael
-- Backup owner: Anya Tingle
-- Support communicator: Michael / `support@rivt.pro`
+- Incident commander role: founder-incident-commander
+- Backup owner role: backup-incident-owner
+- Support communicator role: founder-support-owner / `support@rivt.pro`
 - Production source commit: `6d8e276e036553c5f861f1f8ab97cc3333a3494b` from `npm run monitor:production`
 - Alert destination tested: production synthetic monitor path was exercised locally; Sentry high-priority issue alert was previously verified on smoke issue `RIVT Sentry smoke test` at 2026-06-22 02:38 UTC
 - Paging destination tested: not newly triggered in this attempt
@@ -2414,7 +2430,7 @@ Add one entry per staging/production deployment.
 - Automated gates: `npm run monitor:production` passed after provider configuration; prior source gates for `6d8e276` remain `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`
 - Post-deploy smoke tests: public `/api/health` passed and reported exact source commit `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL/S3-compatible dependencies healthy, and `observability.errorMonitoring.mode=configured`; Sentry accepted smoke event `RIVT Sentry smoke test` with HTTP 200 and showed `Error Received`
 - Escalation evidence: Sentry alert rule `Send a notification for high priority issues` is connected to project `node-express`, notifies suggested assignees or recently active members on every trigger, and triggered once for the smoke issue at 2026-06-22 02:38 UTC.
-- Incident-owner evidence: backup incident owner Anya Tingle is recorded in `docs/operations/incident-routing.json` with email and phone status recorded; the actual phone number is intentionally not stored in the repository.
+- Incident-owner evidence: the backup-incident-owner role is recorded in `docs/operations/incident-routing.json`; private contact-route status is recorded outside the repository.
 - Support-hours evidence: founder-provided Gate A support coverage is recorded as Monday-Saturday, 9:00 AM-5:00 PM, America/New_York.
 - Recovery-policy evidence: Gate A recovery policy is approved with RPO 1440 minutes, RTO 240 minutes, 30-day backup retention, 30-day restore-drill cadence, next restore drill due `2026-07-21T04:18:59.000Z`, and founder/operations approvals by Michael.
 - Incident-routing approval evidence: `docs/operations/incident-routing.json` is approved for the Gate A pilot scope by Michael at `2026-06-22T03:09:36.0366141Z`.

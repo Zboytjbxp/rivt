@@ -3,7 +3,7 @@
 - Status: containment in progress
 - Severity: critical
 - Environment: Railway production
-- Incident owner: Michael
+- Incident owner role: founder-incident-commander
 - Source at detection: `92a8451b8190f5119384a4970fb1a324503df995`
 - Detected at: between `2026-07-29T19:01:00-04:00` and
   `2026-07-29T21:42:25-04:00` (repository-bounded; exact operator-observed time
@@ -16,6 +16,22 @@
   followed by authorization to continue the remaining incident work unless
   incremental cost would exceed $2 total. Completed actions remained below
   that ceiling; no exact measured provider cost is claimed.
+
+## Current release evidence boundary - 2026-08-04
+
+- Production and `origin/master` remain at exact source
+  `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 provides
+  source-only backup tooling and does not prove recurrence or restore.
+- Release candidate `codex/final-release-candidate-20260804` is at
+  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`, containing integration merge
+  `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge
+  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. It pins Node 22 and has not
+  been deployed.
+- Backup recurrence is still pending. No scheduler service, independent
+  provider, recurring artifact, or isolated current-artifact restore is
+  activated or proved. ACH remains disabled and `ACTIVE_LAUNCH_HOLD` remains
+  active. `GA-OPS-004` and `GA-OPS-009` remain blockers; final gate counts and
+  readiness are pending.
 
 ## Summary
 
@@ -56,7 +72,7 @@ identifiers are not classified as credentials. The existing
 merges, release deployment, Railway Stage 1, new ACH activity, and public
 launch remain paused.
 
-Michael approved emergency one-class-at-a-time rotation on 2026-08-03 with an
+The founder role approved emergency one-class-at-a-time rotation on 2026-08-03 with an
 incremental cost ceiling of `$2` before tax and up to 30 minutes of cumulative
 interruption. The approval includes owner-controlled email, OAuth, and push
 proofs; no-charge Stripe deliveries that may create audit/idempotency rows; a
@@ -120,7 +136,7 @@ not be read as closure of the recurrence.
   service `518129de-bb84-49df-89a0-4660b4cabd8d`, role `postgres`, attached
   volume `dbc470a5-8928-4b07-82a7-a468a516326f`, and dependent RIVT service
   `4e672e30-a351-41a5-91da-c1d07f50f370`.
-- **Operator and authority:** Codex operated the provider UI under Michael's
+- **Operator and authority:** Codex operated the provider UI under the founder role's
   explicit 2026-08-03 emergency approval. The action began at 18:58 EDT
   (22:58 UTC) and narrow verification completed at 19:06 EDT (23:06 UTC).
 - **Cutover:** Railway's provider-defined no-overlap `Regenerate Password`
@@ -173,7 +189,7 @@ not be read as closure of the recurrence.
   dependent Railway variable `STRIPE_SECRET_KEY`. No credential value,
   authorization header, or secret-derived fingerprint is recorded.
 - **Operator and authority:** Codex operated the provider and Railway UIs under
-  Michael's explicit 2026-08-03 emergency rotation approval. Stripe created the
+  the founder role's explicit 2026-08-03 emergency rotation approval. Stripe created the
   replacement on August 3; Railway recorded the cutover change at
   `2026-08-04T00:06:37.458Z`, and post-retirement verification completed at
   approximately 20:10 EDT (`2026-08-04T00:10Z`).
@@ -225,7 +241,7 @@ not be read as closure of the recurrence.
   `STRIPE_WEBHOOK_SECRET` changed. No signing-secret value or secret-derived
   fingerprint is recorded.
 - **Operator and authority:** Codex operated the signed-in Stripe and Railway
-  interfaces under Michael's explicit 2026-08-03 emergency rotation approval.
+  interfaces under the founder role's explicit 2026-08-03 emergency rotation approval.
   Cutover verification began at approximately 20:24 EDT (`2026-08-04T00:24Z`),
   and post-retirement verification completed at approximately 21:37 EDT
   (`2026-08-04T01:37Z`).
@@ -287,7 +303,7 @@ not be read as closure of the recurrence.
   variable `STRIPE_CONNECT_WEBHOOK_SECRET` changed. No signing-secret value or
   secret-derived fingerprint is recorded.
 - **Operator and authority:** Codex operated the signed-in Stripe and Railway
-  interfaces under Michael's explicit 2026-08-03 emergency rotation approval.
+  interfaces under the founder role's explicit 2026-08-03 emergency rotation approval.
   Railway recorded the staged-variable deployment at
   `2026-08-04T01:48:59.147Z`; cutover proof completed at approximately 21:54
   EDT (`2026-08-04T01:54Z`).
@@ -341,7 +357,7 @@ not be read as closure of the recurrence.
   `RESEND_API_KEY` changed. No credential value, token prefix, or
   secret-derived fingerprint is recorded.
 - **Operator and authority:** Codex operated the signed-in Resend and Railway
-  interfaces under Michael's explicit 2026-08-03 emergency rotation approval.
+  interfaces under the founder role's explicit 2026-08-03 emergency rotation approval.
   The action used only owner-controlled email proofs and did not contact a
   customer.
 - **Cutover:** the replacement value moved directly from Resend's one-time
@@ -356,7 +372,7 @@ not be read as closure of the recurrence.
 - **Pre-retirement proof:** deployed production sent owner-only proof
   `rivt-resend-recurrence-pre-retirement-1785812675006`, Resend message
   `e2f24752-f016-413e-b949-56107fac0b82`. Resend reported it delivered at
-  2026-08-03 11:04 PM EDT, and Michael confirmed receipt before predecessor
+  2026-08-03 11:04 PM EDT, and the incident owner confirmed receipt before predecessor
   deletion.
 - **Retirement and inventory:** after the replacement and first proof verified,
   predecessor `RIVT Production rotation 2026-07-29`, provider resource
@@ -366,7 +382,7 @@ not be read as closure of the recurrence.
 - **Post-retirement proof:** deployed production sent owner-only proof
   `rivt-resend-recurrence-post-retirement-1785813474437`, Resend message
   `cf7ef6c1-5648-49e9-b829-fd1b2cca0839`. Resend reported it delivered at
-  2026-08-03 11:17 PM EDT, and Michael confirmed receipt after predecessor
+  2026-08-03 11:17 PM EDT, and the incident owner confirmed receipt after predecessor
   deletion.
 - **Runtime boundary:** the exact-source production monitor passed before and
   after retirement. Invoice bank payments remained `enabled: false`,
@@ -387,7 +403,7 @@ not be read as closure of the recurrence.
 
 ### Resend restricted-output recurrence re-rotation evidence - 2026-08-04
 
-- **Authorization and scope:** Michael's existing 2026-08-03 emergency
+- **Authorization and scope:** The founder role's existing 2026-08-03 emergency
   authorization covered one-class-at-a-time Resend replacement, exact-source
   redeployment, owner-controlled email proofs, and retirement only after
   replacement verification, within the existing `$2` incident ceiling. Only
@@ -426,7 +442,7 @@ not be read as closure of the recurrence.
 - **Delivery proof and retirement:** deployed production sent owner-only
   messages `ab1eb0a5-6bb9-44ed-a3c8-31dbaa603658` at 1:51 AM EDT and
   `a2d6b4b6-5948-4405-b9b0-69fd6736257e` at 1:56 AM EDT. Resend reported both
-  delivered, and Michael confirmed receipt of the final one-key-state message.
+  delivered, and the incident owner confirmed receipt of the final one-key-state message.
   The exposed predecessor and unused intermediate key were retired after
   replacement proof. Exactly one final Sending-access, `rivt.pro`-restricted
   key remains; neither retired key may be restored.
@@ -469,8 +485,8 @@ not be read as closure of the recurrence.
   commit `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
   `sha256:5af9fd1934e0d4f4185633e8d4ae151a7448fed8604f0bf5d72de28fcb00a99f`.
   No feature release was deployed.
-- **Pre-retirement proof:** the owner-controlled linked account
-  `zboytjbxp@gmail.com` completed a fresh Google sign-in and returned
+- **Pre-retirement proof:** the owner-controlled linked Google account completed
+  a fresh sign-in and returned
   successfully to `rivt.pro` while both same-client secrets were enabled.
 - **Disablement proof:** predecessor secret created 2026-07-30 7:08:18 AM EDT
   was disabled only after the replacement passed the first sign-in. The same
@@ -561,7 +577,7 @@ not be read as closure of the recurrence.
 
 ### Web Push VAPID recurrence rotation evidence - 2026-08-04
 
-- **Authorization and scope:** Michael's existing emergency authorization
+- **Authorization and scope:** The founder role's existing emergency authorization
   covered one-class-at-a-time VAPID replacement, exact-source redeployment,
   and owner-controlled push proof. It did not authorize ACH, a real payment,
   customer communication, customer-data deletion, public launch, or the
@@ -593,7 +609,7 @@ not be read as closure of the recurrence.
   the controlled Android, iOS 16.7.16, and iOS 18.7.8 devices. Exact readiness
   then reported total, eligible, active, and active-with-success counts of
   `3`; previous, unknown, retired, and inactive counts of `0`; and all five
-  queue categories at `0`. Michael confirmed the owner-only alert arrived on
+  queue categories at `0`. The incident owner confirmed the owner-only alert arrived on
   all three devices.
 - **Predecessor retirement:** `VAPID_PREVIOUS_PUBLIC_KEY` and
   `VAPID_PREVIOUS_PRIVATE_KEY` were removed together without deploying the
@@ -603,7 +619,7 @@ not be read as closure of the recurrence.
   `sha256:3830de3674395f9c636be8eaa03d3e55b7cd277f04ddd88b1f982853a8464f77`.
 - **Post-retirement proof:** readiness returned `ready: true`, previous
   configuration absent, and the same exact three eligible, active, and
-  successfully delivered registrations with all five queues at zero. Michael
+  successfully delivered registrations with all five queues at zero. The incident owner
   confirmed a final post-retirement alert arrived on all three devices.
   Production monitoring passed, and invoice bank payments remained
   `enabled: false`, `configured: false`, `webhookConfigured: true`, and
@@ -862,7 +878,7 @@ not be read as closure of the recurrence.
   transaction that had remained open beyond RIVT's 10-minute lifetime. It
   redirected to the honest authentication error in 10 ms, before a provider
   token exchange, and is not counted as credential proof.
-- A completely fresh journey for `zboytjbxp@gmail.com` then completed at
+- A completely fresh journey for the owner-controlled linked Google account then completed at
   14:18:31 UTC. The callback returned its redirect in 131 ms, established the
   server session, and the controlled browser rendered the authenticated RIVT
   Home workspace. No password, token, code, cookie, or secret was recorded.

@@ -15,6 +15,22 @@ automation transcript. The command was stopped and its output is not copied
 into source, documentation, chat, tests, or evidence. No misuse indicator is
 known, but transcript confidentiality is not accepted as a security boundary.
 
+## Current release boundary - 2026-08-04
+
+- Production and `origin/master` remain at
+  `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 is
+  source-only backup tooling, not recurrence or restore proof.
+- Release candidate `codex/final-release-candidate-20260804` is at
+  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`, containing merge
+  `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge
+  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. It pins Node 22 and is not
+  deployed.
+- Backup recurrence remains pending. No scheduler service, independent backup
+  provider, recurring artifact, or isolated current-artifact restore is
+  activated or proved. ACH is disabled, `ACTIVE_LAUNCH_HOLD` is active,
+  `GA-OPS-004` and `GA-OPS-009` remain blockers, and final gate counts plus
+  readiness are pending.
+
 ## Source scope
 
 - make the root AI instructions forbid broad provider-variable enumeration;
@@ -23,7 +39,7 @@ known, but transcript confidentiality is not accepted as a security boundary.
 - reject committed command-capable automation that constructs the prohibited
   Railway environment/variable enumeration operations;
 - add focused regression coverage and wire it into the existing security gate;
-- record the recurrence and Michael's exact operational authorization without
+- record the recurrence and the founder role's exact operational authorization without
   recording any credential value.
 
 ## Operational containment
@@ -76,15 +92,11 @@ must never reinstall material exposed in the transcript.
 
 ## Verification
 
-- `npm run build`: pass
-- `npm run lint`: pass
-- `npm run lint:security`: pass, including the operator command policy
-- `npm test`: 551 unit/frontend tests and four non-database integration checks
-  pass; 23 database integration cases skip because `TEST_DATABASE_URL` is not
-  configured in this isolated worktree
-- `npm run test:e2e`: four journeys pass
-- `npm audit --omit=dev`: zero production dependency vulnerabilities
-- `git diff --check`: pass
+- Historical Packet 99 checks are preserved in the release evidence history.
+- Final build, lint, security, database-backed integration, browser,
+  dependency, and diff results for exact candidate
+  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86` plus the documentation patch are
+  pending. No final count or readiness result is claimed here.
 
 These are source checks only. They do not replace provider evidence or
 owner-controlled proofs. The remaining recurrence boundary is a fresh

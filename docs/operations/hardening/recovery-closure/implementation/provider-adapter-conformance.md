@@ -211,7 +211,7 @@ An abort record must never count as a completion.
 
 ### Authorization
 
-- [ ] Michael approved the provider, account, US region, exact resources,
+- [ ] The founder role approved the provider, account, US region, exact resources,
   maximum source bytes, maximum incremental cost, and expiration.
 - [ ] DPA, subprocessors, region, deletion, and incident route are recorded.
 - [ ] Retention, erasure, legal hold, and key custody are approved.

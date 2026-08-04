@@ -4,10 +4,19 @@ Last updated: 2026-08-04 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
 Current phase: Final release-candidate consolidation under the active production credential-containment hold; the feature release, Stage 1, ACH activation, and public launch remain paused.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
-Repository branch: `codex/final-release-candidate-20260804` (integration base and current live source `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b`; final candidate commit and verification pending)
-Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
-Production incident hotfix commit:
+Repository branch: `codex/final-release-candidate-20260804`
+Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
+Current release-candidate source: `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`, containing integration merge `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`
+Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
+Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
+
+Release evidence boundary: production remains on Node 20 while the un-deployed
+release candidate pins Node 22. Invoice bank payments/ACH remain disabled, the
+`ACTIVE_LAUNCH_HOLD` remains active, and `GA-OPS-004` plus `GA-OPS-009` remain
+blockers. Backup recurrence is not proved: no scheduler activation, independent
+backup-provider activation, current recurring artifact, or isolated restore is
+claimed. Final release-candidate gate counts and readiness are pending.
 
 Operational status: a 2026-08-03 Railway configuration audit caused a new
 restricted-output exposure of current production credentials. No misuse
@@ -47,11 +56,11 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   tracked package scripts, root and `scripts/` executables, GitHub
   workflows/actions, Dockerfiles, and Railway configuration and emits only
   file paths plus rule identifiers.
-- Production build, full lint, security lint, 551 unit/frontend tests, four
-  non-database integration checks, all four browser E2E journeys, diff
-  integrity, and the production dependency audit pass. Twenty-three database
-  integration cases skipped because this isolated worktree has no
-  `TEST_DATABASE_URL`; no database-backed result is claimed.
+- Historical packet-level checks remain recorded below, but they are not final
+  proof for candidate `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86` plus the
+  current documentation patch. Final gate counts, database-backed coverage,
+  and readiness are pending and must be recorded only after the exact final
+  candidate completes its gates.
 - The Shop Talk / Trade News browser smoke now pins its page clock to the
   fixture date. Its time-sensitive featured-story assertion can no longer fail
   merely because the real calendar advanced beyond the fixture's seven-day
@@ -103,8 +112,8 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   from unchanged production commit
   `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
   `sha256:5af9fd1934e0d4f4185633e8d4ae151a7448fed8604f0bf5d72de28fcb00a99f`.
-  The linked owner-controlled `zboytjbxp@gmail.com` account completed fresh
-  production Google sign-ins before predecessor disablement, after
+  The owner-controlled linked Google account completed fresh production
+  sign-ins before predecessor disablement, after
   disablement, and after deletion. The predecessor created July 30 at 7:08:18
   AM EDT was disabled only after the first proof and deleted only after the
   second. Final provider inventory shows exactly one enabled secret on the
@@ -241,28 +250,18 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
 - The feature release remains separate from containment and is not authorized
   by this packet.
 
-Backup-scheduler preparation is local and unactivated on
-`codex/backup-scheduler-config-hotfix`. The dedicated Railway config now points
-to a bounded scheduler wrapper rather than the web server: 45-minute default
-runtime, 60-minute maximum, graceful termination followed by forced stop, and
-a final bounded fallback if a child refuses to exit. Host shutdown signals are
-forwarded to the backup child, and a PostgreSQL advisory lock prevents
-duplicate runs. Backup creation also
-requires configured `SOURCE_COMMIT` to equal Railway's provider-set
-`RAILWAY_GIT_COMMIT_SHA` before any database or storage client opens. The
-runbook requires the custom `/railway.backup.json` path, no public domain,
-reviewed CPU/RAM limits, and records that this is PostgreSQL-only recovery;
-application photos/documents still need an independent immutable-backup
-packet. Local build, lint, security lint, 226 unit/frontend tests, all three
-browser E2E journeys, and production dependency audit pass. Three non-database
-integration checks passed and 20 PostgreSQL checks skipped because the clean
-worktree has no test-database credential; earlier Linux CI evidence does not
-substitute for final provider acceptance. Nothing in this preparation was
-merged, pushed, deployed, scheduled, connected to AWS, or billed. AWS account
-creation remains blocked under support case `178585620400417`. The approved
-provider plan explicitly excludes backup-object deletion, while the verifier
-requires a post-retention lifecycle rule; that rule needs a separate,
-plain-language deletion approval before scheduler activation.
+PR #22 is present on production/`origin/master` as source
+`7ee9b30a77bbed2cb1ca4aeda330066884e3d59b`; it adds source-only backup tooling
+and does not prove recurring execution or recovery. The hardened scheduler
+source was then merged only into `codex/final-release-candidate-20260804` by
+`b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. Its bounded runtime, shutdown,
+advisory-lock, and exact-source guards remain candidate controls only. No
+Railway scheduler service, schedule, independent retention provider, backup
+artifact generated by that recurrence, or isolated restore has been activated
+or proved. Application photos/documents also remain outside the PostgreSQL-only
+logical-backup boundary. Final candidate gates and provider acceptance are
+pending; no provider action, cost, deployment, or readiness is inferred from
+the source merges.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
@@ -768,7 +767,7 @@ decision.
   secret-safe provider-configuration probe, and the expected-source production
   monitor pass. Two unused replacement candidates were deleted before
   installation. A fresh production OAuth journey for
-  `zboytjbxp@gmail.com` completed at 14:18:31 UTC on July 30: the callback
+  the owner-controlled linked Google account completed at 14:18:31 UTC on July 30: the callback
   returned its redirect in 131 ms and the browser rendered the authenticated
   RIVT Home workspace. An earlier callback from a transaction held open longer
   than the 10-minute ticket lifetime failed closed before token exchange and
@@ -5159,15 +5158,15 @@ decision.
   - `npm run lint` (pass)
   - `npm run lint:security` (pass)
 
-## Latest Packet 08 Pass - Jacksonville Beta Invite Code
+## Latest Packet 08 Pass - Jacksonville Beta Invite Record
 
-- Added support for the named Jacksonville beta access code `JAX26`:
-  - signup request validation now accepts 5-character pilot codes while invite consumption remains server-side and hash-backed
-  - `scripts/create-pilot-invite.js` can now create a reviewed fixed code with `--code=...` instead of only random one-time strings
-  - `scripts/create-pilot-invite.js` can also raise the capacity of an existing active fixed code with `--update-max-uses=...`, avoiding one-off production SQL for launch-code adjustments
+- Historical support was added for a reviewed Jacksonville beta invite record; raw invite authority is redacted from public documentation:
+  - signup request validation accepts the reviewed short pilot-code format while invite consumption remains server-side and hash-backed
+  - the earlier operator CLI accepted fixed codes through process arguments; the consolidated candidate retires that unsafe path and accepts exceptional manual values only through protected input with `--allow-manual-code`
+  - current inspection, capacity changes, and revocation require the non-secret invite record ID, with `--update-max-uses=...` available only alongside `--update --invite-id=<uuid>`
   - integration coverage includes a short-code invite signup path so this does not regress silently
 - Created the production invite through Railway SSH inside the production service network:
-  - code: `JAX26`
+  - code: `[redacted]`
   - invite id: `b6ce645b-bb30-4279-875a-405b85ec5879`
   - email lock: none
   - role lock: none
@@ -5176,8 +5175,8 @@ decision.
   - expires: `2026-10-05T01:09:24.224Z`
 - Live verification:
   - production `/api/health` reported exact build commit `8be08d7768f3796257d7b669a0c9eddd38d38df9`
-  - Railway SSH update returned the active `JAX26` invite with `maxUses: 500`, `useCount: 0`, and `revokedAt: null`
-  - non-consuming signup probe with `JAX26` reached password-policy validation instead of request-shape rejection, proving the short code is accepted by the deployed API without consuming the invite
+  - Railway SSH update returned the reviewed invite record with `maxUses: 500`, `useCount: 0`, and `revokedAt: null`
+  - a non-consuming signup probe using the reviewed invite record reached password-policy validation instead of request-shape rejection, proving the short-code path was accepted by the deployed API without consuming the invite
   - `EXPECTED_SOURCE_COMMIT=8be08d7768f3796257d7b669a0c9eddd38d38df9 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 593 ms duration
 - Preserved boundaries:
   - the code remains revocable, expiring, max-use-limited, and stored only as a hash
@@ -7370,7 +7369,7 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 - Rendered QA passed for Tools and Shop Talk/Trade News at desktop and mobile sizes. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
 - The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
-- Production deployment was performed through Railway from `master`. Deployment `97915261-3fc8-499d-bfcd-04a7811990a5` served the new frontend assets, and follow-up deployment `2cf692b0-b88e-45c8-98da-f164d07b2c7d` corrected the reported health commit metadata. Live `/api/health` returned healthy PostgreSQL, S3-compatible object storage, ready migrations, and configured Sentry. Live `/api/news?location=Jacksonville%2C%20FL` returned 30 items with 13 article thumbnails, 9 feed thumbnails, and 8 fallback thumbnails. Authenticated production UI publish testing remains blocked until a valid production test login is available; the provided `rivttesting@gmail.com` credentials returned invalid credentials.
+- Production deployment was performed through Railway from `master`. Deployment `97915261-3fc8-499d-bfcd-04a7811990a5` served the new frontend assets, and follow-up deployment `2cf692b0-b88e-45c8-98da-f164d07b2c7d` corrected the reported health commit metadata. Live `/api/health` returned healthy PostgreSQL, S3-compatible object storage, ready migrations, and configured Sentry. Live `/api/news?location=Jacksonville%2C%20FL` returned 30 items with 13 article thumbnails, 9 feed thumbnails, and 8 fallback thumbnails. Authenticated production UI publish testing remains blocked until a valid production test login is available; the provided production test account credentials returned invalid credentials.
 
 ## Latest Packet 08 Pass - Improvement Backlog and Truthful Entitlement Cleanup
 
@@ -7684,7 +7683,7 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 
 ## Latest Packet 08 Pass - Incident Rehearsal Passed
 
-- Re-authenticated Railway CLI as `zboytjbxp@gmail.com` and verified the linked project/service: project `RIVT`, production environment, service `RIVT`, public URL `https://rivt.pro`.
+- Re-authenticated Railway CLI through the owner-controlled workspace account and verified the linked project/service: project `RIVT`, production environment, service `RIVT`, public URL `https://rivt.pro`.
 - `npm run monitor:production` passed against production, confirming exact source `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL and S3-compatible storage healthy, Sentry configured, operational controls off, and seven anonymous private-route checks failing closed.
 - Local live smoke failed against the Railway internal DB hostname, then passed inside the service with `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live`.
 - The service-local live smoke verified migration `0011_shop_talk_reaction_events_immutable`, zero seed/demo findings, seven anonymous private-route checks, operational controls off, five active accounts, zero network profiles, zero open jobs, two open support cases, zero active restrictions, 115 legacy app-state rows, and 111 rate-limit windows.
@@ -7724,10 +7723,10 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 
 ## Latest Packet 08 Pass - Backup Incident Owner Recorded
 
-- Recorded backup incident owner in `docs/operations/incident-routing.json`: Anya Tingle, partner / wife, `abota1994@gmail.com`.
+- Recorded the backup-incident-owner role in `docs/operations/incident-routing.json`; personal identity, relationship, and contact route remain in the access-controlled roster.
 - Phone status is `recorded`; the actual phone number is intentionally not stored in the repository.
 - `node scripts/incident-readiness-check.js --json` stopped reporting `BACKUP_OWNER_MISSING`; support hours were recorded in the follow-up pass above.
-- Remaining honesty boundary: backup ownership is recorded, but Anya still needs access/runbook orientation before we should treat incident response as operationally rehearsed.
+- Remaining honesty boundary: backup ownership is recorded, but the backup-incident-owner still needs access/runbook orientation before we should treat incident response as operationally rehearsed.
 
 ## Latest Packet 08 Pass - Sentry Error Monitoring Configured
 
@@ -8305,7 +8304,7 @@ Implemented on 2026-06-20:
 - Added `scripts/production-synthetic-monitor.js` and `npm run monitor:production`.
 - Added `.github/workflows/production-synthetic.yml` to run the public production synthetic check every 30 minutes and on manual dispatch.
 - The monitor verifies public health, deployed source presence, managed PostgreSQL/S3-compatible dependency status, invite-gated email/password provider configuration, operational-control state, and seven anonymous private-route 401 boundaries.
-- Hardened the scheduled workflow so it installs dependencies from `package-lock.json`, uploads `production-monitor.log` evidence on every run, opens or updates one GitHub issue titled `Production synthetic check failing` when checks fail, and comments/closes that issue when production recovers.
+- Hardened the scheduled workflow so it installs dependencies from `package-lock.json`, uploads only allowlisted `production-monitor-summary.json` evidence on every run, fails visibly when the production ref is not protected, opens or updates one sanitized GitHub issue titled `Production synthetic check failing` when checks fail, and comments/closes that issue when production recovers.
 - Latest local run against `https://rivt.pro` passed with source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, operational controls disabled, seven anonymous private checks, and a 606 ms duration.
 - This is partial monitoring progress only. Dedicated error monitoring, alert routing, paging destination, named incident owner, and rehearsal remain launch blockers.
 
@@ -8317,7 +8316,7 @@ Implemented on 2026-06-20:
 - Added `scripts/incident-readiness-check.js` and `npm run incident:readiness`.
 - Added unit coverage proving incident readiness passes only with owners, support hours, synthetic monitoring, error monitoring, paging, recent rehearsal, and founder/support/legal-safety approvals.
 - Updated the production synthetic GitHub issue workflow so a failing monitor issue includes incident-routing context: primary owner, backup owner, dedicated error-monitoring status, and paging status.
-- Current readiness output is blocked, with primary owner recorded as Michael at `support@rivt.pro`, synthetic monitoring configured, and these missing blockers: backup owner, founder-approved support hours, dedicated error monitoring, paging route, incident rehearsal, founder approval, support approval, and legal/safety approval.
+- Current readiness output is blocked, with the founder-incident-commander role routed through `support@rivt.pro`, synthetic monitoring configured, and these missing blockers: backup owner, founder-approved support hours, dedicated error monitoring, paging route, incident rehearsal, founder approval, support approval, and legal/safety approval.
 
 ## Packet 08 Restore Drill Tooling Progress
 

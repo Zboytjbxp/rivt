@@ -3,11 +3,10 @@ name: Production Synthetic Check
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/30 * * * *"
+    - cron: "7,37 * * * *"
 
 permissions:
   contents: read
-  issues: write
 
 concurrency:
   group: production-synthetic
@@ -15,96 +14,258 @@ concurrency:
 
 jobs:
   monitor:
+    name: monitor
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    environment: production
     env:
       RIVT_MONITOR_BASE_URL: https://rivt.pro
+      EXPECTED_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
+      RIVT_MONITOR_OUTPUT_PATH: production-monitor-summary.json
 
     steps:
+      - name: Validate protected production context
+        shell: bash
+        env:
+          EVENT_REPOSITORY: ${{ github.repository }}
+          EVENT_REF: ${{ github.ref }}
+          REF_IS_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          set -euo pipefail
+          umask 077
+          if [[ "$EVENT_REPOSITORY" == "Zboytjbxp/rivt" && "$EVENT_REF" == "refs/heads/master" && "$REF_IS_PROTECTED" == "true" ]]; then
+            echo "Protected production workflow context verified."
+            exit 0
+          fi
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+
+          const summary = {
+            ok: false,
+            errorCode: "INVALID_CONFIGURATION",
+            check: "workflow-context",
+          };
+          fs.writeFileSync(
+            process.env.RIVT_MONITOR_OUTPUT_PATH,
+            `${JSON.stringify(summary, null, 2)}\n`,
+            { encoding: "utf8", mode: 0o600 },
+          );
+          console.error(JSON.stringify(summary));
+          NODE
+          exit 1
+
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run production synthetic monitor
-        shell: bash
-        run: |
-          set -o pipefail
-          npm run monitor:production 2>&1 | tee production-monitor.log
+        run: npm run monitor:production
 
-      - name: Upload monitor evidence
+      - name: Upload sanitized monitor evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: production-monitor-${{ github.run_id }}
-          path: production-monitor.log
+          path: production-monitor-summary.json
           if-no-files-found: warn
 
-      - name: Open or update incident issue on failure
-        if: failure()
-        uses: actions/github-script@v7
+  reconcile-incident:
+    name: reconcile-incident
+    needs: monitor
+    if: >-
+      always() &&
+      github.repository == 'Zboytjbxp/rivt' &&
+      github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      issues: write
+
+    steps:
+      - name: Download sanitized monitor evidence
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: production-monitor-${{ github.run_id }}
+          path: monitor-evidence
+
+      - name: Open, update, or close the production incident
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        env:
+          MONITOR_RESULT: ${{ needs.monitor.result }}
+          RIVT_MONITOR_SUMMARY_PATH: monitor-evidence/production-monitor-summary.json
         with:
           script: |
             const fs = require("fs");
-            const { owner, repo } = context.repo;
             const marker = "<!-- rivt-production-synthetic-incident -->";
             const title = "Production synthetic check failing";
+            const productionRepositoryUrl = "https://api.github.com/repos/Zboytjbxp/rivt";
+            const trustedAutomationLogin = "github-actions[bot]";
+            const allowedMonitorResults = new Set(["success", "failure", "cancelled", "skipped"]);
+            const allowedErrorCodes = new Set([
+              "CHECK_FAILED",
+              "INVALID_CONFIGURATION",
+              "NON_JSON_RESPONSE",
+              "OUTPUT_WRITE_FAILED",
+              "REQUEST_FAILED",
+              "REQUEST_TIMEOUT",
+              "UNEXPECTED_MONITOR_FAILURE",
+              "UNEXPECTED_STATUS",
+            ]);
+            const allowedEndpoints = new Set([
+              "/api/health",
+              "/api/auth/providers",
+              "/api/readiness",
+              "/api/storage",
+              "/api/app-state",
+              "/api/v1/me",
+              "/api/v1/jobs",
+              "/api/v1/conversations",
+              "/api/v1/admin/overview",
+            ]);
+            const allowedChecks = new Set([
+              "health",
+              "health-ok",
+              "auth-providers",
+              "base-url",
+              "timeout",
+              "expected-commit",
+              "workflow-context",
+              "matching-job-alerts-expectation",
+              "error-monitoring-ok",
+              "error-monitoring-mode",
+              "password-breach-screening",
+              "dependency-status-present",
+              "dependencies-ok",
+              "database-mode",
+              "object-storage-mode",
+              "build-commit",
+              "expected-source-commit",
+              "matching-job-alerts-shape",
+              "matching-job-alerts-state",
+              "pilot-invite-required",
+              "email-provider",
+              "google-provider",
+              "session-security",
+              "session-security-mode",
+              "signup-control-shape",
+              "mutation-control-shape",
+              "signups-enabled",
+              "mutations-enabled",
+              "summary-output",
+              ...[...allowedEndpoints].map((endpoint) => `anonymous-private:${endpoint}`),
+            ]);
+            const safeStatus = (value) => Number.isInteger(value) && value >= 100 && value <= 599
+              ? value
+              : "not recorded";
+            const defaultSummary = () => ({
+              ok: false,
+              errorCode: "UNEXPECTED_MONITOR_FAILURE",
+              check: "not recorded",
+              endpoint: "not recorded",
+              expectedStatus: "not recorded",
+              actualStatus: "not recorded",
+              artifactAvailable: false,
+            });
+            const readSafeSummary = () => {
+              try {
+                const summaryPath = process.env.RIVT_MONITOR_SUMMARY_PATH;
+                const stat = fs.lstatSync(summaryPath);
+                if (!stat.isFile() || stat.isSymbolicLink()) return defaultSummary();
+                const raw = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+                return {
+                  ok: raw.ok === true,
+                  errorCode: allowedErrorCodes.has(raw.errorCode) ? raw.errorCode : "UNEXPECTED_MONITOR_FAILURE",
+                  check: allowedChecks.has(raw.check) ? raw.check : "not recorded",
+                  endpoint: allowedEndpoints.has(raw.endpoint) ? raw.endpoint : "not recorded",
+                  expectedStatus: safeStatus(raw.expectedStatus),
+                  actualStatus: safeStatus(raw.actualStatus),
+                  artifactAvailable: true,
+                };
+              } catch {
+                return defaultSummary();
+              }
+            };
+            const findOwnedIncident = (issues) => issues.find((issue) => (
+              !issue.pull_request
+              && issue.title === title
+              && issue.body?.split(/\r?\n/, 1)[0] === marker
+              && issue.repository_url === productionRepositoryUrl
+              && issue.user?.login === trustedAutomationLogin
+              && issue.user?.type === "Bot"
+            ));
+            const { owner, repo } = context.repo;
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
-            const routing = JSON.parse(fs.readFileSync("docs/operations/incident-routing.json", "utf8"));
-            const primaryOwner = routing.primaryOwner
-              ? `${routing.primaryOwner.name} <${routing.primaryOwner.email}>`
-              : "not configured";
-            const backupOwner = routing.backupOwner && routing.backupOwner.email !== "TBD"
-              ? `${routing.backupOwner.name} <${routing.backupOwner.email}>`
-              : "missing";
-            const errorMonitoring = routing.alertDestinations?.find((destination) => destination.category === "error_monitoring")?.status ?? "missing";
-            const paging = routing.alertDestinations?.find((destination) => destination.category === "paging")?.status ?? "missing";
-            const log = fs.existsSync("production-monitor.log")
-              ? fs.readFileSync("production-monitor.log", "utf8").slice(-6000)
-              : "No monitor log was captured.";
-            const body = [
-              marker,
-              "",
-              "The scheduled production synthetic check is failing.",
-              "",
-              `Run: ${runUrl}`,
-              `Workflow: ${context.workflow}`,
-              `Ref: ${context.ref}`,
-              `Commit: ${context.sha}`,
-              "",
-              "Incident routing:",
-              `- Primary owner: ${primaryOwner}`,
-              `- Backup owner: ${backupOwner}`,
-              `- Dedicated error monitoring: ${errorMonitoring}`,
-              `- Paging route: ${paging}`,
-              "",
-              "Immediate triage:",
-              "1. Check https://rivt.pro/api/health and confirm the deployed commit, PostgreSQL, and object storage status.",
-              "2. Check https://rivt.pro/api/auth/providers and confirm invite-gated email auth and operational-control state.",
-              "3. Confirm anonymous private routes still return 401.",
-              "4. If user impact is plausible, set the appropriate RIVT kill switch and record the reason in the deployment ledger.",
-              "5. Restore normal state only after the synthetic check passes again.",
-              "",
-              "Latest monitor output:",
-              "",
-              "```text",
-              log,
-              "```",
-              "",
-            ].join("\n");
+            const monitorResult = allowedMonitorResults.has(process.env.MONITOR_RESULT)
+              ? process.env.MONITOR_RESULT
+              : "unknown";
+            const monitor = readSafeSummary();
+            const recovered = monitorResult === "success" && monitor.ok === true;
             const issues = await github.paginate(github.rest.issues.listForRepo, {
               owner,
               repo,
               state: "open",
               per_page: 100,
             });
-            const existing = issues.find((issue) => !issue.pull_request && (issue.title === title || issue.body?.includes(marker)));
+            const existing = findOwnedIncident(issues);
+
+            if (recovered) {
+              if (existing) {
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: existing.number,
+                  body: `Synthetic check recovered and passed: ${runUrl}`,
+                });
+                await github.rest.issues.update({
+                  owner,
+                  repo,
+                  issue_number: existing.number,
+                  state: "closed",
+                  state_reason: "completed",
+                });
+              }
+              return;
+            }
+
+            const body = [
+              marker,
+              "",
+              "The scheduled production synthetic check is failing.",
+              "",
+              `Run: ${runUrl}`,
+              `Monitor job result: ${monitorResult}`,
+              "",
+              "Sanitized monitor metadata:",
+              `- Artifact available: ${monitor.artifactAvailable ? "yes" : "no"}`,
+              `- Failure code: ${monitor.errorCode}`,
+              `- Check: ${monitor.check}`,
+              `- Endpoint: ${monitor.endpoint}`,
+              `- Expected HTTP status: ${monitor.expectedStatus}`,
+              `- Actual HTTP status: ${monitor.actualStatus}`,
+              "",
+              "Immediate triage:",
+              "1. Check https://rivt.pro/api/health and confirm the deployed commit, PostgreSQL, and object storage status.",
+              "2. Confirm the workflow is running from the canonical protected master branch.",
+              "3. Confirm the protected expected-source revision matches the intended deployment.",
+              "4. Confirm anonymous private routes still return 401.",
+              "5. Restore normal state only after the synthetic check passes again.",
+              "",
+            ].join("\n");
+
             if (existing) {
               await github.rest.issues.update({
                 owner,
@@ -124,36 +285,5 @@ jobs:
                 repo,
                 title,
                 body,
-              });
-            }
-
-      - name: Close incident issue after recovery
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const marker = "<!-- rivt-production-synthetic-incident -->";
-            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
-            const issues = await github.paginate(github.rest.issues.listForRepo, {
-              owner,
-              repo,
-              state: "open",
-              per_page: 100,
-            });
-            const existing = issues.find((issue) => !issue.pull_request && (issue.title === "Production synthetic check failing" || issue.body?.includes(marker)));
-            if (existing) {
-              await github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: existing.number,
-                body: `Synthetic check recovered and passed: ${runUrl}`,
-              });
-              await github.rest.issues.update({
-                owner,
-                repo,
-                issue_number: existing.number,
-                state: "closed",
-                state_reason: "completed",
               });
             }

@@ -33,8 +33,8 @@ exact materialized configuration.
 - Live Gate A smoke: `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live` passed inside Railway with zero seed/demo findings and seven anonymous private-route checks.
 - Incident rehearsal: Scenario A passed; Sentry accepted event `43fc7567f458490582db1f6642e2e0ea`.
 - Recovery: RPO 24 hours, RTO 4 hours, 30-day backup retention, 30-day restore-drill cadence, and named backup-artifact restore evidence are approved.
-- Support owner: Michael at `support@rivt.pro`.
-- Backup owner: Anya Tingle, phone status recorded outside the repo.
+- Support owner role: founder-support-owner via `support@rivt.pro`.
+- Backup owner role: backup-incident-owner; private contact-route status is recorded outside the repo.
 
 ## Approval 1: Founder
 
@@ -54,7 +54,7 @@ Founder approval confirms:
 
 Recommended signoff scope:
 
-> I approve the Gate A support plan for the named-cohort pilot: support@rivt.pro, Monday-Saturday, 9:00 AM-5:00 PM America/New_York, with Michael as primary support owner and Anya Tingle as backup incident owner.
+> I approve the Gate A support plan for the named-cohort pilot: support@rivt.pro, Monday-Saturday, 9:00 AM-5:00 PM America/New_York, with the founder-support-owner as primary support owner and the backup-incident-owner role as backup incident owner.
 
 Support approval confirms:
 
