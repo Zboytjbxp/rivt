@@ -51,8 +51,21 @@ known, but transcript confidentiality is not accepted as a security boundary.
    access.
 4. No credential value, provider secret, database URL, private key, session,
    or customer data is written to the repository or test output.
-5. This packet does not claim any credential rotation, provider verification,
-   deployment, incident closure, launch approval, or added-cost action.
+5. The source-control acceptance boundary does not by itself claim any
+   credential rotation, provider verification, deployment, incident closure,
+   launch approval, or added-cost action. Later operational actions require
+   separate explicit owner authorization and provider evidence in the incident
+   record and deployment ledger.
+
+## Operational closeout status
+
+The separately authorized one-class-at-a-time recurrence rotations are tracked
+in `docs/operations/incidents/2026-07-29-production-credential-exposure.md` and
+`docs/delivery/DEPLOYMENT_LEDGER.md`. PostgreSQL, Stripe API and both webhook
+classes, Resend, Google OAuth, both independent pepper classes, and Web Push
+VAPID have current recurrence evidence. Backup-encryption rotation remains
+pending. The broader incident and `ACTIVE_LAUNCH_HOLD` remain open; ACH, the
+feature release, Railway Stage 1, and public launch remain paused.
 
 ## Rollback
 
@@ -73,6 +86,7 @@ must never reinstall material exposed in the transcript.
 - `npm audit --omit=dev`: zero production dependency vulnerabilities
 - `git diff --check`: pass
 
-These are source checks only. They do not replace the pending provider
-rotations, owner-controlled proofs, fresh encrypted backup, or isolated
-restore.
+These are source checks only. They do not replace provider evidence or
+owner-controlled proofs. The remaining recurrence boundary is a fresh
+encrypted backup, isolated restore proof, and safe retirement of the exposed
+backup-encryption predecessor under separate explicit approval.

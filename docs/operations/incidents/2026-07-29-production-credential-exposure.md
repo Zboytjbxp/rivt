@@ -77,9 +77,9 @@ output. No secret value, token prefix, secret-derived fingerprint, or other
 secret material is reproduced in this record. Each exposed candidate was
 treated as compromised. The VAPID candidate was abandoned and replaced with a
 separate final pair; the predecessor remained only for the bounded device-
-migration bridge and was retired after three-device proof. The Resend class is
-reopened and cannot be represented as closed until another replacement,
-retirement, and owner-only delivery proof complete.
+migration bridge and was retired after three-device proof. The Resend class
+was reopened, then re-rotated and verified on 2026-08-04 using the restricted-
+output process recorded below.
 
 ## Potentially exposed credential classes
 
@@ -101,7 +101,7 @@ retirement, and owner-only delivery proof complete.
 |---|---|
 | PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
 | Stripe API, billing webhook, and Connect webhook | Live API key plus both webhook signing secrets rotated and verified on 2026-08-03; the exposed API key is expired and both webhook predecessors completed Stripe's one-hour retirement window. Fresh post-retirement probes and exact-source monitoring passed |
-| Resend | Reopened on 2026-08-04 after the then-current replacement appeared in restricted automation output during VAPID recovery; the 2026-08-03 delivery proofs remain historical evidence but do not close this new exposure |
+| Resend | Re-rotated and verified on 2026-08-04 after the then-current replacement appeared in restricted automation output during VAPID recovery; both that predecessor and an unused intermediate were retired after proof, exactly one final Sending-access key restricted to `rivt.pro` remains, and owner-only delivery was confirmed |
 | Google OAuth | Rotated and verified on 2026-08-03; the same production web client retained its reviewed origin and callback, owner-controlled sign-ins passed before disablement, after disablement, and after deletion, and provider inventory shows exactly one enabled secret |
 | Authentication metadata pepper | Rotated and verified on 2026-08-03; a fresh independent value replaced the prior value without overlap, exact-source monitoring passed, the existing owner session remained valid, and a fresh owner-controlled Google OAuth sign-in returned authenticated through new session issuance |
 | Rate-limit pepper | Rotated and verified on 2026-08-03; production now uses a fresh dedicated value instead of falling back to the authentication metadata pepper, exact-source monitoring and bounded public-job limiter probes passed before and after the independent authentication-pepper cutover, and final masked inventory shows one row for each separate pepper |
@@ -382,8 +382,75 @@ not be read as closure of the recurrence.
   appeared in restricted automation output during VAPID recovery on
   2026-08-04. The evidence above remains an accurate record of the 2026-08-03
   rotation, but it no longer closes the Resend class. A separate fresh
-  replacement, predecessor retirement, and owner-only delivery proof remain
-  required.
+  replacement, predecessor retirement, and owner-only delivery proof were
+  subsequently completed as recorded below.
+
+### Resend restricted-output recurrence re-rotation evidence - 2026-08-04
+
+- **Authorization and scope:** Michael's existing 2026-08-03 emergency
+  authorization covered one-class-at-a-time Resend replacement, exact-source
+  redeployment, owner-controlled email proofs, and retirement only after
+  replacement verification, within the existing `$2` incident ceiling. Only
+  Railway variable `RESEND_API_KEY` and Resend API-key resources were in scope.
+  This did not authorize ACH, a real payment, customer communication,
+  customer-data deletion, public launch, or the feature release.
+- **Provider least privilege:** the final key is named
+  `RIVT Production Sending - August 2026 Final Clean`, has Sending access only,
+  and is restricted to the verified `rivt.pro` domain. Final provider
+  inventory showed exactly this one key. No unmasked credential value,
+  secret-derived fingerprint, or usable secret material is recorded. A broad
+  provider inventory view rendered only provider-masked labels; it was
+  abandoned, nothing from those labels was copied into repository evidence,
+  and subsequent checks projected only non-secret fields. This did not expose
+  an authenticating value and therefore did not start another replacement
+  cycle.
+- **Initial clipboard-boundary failure and fail-closed behavior:** the first
+  re-rotation attempt encountered a browser-to-operating-system clipboard
+  boundary mismatch. The Railway value therefore did not become the intended
+  fresh provider value, and bounded post-retirement owner-proof attempts
+  failed closed with HTTP 502 `EMAIL_DELIVERY_FAILED`; no delivery success was
+  claimed. Exact-source deployment
+  `42da7fd3-824c-4f8f-85c6-aac0301d5d0d` made that failed transfer observable
+  without changing application source. Provider evidence showed the unused
+  intermediate had no activity.
+  No secret material was printed, copied into this record, or used as an
+  identifier.
+- **Protected transfer and exact-source pickup:** a separate final clean key
+  was created, read only inside the protected browser-control process, and
+  passed directly to Railway CLI standard input without exposing it through
+  chat, shell output, logs, or documentation. Railway exact-source deployment
+  `0528d1ec-f9dd-4987-b4e8-7620cf71ced0` succeeded from unchanged production
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d4f90bfe92152a07aad8ca4b42567b0b542c9fb64a93d2e2961a61149aaf849b`.
+  No feature release was deployed.
+- **Delivery proof and retirement:** deployed production sent owner-only
+  messages `ab1eb0a5-6bb9-44ed-a3c8-31dbaa603658` at 1:51 AM EDT and
+  `a2d6b4b6-5948-4405-b9b0-69fd6736257e` at 1:56 AM EDT. Resend reported both
+  delivered, and Michael confirmed receipt of the final one-key-state message.
+  The exposed predecessor and unused intermediate key were retired after
+  replacement proof. Exactly one final Sending-access, `rivt.pro`-restricted
+  key remains; neither retired key may be restored.
+- **Runtime and safety boundary:** public health returned HTTP 200 with
+  `ok: true`, migration `0042_push_vapid_generation` ready, PostgreSQL and
+  S3-compatible storage healthy, and the exact expected source. The exact-
+  source production monitor passed with anonymous private routes fail-closed.
+  Invoice bank payments remained `enabled: false`, `configured: false`,
+  `webhookConfigured: true`, and `setup_required`.
+- **Verification:** the focused email suite passed 5/5. `npm run build`,
+  `npm run lint`, `npm run lint:security`, `npm run test:e2e`, and the
+  production dependency audit passed, with the audit reporting zero known
+  production vulnerabilities. The complete test run passed 551 unit/frontend
+  checks plus four database-independent integration-harness checks; 23
+  database-backed integration cases skipped because `TEST_DATABASE_URL` was
+  absent. Those skips are not represented as database-backed proof.
+- **Interruption and cost:** no outage was observed and no new recurring
+  service, database, bucket, plan, or payment was created. Provider and
+  ordinary Railway usage were not separately itemized, so no exact
+  incremental cost is claimed.
+- **Closure boundary:** Resend is closed for the 2026-08-03 restricted-output
+  recurrence. This does not close the broader incident, clear
+  `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
+  release.
 
 ### Google OAuth recurrence rotation evidence - 2026-08-03
 
@@ -548,8 +615,8 @@ not be read as closure of the recurrence.
   push-notification/readiness run passed 26 tests and skipped one
   database-backed integration case for the same reason.
 - **Closure boundary:** VAPID is closed for this recurrence and the predecessor
-  must never be restored. Resend re-rotation and backup-encryption rotation
-  remain pending. This does not close the incident, clear
+  must never be restored. Backup-encryption rotation remains the only pending
+  recurrence credential rotation. This does not close the incident, clear
   `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
   release.
 
@@ -1093,9 +1160,9 @@ credential during application rollback.
 Completed containment and rotation evidence above remains required history.
 The still-open exit boundary is:
 
-- complete and verify the reopened Resend rotation and the still-pending backup-
-  encryption rotation; Web Push VAPID and both pepper classes are closed for
-  this recurrence and no longer part of this open item;
+- complete and verify the still-pending backup-encryption rotation; Resend,
+  Web Push VAPID, and both pepper classes are closed for this recurrence and
+  no longer part of this open item;
 - finish the consolidated release-candidate forward-port, then obtain a final
   independent exact-source review and disposable-PostgreSQL CI evidence for
   that exact documentation-inclusive candidate; historical branch SHAs, scan

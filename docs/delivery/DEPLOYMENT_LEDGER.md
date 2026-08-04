@@ -1,5 +1,64 @@
 # Deployment Ledger
 
+## 2026-08-04 - Resend Restricted-Output Recurrence Re-Rotation and Retirement
+
+- Approval and exact scope: Michael's explicit 2026-08-03 emergency
+  credential-rotation authorization covered one-class-at-a-time replacement of
+  the exposed Resend credential, exact-source Railway redeployments,
+  owner-controlled email proofs, up to 30 minutes of cumulative interruption,
+  and up to US$2 before tax in incremental cost. Only `RESEND_API_KEY` changed. It did
+  not authorize ACH, a real payment, customer communication, customer-data
+  deletion, public launch, or the feature release.
+- Restricted transfer boundary: the final one-time credential was transferred
+  from the protected browser clipboard directly to Railway CLI standard input.
+  It was never placed on a command line. No unmasked credential value,
+  secret-derived fingerprint, or usable secret material is retained in this
+  ledger. A provider inventory view rendered only provider-masked labels; the
+  broad view was abandoned and subsequent evidence used a redacted field
+  projection.
+- Fail-closed recovery: the first clipboard-boundary transfer did not update
+  the runtime. The resulting bounded owner-only proofs returned HTTP 502 and
+  did not create a provider delivery or expose secret material. Production
+  remained fail-closed while the transfer path was corrected; no delivery
+  success is claimed for those attempts.
+- Exact-source deployments: recovery deployments included
+  `e421ff08-cb2e-4693-8132-a2dd00357179` and
+  `3be2e1e7-e882-463c-bfe0-e3f63d1683e3`. Deployment
+  `42da7fd3-824c-4f8f-85c6-aac0301d5d0d` proved that the first protected
+  transfer had not reached the runtime: the owner-only proof failed closed.
+  Final deployment
+  `0528d1ec-f9dd-4987-b4e8-7620cf71ced0` succeeded from unchanged production
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d4f90bfe92152a07aad8ca4b42567b0b542c9fb64a93d2e2961a61149aaf849b`;
+  no feature release was deployed.
+- Retirement ordering: the predecessor was removed only after Michael
+  confirmed the pre-retirement owner proof. The unused intermediate key was
+  removed only after the final clean replacement proved provider delivery.
+  Neither retired credential may be restored; recovery requires another fresh
+  replacement.
+- Final provider inventory: exactly one Resend key remains,
+  `RIVT Production Sending - August 2026 Final Clean`. It has Sending access
+  only and is restricted to verified domain `rivt.pro`.
+- Replacement proof: message `ab1eb0a5-6bb9-44ed-a3c8-31dbaa603658` was marked
+  delivered by Resend at 1:51 AM EDT before removal of the unused intermediate
+  key.
+- Final post-cleanup proof: message
+  `a2d6b4b6-5948-4405-b9b0-69fd6736257e` was marked delivered by Resend at
+  1:56 AM EDT after the inventory reached the final one-key state, and Michael
+  confirmed receipt.
+- Runtime and payment boundary: the exact-source production health and
+  synthetic monitor passed in 539 ms. Invoice bank payments remained
+  `enabled: false`, `configured: false`, `webhookConfigured: true`, and mode
+  `setup_required`; ACH was not activated.
+- Verification: focused email tests passed 5/5. The earlier full build, lint,
+  security lint, audit, unit/frontend, integration-harness, and end-to-end gates
+  passed. The database-backed integration cases remained skipped because
+  `TEST_DATABASE_URL` was absent; no database-backed success is inferred from
+  those skips.
+- Final boundary: this closes the Resend restricted-output recurrence only. No
+  public launch, feature release, customer communication, ACH activation, real
+  payment, or customer-data deletion occurred or was authorized.
+
 ## 2026-08-04 - Web Push VAPID Recurrence Rotation and Retirement
 
 - Approval: Michael's explicit 2026-08-03 emergency credential-rotation

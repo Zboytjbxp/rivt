@@ -1,6 +1,6 @@
 # Gate A Requirements Traceability
 
-## Packet 99 - Operator secret-output containment (source only; rotation pending)
+## Packet 99 - Operator secret-output containment (source controls complete; rotation in progress)
 
 - `GA-OPS-007` remains **Partial**. Root Codex and Claude instructions now
   prohibit broad production-provider enumeration, and the collaboration
@@ -14,10 +14,18 @@
   were skipped because this isolated worktree has no `TEST_DATABASE_URL`; no
   database-backed evidence is claimed.
 - `GA-OPS-008` remains **Partial**. The recurrence and exact owner-approved
-  boundaries are recorded without credential values. Every affected current
-  credential remains treated as compromised; no replacement, revocation,
-  provider proof, deployment, cost-bearing action, incident closure, or hold
-  clearance is claimed by this source packet.
+  boundaries are recorded without credential values. PostgreSQL, Stripe live
+  API and both webhook classes, Google OAuth, the independent authentication
+  metadata and rate-limit peppers, Web Push VAPID, and the reopened Resend
+  class now have one-at-a-time replacement, predecessor-retirement, provider,
+  and exact-source production evidence. The final Resend cutover serves
+  unchanged source `29e3c613f2eb95a6583b52c671275e5046dde0d3` through Railway
+  deployment `0528d1ec-f9dd-4987-b4e8-7620cf71ced0`; provider inventory shows
+  one sending-only key restricted to `rivt.pro`, the final one-key-state proof
+  was provider-delivered and owner-confirmed, and the 539 ms production
+  monitor passed with ACH still disabled and unconfigured. Backup-encryption
+  rotation remains pending, so no incident closure, feature-release deploy,
+  public launch, or launch-hold clearance is claimed.
 - Requirement maturity does not change. The repository guard reduces
   recurrence from tracked automation but cannot prevent an unsafe command
   entered outside the repository. Provider RBAC/workstation enforcement and

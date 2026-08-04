@@ -2,7 +2,7 @@
 
 Last updated: 2026-08-04 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Emergency operator-output containment under the active production credential-containment hold; deployment, Stage 1, ACH activation, and public launch remain paused.
+Current phase: Emergency operator-output containment under the active production credential-containment hold; the feature release, Stage 1, ACH activation, and public launch remain paused.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
 Repository branch: `codex/operator-secret-output-containment` (Packet 98 head `87048577fe69ce78b9ae0c9fb04d4c94f2cba4b4`)
 Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
@@ -15,8 +15,8 @@ indicator is known, but every affected class is again treated as compromised.
 Michael approved one-class-at-a-time emergency rotation with up to 30 minutes
 of cumulative interruption and a `$2` before-tax incremental-cost ceiling.
 PostgreSQL, the Stripe live API key, both Stripe webhook secrets, Google OAuth,
-both independent pepper classes, and Web Push VAPID are closed for this
-recurrence.
+both independent pepper classes, Web Push VAPID, and the August 4 Resend
+recurrence are closed.
 The Google rotation preserved the existing project, web client, origin,
 redirect, and client ID; owner-controlled sign-ins passed before predecessor
 disablement, after disablement, and after deletion, and provider inventory
@@ -30,11 +30,13 @@ then-current Resend credential, the VAPID predecessor, and one candidate VAPID
 replacement. No value is reproduced or retained in repository evidence. The
 affected VAPID candidate was abandoned and a separate final replacement was
 proven on all three controlled devices before the predecessor was retired.
-Resend is therefore reopened for another replacement and owner-only delivery
-proof; backup encryption also remains pending. Launch and Railway Stage 1
-remain paused.
+The separately exposed Resend credential was replaced again, the predecessor
+and an unused intermediate were retired only after owner-controlled delivery
+proof, and final provider inventory shows exactly one restricted sending key.
+Backup encryption remains pending. The incident and `ACTIVE_LAUNCH_HOLD`
+remain open; the feature release, launch, and Railway Stage 1 remain paused.
 
-## Packet 99 operator secret-output containment - active; provider rotation pending
+## Packet 99 operator secret-output containment - active; backup-encryption rotation pending
 
 - The recurrence is recorded without any secret value or credential-bearing
   output.
@@ -61,8 +63,8 @@ remain paused.
 - Production rotation continues one class at a time. PostgreSQL, the Stripe
   live API key, both Stripe webhooks, Google OAuth, the distinct authentication
   metadata and rate-limit peppers, and Web Push VAPID are closed for this
-  recurrence. Resend was reopened by the 2026-08-04 restricted-output
-  recurrence and backup encryption remains pending.
+  recurrence. The 2026-08-04 Resend recurrence is now closed; backup
+  encryption remains pending.
 - The Connect cutover changed only `STRIPE_CONNECT_WEBHOOK_SECRET`. Automatic
   deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
   policy; exact-source deployment `6152da11-1323-47a9-a258-d9013f040522`
@@ -184,16 +186,56 @@ remain paused.
   all three devices. Production monitoring passed, and invoice bank payments
   remained `enabled: false`, `configured: false`,
   `webhookConfigured: true`, and `setup_required`.
+- The 2026-08-04 Resend recurrence rotation is closed. The first attempted
+  one-time-key transfer crossed a browser/operating-system clipboard boundary
+  incorrectly and did not install the intended replacement. No unmasked
+  credential value, provider token, secret-derived hash, fingerprint, or
+  usable secret material is retained in repository evidence. The first two
+  exact-source restart attempts preserved the approved source but did not
+  establish use of that replacement; the owner-only
+  post-retirement proofs failed closed with HTTP 502 and were not presented as
+  successful delivery.
+- A later provider inventory view rendered only provider-masked credential
+  labels. The broad view was abandoned, no label was copied into repository
+  evidence, and subsequent checks projected only key name, permission,
+  last-use state, domain restriction, and count. Because no usable credential
+  material was exposed, this tooling-hygiene deviation did not trigger another
+  replacement cycle.
+- Recovery created the clean provider key named
+  `RIVT Production Sending - August 2026 Final Clean`, with Sending access
+  restricted to `rivt.pro`, and transferred it without secret-bearing command
+  output. Final exact-source deployment
+  `0528d1ec-f9dd-4987-b4e8-7620cf71ced0` serves unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d4f90bfe92152a07aad8ca4b42567b0b542c9fb64a93d2e2961a61149aaf849b`.
+  Public health and the exact-source production monitor passed in 539 ms.
+- Resend marked provider messages
+  `ab1eb0a5-6bb9-44ed-a3c8-31dbaa603658` and
+  `a2d6b4b6-5948-4405-b9b0-69fd6736257e` delivered at 1:51 AM EDT and
+  1:56 AM EDT, respectively. The predecessor and unused intermediate were
+  removed only after proof on the clean replacement. Provider inventory then
+  showed exactly one key: `RIVT Production Sending - August 2026 Final Clean`,
+  with Sending access restricted to `rivt.pro`. Michael confirmed receipt of
+  the final one-key-state email. No observed outage or new recurring service
+  resulted. Exact incremental provider cost was not separately itemized, so
+  this record makes no more precise cost claim.
+- After closure, invoice bank payments remain `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+  Focused email tests pass 5/5. The previously completed production build,
+  application lint, security lint, full test, browser E2E, and production
+  dependency-audit gates remain the applicable source-verification evidence;
+  23 database-backed integration cases skipped because this worktree has no
+  `TEST_DATABASE_URL`.
 - Verification for this boundary passed: `npm run build`, `npm run lint`,
   `npm run lint:security`, and `npm run test`. The full test run passed 551
   unit/frontend checks plus four non-database integration-harness checks; 23
   database-backed integration cases skipped because `TEST_DATABASE_URL` was
   absent. A focused push-notification/readiness run passed 26 tests and skipped
   one database-backed integration case for the same reason.
-- VAPID is closed for this recurrence. Resend re-rotation and backup-encryption
-  rotation remain pending; this does not clear the incident or
-  `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
-  release.
+- VAPID and the August 4 Resend recurrence are closed. Backup-encryption
+  rotation remains pending; Packet 99 stays active. This does not clear the
+  incident or `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the
+  feature release.
 - `master` currently has no branch protection/ruleset, so the Packet 98
   rehearsal's protected-branch guard cannot pass. No bypass is authorized.
 - The feature release remains separate from containment and is not authorized
