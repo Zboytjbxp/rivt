@@ -89,7 +89,7 @@ record does not claim they occurred.
 | Credential class | Current status |
 |---|---|
 | PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
-| Stripe API, billing webhook, and Connect webhook | Pending one-at-a-time replacement and no-charge verification; current secrets remain treated as compromised |
+| Stripe API, billing webhook, and Connect webhook | Live API key rotated and verified on 2026-08-03; the exposed July API key is expired. Billing and Connect webhook signing-secret replacements remain pending and continue to be treated as compromised |
 | Resend | Pending sending-only replacement and owner-controlled proof delivery |
 | Google OAuth | Pending same-client replacement and owner-controlled sign-in proof |
 | Authentication metadata and rate-limit peppers | Pending distinct replacements and runtime verification |
@@ -152,6 +152,55 @@ not be read as closure of the recurrence.
 - **Approval boundary:** this action did not enable ACH, attempt a real payment,
   contact a customer, delete customer data, launch publicly, or deploy the
   feature release.
+
+### Stripe live API-key recurrence rotation evidence — 2026-08-03
+
+- **Provider and scope:** Stripe live account `acct_1TnnyAIz6JDg8Lda`, standard
+  live secret-key class, replacement Workbench label
+  `RIVT Production Server - August 2026 Security Rotation`, and the single
+  dependent Railway variable `STRIPE_SECRET_KEY`. No credential value,
+  authorization header, or secret-derived fingerprint is recorded.
+- **Operator and authority:** Codex operated the provider and Railway UIs under
+  Michael's explicit 2026-08-03 emergency rotation approval. Stripe created the
+  replacement on August 3; Railway recorded the cutover change at
+  `2026-08-04T00:06:37.458Z`, and post-retirement verification completed at
+  approximately 20:10 EDT (`2026-08-04T00:10Z`).
+- **Overlap and cutover:** the exposed July key remained active while the new
+  standard live key was created. The one-time value moved directly from the
+  signed-in Stripe page into Railway's masked `STRIPE_SECRET_KEY` editor without
+  being printed to chat, shell output, logs, or this record. Only that named
+  variable changed. The predecessor was expired only after the replacement
+  deployment, health check, and direct provider-authentication proof passed.
+- **Exact-source application pickup:** Railway deployment
+  `3481b13c-2249-4535-b64c-ece8ae4ca78e` succeeded from the unchanged production
+  commit `29e3c613f2eb95a6583b52c671275e5046dde0d3`. The automatic variable-change
+  deployment `5676be8d-e45c-4663-b1c4-c76e21a26011` was skipped by the configured
+  CI wait policy, so the operator explicitly redeployed the last-known-good
+  release. No feature release was deployed.
+- **Runtime and provider proof:** public `GET /api/health` returned HTTP 200 with
+  `ok: true`, migration `0042_push_vapid_generation` ready, database `postgres`,
+  object storage `s3-compatible`, and the exact expected commit. Before
+  predecessor expiry, a read-only application-container `GET /v1/account`
+  returned HTTP 200 for account `acct_1TnnyAIz6JDg8Lda` with Stripe request ID
+  `req_3yQqdwY6xuw8HI`. After expiry, the same read-only proof again returned
+  HTTP 200 for the same account with request ID `req_wc1PPyy0GZO3Yr`.
+  `npm run monitor:production` passed after cutover and after retirement. Invoice
+  bank payments remained `enabled: false`, `configured: false`, and
+  `setup_required`; no Stripe mutation or payment operation was attempted.
+- **Retirement and recovery:** Stripe removed
+  `RIVT Production Server - July 2026 Rotation` from the active key inventory
+  after the replacement proved healthy, while the August replacement remained
+  present. The recovery path before retirement was to correct or replace the new
+  key while leaving the old key active. After retirement, rollback may reuse the
+  last-known-good application source but must not restore the retired key.
+- **Interruption and cost:** the prior production instance remained online while
+  Railway built the replacement; no interruption was observed. No service,
+  database, bucket, plan, or recurring resource was added. Stripe quoted no
+  charge for key creation, read-only account checks, or key expiration, and only
+  ordinary Railway redeploy usage applies within the approved `$2` ceiling.
+- **Approval boundary:** this action did not rotate either webhook signing
+  secret, enable ACH, attempt a real payment, contact a customer, delete customer
+  data, launch publicly, or deploy the feature release.
 
 ## Historical rotation status before the 2026-08-03 recurrence
 
