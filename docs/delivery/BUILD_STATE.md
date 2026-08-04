@@ -36,6 +36,11 @@ and Railway Stage 1 remain paused.
   integrity, and the production dependency audit pass. Twenty-three database
   integration cases skipped because this isolated worktree has no
   `TEST_DATABASE_URL`; no database-backed result is claimed.
+- The Shop Talk / Trade News browser smoke now pins its page clock to the
+  fixture date. Its time-sensitive featured-story assertion can no longer fail
+  merely because the real calendar advanced beyond the fixture's seven-day
+  window. Tools, Shop Talk / Trade News, mobile actions, and Work lifecycle UI
+  smokes pass after this deterministic-clock fix.
 - A Windows CRLF checkout exposed a latent LF-only incident-workflow test;
   the fixture loader now normalizes CRLF and the six focused workflow checks
   pass on the Windows worktree.
