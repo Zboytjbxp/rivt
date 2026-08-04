@@ -1,6 +1,6 @@
 # RIVT Build State
 
-Last updated: 2026-08-03 America/New_York
+Last updated: 2026-08-04 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
 Current phase: Emergency operator-output containment under the active production credential-containment hold; deployment, Stage 1, ACH activation, and public launch remain paused.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
@@ -14,8 +14,9 @@ restricted-output exposure of current production credentials. No misuse
 indicator is known, but every affected class is again treated as compromised.
 Michael approved one-class-at-a-time emergency rotation with up to 30 minutes
 of cumulative interruption and a `$2` before-tax incremental-cost ceiling.
-PostgreSQL, the Stripe live API key, both Stripe webhook secrets, Resend,
-Google OAuth, and both independent pepper classes are closed for this recurrence.
+PostgreSQL, the Stripe live API key, both Stripe webhook secrets, Google OAuth,
+both independent pepper classes, and Web Push VAPID are closed for this
+recurrence.
 The Google rotation preserved the existing project, web client, origin,
 redirect, and client ID; owner-controlled sign-ins passed before predecessor
 disablement, after disablement, and after deletion, and provider inventory
@@ -24,7 +25,13 @@ the limiter's former fallback to `AUTH_METADATA_PEPPER`; its bounded durable-
 limiter probes passed. The independent authentication metadata replacement kept
 the existing owner session valid, issued a new authenticated owner session
 through Google OAuth, and passed exact-source monitoring. ACH remains disabled.
-Web Push VAPID and backup encryption remain pending. Launch and Railway Stage 1
+During VAPID recovery, restricted automation output unexpectedly exposed the
+then-current Resend credential, the VAPID predecessor, and one candidate VAPID
+replacement. No value is reproduced or retained in repository evidence. The
+affected VAPID candidate was abandoned and a separate final replacement was
+proven on all three controlled devices before the predecessor was retired.
+Resend is therefore reopened for another replacement and owner-only delivery
+proof; backup encryption also remains pending. Launch and Railway Stage 1
 remain paused.
 
 ## Packet 99 operator secret-output containment - active; provider rotation pending
@@ -52,9 +59,10 @@ remain paused.
   the fixture loader now normalizes CRLF and the six focused workflow checks
   pass on the Windows worktree.
 - Production rotation continues one class at a time. PostgreSQL, the Stripe
-  live API key, both Stripe webhooks, Resend, Google OAuth, and the distinct
-  authentication metadata and rate-limit peppers are closed for this
-  recurrence. VAPID and backup encryption remain pending.
+  live API key, both Stripe webhooks, Google OAuth, the distinct authentication
+  metadata and rate-limit peppers, and Web Push VAPID are closed for this
+  recurrence. Resend was reopened by the 2026-08-04 restricted-output
+  recurrence and backup encryption remains pending.
 - The Connect cutover changed only `STRIPE_CONNECT_WEBHOOK_SECRET`. Automatic
   deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
   policy; exact-source deployment `6152da11-1323-47a9-a258-d9013f040522`
@@ -137,7 +145,55 @@ remain paused.
   HTTP 200 with durable limiter limit `90`, remaining `89` then `88`, and the
   same reset. Focused security/authentication tests passed 60/60 and
   `npm run lint:security` passed. Both independent pepper classes are closed for
-  this recurrence; VAPID and backup encryption remain pending.
+  this recurrence.
+- The 2026-08-04 VAPID recurrence rotation is closed. Automatic deployment
+  `d97d5f29-8844-4309-b80e-25b546dc0b8c` was skipped. The first exact-source
+  bridge deployment, `f4cbdfce-50d4-42b3-a4a1-16a442e89438`, served unchanged
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d1b99f44be69301d5e6ee25387bbfc1238132547d2ca3113b2d93c78cfe4aaa9`.
+  Its malformed predecessor bridge failed closed: the provider reported
+  invalid configuration, all three eligible registrations were classified
+  retired rather than delivered, and all delivery queues remained empty.
+  No false delivery success is claimed.
+- Restricted automation output during that recovery unexpectedly exposed the
+  then-current Resend credential, the VAPID predecessor, and one candidate
+  replacement. No value, token prefix, secret-derived fingerprint, or secret
+  material is reproduced in repository evidence. Every affected candidate was
+  treated as compromised; the VAPID candidate was abandoned, and Resend was
+  reopened for another replacement and proof.
+- Corrected automatic deployment
+  `9365f0e5-c059-4296-8ef5-d74f20abdc18` was skipped. Corrected bridge
+  deployment `22811563-97df-4278-bd22-1704c82c0141` succeeded from unchanged
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:c32b62f20694e0553f73b467e71d883aba742d74c302074a2af16dcdb5a15d63`.
+  Its initial inventory showed three eligible registrations on the previous
+  generation, none on the active generation, and all five queue categories at
+  zero. The installed RIVT PWA was then opened on the controlled Android,
+  iOS 16.7.16, and iOS 18.7.8 devices. Before retirement, exact readiness
+  reported total, eligible, active, and active-with-success counts of `3`,
+  previous/unknown/retired/inactive counts of `0`, and all five queue counts
+  at `0`; Michael confirmed the owner-only alert arrived on all three devices.
+- Both previous-key variables were removed together without deploying the
+  skipped intermediate configuration. Exact-source retirement deployment
+  `1ab805db-e200-4e87-a49a-3e2b415f7428` succeeded from unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:3830de3674395f9c636be8eaa03d3e55b7cd277f04ddd88b1f982853a8464f77`.
+  Post-retirement readiness returned `ready: true`, previous configuration
+  absent, the same exact `3/3` active and successful-device evidence, and an
+  empty queue. Michael then confirmed a final post-retirement alert arrived on
+  all three devices. Production monitoring passed, and invoice bank payments
+  remained `enabled: false`, `configured: false`,
+  `webhookConfigured: true`, and `setup_required`.
+- Verification for this boundary passed: `npm run build`, `npm run lint`,
+  `npm run lint:security`, and `npm run test`. The full test run passed 551
+  unit/frontend checks plus four non-database integration-harness checks; 23
+  database-backed integration cases skipped because `TEST_DATABASE_URL` was
+  absent. A focused push-notification/readiness run passed 26 tests and skipped
+  one database-backed integration case for the same reason.
+- VAPID is closed for this recurrence. Resend re-rotation and backup-encryption
+  rotation remain pending; this does not clear the incident or
+  `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
+  release.
 - `master` currently has no branch protection/ruleset, so the Packet 98
   rehearsal's protected-branch guard cannot pass. No bypass is authorized.
 - The feature release remains separate from containment and is not authorized

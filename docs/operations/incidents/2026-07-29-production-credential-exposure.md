@@ -10,7 +10,7 @@
   was not recorded)
 - Declared at: `2026-07-29T21:42:25-04:00` (first formal repository
   declaration; any earlier verbal declaration is unverified)
-- Last updated: 2026-08-03 America/New_York
+- Last updated: 2026-08-04 America/New_York
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
   followed by authorization to continue the remaining incident work unless
@@ -70,6 +70,17 @@ Resend, Google OAuth, distinct authentication/rate-limit peppers, VAPID, then
 backup encryption. Rotation is proceeding one class at a time; only the
 classes with fresh recurrence evidence below are claimed complete.
 
+During VAPID bridge recovery on 2026-08-04, masked provider automation
+unexpectedly returned the then-current Resend credential, the VAPID
+predecessor, and one candidate VAPID replacement into restricted automation
+output. No secret value, token prefix, secret-derived fingerprint, or other
+secret material is reproduced in this record. Each exposed candidate was
+treated as compromised. The VAPID candidate was abandoned and replaced with a
+separate final pair; the predecessor remained only for the bounded device-
+migration bridge and was retired after three-device proof. The Resend class is
+reopened and cannot be represented as closed until another replacement,
+retirement, and owner-only delivery proof complete.
+
 ## Potentially exposed credential classes
 
 - PostgreSQL connection credential
@@ -90,11 +101,11 @@ classes with fresh recurrence evidence below are claimed complete.
 |---|---|
 | PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
 | Stripe API, billing webhook, and Connect webhook | Live API key plus both webhook signing secrets rotated and verified on 2026-08-03; the exposed API key is expired and both webhook predecessors completed Stripe's one-hour retirement window. Fresh post-retirement probes and exact-source monitoring passed |
-| Resend | Rotated and verified on 2026-08-03; the sending-only `rivt.pro` replacement delivered owner-controlled proofs before and after predecessor deletion, the owner confirmed both receipts, and provider inventory shows exactly one replacement key |
+| Resend | Reopened on 2026-08-04 after the then-current replacement appeared in restricted automation output during VAPID recovery; the 2026-08-03 delivery proofs remain historical evidence but do not close this new exposure |
 | Google OAuth | Rotated and verified on 2026-08-03; the same production web client retained its reviewed origin and callback, owner-controlled sign-ins passed before disablement, after disablement, and after deletion, and provider inventory shows exactly one enabled secret |
 | Authentication metadata pepper | Rotated and verified on 2026-08-03; a fresh independent value replaced the prior value without overlap, exact-source monitoring passed, the existing owner session remained valid, and a fresh owner-controlled Google OAuth sign-in returned authenticated through new session issuance |
 | Rate-limit pepper | Rotated and verified on 2026-08-03; production now uses a fresh dedicated value instead of falling back to the authentication metadata pepper, exact-source monitoring and bounded public-job limiter probes passed before and after the independent authentication-pepper cutover, and final masked inventory shows one row for each separate pepper |
-| Web Push VAPID | Pending active/previous bridge rotation and owner-controlled physical-device proof |
+| Web Push VAPID | Rotated and verified on 2026-08-04; all three controlled devices migrated to the final active generation and received alerts before and after predecessor retirement, previous configuration is absent, exact readiness is `3/3`, and all queues are empty |
 | Backup encryption | Pending active/previous rotation, one fresh encrypted artifact, and one isolated restore proof |
 | S3 application access | No new rotation triggered by this recurrence because only provider references, not access values, were returned |
 
@@ -367,6 +378,12 @@ not be read as closure of the recurrence.
 - **Approval boundary:** this action did not enable ACH, attempt a real payment,
   contact a customer, delete customer data, launch publicly, or deploy the
   feature release.
+- **Superseding recurrence:** the then-current replacement subsequently
+  appeared in restricted automation output during VAPID recovery on
+  2026-08-04. The evidence above remains an accurate record of the 2026-08-03
+  rotation, but it no longer closes the Resend class. A separate fresh
+  replacement, predecessor retirement, and owner-only delivery proof remain
+  required.
 
 ### Google OAuth recurrence rotation evidence - 2026-08-03
 
@@ -472,9 +489,69 @@ not be read as closure of the recurrence.
 - **Focused verification:** the focused security/authentication suite passed
   all 60 tests, and `npm run lint:security` passed.
 - **Remaining boundary:** both pepper classes are now independently configured
-  and closed for the 2026-08-03 recurrence. Web Push VAPID and backup encryption
-  remain pending; this evidence does not close the broader incident, clear
-  `ACTIVE_LAUNCH_HOLD`, or authorize launch.
+  and closed for the 2026-08-03 recurrence. This evidence does not close the
+  broader incident, clear `ACTIVE_LAUNCH_HOLD`, or authorize launch.
+
+### Web Push VAPID recurrence rotation evidence - 2026-08-04
+
+- **Authorization and scope:** Michael's existing emergency authorization
+  covered one-class-at-a-time VAPID replacement, exact-source redeployment,
+  and owner-controlled push proof. It did not authorize ACH, a real payment,
+  customer communication, customer-data deletion, public launch, or the
+  feature release.
+- **Initial fail-closed bridge:** automatic deployment
+  `d97d5f29-8844-4309-b80e-25b546dc0b8c` was skipped. Exact-source deployment
+  `f4cbdfce-50d4-42b3-a4a1-16a442e89438` succeeded from unchanged production
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d1b99f44be69301d5e6ee25387bbfc1238132547d2ca3113b2d93c78cfe4aaa9`.
+  The malformed predecessor bridge failed closed: provider status was invalid,
+  all three eligible registrations were retired rather than active, and all
+  delivery-queue counts were zero. No false delivery success is claimed.
+- **Restricted-output recurrence and containment:** masked provider automation
+  unexpectedly returned the then-current Resend credential, the VAPID
+  predecessor, and one candidate VAPID replacement into restricted automation
+  output. No value, token prefix, secret-derived fingerprint, or secret
+  material is recorded here. The exposed VAPID replacement was abandoned; a
+  separate final pair was created. The predecessor was retained only for the
+  bounded compatibility bridge, and Resend was reopened for another rotation.
+- **Corrected bridge:** automatic deployment
+  `9365f0e5-c059-4296-8ef5-d74f20abdc18` was skipped. Exact-source deployment
+  `22811563-97df-4278-bd22-1704c82c0141` succeeded from unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:c32b62f20694e0553f73b467e71d883aba742d74c302074a2af16dcdb5a15d63`.
+  Initial readiness showed three eligible registrations on the previous
+  generation, none on the active generation, and all five queue categories at
+  zero.
+- **Migration and pre-retirement proof:** the installed RIVT PWA was opened on
+  the controlled Android, iOS 16.7.16, and iOS 18.7.8 devices. Exact readiness
+  then reported total, eligible, active, and active-with-success counts of
+  `3`; previous, unknown, retired, and inactive counts of `0`; and all five
+  queue categories at `0`. Michael confirmed the owner-only alert arrived on
+  all three devices.
+- **Predecessor retirement:** `VAPID_PREVIOUS_PUBLIC_KEY` and
+  `VAPID_PREVIOUS_PRIVATE_KEY` were removed together without deploying the
+  intermediate configuration. Exact-source deployment
+  `1ab805db-e200-4e87-a49a-3e2b415f7428` succeeded from unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:3830de3674395f9c636be8eaa03d3e55b7cd277f04ddd88b1f982853a8464f77`.
+- **Post-retirement proof:** readiness returned `ready: true`, previous
+  configuration absent, and the same exact three eligible, active, and
+  successfully delivered registrations with all five queues at zero. Michael
+  confirmed a final post-retirement alert arrived on all three devices.
+  Production monitoring passed, and invoice bank payments remained
+  `enabled: false`, `configured: false`, `webhookConfigured: true`, and
+  `setup_required`.
+- **Verification:** `npm run build`, `npm run lint`, `npm run lint:security`,
+  and `npm run test` passed. The full run passed 551 unit/frontend checks and
+  four non-database integration-harness checks; 23 database-backed integration
+  cases skipped because `TEST_DATABASE_URL` was absent. A focused
+  push-notification/readiness run passed 26 tests and skipped one
+  database-backed integration case for the same reason.
+- **Closure boundary:** VAPID is closed for this recurrence and the predecessor
+  must never be restored. Resend re-rotation and backup-encryption rotation
+  remain pending. This does not close the incident, clear
+  `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
+  release.
 
 ## Historical rotation status before the 2026-08-03 recurrence
 
@@ -1016,9 +1093,9 @@ credential during application rollback.
 Completed containment and rotation evidence above remains required history.
 The still-open exit boundary is:
 
-- complete and verify the still-pending 2026-08-03 recurrence rotations for Web
-  Push VAPID and backup encryption; both pepper classes are independently
-  rotated and no longer part of this open item;
+- complete and verify the reopened Resend rotation and the still-pending backup-
+  encryption rotation; Web Push VAPID and both pepper classes are closed for
+  this recurrence and no longer part of this open item;
 - finish the consolidated release-candidate forward-port, then obtain a final
   independent exact-source review and disposable-PostgreSQL CI evidence for
   that exact documentation-inclusive candidate; historical branch SHAs, scan

@@ -1,5 +1,69 @@
 # Deployment Ledger
 
+## 2026-08-04 - Web Push VAPID Recurrence Rotation and Retirement
+
+- Approval: Michael's explicit 2026-08-03 emergency credential-rotation
+  authorization covered one-class-at-a-time VAPID replacement, exact-source
+  redeployments, owner-controlled push tests, up to 30 minutes of cumulative
+  interruption, and less than US$2 of incremental cost. It did not authorize
+  ACH, a real payment, customer communication, customer-data deletion, public
+  launch, or the feature release.
+- Initial fail-closed cutover: automatic variable deployment
+  `d97d5f29-8844-4309-b80e-25b546dc0b8c` was skipped. Exact-source deployment
+  `f4cbdfce-50d4-42b3-a4a1-16a442e89438` succeeded from unchanged production
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d1b99f44be69301d5e6ee25387bbfc1238132547d2ca3113b2d93c78cfe4aaa9`.
+  The malformed predecessor bridge failed closed: provider status was invalid,
+  all three eligible registrations were classified retired, none was active,
+  and every delivery-queue count remained zero. No delivery success is claimed
+  through that invalid configuration.
+- Restricted-output recurrence: while recovering the bridge, masked provider
+  automation unexpectedly returned the then-current Resend credential, the
+  VAPID predecessor, and one candidate VAPID replacement into restricted
+  automation output. No value, token prefix, secret-derived fingerprint, or
+  other secret material is recorded here. The exposed VAPID replacement was
+  abandoned, a separate final pair was created, and the VAPID predecessor was
+  retained only for the bounded compatibility bridge. Resend was reopened for
+  a new replacement and owner-only proof.
+- Corrected bridge deployment: automatic deployment
+  `9365f0e5-c059-4296-8ef5-d74f20abdc18` was skipped. Exact-source deployment
+  `22811563-97df-4278-bd22-1704c82c0141` succeeded from unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:c32b62f20694e0553f73b467e71d883aba742d74c302074a2af16dcdb5a15d63`.
+  Initial bridge inventory reported three eligible registrations, zero on the
+  active generation, three on the previous generation, and all five queue
+  categories at zero.
+- Migration and pre-retirement proof: Michael opened the installed RIVT PWA on
+  the controlled Android, iOS 16.7.16, and iOS 18.7.8 devices. Exact readiness
+  then reported total, eligible, active, and active-with-success counts of
+  `3`; previous, unknown, retired, and inactive counts of `0`; and all five
+  queue categories at `0`. Michael confirmed the owner-only alert arrived on
+  all three devices before predecessor retirement.
+- Retirement: `VAPID_PREVIOUS_PUBLIC_KEY` and
+  `VAPID_PREVIOUS_PRIVATE_KEY` were removed without triggering an automatic
+  deployment. Exact-source deployment
+  `1ab805db-e200-4e87-a49a-3e2b415f7428` succeeded from unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:3830de3674395f9c636be8eaa03d3e55b7cd277f04ddd88b1f982853a8464f77`.
+- Post-retirement proof: readiness returned `ready: true`, reported previous
+  configuration absent, retained the exact three eligible/active/successful
+  registrations, and showed every queue count at zero. Michael confirmed a
+  final owner-only alert arrived on Android and both iPhones after retirement.
+- Runtime and verification: the exact-source production monitor passed.
+  Invoice bank payments remained `enabled: false`, `configured: false`,
+  `webhookConfigured: true`, and `setup_required`. `npm run build`,
+  `npm run lint`, `npm run lint:security`, and `npm run test` passed. The full
+  run passed 551 unit/frontend checks and four non-database integration-harness
+  checks; 23 database-backed integration cases skipped because
+  `TEST_DATABASE_URL` was absent. A focused push-notification/readiness run
+  passed 26 tests and skipped one database-backed integration case for the
+  same reason.
+- Final boundary: VAPID is closed for the 2026-08-03 recurrence. The predecessor
+  must never be restored; recovery requires another fresh pair. Resend
+  re-rotation and backup-encryption rotation remain pending. This entry does
+  not clear the incident or `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH,
+  or deploy the feature release.
+
 ## 2026-08-03 - Authentication Metadata Pepper Recurrence Rotation
 
 - Approval: Michael's explicit 2026-08-03 emergency credential-rotation
