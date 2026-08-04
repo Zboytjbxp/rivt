@@ -1,5 +1,39 @@
 # Deployment Ledger
 
+## 2026-08-03 - Rate-Limit Pepper Recurrence Rotation
+
+- Approval: Michael's explicit 2026-08-03 emergency credential-rotation
+  authorization covered one-class-at-a-time replacement of the distinct
+  authentication and rate-limit peppers, exact-source redeployment, up to 30
+  minutes of cumulative interruption, and less than US$2 of incremental cost.
+  It did not authorize ACH, a real payment, customer communication,
+  customer-data deletion, public launch, or the feature release.
+- Prior state and scope: Railway had no distinct `RATE_LIMIT_PEPPER`, so the
+  durable limiter used the `AUTH_METADATA_PEPPER` fallback. A fresh independent
+  dedicated `RATE_LIMIT_PEPPER` was created. No secret value, suffix, hash, or
+  other secret-derived identifier is recorded.
+- Deployment: automatic variable deployment
+  `d4eaa8e9-c5c9-471d-9fa5-fc387f972b05` was skipped by the CI wait policy.
+  Explicit Railway deployment `5105fe71-4bfe-47b3-a2b5-cb23286d932f`
+  succeeded from unchanged production source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d54ed8045a948741a5b471363edcb20ab83c4b8f7ddacf26ed87882fca14be34`;
+  no feature release was deployed.
+- Runtime evidence: the exact-source production synthetic monitor passed with
+  authentication configured. Invoice bank payments remained `enabled: false`,
+  `configured: false`, and `setup_required`. The existing owner session
+  remained valid through the cutover.
+- Limiter evidence: two bounded `GET /api/public/jobs?limit=1` requests returned
+  HTTP 200. Durable limiter headers reported limit `90`, remaining `89` then
+  `88`, and the same reset, proving both requests consumed one shared active
+  limiter window after cutover.
+- Focused gates: 60/60 focused security/authentication tests passed and
+  `npm run lint:security` passed.
+- Remaining boundary: this closes only the rate-limit-pepper recurrence.
+  `AUTH_METADATA_PEPPER` remains configured for authentication metadata and is
+  still pending independent replacement and runtime verification. The former
+  shared fallback must not be represented as closure of that separate class.
+
 ## 2026-08-03 - Google OAuth Recurrence Rotation
 
 - Approval: Michael's explicit 2026-08-03 emergency credential-rotation
