@@ -153,6 +153,29 @@ Required allowlisted evidence:
 - alert-delivery result;
 - cleanup status.
 
+### Repository receipt privacy
+
+New public or protected repository receipts must not contain a bucket name, object
+key, filename, account identifier, provider URL, signed URL, or exact storage
+version. The adapter keeps exact provider identifiers for new evidence only in encrypted,
+access-restricted operator evidence and publishes a one-way 64-character
+`artifactIdentitySha256` as the sole artifact correlator.
+
+This is a prospective contract. Existing historical repository records are not
+retroactively erased.
+
+Completion and restore receipts each bind their own exact opaque identity.
+They are not required to be equal because scheduled completion and periodic
+restore cadences differ. If readiness later requires proof that one selected
+backup was restored, the evidence plan must bind both receipts through an
+explicit recovery-set or selected-artifact relationship rather than infer that
+relationship from timing.
+
+Only aggregate positive safe-integer counts and bounded byte/duration totals
+may accompany the identity. A digest and aggregate counts prove receipt
+binding, not complete object coverage or successful recovery; those claims
+still require the isolated database-plus-object acceptance checks below.
+
 Alert when:
 
 - no independently attested valid set exists within 24 hours;

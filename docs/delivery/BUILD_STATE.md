@@ -2,11 +2,11 @@
 
 Last updated: 2026-08-08 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Two low-severity final-diff security findings are remediated and fully verified in the un-deployed release candidate. Draft PR #25 passed every engineering gate, including fresh disposable-PostgreSQL proof; its only failing step is the deliberate launch-readiness enforcement. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Current phase: Packet 99 adds source-only backup-evidence privacy hardening on top of the fully verified, un-deployed release candidate. Future repository receipts use opaque artifact identities and safe aggregate counts rather than private object names. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
-Repository branch: `codex/final-release-candidate-20260804`
+Repository branch: `codex/packet-99-evidence-infrastructure`
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
-Current release-candidate application source: `e06a6218e6c9047569e3140d24a7f25a9c710de8`, including security remediation `6b2f7d8a64b17899f87c8d409353689738fdf294` and the transitive Nano ID patch. Draft PR #25 Gate A Safety run `31269498552` supplies fresh disposable-PostgreSQL evidence for this descendant.
+Current release-candidate application source: `aab7e07b32bb2173cda6deb401f9631fc55a97cd`, based on verified candidate `3103048ba20d629a3352592c0317c846e716b2f1`. The new source is not merged or deployed and makes no provider or readiness claim.
 Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -14,14 +14,15 @@ Earlier production incident hotfix commit:
 Release evidence boundary: production remains on Node 20 while the un-deployed
 release candidate pins Node 22. Invoice bank payments/ACH remain disabled, the
 `ACTIVE_LAUNCH_HOLD` remains active, and `GA-OPS-004` plus `GA-OPS-009` remain
-blockers. Backup recurrence is not proved: no scheduler activation, independent
-backup-provider activation, current recurring artifact, or isolated restore is
-claimed. Exact-candidate local engineering gates pass, but launch readiness
-remains blocked with exactly 21 findings. Draft PR #25 Gate A Safety run
-`30955179943` completed with 14/14 pretest safety checks, 603/603 unit tests,
-28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys
-passing. The workflow ended with exit 1 only because the required launch-
-readiness enforcement correctly preserved those 21 operational blockers.
+blockers. Recurring independently retained complete recovery is not proved: no
+approved scheduler activation, independent backup-provider retention, recurring
+recovery set, or isolated database-plus-object recovery-set restore is claimed.
+Local engineering gates pass for application source `aab7e07b`; fresh
+exact-head pull-request CI remains pending. Its verified base `3103048b` is
+backed by draft PR #25 Gate A Safety run `31269498552`, which completed with
+14/14 pretest safety checks, 604/604 unit tests, 28/28 disposable-PostgreSQL
+integration tests, and 4/4 browser E2E journeys passing. Launch readiness for
+the current source remains blocked with exactly 21 operational findings.
 
 Operational status: a 2026-08-03 Railway configuration audit caused a new
 restricted-output exposure of current production credentials. No misuse
@@ -47,8 +48,11 @@ proven on all three controlled devices before the predecessor was retired.
 The separately exposed Resend credential was replaced again, the predecessor
 and an unused intermediate were retired only after owner-controlled delivery
 proof, and final provider inventory shows exactly one restricted sending key.
-Backup encryption remains pending. The incident and `ACTIVE_LAUNCH_HOLD`
-remain open; the feature release, launch, and Railway Stage 1 remain paused.
+Backup-encryption rotation is closed: active- and predecessor-key restore proofs
+passed before `BACKUP_ENCRYPTION_KEY_PREVIOUS` and its alias were removed from
+runtime. That one-time key rotation is not recurring independent recovery. The
+incident and `ACTIVE_LAUNCH_HOLD` remain open; the feature release, launch, and
+Railway Stage 1 remain paused.
 
 ## Packet 99 final-diff security remediation addendum - fully verified in the release candidate
 
@@ -82,7 +86,35 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   this addendum is merged to `master`, deployed, payment-enabling, provider-
   mutating, or launch-authorizing.
 
-## Packet 99 operator secret-output containment - active; backup-encryption rotation pending
+## Packet 99 backup-evidence privacy addendum - source-only
+
+- Source commit `aab7e07b32bb2173cda6deb401f9631fc55a97cd`
+  removes private backup object names from the public/protected completion and
+  restore receipt contracts. Each receipt must instead carry its own opaque
+  64-character `artifactIdentitySha256`; completion and restore identities are
+  independently bound because their approved cadences may differ.
+- Authenticated backup verification now returns only positive safe-integer
+  aggregate `tableCount` and `rowCount` values. The materializer and final
+  readiness evaluator reject zero, fractional, unsafe, missing, or unbound
+  counts, and strict receipt schemas reject the legacy raw `artifactKey` field.
+- Focused backup, materializer, and launch-readiness coverage passes 130/130.
+  An independent security re-review found the privacy change fail-closed and
+  found no remaining blocker in this patch.
+- Full local verification passes: production build; application, security, and
+  public-documentation lint; 14/14 prechecks; 607/607 unit/frontend tests;
+  four non-database integration harness checks with 23 database cases honestly
+  skipped because this worktree has no `TEST_DATABASE_URL`; all four browser
+  E2E journeys; `npm audit --omit=dev` with zero known vulnerabilities; and
+  diff integrity. `launch:readiness --json` remains blocked with the same 21
+  incident, recovery, and disabled-payment evidence findings.
+- This is prospective repository-evidence hygiene. New typed receipts keep
+  exact provider identifiers only in encrypted, access-restricted operator
+  evidence; existing historical repository records are not retroactively
+  erased. This source change does not activate a
+  scheduler/provider, create or restore a backup, prove object-byte recovery,
+  change requirement maturity, clear the incident/hold, deploy, or add cost.
+
+## Packet 99 operator secret-output containment - active; named credential rotations closed
 
 - The recurrence is recorded without any secret value or credential-bearing
   output.
@@ -118,8 +150,9 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
 - Production rotation continues one class at a time. PostgreSQL, the Stripe
   live API key, both Stripe webhooks, Google OAuth, the distinct authentication
   metadata and rate-limit peppers, and Web Push VAPID are closed for this
-  recurrence. The 2026-08-04 Resend recurrence is now closed; backup
-  encryption remains pending.
+  recurrence. The 2026-08-04 Resend recurrence and backup-encryption rotation
+  are also closed. Recurring independently retained complete recovery remains
+  unproved and does not become closed merely because the key rotation passed.
 - The Connect cutover changed only `STRIPE_CONNECT_WEBHOOK_SECRET`. Automatic
   deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
   policy; exact-source deployment `6152da11-1323-47a9-a258-d9013f040522`
@@ -287,10 +320,11 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   database-backed integration cases skipped because `TEST_DATABASE_URL` was
   absent. A focused push-notification/readiness run passed 26 tests and skipped
   one database-backed integration case for the same reason.
-- VAPID and the August 4 Resend recurrence are closed. Backup-encryption
-  rotation remains pending; Packet 99 stays active. This does not clear the
-  incident or `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the
-  feature release.
+- VAPID, the August 4 Resend recurrence, and backup-encryption rotation are
+  closed. Packet 99 stays active because the incident, forensic limits,
+  recurring independent complete recovery, and launch approvals remain open.
+  This does not clear `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or
+  deploy the feature release.
 - `master` currently has no branch protection/ruleset, so the Packet 98
   rehearsal's protected-branch guard cannot pass. No bypass is authorized.
 - The feature release remains separate from containment and is not authorized
