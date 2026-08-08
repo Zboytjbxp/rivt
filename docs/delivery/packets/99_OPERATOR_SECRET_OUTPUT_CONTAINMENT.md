@@ -15,26 +15,26 @@ automation transcript. The command was stopped and its output is not copied
 into source, documentation, chat, tests, or evidence. No misuse indicator is
 known, but transcript confidentiality is not accepted as a security boundary.
 
-## Current release boundary - 2026-08-04
+## Current release boundary - 2026-08-08
 
 - Production and `origin/master` remain at
   `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 is
   source-only backup tooling, not recurrence or restore proof.
-- Release candidate `codex/final-release-candidate-20260804` is at
-  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` in draft PR #25, containing merge
-  `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge
-  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. It pins Node 22 and is not
-  deployed.
-- Backup recurrence remains pending. No scheduler service, independent backup
-  provider, recurring artifact, or isolated current-artifact restore is
-  activated or proved. ACH is disabled, `ACTIVE_LAUNCH_HOLD` is active,
-  `GA-OPS-004` and `GA-OPS-009` remain blockers. Exact-candidate local
-  engineering gates pass, launch readiness remains blocked with exactly 21
-  findings, and draft PR #25 Gate A Safety run `30955179943` supplies the
-  database-backed proof: 14/14 pretest safety checks, 603/603 unit tests, 28/28
-  disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys pass.
-  The final exit 1 is the intended launch-readiness refusal for the 21 open
-  operational blockers.
+- Current source-only branch `codex/packet-99-evidence-infrastructure` contains
+  application commit `aab7e07b32bb2173cda6deb401f9631fc55a97cd` on verified
+  release-candidate base `3103048ba20d629a3352592c0317c846e716b2f1`.
+  It pins Node 22 and is not merged or deployed.
+- Recurring independently retained complete recovery remains pending. No
+  approved scheduler service, independent backup-provider retention, recurring
+  database-plus-object recovery set, or isolated complete recovery-set restore
+  is activated or proved. ACH is disabled, `ACTIVE_LAUNCH_HOLD` is active,
+  `GA-OPS-004` and `GA-OPS-009` remain blockers. Local engineering gates pass
+  for application source `aab7e07b`. Draft PR #27 Gate A Safety run
+  `31283425853` independently verified review commit `4202fa3` with 14/14
+  pretest safety checks, 607/607 unit/frontend tests, 28/28 disposable-
+  PostgreSQL integration tests, and 4/4 browser E2E journeys, plus clean build,
+  lint, security lint, diff, and dependency audit. The embedded readiness check
+  still reports exactly 21 operational findings.
 
 ## Source scope
 
@@ -83,10 +83,11 @@ known, but transcript confidentiality is not accepted as a security boundary.
 The separately authorized one-class-at-a-time recurrence rotations are tracked
 in `docs/operations/incidents/2026-07-29-production-credential-exposure.md` and
 `docs/delivery/DEPLOYMENT_LEDGER.md`. PostgreSQL, Stripe API and both webhook
-classes, Resend, Google OAuth, both independent pepper classes, and Web Push
-VAPID have current recurrence evidence. Backup-encryption rotation remains
-pending. The broader incident and `ACTIVE_LAUNCH_HOLD` remain open; ACH, the
-feature release, Railway Stage 1, and public launch remain paused.
+classes, Resend, Google OAuth, both independent pepper classes, Web Push VAPID,
+and backup encryption have current credential-rotation evidence. The one-time backup-key
+rotation and predecessor retirement are closed; recurring independent complete
+recovery is not. The broader incident and `ACTIVE_LAUNCH_HOLD` remain open;
+ACH, the feature release, Railway Stage 1, and public launch remain paused.
 
 ## Rollback
 
@@ -112,9 +113,9 @@ must never reinstall material exposed in the transcript.
   refusal for those 21 operational blockers.
 
 These are source checks only. They do not replace provider evidence or
-owner-controlled proofs. The remaining recurrence boundary is a fresh
-encrypted backup, isolated restore proof, and safe retirement of the exposed
-backup-encryption predecessor under separate explicit approval.
+owner-controlled proofs. The remaining recovery boundary is monitored
+recurrence, independent retention, a complete database-plus-object recovery
+set, alert receipt, recurring isolated restore evidence, and later approvals.
 
 ## Final-diff security remediation addendum - 2026-08-08
 
@@ -141,3 +142,37 @@ backup-encryption predecessor under separate explicit approval.
 - This addendum does not change the active packet, clear the incident or
   launch hold, enable ACH, authorize a payment, call a provider, deploy the
   feature release, delete legacy browser data, or add cost.
+
+## Backup-evidence privacy addendum - 2026-08-08
+
+- Commit `aab7e07b32bb2173cda6deb401f9631fc55a97cd` changes the
+  public/protected backup completion and restore contracts to accept only an
+  opaque 64-character `artifactIdentitySha256`, never a private object name.
+  Completion and restore receipts bind their own exact identities separately;
+  their schedules may differ, so equality is not inferred.
+- Successful freshness verification exposes only positive safe-integer
+  aggregate table and row counts. The monitor reducer, evidence materializer,
+  and final readiness evaluator reject zero, fractional, unsafe, missing, or
+  unbound counts. Exact schemas reject legacy `artifactKey` input even when a
+  plan and receipt agree on it.
+- Focused verification passes 130/130, and an independent security re-review
+  found no remaining blocker in the patch.
+- Full local verification passes production build; application, security, and
+  public-documentation lint; 14/14 prechecks; 607/607 unit/frontend checks;
+  four non-database integration harness checks with 23 database cases skipped
+  because no `TEST_DATABASE_URL` exists in this isolated worktree; four browser
+  E2E journeys; a zero-vulnerability production dependency audit; and diff
+  integrity. Launch readiness still reports exactly 21 blockers.
+- Draft PR #27 Gate A Safety run `31283425853` independently verifies the same
+  application source on disposable PostgreSQL: 14/14 pretests, 607/607
+  unit/frontend tests, 28/28 integration tests, all four browser journeys,
+  formatting, and a zero-vulnerability production dependency audit pass. Its
+  readiness evidence still contains the expected 21 operational findings.
+- This is prospective source-level evidence hygiene only. It does not create,
+  copy, delete, or restore a provider object; does not prove an independent
+  provider, object-byte recovery, recurrence, or alert delivery; does not alter
+  requirement maturity; and does not authorize deployment, launch, payments,
+  provider mutation, production-data access, or cost.
+- New typed receipts keep exact provider identifiers only in encrypted,
+  access-restricted operator evidence. Existing historical repository records
+  are retained as history and are not retroactively erased by this change.

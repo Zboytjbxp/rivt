@@ -1602,6 +1602,8 @@ test("freshness verifier binds provider controls to the newest current version",
   assert.equal(result.ageHours, 1);
   assert.equal(result.versionId, "4_zversion");
   assert.equal(result.sha256, fixture.sha256);
+  assert.equal(result.tableCount, losslessSnapshot.manifest.tableCount);
+  assert.equal(result.rowCount, losslessSnapshot.manifest.rowCount);
 
   assert.equal(result.encryptionKeyMode, "active-only");
 
@@ -1774,6 +1776,8 @@ test("newest backup selection and sanitized failures do not expose credentials o
     retentionDays: 30,
     retentionUntil: "2026-09-01T00:00:00.000Z",
     encryptionKeyMode: "active-only",
+    tableCount: 109,
+    rowCount: 8768,
     durationMs: 10,
   });
   const serializedSuccess = JSON.stringify(success);
@@ -1783,6 +1787,8 @@ test("newest backup selection and sanitized failures do not expose credentials o
   assert.match(success.destinationIdentitySha256, /^[a-f0-9]{64}$/);
   assert.match(success.artifactIdentitySha256, /^[a-f0-9]{64}$/);
   assert.equal(success.encryptionKeyMode, "active-only");
+  assert.equal(success.tableCount, 109);
+  assert.equal(success.rowCount, 8768);
 });
 
 test("newest backup selection follows version pagination instead of trusting the first lexicographic page", async () => {

@@ -35,7 +35,9 @@ const SUCCESS_KEYS = Object.freeze([
   "ok",
   "retentionDays",
   "retentionUntil",
+  "rowCount",
   "sourceCommit",
+  "tableCount",
   "uploadedAt",
 ]);
 const FAILURE_KEYS = Object.freeze(["errorCode", "message", "mode", "ok"]);
@@ -137,6 +139,12 @@ function validateSuccessReceipt(receipt, { expectedSourceCommit, now }) {
   if (!Number.isSafeInteger(receipt.retentionDays) || receipt.retentionDays < MIN_RETENTION_DAYS) {
     throw new BackupMonitorReceiptError("Backup retention is below policy.");
   }
+  if (!Number.isSafeInteger(receipt.tableCount) || receipt.tableCount <= 0) {
+    throw new BackupMonitorReceiptError("Backup table count is invalid.");
+  }
+  if (!Number.isSafeInteger(receipt.rowCount) || receipt.rowCount <= 0) {
+    throw new BackupMonitorReceiptError("Backup row count is invalid.");
+  }
 
   const currentTime = typeof now === "function" ? now() : now;
   if (!Number.isFinite(currentTime)) {
@@ -178,6 +186,8 @@ function validateSuccessReceipt(receipt, { expectedSourceCommit, now }) {
     encryptionKeyMode: "active-only",
     destinationIdentitySha256: receipt.destinationIdentitySha256,
     artifactIdentitySha256: receipt.artifactIdentitySha256,
+    tableCount: receipt.tableCount,
+    rowCount: receipt.rowCount,
     durationMs: receipt.durationMs,
   });
 }
