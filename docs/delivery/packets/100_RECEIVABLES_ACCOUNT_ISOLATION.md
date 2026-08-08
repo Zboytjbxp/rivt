@@ -9,8 +9,8 @@ different account's server-owned payment records.
 ## Source and production boundary
 
 - Branch: `codex/receivables-tenant-boundary`
-- Source base: release-candidate commit
-  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61`
+- Source base: release-candidate branch head
+  `dfbb37831b3a22717c0c68ecbe4654ad8efa56cc`
 - Fix source:
   `8ee0d306502f783d323373b6d42d521ce18d9970`
 - Finding: unowned legacy `rivt.payments.v1` rows could be merged into an

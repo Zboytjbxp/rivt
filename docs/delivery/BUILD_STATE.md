@@ -6,7 +6,7 @@ Current phase: Packet 100's Receivables account-isolation regression, build, lin
 Active packet: `docs/delivery/packets/100_RECEIVABLES_ACCOUNT_ISOLATION.md`
 Repository branch: `codex/receivables-tenant-boundary`
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
-Current Packet 100 implementation source: `8ee0d306502f783d323373b6d42d521ce18d9970`, with bounded audited transitive patches at `b1c99e7fb54762c26f079b26bea3be7d51ae4566`, based on release-candidate source `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` from draft PR #25
+Current Packet 100 implementation source: `8ee0d306502f783d323373b6d42d521ce18d9970`, with bounded audited transitive patches at `b1c99e7fb54762c26f079b26bea3be7d51ae4566`, based on release-candidate branch head `dfbb37831b3a22717c0c68ecbe4654ad8efa56cc` from draft PR #25
 Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -16,10 +16,11 @@ release candidate pins Node 22. Invoice bank payments/ACH remain disabled, the
 `ACTIVE_LAUNCH_HOLD` remains active, and `GA-OPS-004` plus `GA-OPS-009` remain
 blockers. Backup recurrence is not proved: no scheduler activation, independent
 backup-provider activation, current recurring artifact, or isolated restore is
-claimed. The underlying release-candidate engineering gates passed at
-`aa5b5361374bce0ae51d71cbe4b6d8031a605c61`, but Packet 100 source
-`8ee0d306502f783d323373b6d42d521ce18d9970` does not yet have complete gate or
-deployment evidence. Launch readiness remains blocked with exactly 21
+claimed. The underlying release-candidate engineering gates passed at its last
+code-affecting source `aa5b5361374bce0ae51d71cbe4b6d8031a605c61`; draft PR #25 then advanced to
+documentation-only branch head `dfbb37831b3a22717c0c68ecbe4654ad8efa56cc`. Packet 100 source
+`8ee0d306502f783d323373b6d42d521ce18d9970` passes the complete local gate, but
+exact-source CI/database and deployment evidence remain pending. Launch readiness remains blocked with exactly 21
 operational findings before this newly identified privacy defect. Draft PR #25 Gate A Safety run
 `30955179943` completed with 14/14 pretest safety checks, 603/603 unit tests,
 28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys
