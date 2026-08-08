@@ -56,8 +56,9 @@ export async function verifyLogicalBackup({
       "The newest protected backup source does not match BACKUP_EXPECTED_SOURCE_COMMIT.",
     );
   }
+  let snapshot;
   try {
-    const snapshot = decryptSnapshot(verified.envelope, encryptionSecrets.active);
+    snapshot = decryptSnapshot(verified.envelope, encryptionSecrets.active);
     assertRestoreUsableSnapshot(snapshot, verified);
   } catch (error) {
     if (error instanceof BackupConfigurationError && error.code === "BACKUP_OBJECT_INVALID") throw error;
@@ -98,6 +99,8 @@ export async function verifyLogicalBackup({
     objectLockMode: protection.objectLockMode,
     defaultRetentionDays: protection.defaultRetentionDays,
     encryptionKeyMode: "active-only",
+    tableCount: snapshot.manifest.tableCount,
+    rowCount: snapshot.manifest.rowCount,
     durationMs: Date.now() - startedAt,
   };
 }
