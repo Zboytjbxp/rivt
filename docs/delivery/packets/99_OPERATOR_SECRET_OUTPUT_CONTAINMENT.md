@@ -115,3 +115,25 @@ These are source checks only. They do not replace provider evidence or
 owner-controlled proofs. The remaining recurrence boundary is a fresh
 encrypted backup, isolated restore proof, and safe retirement of the exposed
 backup-encryption predecessor under separate explicit approval.
+
+## Final-diff security remediation addendum - 2026-08-08
+
+- Completed diff scan `ad843b09-ef72-4a08-b2ab-d792bc914821` found two
+  low-severity issues in the un-deployed candidate: stale invoice delivery
+  proof after a top-level document edit, and possible rendering of an
+  ownerless legacy Receivables row in a reused browser profile.
+- Remediation commit `6b2f7d8a64b17899f87c8d409353689738fdf294`
+  binds delivery proof to the complete canonical invoice and makes
+  authenticated Receivables server-only, account-bound, and fail-closed.
+  Identical lost-response autosaves and current-account server history remain
+  supported. Ownerless legacy rows are quarantined without deletion.
+- Candidate commit `e06a6218e6c9047569e3140d24a7f25a9c710de8`
+  also updates transitive `nanoid` from `3.3.16` to `3.3.18` after the
+  production dependency gate identified advisory `GHSA-2v37-7h3g-55p8`.
+- Local source, browser, and dependency gates pass. The database integration
+  aggregate skipped its 23 PostgreSQL cases because no local disposable
+  database is available; fresh draft-PR disposable-PostgreSQL proof is the
+  remaining acceptance boundary.
+- This addendum does not change the active packet, clear the incident or
+  launch hold, enable ACH, authorize a payment, call a provider, deploy the
+  feature release, delete legacy browser data, or add cost.

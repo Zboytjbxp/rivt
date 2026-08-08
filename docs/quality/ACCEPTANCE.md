@@ -2,7 +2,31 @@
 
 Gate A is approved only with automated and manual evidence against production-like infrastructure. Screenshots alone are insufficient.
 
-## Current Evidence Snapshot - 2026-08-04
+## Current Evidence Snapshot - 2026-08-08
+
+Final-diff remediation application source
+`e06a6218e6c9047569e3140d24a7f25a9c710de8` closes two low-severity
+candidate-only security findings: stale invoice delivery proof after a
+top-level edit and cross-account rendering of an ownerless legacy Receivables
+row. Local evidence on this descendant is:
+
+- `npm run build`, `npm run lint`, and `npm run lint:security` pass.
+- 14/14 prechecks and 604/604 unit tests pass.
+- `npm run test:ui:tools` passes, including orphaned-row quarantine,
+  account-switch, and API-outage cases.
+- `npm run test:e2e` passes all four browser journeys.
+- `npm audit --omit=dev` reports zero known vulnerabilities after transitive
+  `nanoid` was updated from `3.3.16` to `3.3.18`.
+- `git diff --check` passes.
+- `npm run test:integration` exits zero with four provider-free cases passing
+  and 23 PostgreSQL cases skipped because no local `TEST_DATABASE_URL` or
+  Docker engine is available. The new invoice route regression is one of the
+  skipped cases, so fresh draft-PR disposable-PostgreSQL CI is mandatory.
+
+No fix is called fully verified until that database CI passes. Production,
+ACH, payment, provider, deployment, cost, and launch state are unchanged.
+
+## Prior Evidence Snapshot - 2026-08-04
 
 Draft PR #25 binds the un-deployed Node 22 release candidate to exact source
 `aa5b5361374bce0ae51d71cbe4b6d8031a605c61`. Local evidence on that source is:

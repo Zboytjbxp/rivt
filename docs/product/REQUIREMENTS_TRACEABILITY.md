@@ -1,5 +1,30 @@
 # Gate A Requirements Traceability
 
+## Packet 99 final-diff remediation addendum - 2026-08-08
+
+- `GA-FND-004` gains a source-level cross-account closure: authenticated
+  Receivables no longer reads or merges the unowned `rivt.payments.v1` browser
+  key. It renders only tenant-bound API records and fails closed on account
+  changes, session mismatch, empty/error recovery, and stale responses.
+- `GA-UX-006` gains exact invoice-delivery integrity: sent state and its
+  provider evidence survive only an identical canonical document autosave.
+  Title, date, amount, account-owned work/customer binding, or payload changes
+  detach the prior delivery record and return the document to draft.
+- `GA-SEC-004` gains regressions for both boundaries: a reused browser profile
+  cannot render an ownerless prior-account receivable, and top-level-only
+  invoice edits cannot inherit stale proof. Exact lost-response replay remains
+  supported.
+- Application source is
+  `e06a6218e6c9047569e3140d24a7f25a9c710de8`; local build, lint, security
+  lint, 604/604 unit tests plus 14/14 prechecks, Tools UI smoke, four E2E
+  journeys, dependency audit, and diff integrity pass. Database cases are not
+  promoted to passing: 23 skipped locally because `TEST_DATABASE_URL` and
+  Docker are unavailable. Fresh disposable-PostgreSQL draft-PR evidence is
+  required before these rows advance beyond source-verified.
+- Requirement maturity remains **Partial/source-verified**. Production stays
+  at `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b`; no deployment, ACH, payment,
+  provider, launch, or cost action occurred.
+
 ## Current release evidence boundary - 2026-08-04
 
 - Production and `origin/master` are at
