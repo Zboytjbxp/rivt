@@ -130,10 +130,14 @@ backup-encryption predecessor under separate explicit approval.
 - Candidate commit `e06a6218e6c9047569e3140d24a7f25a9c710de8`
   also updates transitive `nanoid` from `3.3.16` to `3.3.18` after the
   production dependency gate identified advisory `GHSA-2v37-7h3g-55p8`.
-- Local source, browser, and dependency gates pass. The database integration
-  aggregate skipped its 23 PostgreSQL cases because no local disposable
-  database is available; fresh draft-PR disposable-PostgreSQL proof is the
-  remaining acceptance boundary.
+- Local source, browser, and dependency gates pass. Although the local
+  integration aggregate skips 23 PostgreSQL cases because no local disposable
+  database is available, draft PR #25 Gate A Safety run `31269498552` passed
+  all 28 disposable-PostgreSQL integration tests, including the new invoice
+  route regression, alongside 14/14 prechecks, 604/604 unit tests, and all
+  four browser journeys. The run stopped only at the deliberate launch-
+  readiness enforcement; this remediation has no remaining engineering proof
+  gap.
 - This addendum does not change the active packet, clear the incident or
   launch hold, enable ACH, authorize a payment, call a provider, deploy the
   feature release, delete legacy browser data, or add cost.

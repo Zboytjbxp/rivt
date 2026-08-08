@@ -2,11 +2,11 @@
 
 Last updated: 2026-08-08 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Two low-severity final-diff security findings are remediated in the un-deployed release candidate; local gates pass and fresh disposable-PostgreSQL PR proof is pending. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Current phase: Two low-severity final-diff security findings are remediated and fully verified in the un-deployed release candidate. Draft PR #25 passed every engineering gate, including fresh disposable-PostgreSQL proof; its only failing step is the deliberate launch-readiness enforcement. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
 Repository branch: `codex/final-release-candidate-20260804`
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
-Current release-candidate application source: `e06a6218e6c9047569e3140d24a7f25a9c710de8`, including security remediation `6b2f7d8a64b17899f87c8d409353689738fdf294` and the transitive Nano ID patch. Draft PR #25 must produce fresh disposable-PostgreSQL evidence for this descendant before the fixes are called fully verified.
+Current release-candidate application source: `e06a6218e6c9047569e3140d24a7f25a9c710de8`, including security remediation `6b2f7d8a64b17899f87c8d409353689738fdf294` and the transitive Nano ID patch. Draft PR #25 Gate A Safety run `31269498552` supplies fresh disposable-PostgreSQL evidence for this descendant.
 Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -50,7 +50,7 @@ proof, and final provider inventory shows exactly one restricted sending key.
 Backup encryption remains pending. The incident and `ACTIVE_LAUNCH_HOLD`
 remain open; the feature release, launch, and Railway Stage 1 remain paused.
 
-## Packet 99 final-diff security remediation addendum - local proof complete; database CI pending
+## Packet 99 final-diff security remediation addendum - fully verified in the release candidate
 
 - Completed Codex Security diff scan
   `ad843b09-ef72-4a08-b2ab-d792bc914821` reported two low-severity findings
@@ -71,12 +71,14 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
 - Local verification passes: `git diff --check`, production build,
   application/security/public-documentation lint, 604/604 unit tests plus
   14/14 prechecks, Tools UI smoke, all four browser E2E journeys, and
-  `npm audit --omit=dev`. The integration aggregate passes its four
-  provider-free cases and skips 23 database cases because this machine has no
-  `TEST_DATABASE_URL` or Docker. The new database-backed invoice regression is
-  therefore pending the disposable PostgreSQL run in draft PR #25.
-- Independent review found no bypass in either patch and confirmed that the
-  only remaining proof gap is the database-backed route test. No source in
+  `npm audit --omit=dev`. Local integration execution still skips 23 database
+  cases because this machine has no `TEST_DATABASE_URL` or Docker, but draft
+  PR #25 Gate A Safety run `31269498552` passed 14/14 prechecks, 604/604 unit
+  tests, 28/28 disposable-PostgreSQL integration tests, and all four browser
+  journeys. The workflow failed only at the deliberate final readiness
+  enforcement, which correctly reported the existing 21 incident, recovery,
+  and disabled-payment evidence blockers.
+- Independent review found no bypass in either patch. No source in
   this addendum is merged to `master`, deployed, payment-enabling, provider-
   mutating, or launch-authorizing.
 

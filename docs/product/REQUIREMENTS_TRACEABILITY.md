@@ -17,11 +17,12 @@
 - Application source is
   `e06a6218e6c9047569e3140d24a7f25a9c710de8`; local build, lint, security
   lint, 604/604 unit tests plus 14/14 prechecks, Tools UI smoke, four E2E
-  journeys, dependency audit, and diff integrity pass. Database cases are not
-  promoted to passing: 23 skipped locally because `TEST_DATABASE_URL` and
-  Docker are unavailable. Fresh disposable-PostgreSQL draft-PR evidence is
-  required before these rows advance beyond source-verified.
-- Requirement maturity remains **Partial/source-verified**. Production stays
+  journeys, dependency audit, and diff integrity pass. Draft PR #25 Gate A
+  Safety run `31269498552` independently repeated those gates and passed 28/28
+  disposable-PostgreSQL integration tests, including the invoice route
+  regression.
+- These remediation rows are **Verified in release candidate**. Overall
+  requirement maturity remains Partial because production stays
   at `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b`; no deployment, ACH, payment,
   provider, launch, or cost action occurred.
 

@@ -8,7 +8,7 @@ Final-diff remediation application source
 `e06a6218e6c9047569e3140d24a7f25a9c710de8` closes two low-severity
 candidate-only security findings: stale invoice delivery proof after a
 top-level edit and cross-account rendering of an ownerless legacy Receivables
-row. Local evidence on this descendant is:
+row. Evidence on this descendant is:
 
 - `npm run build`, `npm run lint`, and `npm run lint:security` pass.
 - 14/14 prechecks and 604/604 unit tests pass.
@@ -18,13 +18,19 @@ row. Local evidence on this descendant is:
 - `npm audit --omit=dev` reports zero known vulnerabilities after transitive
   `nanoid` was updated from `3.3.16` to `3.3.18`.
 - `git diff --check` passes.
-- `npm run test:integration` exits zero with four provider-free cases passing
-  and 23 PostgreSQL cases skipped because no local `TEST_DATABASE_URL` or
-  Docker engine is available. The new invoice route regression is one of the
-  skipped cases, so fresh draft-PR disposable-PostgreSQL CI is mandatory.
+- Local `npm run test:integration` exits zero with four provider-free cases
+  passing and 23 PostgreSQL cases skipped because no local `TEST_DATABASE_URL`
+  or Docker engine is available.
+- Draft PR #25 Gate A Safety run `31269498552` passed 28/28 tests against its
+  disposable PostgreSQL 16 service, including the new invoice route
+  regression. It also repeated 14/14 prechecks, 604/604 unit tests, and all
+  four browser journeys successfully.
 
-No fix is called fully verified until that database CI passes. Production,
-ACH, payment, provider, deployment, cost, and launch state are unchanged.
+Both low-severity findings are fully verified in the release candidate. The
+workflow's final exit remains intentionally nonzero because launch-readiness
+enforcement correctly reported the existing 21 incident, recovery, and
+disabled-payment evidence blockers. Production, ACH, payment, provider,
+deployment, cost, and launch state are unchanged.
 
 ## Prior Evidence Snapshot - 2026-08-04
 
