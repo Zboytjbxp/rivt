@@ -101,8 +101,8 @@ const receiptKeys = Object.freeze({
     "timestamp", "type",
   ]),
   "provider-backup-completion": Object.freeze([
-    "artifactKey", "controlId", "provider", "rowCount", "schemaVersion", "status",
-    "tableCount", "timestamp", "type",
+    "artifactIdentitySha256", "controlId", "provider", "rowCount", "schemaVersion",
+    "status", "tableCount", "timestamp", "type",
   ]),
   "provider-alert-delivery-test": Object.freeze([
     "controlId", "destination", "provider", "retryAllowanceMinutes", "schemaVersion",
@@ -117,8 +117,8 @@ const receiptKeys = Object.freeze({
     "timestamp", "type",
   ]),
   "provider-restore-verification": Object.freeze([
-    "artifactKey", "controlId", "provider", "restoreDurationMs", "rowCount", "schemaVersion",
-    "status", "tableCount", "timestamp", "type", "verificationDurationMs",
+    "artifactIdentitySha256", "controlId", "provider", "restoreDurationMs", "rowCount",
+    "schemaVersion", "status", "tableCount", "timestamp", "type", "verificationDurationMs",
   ]),
   "provider-payment-state-verification": Object.freeze([
     "configured", "controlId", "enabled", "featureFlagVerifiedOff", "mode", "provider",
@@ -169,6 +169,10 @@ function validTimestamp(value) {
 
 function positive(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function positiveSafeInteger(value) {
+  return Number.isSafeInteger(value) && value > 0;
 }
 
 function addDaysTimestamp(value, days) {
@@ -417,9 +421,9 @@ function staticRecoveryMatch(policy, definition, receipt) {
   }
   if (definition.slot === "latestSuccessfulBackup") {
     return receipt.status === "passed"
-      && text(receipt.artifactKey)
-      && positive(receipt.tableCount)
-      && positive(receipt.rowCount);
+      && sha256Pattern.test(receipt.artifactIdentitySha256 ?? "")
+      && positiveSafeInteger(receipt.tableCount)
+      && positiveSafeInteger(receipt.rowCount);
   }
   if (definition.slot === "missedBackupAlert") {
     return receipt.status === "tested"
@@ -440,9 +444,9 @@ function staticRecoveryMatch(policy, definition, receipt) {
   }
   return definition.slot === "latestNamedArtifactRestore"
     && receipt.status === "passed"
-    && text(receipt.artifactKey)
-    && positive(receipt.tableCount)
-    && positive(receipt.rowCount)
+    && sha256Pattern.test(receipt.artifactIdentitySha256 ?? "")
+    && positiveSafeInteger(receipt.tableCount)
+    && positiveSafeInteger(receipt.rowCount)
     && positive(receipt.restoreDurationMs)
     && positive(receipt.verificationDurationMs);
 }
@@ -550,7 +554,7 @@ function materializeEvidence(policies, definitions, bound) {
         recoveryPolicy.latestSuccessfulBackup = {
           status: receipt.status,
           completedAt: receipt.timestamp,
-          artifactKey: receipt.artifactKey,
+          artifactIdentitySha256: receipt.artifactIdentitySha256,
           tableCount: receipt.tableCount,
           rowCount: receipt.rowCount,
           ...recoveryEvidenceFields(entry, "completedAt"),
@@ -576,7 +580,7 @@ function materializeEvidence(policies, definitions, bound) {
         recoveryPolicy.latestNamedArtifactRestore = {
           status: receipt.status,
           completedAt: receipt.timestamp,
-          artifactKey: receipt.artifactKey,
+          artifactIdentitySha256: receipt.artifactIdentitySha256,
           tableCount: receipt.tableCount,
           rowCount: receipt.rowCount,
           restoreDurationMs: receipt.restoreDurationMs,

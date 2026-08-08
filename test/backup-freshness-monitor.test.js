@@ -38,6 +38,8 @@ function validSuccessReceipt(overrides = {}) {
     encryptionKeyMode: "active-only",
     destinationIdentitySha256: "b".repeat(64),
     artifactIdentitySha256: "c".repeat(64),
+    tableCount: 109,
+    rowCount: 8768,
     ...overrides,
   };
 }
@@ -70,6 +72,8 @@ test("receipt validator emits only the strict safe success schema", () => {
     encryptionKeyMode: "active-only",
     destinationIdentitySha256: "b".repeat(64),
     artifactIdentitySha256: "c".repeat(64),
+    tableCount: 109,
+    rowCount: 8768,
     durationMs: 125,
   });
 });
@@ -83,6 +87,9 @@ test("receipt validator fails closed on source, key, freshness, retention, ident
     validSuccessReceipt({ retentionDays: 29 }),
     validSuccessReceipt({ retentionUntil: "2026-08-20T11:00:01.000Z" }),
     validSuccessReceipt({ artifactIdentitySha256: "not-a-digest" }),
+    validSuccessReceipt({ tableCount: 0 }),
+    validSuccessReceipt({ rowCount: -1 }),
+    { ...validSuccessReceipt(), artifactKey: "private/object/name" },
     { ...validSuccessReceipt(), secretAccessKey: "must-not-pass" },
   ];
   for (const receipt of invalidReceipts) {
