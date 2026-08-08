@@ -29,12 +29,12 @@ known, but transcript confidentiality is not accepted as a security boundary.
   database-plus-object recovery set, or isolated complete recovery-set restore
   is activated or proved. ACH is disabled, `ACTIVE_LAUNCH_HOLD` is active,
   `GA-OPS-004` and `GA-OPS-009` remain blockers. Local engineering gates pass
-  for application source `aab7e07b`; fresh exact-head pull-request CI remains
-  pending. Verified base `3103048b` is backed by draft PR #25 Gate A Safety run
-  `31269498552`: 14/14 pretest safety checks, 604/604 unit tests, 28/28
-  disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys pass.
-  Launch readiness for the current source remains blocked with exactly 21
-  operational findings.
+  for application source `aab7e07b`. Draft PR #27 Gate A Safety run
+  `31283425853` independently verified review commit `4202fa3` with 14/14
+  pretest safety checks, 607/607 unit/frontend tests, 28/28 disposable-
+  PostgreSQL integration tests, and 4/4 browser E2E journeys, plus clean build,
+  lint, security lint, diff, and dependency audit. The embedded readiness check
+  still reports exactly 21 operational findings.
 
 ## Source scope
 
@@ -163,6 +163,11 @@ set, alert receipt, recurring isolated restore evidence, and later approvals.
   because no `TEST_DATABASE_URL` exists in this isolated worktree; four browser
   E2E journeys; a zero-vulnerability production dependency audit; and diff
   integrity. Launch readiness still reports exactly 21 blockers.
+- Draft PR #27 Gate A Safety run `31283425853` independently verifies the same
+  application source on disposable PostgreSQL: 14/14 pretests, 607/607
+  unit/frontend tests, 28/28 integration tests, all four browser journeys,
+  formatting, and a zero-vulnerability production dependency audit pass. Its
+  readiness evidence still contains the expected 21 operational findings.
 - This is prospective source-level evidence hygiene only. It does not create,
   copy, delete, or restore a provider object; does not prove an independent
   provider, object-byte recovery, recurrence, or alert delivery; does not alter

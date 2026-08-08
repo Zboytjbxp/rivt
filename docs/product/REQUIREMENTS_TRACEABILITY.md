@@ -23,6 +23,11 @@
   `codex/packet-99-evidence-infrastructure`. It remains **Partial**: the change
   is not merged or deployed, and no provider evidence, backup operation,
   production-data access, payment, launch authorization, or cost occurred.
+- Draft PR #27 Gate A Safety run `31283425853` independently verifies review
+  commit `4202fa3` and application source `aab7e07b`: 14/14 pretests, 607/607
+  unit/frontend tests, 28/28 disposable-PostgreSQL integration tests, all four
+  browser journeys, formatting, and the zero-vulnerability production
+  dependency audit pass. Readiness still reports 21 operational findings.
 - Requirement maturity does not change. New typed receipts keep exact
   identifiers only in encrypted, access-restricted operator evidence; existing
   historical repository records are not retroactively erased. Completion and
@@ -69,12 +74,13 @@
 - ACH remains disabled and `ACTIVE_LAUNCH_HOLD` remains active. Recurring
   independently retained database-plus-object recovery remains unproved.
   `GA-OPS-004` and `GA-OPS-009` remain **Blocker**. Local engineering gates
-  pass for application source `aab7e07b`; fresh exact-head pull-request CI
-  remains pending. Verified base `3103048b` is backed by draft PR #25 Gate A
-  Safety run `31269498552`: 14/14 pretest safety checks, 604/604 unit tests,
-  28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys
-  pass. Launch readiness for the current source remains blocked with exactly 21
-  operational findings; historical packet counts below remain context only.
+  pass for application source `aab7e07b`. Draft PR #27 Gate A Safety run
+  `31283425853` independently verified review commit `4202fa3` with 14/14
+  pretest safety checks, 607/607 unit/frontend tests, 28/28 disposable-
+  PostgreSQL integration tests, and 4/4 browser E2E journeys, plus clean build,
+  lint, security lint, diff, and dependency audit. Launch readiness remains
+  blocked with exactly 21 operational findings; historical packet counts below
+  remain context only.
 
 ## Packet 99 - Operator secret-output containment (source controls complete; named rotations closed)
 

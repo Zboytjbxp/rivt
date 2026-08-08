@@ -13,12 +13,12 @@
   evidence, and a database-plus-object recovery-set restore remain unproved.
   ACH remains disabled and
   `ACTIVE_LAUNCH_HOLD` remains active. `GA-OPS-004` and `GA-OPS-009` remain
-  blockers. Local engineering gates pass for application source `aab7e07b`;
-  fresh exact-head pull-request CI remains pending. Verified base `3103048b`
-  is backed by draft PR #25 Gate A Safety run `31269498552`, which passed
-  14/14 pretest safety checks, 604/604 unit tests, 28/28 disposable-PostgreSQL
-  integration tests, and 4/4 browser E2E journeys. Launch readiness for the
-  current source remains blocked with exactly 21 operational findings.
+  blockers. Local engineering gates pass for application source `aab7e07b`.
+  Draft PR #27 Gate A Safety run `31283425853` independently verified review
+  commit `4202fa3` with 14/14 pretest safety checks, 607/607 unit/frontend
+  tests, 28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E
+  journeys, plus clean build, lint, security lint, diff, and dependency audit.
+  The embedded readiness check still reports exactly 21 operational findings.
 
 | ID | Severity | Risk | Current evidence | Required mitigation / exit |
 |---|---:|---|---|---|

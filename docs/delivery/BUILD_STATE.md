@@ -17,12 +17,13 @@ release candidate pins Node 22. Invoice bank payments/ACH remain disabled, the
 blockers. Recurring independently retained complete recovery is not proved: no
 approved scheduler activation, independent backup-provider retention, recurring
 recovery set, or isolated database-plus-object recovery-set restore is claimed.
-Local engineering gates pass for application source `aab7e07b`; fresh
-exact-head pull-request CI remains pending. Its verified base `3103048b` is
-backed by draft PR #25 Gate A Safety run `31269498552`, which completed with
-14/14 pretest safety checks, 604/604 unit tests, 28/28 disposable-PostgreSQL
-integration tests, and 4/4 browser E2E journeys passing. Launch readiness for
-the current source remains blocked with exactly 21 operational findings.
+Local engineering gates pass for application source `aab7e07b`. Draft PR #27
+Gate A Safety run `31283425853` independently verified review commit `4202fa3`
+with 14/14 pretest safety checks, 607/607 unit/frontend tests, 28/28
+disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys passing,
+plus clean build, lint, security lint, diff, and dependency audit. The embedded
+readiness check still reports exactly 21 operational findings; the review run
+records that fail-closed result and does not clear the launch hold.
 
 Operational status: a 2026-08-03 Railway configuration audit caused a new
 restricted-output exposure of current production credentials. No misuse
@@ -107,6 +108,11 @@ Railway Stage 1 remain paused.
   E2E journeys; `npm audit --omit=dev` with zero known vulnerabilities; and
   diff integrity. `launch:readiness --json` remains blocked with the same 21
   incident, recovery, and disabled-payment evidence findings.
+- Draft PR #27 Gate A Safety run `31283425853` independently verifies the same
+  application source on disposable PostgreSQL: 14/14 pretests, 607/607
+  unit/frontend tests, 28/28 integration tests, all four browser journeys,
+  formatting, and a zero-vulnerability production dependency audit pass. Its
+  readiness evidence still contains the expected 21 operational findings.
 - This is prospective repository-evidence hygiene. New typed receipts keep
   exact provider identifiers only in encrypted, access-restricted operator
   evidence; existing historical repository records are not retroactively
