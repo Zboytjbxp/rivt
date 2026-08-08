@@ -1,4 +1,11 @@
-import { apiPath, fetchWithTimeout, notifySessionExpired, requestKey, RivtApiError } from "../../lib/api";
+import {
+  apiPath,
+  fetchWithTimeout,
+  notifySessionExpired,
+  requestKey,
+  RIVT_EXPECTED_ACCOUNT_HEADER,
+  RivtApiError,
+} from "../../lib/api";
 
 export type ToolRecordType =
   | "payment_record"
@@ -46,11 +53,17 @@ export interface ToolRecordInput {
   payload?: Record<string, unknown>;
 }
 
-export async function fetchToolRecords(recordType?: ToolRecordType): Promise<ServerToolRecord[] | null> {
+export async function fetchToolRecords(
+  recordType?: ToolRecordType,
+  expectedAccountId?: string,
+): Promise<ServerToolRecord[] | null> {
   try {
     const suffix = recordType ? `?type=${encodeURIComponent(recordType)}` : "";
-    const response = await fetchWithTimeout(apiPath(`/api/v1/tool-records${suffix}`), { credentials: "include" });
-    if (response.status === 401) notifySessionExpired();
+    const response = await fetchWithTimeout(apiPath(`/api/v1/tool-records${suffix}`), {
+      credentials: "include",
+      headers: expectedAccountId ? { [RIVT_EXPECTED_ACCOUNT_HEADER]: expectedAccountId } : undefined,
+    });
+    if (response.status === 401) notifySessionExpired(expectedAccountId);
     if (!response.ok) return null;
     const body = await response.json().catch(() => null) as { data?: { records?: ServerToolRecord[] } } | null;
     return Array.isArray(body?.data?.records) ? body!.data!.records! : null;
