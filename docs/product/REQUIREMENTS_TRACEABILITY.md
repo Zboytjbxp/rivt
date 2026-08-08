@@ -46,10 +46,11 @@
   candidate or `master` and is not deployed. No production source, data,
   migration, provider, payment, ACH, or cost evidence is created.
 - Requirement maturity does not change. Independent security re-review found
-  no remaining source bypass. The dependency gate is still red on the
-  inherited high-severity `nanoid@3.3.16` advisory, and exact-source database
-  CI, accepted-source merge, exact deployment, and account-switch revalidation
-  remain open with `R-063`. Packet 99's credential incident,
+  no remaining source bypass. Bounded transitive patch commit
+  `b1c99e7fb54762c26f079b26bea3be7d51ae4566` clears the dependency audit with
+  zero known vulnerabilities, and all four required surface smokes pass.
+  Exact-source database CI, accepted-source merge, exact deployment, and
+  account-switch revalidation remain open with `R-063`. Packet 99's credential incident,
   backup/recovery work, `ACTIVE_LAUNCH_HOLD`, ACH-disabled posture,
   feature-release pause, Stage 1 pause, and public-launch block are unchanged.
 

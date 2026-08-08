@@ -152,17 +152,22 @@ Implementation and regression coverage are committed at
   worktree.
 - `npm run test:e2e`: pass for authentication fail-closed, Jobs/discovery,
   offline recovery, and production CSP journeys.
+- `npm run lint:security`: pass, including the operator-command policy.
+- `npm run test:ui:shop-talk-news`: pass.
+- `npm run test:ui:mobile-actions`: pass.
+- `npm run test:ui:work-lifecycle`: pass.
 - Independent read-only security re-review: pass; no remaining source bypass
   found. A deliberately delayed Account A response after a B remount remains a
   non-blocking dynamic coverage opportunity; keyed remount plus effect cleanup
   closes it by static trace.
-- `npm audit --omit=dev`: blocked by a pre-existing high-severity advisory in
-  transitive `nanoid@3.3.16`. The Receivables patch does not introduce or alter
-  that dependency. It requires a separate bounded dependency packet before
-  Packet 100 can satisfy its full acceptance gate.
+- `npm audit --omit=dev`: pass with zero known vulnerabilities after bounded,
+  compatible transitive patch updates in commit
+  `b1c99e7fb54762c26f079b26bea3be7d51ae4566` (`nanoid` 3.3.16 -> 3.3.18 and
+  `brace-expansion` 5.0.8 -> 5.0.9). No direct dependency, API, or runtime
+  behavior changed.
 
-Pull-request evidence, accepted-source merge, deployment, and physical
-account-switch revalidation are not recorded.
+Exact-source database CI, pull-request evidence, accepted-source merge,
+deployment, and physical account-switch revalidation are not recorded.
 
-Packet status: **Active - privacy regression and code gates pass; dependency
-gate, merge, deployment, and physical revalidation remain pending**.
+Packet status: **Active - local engineering and dependency gates pass;
+database CI, merge, deployment, and physical revalidation remain pending**.

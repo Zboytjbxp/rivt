@@ -2,11 +2,11 @@
 
 Last updated: 2026-08-08 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Packet 100's Receivables account-isolation regression, build, lint, test, browser E2E, and independent security re-review pass. The dependency gate is blocked by a pre-existing high-severity `nanoid@3.3.16` advisory; database-backed cases were not rerun locally because `TEST_DATABASE_URL` is absent. Dependency remediation, exact-source CI/database proof, merge, deployment, and physical account-switch revalidation remain pending. Packet 99's active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Current phase: Packet 100's Receivables account-isolation regression, build, lint, security lint, test, browser E2E, four required surface smokes, dependency audit, and independent security re-review pass. Compatible transitive security patches are committed at `b1c99e7fb54762c26f079b26bea3be7d51ae4566`. Database-backed cases were not rerun locally because `TEST_DATABASE_URL` is absent. Exact-source CI/database proof, merge, deployment, and physical account-switch revalidation remain pending. Packet 99's active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
 Active packet: `docs/delivery/packets/100_RECEIVABLES_ACCOUNT_ISOLATION.md`
 Repository branch: `codex/receivables-tenant-boundary`
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
-Current Packet 100 candidate source: `8ee0d306502f783d323373b6d42d521ce18d9970`, based on release-candidate source `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` from draft PR #25
+Current Packet 100 implementation source: `8ee0d306502f783d323373b6d42d521ce18d9970`, with bounded audited transitive patches at `b1c99e7fb54762c26f079b26bea3be7d51ae4566`, based on release-candidate source `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` from draft PR #25
 Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -79,13 +79,15 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
 - Independent read-only security re-review found no remaining bypass. A
   delayed-response race is protected by keyed remount and effect cleanup but
   is not yet represented by a deliberately held-response runtime assertion.
-- `npm audit --omit=dev` remains red because the inherited lockfile resolves
-  transitive `nanoid@3.3.16`, which has one high-severity advisory. Packet 100
-  did not introduce that dependency; a separate bounded dependency packet is
-  required before this packet's full gate can be accepted.
+- A bounded lockfile-only security update moved transitive `nanoid` from
+  3.3.16 to 3.3.18 and `brace-expansion` from 5.0.8 to 5.0.9 without changing
+  direct dependencies. The exact candidate rebuilds and `npm audit --omit=dev`
+  reports zero known vulnerabilities.
+- Security lint plus Shop Talk/Trade News, mobile actions, Work lifecycle, and
+  the full Tools surface smokes pass on the patched candidate.
 - `GA-FND-003`, `GA-UX-005`, `GA-OPS-007`, and `GA-OPS-008` remain Partial.
-  `R-063` remains open until the dependency gate, exact-source CI/database
-  verification, merge, deployment, and account-switch revalidation complete.
+  `R-063` remains open until exact-source CI/database verification, merge,
+  deployment, and account-switch revalidation complete.
 - This source-only packet performs and authorizes no browser-data or customer-
   data deletion, ownership assignment, schema or data migration, provider
   access or configuration, payment or ACH activity, merge, deployment, public
