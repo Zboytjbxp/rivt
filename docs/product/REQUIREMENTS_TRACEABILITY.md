@@ -1,13 +1,14 @@
 # Gate A Requirements Traceability
 
-## Current release evidence boundary - 2026-08-04
+## Current release evidence boundary - 2026-08-08
 
 - Production and `origin/master` are at
   `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` and remain on Node 20. PR #22
   contributes source-only backup tooling; it is not proof of a running
   scheduler, independent retention provider, recurring artifact, or restore.
-- Release candidate `codex/final-release-candidate-20260804` is at
-  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` in draft PR #25. It contains integration merge
+- Packet 100 candidate `codex/receivables-tenant-boundary` is at
+  `8ee0d306502f783d323373b6d42d521ce18d9970`, based on release candidate
+  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` in draft PR #25. The underlying release candidate contains integration merge
   `6726bbbad92e018cbd9992bebfc556c5f7dd7e60`, scheduler-source merge
   `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`, and pins Node 22. It is not
   deployed.
@@ -15,11 +16,42 @@
   recurrence, provider activation, and isolated current-artifact restore are
   unproved. `GA-OPS-004` and `GA-OPS-009` remain **Blocker**. Exact-candidate
   local engineering gates pass, while launch readiness remains blocked with
-  exactly 21 findings. Draft PR #25 Gate A Safety run `30955179943` adds
+  exactly 21 operational findings before the newly identified Packet 100
+  privacy defect. Draft PR #25 Gate A Safety run `30955179943` adds
   database-backed candidate proof: 14/14 pretest safety checks, 603/603 unit
   tests, 28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E
   journeys pass. Its final exit 1 is the intended launch-readiness refusal;
-  historical packet counts below remain context only.
+  historical packet counts below remain context only. Packet 100 focused and
+  repository-wide execution evidence, independent security re-review, merge,
+  and deployment are not yet recorded.
+
+## Packet 100 - Receivables account isolation (source fix committed; verification pending)
+
+- `GA-FND-003` remains **Partial**. Authenticated Receivables no longer merges
+  ownerless data from the browser-wide `rivt.payments.v1` key. Source
+  `8ee0d306502f783d323373b6d42d521ce18d9970` starts the view empty and renders
+  only server-returned, account-owned `payment_record` rows. The old browser
+  value is quarantined without deletion or assignment to the current account.
+- `GA-UX-005` remains **Partial**. An account-check failure clears Receivables
+  and shows a retryable error instead of exposing browser-local rows or keeping
+  a prior account's server result on screen.
+- `GA-OPS-007` remains **Partial**. The commit adds rendered regression
+  coverage for an ownerless browser row, Account A to Account B switching,
+  expected-account request binding, prior-result clearing, API failure, and
+  non-destructive quarantine. The focused smoke passes across desktop, 390px,
+  and 320px viewports; build, lint, 603/603 unit/frontend tests, available
+  non-database integration checks, and four browser E2E journeys pass.
+- `GA-OPS-008` remains **Partial**. The fix is committed only on
+  `codex/receivables-tenant-boundary`; it is not merged to the release
+  candidate or `master` and is not deployed. No production source, data,
+  migration, provider, payment, ACH, or cost evidence is created.
+- Requirement maturity does not change. Independent security re-review found
+  no remaining source bypass. The dependency gate is still red on the
+  inherited high-severity `nanoid@3.3.16` advisory, and exact-source database
+  CI, accepted-source merge, exact deployment, and account-switch revalidation
+  remain open with `R-063`. Packet 99's credential incident,
+  backup/recovery work, `ACTIVE_LAUNCH_HOLD`, ACH-disabled posture,
+  feature-release pause, Stage 1 pause, and public-launch block are unchanged.
 
 ## Packet 99 - Operator secret-output containment (source controls complete; rotation in progress)
 

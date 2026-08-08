@@ -1,12 +1,12 @@
 # RIVT Build State
 
-Last updated: 2026-08-04 America/New_York
+Last updated: 2026-08-08 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Exact release-candidate engineering gates are complete, including disposable-PostgreSQL proof in draft PR #25; the active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
-Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
-Repository branch: `codex/final-release-candidate-20260804`
+Current phase: Packet 100's Receivables account-isolation regression, build, lint, test, browser E2E, and independent security re-review pass. The dependency gate is blocked by a pre-existing high-severity `nanoid@3.3.16` advisory; database-backed cases were not rerun locally because `TEST_DATABASE_URL` is absent. Dependency remediation, exact-source CI/database proof, merge, deployment, and physical account-switch revalidation remain pending. Packet 99's active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Active packet: `docs/delivery/packets/100_RECEIVABLES_ACCOUNT_ISOLATION.md`
+Repository branch: `codex/receivables-tenant-boundary`
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
-Current release-candidate source: `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` in draft PR #25, containing integration merge `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`
+Current Packet 100 candidate source: `8ee0d306502f783d323373b6d42d521ce18d9970`, based on release-candidate source `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` from draft PR #25
 Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -16,8 +16,11 @@ release candidate pins Node 22. Invoice bank payments/ACH remain disabled, the
 `ACTIVE_LAUNCH_HOLD` remains active, and `GA-OPS-004` plus `GA-OPS-009` remain
 blockers. Backup recurrence is not proved: no scheduler activation, independent
 backup-provider activation, current recurring artifact, or isolated restore is
-claimed. Exact-candidate local engineering gates pass, but launch readiness
-remains blocked with exactly 21 findings. Draft PR #25 Gate A Safety run
+claimed. The underlying release-candidate engineering gates passed at
+`aa5b5361374bce0ae51d71cbe4b6d8031a605c61`, but Packet 100 source
+`8ee0d306502f783d323373b6d42d521ce18d9970` does not yet have complete gate or
+deployment evidence. Launch readiness remains blocked with exactly 21
+operational findings before this newly identified privacy defect. Draft PR #25 Gate A Safety run
 `30955179943` completed with 14/14 pretest safety checks, 603/603 unit tests,
 28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys
 passing. The workflow ended with exit 1 only because the required launch-
@@ -49,6 +52,48 @@ and an unused intermediate were retired only after owner-controlled delivery
 proof, and final provider inventory shows exactly one restricted sending key.
 Backup encryption remains pending. The incident and `ACTIVE_LAUNCH_HOLD`
 remain open; the feature release, launch, and Railway Stage 1 remain paused.
+
+## Packet 100 Receivables account isolation - active; verification pending
+
+- A validated Low/P3 release-candidate defect showed that the authenticated
+  Receivables view could append ownerless rows from the browser-wide
+  `rivt.payments.v1` key to the current account's server response. On a shared
+  browser, that could expose a prior account's title, amount, date, status, or
+  private notes.
+- Source `8ee0d306502f783d323373b6d42d521ce18d9970` removes the browser merge from
+  authenticated Receivables. The view now starts empty, renders only
+  server-returned `payment_record` rows, binds the read to the rendered account
+  through the existing expected-account header, remounts when the account ID
+  changes, and clears results if the account cannot be checked.
+- The legacy browser value is quarantined in place. Packet 100 neither deletes
+  it nor assigns it to the account currently using the browser. Any future
+  recovery requires a separate ownership-confirming design and reviewed
+  migration boundary.
+- The committed rendered regression seeds an ownerless browser row, exercises
+  Account A and Account B server records, switches accounts, and forces a 503.
+  It asserts that prior-account and ownerless rows never render, each request
+  carries the correct expected account ID, and quarantine does not silently
+  delete the legacy value. It passes on desktop, 390px mobile, and 320px compact
+  viewports. Build, lint, 603/603 unit/frontend tests, the available non-
+  database integration harness, and all four browser E2E journeys pass.
+- Independent read-only security re-review found no remaining bypass. A
+  delayed-response race is protected by keyed remount and effect cleanup but
+  is not yet represented by a deliberately held-response runtime assertion.
+- `npm audit --omit=dev` remains red because the inherited lockfile resolves
+  transitive `nanoid@3.3.16`, which has one high-severity advisory. Packet 100
+  did not introduce that dependency; a separate bounded dependency packet is
+  required before this packet's full gate can be accepted.
+- `GA-FND-003`, `GA-UX-005`, `GA-OPS-007`, and `GA-OPS-008` remain Partial.
+  `R-063` remains open until the dependency gate, exact-source CI/database
+  verification, merge, deployment, and account-switch revalidation complete.
+- This source-only packet performs and authorizes no browser-data or customer-
+  data deletion, ownership assignment, schema or data migration, provider
+  access or configuration, payment or ACH activity, merge, deployment, public
+  launch, launch-hold clearance, or added cost.
+- Packet 99 remains operationally open and paused, not closed or superseded.
+  The production credential incident, backup/recovery boundary,
+  `ACTIVE_LAUNCH_HOLD`, ACH-disabled posture, feature-release pause, Railway
+  Stage 1 pause, and public-launch block remain unchanged.
 
 ## Packet 99 operator secret-output containment - active; backup-encryption rotation pending
 

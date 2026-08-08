@@ -35,6 +35,8 @@ tightly controlled sessions. Do not combine packets to save time.
 | 96 | Reachable three-revision `S -> E -> A` provider-evidence approval lifecycle without transferring policy authority to later roots |
 | 97 | Exact source-bound provider-control contract and fail-closed provider adapters |
 | 98 | Protected human-attested incident-rehearsal workflow and read-only exact-source smoke |
+| 99 | Operator secret-output containment and production credential-rotation boundary |
+| 100 | Quarantine unowned legacy Receivables browser rows and bind authenticated reads to the current account |
 
 Before each packet read:
 
