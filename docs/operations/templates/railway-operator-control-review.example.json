@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "source": "operator_activation_control_review_v1",
+  "reviewedAt": null,
+  "reviewedBy": null,
+  "environmentName": null,
+  "environmentIdFingerprint": null,
+  "connectedBranch": null,
+  "autodeployMode": null,
+  "effectiveConfigSource": null,
+  "serverlessDisabled": null,
+  "billingCycleStartsAt": null,
+  "billingCycleEndsAt": null,
+  "services": [
+    {
+      "name": "web",
+      "configPath": null,
+      "startCommand": null,
+      "preDeployCommand": null,
+      "healthcheckPath": null,
+      "renderedReplicaCount": null,
+      "region": null,
+      "volumeAttached": null,
+      "serverlessDisabled": null,
+      "pushRequired": null,
+      "drainingSeconds": null,
+      "deploymentTrigger": null
+    },
+    {
+      "name": "worker",
+      "configPath": null,
+      "startCommand": null,
+      "preDeployCommand": null,
+      "healthcheckPath": null,
+      "renderedReplicaCount": null,
+      "region": null,
+      "volumeAttached": null,
+      "serverlessDisabled": null,
+      "pushRequired": null,
+      "drainingSeconds": null,
+      "deploymentTrigger": null
+    }
+  ],
+  "database": {
+    "privateEndpointConfirmed": null,
+    "endpointMode": null,
+    "observedGlobalUsableConnections": null,
+    "observedEffectiveConnections": null,
+    "declaredMaxConnections": null,
+    "webPoolMax": null,
+    "workerPoolMax": null,
+    "migratePoolMax": null,
+    "reservedConnections": null,
+    "oldCombinedPoolMax": null
+  },
+  "monitoring": {
+    "publicUptimeConfigured": null,
+    "workerHeartbeatConfigured": null,
+    "pushBacklogAlertConfigured": null,
+    "deadLetterAlertConfigured": null,
+    "resourceAlertsConfigured": null,
+    "alertReceiverTested": null,
+    "onCallOwner": null
+  },
+  "cost": {
+    "currentMonthActualUsd": null,
+    "currentMonthEstimateBeforeUsd": null,
+    "agentUsageUsd": null,
+    "providerHardLimitVerified": null,
+    "providerEnforcedHardLimitUsd": null,
+    "providerHardLimitScope": null,
+    "providerHardLimitCanStopWorkspace": null,
+    "agentMonthlyLimitUsd": null
+  }
+}

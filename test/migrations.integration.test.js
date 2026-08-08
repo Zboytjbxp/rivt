@@ -16,8 +16,44 @@ const expectedPendingAfter = (version) => latestMigrationVersion - version;
 
 if (!testDatabaseUrl) {
   test("versioned migration lifecycle", { skip: "TEST_DATABASE_URL is not configured" }, () => {});
+  test("concurrent migration contenders serialize", { skip: "TEST_DATABASE_URL is not configured" }, () => {});
 } else {
   const { Pool } = pg;
+
+  test("concurrent migration contenders serialize", async () => {
+    const schema = `packet93_${randomUUID().replaceAll("-", "")}`;
+    const admin = new Pool({ connectionString: testDatabaseUrl, ssl: false });
+    await admin.query(`CREATE SCHEMA "${schema}"`);
+    const poolOptions = {
+      connectionString: testDatabaseUrl,
+      ssl: false,
+      options: `-c search_path=${schema},pg_catalog`,
+      max: 1,
+    };
+    const first = new Pool(poolOptions);
+    const second = new Pool(poolOptions);
+
+    try {
+      const [left, right] = await Promise.all([
+        migrateUp(first),
+        migrateUp(second),
+      ]);
+      assert.equal(left.latestVersion, latestMigrationVersion);
+      assert.equal(right.latestVersion, latestMigrationVersion);
+      const ledger = await first.query(
+        `SELECT count(*)::int AS applied,
+                count(DISTINCT version)::int AS distinct_versions
+         FROM schema_migrations`,
+      );
+      assert.equal(ledger.rows[0].applied, latestMigrationVersion);
+      assert.equal(ledger.rows[0].distinct_versions, latestMigrationVersion);
+    } finally {
+      await first.end();
+      await second.end();
+      await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
+      await admin.end();
+    }
+  });
 
   test("versioned migration lifecycle", async () => {
     const schema = `packet01_${randomUUID().replaceAll("-", "")}`;
@@ -681,9 +717,16 @@ if (!testDatabaseUrl) {
 
       const stored = await database.query("SELECT checksum FROM schema_migrations WHERE version = 14");
       await database.query("UPDATE schema_migrations SET checksum = 'tampered' WHERE version = 14");
-      await migrationStatus(database);
-      const repaired = await database.query("SELECT checksum FROM schema_migrations WHERE version = 14");
-      assert.equal(repaired.rows[0].checksum, stored.rows[0].checksum);
+      await assert.rejects(
+        migrationStatus(database),
+        /checksum does not match source/,
+      );
+      const preserved = await database.query("SELECT checksum FROM schema_migrations WHERE version = 14");
+      assert.equal(preserved.rows[0].checksum, "tampered");
+      await database.query(
+        "UPDATE schema_migrations SET checksum = $1 WHERE version = 14",
+        [stored.rows[0].checksum],
+      );
     } finally {
       await database.end();
       await admin.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);

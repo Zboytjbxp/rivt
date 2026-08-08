@@ -1,0 +1,11 @@
+flowchart LR
+    U["Browser / PWA"] --> RE["Railway public edge"]
+    RE --> APP["One RIVT Node process"]
+    APP --> API["Express API + static app"]
+    APP --> MIG["Startup migrations"]
+    APP --> PUSH["Push delivery loop"]
+    APP --> MAINT["Database maintenance loop"]
+    API --> PG["One PostgreSQL service + volume"]
+    API --> OBJ["Railway private buckets"]
+    API --> EXT["Stripe / Resend / OAuth / Web Push"]
+    MON["External synthetic monitor + Sentry"] --> RE

@@ -26,6 +26,7 @@ jobs:
     permissions: {}
     outputs:
       mode: ${{ steps.mode.outputs.mode }}
+      ref_protected: ${{ steps.protection.outputs.ref_protected }}
     steps:
       - name: Require the canonical repository and master branch
         shell: bash
@@ -39,6 +40,18 @@ jobs:
           test "$EVENT_REPOSITORY" = "Zboytjbxp/rivt"
           test "$EVENT_REF" = "refs/heads/master"
           test "$EVENT_NAME" = "schedule" || test "$EVENT_NAME" = "workflow_dispatch"
+      - id: protection
+        name: Record the protected-master guard without suppressing incident reconciliation
+        shell: bash
+        env:
+          REF_IS_PROTECTED: ${{ github.ref_protected }}
+        run: |
+          set -euo pipefail
+          if [[ "$REF_IS_PROTECTED" == "true" ]]; then
+            echo "ref_protected=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref_protected=false" >> "$GITHUB_OUTPUT"
+          fi
       - id: mode
         name: Select the bounded monitor mode
         shell: bash
@@ -56,7 +69,9 @@ jobs:
   verify:
     name: Verify newest immutable backup
     needs: validate_invocation
-    if: needs.validate_invocation.outputs.mode == 'verify'
+    if: >-
+      needs.validate_invocation.outputs.mode == 'verify' &&
+      needs.validate_invocation.outputs.ref_protected == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     permissions:
@@ -66,20 +81,24 @@ jobs:
       ok: ${{ steps.monitor.outputs.ok }}
       error_code: ${{ steps.monitor.outputs.error_code }}
     steps:
-      - name: Check out the reviewed production source
+      - name: Check out the full canonical protected-master history
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ vars.BACKUP_EXPECTED_SOURCE_COMMIT }}
+          ref: refs/heads/master
+          fetch-depth: 0
           persist-credentials: false
 
-      - name: Require the checked-out commit to match the protected source binding
+      - name: Require the expected source binding to be protected-master history
         shell: bash
         env:
           EXPECTED_SOURCE_COMMIT: ${{ vars.BACKUP_EXPECTED_SOURCE_COMMIT }}
         run: |
           set -euo pipefail
           [[ "$EXPECTED_SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]
-          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_COMMIT"
+          protected_master_commit="$(git rev-parse HEAD)"
+          git cat-file -e "$EXPECTED_SOURCE_COMMIT^{commit}"
+          git merge-base --is-ancestor "$EXPECTED_SOURCE_COMMIT" "$protected_master_commit"
+          test "$(git rev-parse HEAD)" = "$protected_master_commit"
 
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -150,7 +169,9 @@ jobs:
   alert_test:
     name: Exercise alert route
     needs: validate_invocation
-    if: needs.validate_invocation.outputs.mode == 'alert_test'
+    if: >-
+      needs.validate_invocation.outputs.mode == 'alert_test' &&
+      needs.validate_invocation.outputs.ref_protected == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions: {}
@@ -180,6 +201,7 @@ jobs:
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
           MONITOR_MODE: ${{ needs.validate_invocation.outputs.mode }}
+          REF_IS_PROTECTED: ${{ needs.validate_invocation.outputs.ref_protected }}
           VERIFY_RESULT: ${{ needs.verify.result }}
           VERIFY_OK: ${{ needs.verify.outputs.ok }}
           VERIFY_ERROR_CODE: ${{ needs.verify.outputs.error_code }}
@@ -194,7 +216,9 @@ jobs:
             const bot = "github-actions[bot]";
             const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
             const mode = process.env.MONITOR_MODE;
-            const verificationPassed = mode === "verify"
+            const refProtected = process.env.REF_IS_PROTECTED === "true";
+            const verificationPassed = refProtected
+              && mode === "verify"
               && process.env.VERIFY_RESULT === "success"
               && process.env.VERIFY_OK === "true";
             const allowedCodes = new Set([
@@ -205,11 +229,14 @@ jobs:
               "BACKUP_OBJECT_INVALID",
               "BACKUP_OPERATION_FAILED",
               "BACKUP_PROVIDER_CHECK_FAILED",
+              "BACKUP_REF_UNPROTECTED",
               "BACKUP_SOURCE_MISMATCH",
             ]);
-            const requestedCode = mode === "alert_test"
-              ? process.env.ALERT_TEST_ERROR_CODE
-              : process.env.VERIFY_ERROR_CODE;
+            const requestedCode = !refProtected
+              ? "BACKUP_REF_UNPROTECTED"
+              : mode === "alert_test"
+                ? process.env.ALERT_TEST_ERROR_CODE
+                : process.env.VERIFY_ERROR_CODE;
             const errorCode = allowedCodes.has(requestedCode)
               ? requestedCode
               : "BACKUP_OPERATION_FAILED";
@@ -221,6 +248,7 @@ jobs:
               BACKUP_OBJECT_INVALID: "The newest backup artifact did not pass integrity checks.",
               BACKUP_OPERATION_FAILED: "The backup monitor did not complete safely.",
               BACKUP_PROVIDER_CHECK_FAILED: "The backup provider could not be verified.",
+              BACKUP_REF_UNPROTECTED: "The canonical production branch is not protected; backup verification was blocked.",
               BACKUP_SOURCE_MISMATCH: "The newest backup source revision is not the approved revision.",
             };
             if (mode !== "verify" && mode !== "alert_test") {

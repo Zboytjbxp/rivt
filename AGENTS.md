@@ -19,6 +19,21 @@
 - Do not regenerate or approximate approved RIVT logos.
 - Keep the five primary concepts: Home, Work, Crew, Shop Talk, Tools. Messages, notifications, search, and profile use the top bar.
 
+## Production provider-output safety
+
+- Never enumerate, export, print, redirect, or capture an entire production
+  provider environment, even when the command is described as read-only or
+  JSON-only.
+- The Railway commands `railway environment config` and every `railway
+  variable`/`railway variables` enumeration or export are prohibited against
+  production. Do not place a secret in a CLI argument or shell command.
+- For Railway activation evidence, use only the sanitized snapshot path in
+  `docs/operations/RAILWAY_ACTIVATION_RUNBOOK.md`. Change one named secret at a
+  time through an authenticated provider or Railway form.
+- If a credential appears in tool output, stop immediately. Do not repeat,
+  summarize, store, screenshot, or paste it. Preserve the launch hold and
+  follow `docs/operations/CREDENTIAL_ROTATION_RUNBOOK.md`.
+
 ## Verification
 
 After relevant changes run:

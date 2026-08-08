@@ -1,0 +1,11 @@
+flowchart LR
+  App["RIVT backup runner"] --> Snapshot["Consistent DB and object manifest"]
+  Snapshot --> Cipher["Client-side encryption and integrity checks"]
+  Cipher --> Immutable["Separate-provider immutable backup account"]
+  Immutable --> Versioned["Versioning and retention/Object Lock"]
+  Recovery["Separate recovery credential"] --> Versioned
+  Versioned --> Temp["Isolated DB and object restore targets"]
+  Temp --> Verify["Hash, format, schema, and count verification"]
+  Verify --> Monitor["Audited restore evidence and alerts"]
+  Compromise["Production Railway account compromise"] --> App
+  Compromise -. "No delete authority in backup account" .-> Immutable

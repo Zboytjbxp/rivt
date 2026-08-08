@@ -228,12 +228,14 @@ test("incident body uses only static text, validated URLs, and allowlisted codes
 
 test("workflow keeps verification, alert testing, and issue mutation separated and fail closed", () => {
   const workflowPath = fileURLToPath(new URL("../.github/workflows/backup-freshness.yml", import.meta.url));
-  const workflow = fs.readFileSync(workflowPath, "utf8");
+  const workflow = fs.readFileSync(workflowPath, "utf8").replaceAll("\r\n", "\n");
   assert.match(workflow, /cron: "37 \* \* \* \*"/);
   assert.match(workflow, /queue: max/);
   assert.match(workflow, /environment: production-backup-monitor/);
-  assert.match(workflow, /ref: \$\{\{ vars\.BACKUP_EXPECTED_SOURCE_COMMIT \}\}/);
-  assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$EXPECTED_SOURCE_COMMIT"/);
+  assert.match(workflow, /ref: refs\/heads\/master/);
+  assert.match(workflow, /git merge-base --is-ancestor "\$EXPECTED_SOURCE_COMMIT" "\$protected_master_commit"/);
+  assert.match(workflow, /test "\$\(git rev-parse HEAD\)" = "\$protected_master_commit"/);
+  assert.doesNotMatch(workflow, /ref: \$\{\{ vars\.BACKUP_EXPECTED_SOURCE_COMMIT \}\}/);
   assert.match(workflow, /BACKUP_MONITOR_S3_ACCESS_KEY_ID/);
   assert.match(workflow, /BACKUP_MONITOR_S3_SECRET_ACCESS_KEY/);
   assert.match(workflow, /unset BACKUP_DESTINATION_S3_ENDPOINT[\s\S]*BACKUP_ENCRYPTION_KEY/);
@@ -257,4 +259,23 @@ test("workflow keeps verification, alert testing, and issue mutation separated a
   for (const forbidden of ["uses: actions/checkout", "npm ", "secrets.", "BACKUP_ENCRYPTION_KEY"]) {
     assert.equal(alertJob.includes(forbidden), false, `alert-test contains ${forbidden}`);
   }
+});
+
+test("dedicated Railway backup config runs only the bounded scheduled backup job", () => {
+  const configPath = fileURLToPath(new URL("../railway.backup.json", import.meta.url));
+  const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+
+  assert.equal(config.build.builder, "NIXPACKS");
+  assert.equal(config.build.buildCommand, "npm run build");
+  assert.equal(config.deploy.startCommand, "npm run backup:scheduled");
+  assert.equal(config.deploy.startCommand.includes("backup:logical-artifact"), false);
+  assert.equal(config.deploy.numReplicas, 1);
+  assert.equal(config.deploy.restartPolicyType, "NEVER");
+  assert.equal(config.deploy.restartPolicyMaxRetries, null);
+  assert.equal(config.deploy.cronSchedule, "7 */12 * * *");
+  assert.equal(config.deploy.overlapSeconds, 0);
+  assert.equal(config.deploy.drainingSeconds, 0);
+  assert.equal(config.deploy.startCommand.includes("npm start"), false);
+  assert.equal(config.deploy.healthcheckPath, undefined);
+  assert.equal(config.deploy.preDeployCommand, undefined);
 });

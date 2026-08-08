@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   assertPasswordNotBreached,
   assertStrongPassword,
+  authMetadataPepperStatus,
   buildAppleAuthorizationUrl,
   buildGoogleAuthorizationUrl,
   deviceLabelFromUserAgent,
@@ -11,6 +12,27 @@ import {
   safeRedirectPath,
   verifyLoginPassword,
 } from "../server/auth.js";
+
+test("production session metadata requires a trimmed 32-byte pepper", () => {
+  assert.equal(authMetadataPepperStatus({
+    env: { NODE_ENV: "production", AUTH_METADATA_PEPPER: " ".repeat(64) },
+  }).ok, false);
+  assert.deepEqual(authMetadataPepperStatus({
+    env: { NODE_ENV: "production", AUTH_METADATA_PEPPER: "short-placeholder" },
+  }), {
+    ok: false,
+    provider: "session_security",
+    purpose: "Privacy-safe session metadata",
+    mode: "setup_required",
+    missing: ["AUTH_METADATA_PEPPER"],
+  });
+  assert.equal(authMetadataPepperStatus({
+    env: { NODE_ENV: "production", AUTH_METADATA_PEPPER: "a".repeat(32) },
+  }).ok, true);
+  assert.equal(authMetadataPepperStatus({
+    env: { NODE_ENV: "test", AUTH_METADATA_PEPPER: "" },
+  }).ok, true);
+});
 
 test("password policy accepts strong passwords and rejects incomplete passwords", () => {
   assert.equal(assertStrongPassword("A-strong-pass9"), "A-strong-pass9");

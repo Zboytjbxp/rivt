@@ -1,0 +1,354 @@
+name: Production Incident Rehearsal
+run-name: "Incident rehearsal: public-health-provider-failure / incident-commander"
+
+on:
+  workflow_dispatch:
+    inputs:
+      controlled_failure_exercised:
+        description: Confirm a bounded failure was exercised without mutating production data
+        required: true
+        type: boolean
+      human_page_received:
+        description: Confirm the assigned incident owner received the real alert or page
+        required: true
+        type: boolean
+      incident_roles_assigned:
+        description: Confirm incident commander and support communicator roles were assigned
+        required: true
+        type: boolean
+      recovery_confirmed:
+        description: Confirm the simulated failure was cleared and recovery was observed
+        required: true
+        type: boolean
+      kill_switch_decision_recorded:
+        description: Confirm the decision to use or not use a kill switch was recorded
+        required: true
+        type: boolean
+      decision_log_reference:
+        description: Non-secret incident-note or GitHub issue reference containing the human timeline
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-incident-rehearsal
+  cancel-in-progress: false
+
+jobs:
+  rehearsal:
+    name: rehearsal
+    if: >-
+      github.repository == 'Zboytjbxp/rivt' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/master' &&
+      github.event.repository.default_branch == 'master' &&
+      github.ref_protected == true &&
+      github.ref_name == 'master'
+    environment: production-rehearsal
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      EXPECTED_SOURCE_COMMIT: ${{ github.sha }}
+      RIVT_MONITOR_BASE_URL: https://rivt.pro
+      RIVT_REHEARSAL_COMMANDER_ROLE_ID: incident-commander
+      RIVT_REHEARSAL_SCENARIO: public-health-provider-failure
+
+    steps:
+      - name: Validate protected production source
+        shell: bash
+        env:
+          RIVT_PRODUCTION_SOURCE_COMMIT: ${{ vars.RIVT_PRODUCTION_SOURCE_COMMIT }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$RIVT_PRODUCTION_SOURCE_COMMIT" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "Trusted production source commit is missing or invalid."
+            exit 1
+          fi
+          if [[ "$RIVT_PRODUCTION_SOURCE_COMMIT" != "$GITHUB_SHA" ]]; then
+            echo "The protected workflow source must equal the deployed production source."
+            exit 1
+          fi
+
+      - name: Validate human rehearsal attestations
+        shell: bash
+        env:
+          CONTROLLED_FAILURE_EXERCISED: ${{ inputs.controlled_failure_exercised }}
+          DECISION_LOG_REFERENCE: ${{ inputs.decision_log_reference }}
+          HUMAN_PAGE_RECEIVED: ${{ inputs.human_page_received }}
+          INCIDENT_ROLES_ASSIGNED: ${{ inputs.incident_roles_assigned }}
+          KILL_SWITCH_DECISION_RECORDED: ${{ inputs.kill_switch_decision_recorded }}
+          RECOVERY_CONFIRMED: ${{ inputs.recovery_confirmed }}
+        run: |
+          set -euo pipefail
+          for attestation in \
+            "$CONTROLLED_FAILURE_EXERCISED" \
+            "$HUMAN_PAGE_RECEIVED" \
+            "$INCIDENT_ROLES_ASSIGNED" \
+            "$RECOVERY_CONFIRMED" \
+            "$KILL_SWITCH_DECISION_RECORDED"; do
+            if [[ "$attestation" != "true" ]]; then
+              echo "Every required human rehearsal attestation must be confirmed."
+              exit 1
+            fi
+          done
+          if [[ ! "$DECISION_LOG_REFERENCE" =~ ^(incident-note:[A-Za-z0-9._/-]{1,160}|https://github.com/Zboytjbxp/rivt/issues/[1-9][0-9]{0,9})$ ]]; then
+            echo "Decision log reference must be a bounded private incident-note reference or RIVT GitHub issue URL."
+            exit 1
+          fi
+          echo "Human rehearsal attestations and decision-log reference are present."
+
+      - name: Check out source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Verify checked-out source
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse HEAD)" != "$GITHUB_SHA" ]]; then
+            echo "Checked-out source does not match the rehearsal run source."
+            exit 1
+          fi
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install locked dependencies without lifecycle scripts
+        run: npm ci --ignore-scripts
+
+      - name: Install checksum-pinned Railway CLI
+        shell: bash
+        env:
+          RAILWAY_CLI_ARCHIVE_SHA256: 04669f39998edf6b23644d7c3fbb75bdc53430f981f6bcb4aa1e54e5bfb06471
+          RAILWAY_CLI_VERSION: 5.20.0
+        run: |
+          set -euo pipefail
+          umask 077
+          cli_dir="$RUNNER_TEMP/rivt-railway-cli"
+          archive="$RUNNER_TEMP/railway-cli.tar.gz"
+          rm -rf -- "$cli_dir"
+          mkdir -p -- "$cli_dir"
+          curl \
+            --fail \
+            --location \
+            --proto '=https' \
+            --retry 3 \
+            --show-error \
+            --silent \
+            --tlsv1.2 \
+            "https://github.com/railwayapp/cli/releases/download/v${RAILWAY_CLI_VERSION}/railway-v${RAILWAY_CLI_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+            --output "$archive"
+          printf '%s  %s\n' "$RAILWAY_CLI_ARCHIVE_SHA256" "$archive" | sha256sum --check --strict -
+          if [[ "$(tar -tzf "$archive")" != "railway" ]]; then
+            echo "Pinned Railway CLI archive contains an unexpected file list."
+            exit 1
+          fi
+          tar -xzf "$archive" -C "$cli_dir" railway
+          rm -f -- "$archive"
+          if [[ ! -f "$cli_dir/railway" || -L "$cli_dir/railway" ]]; then
+            echo "Pinned Railway CLI did not extract to one regular executable."
+            exit 1
+          fi
+          chmod 0700 "$cli_dir/railway"
+          "$cli_dir/railway" --version
+          printf '%s\n' "$cli_dir" >> "$GITHUB_PATH"
+
+      - name: Check production health
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+
+          const baseUrl = new URL(process.env.RIVT_MONITOR_BASE_URL);
+          assert.equal(baseUrl.origin, "https://rivt.pro");
+          assert.equal(baseUrl.pathname, "/");
+          assert.match(process.env.EXPECTED_SOURCE_COMMIT ?? "", /^[a-f0-9]{40}$/);
+          const response = await fetch(new URL("/api/health", baseUrl), {
+            headers: { Accept: "application/json", Origin: baseUrl.origin },
+            redirect: "error",
+            signal: AbortSignal.timeout(10_000),
+          });
+          assert.equal(response.status, 200);
+          const payload = await response.json();
+          assert.equal(payload?.ok, true);
+          assert.equal(payload?.build?.commit, process.env.EXPECTED_SOURCE_COMMIT);
+          const dependencies = payload?.dependencies ?? payload?.storage;
+          assert.equal(dependencies?.database, "postgres");
+          assert.equal(dependencies?.objectStorage, "s3-compatible");
+          fs.writeFileSync(
+            `${process.env.RUNNER_TEMP}/rivt-rehearsal-health.ok`,
+            `${payload.build.commit}\n`,
+            { encoding: "utf8", mode: 0o600 },
+          );
+          console.log(JSON.stringify({
+            ok: true,
+            buildCommit: payload.build.commit,
+            database: dependencies.database,
+            objectStorage: dependencies.objectStorage,
+          }));
+          NODE
+
+      - name: Run production monitor
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          raw_output="$(mktemp "$RUNNER_TEMP/rivt-rehearsal-monitor.XXXXXX")"
+          trap 'rm -f "$raw_output"' EXIT
+          if ! node scripts/production-synthetic-monitor.js >"$raw_output" 2>&1; then
+            echo "Production monitor failed; raw production output is withheld."
+            exit 1
+          fi
+          printf '%s\n' "$EXPECTED_SOURCE_COMMIT" > "$RUNNER_TEMP/rivt-rehearsal-monitor.ok"
+          echo "Production monitor passed for the exact rehearsal source."
+
+      - name: Run live Gate A smoke
+        timeout-minutes: 5
+        shell: bash
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RIVT_REHEARSAL_RAILWAY_TOKEN }}
+          RAILWAY_REHEARSAL_SSH_PRIVATE_KEY: ${{ secrets.RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY }}
+          RIVT_RAILWAY_ENVIRONMENT_ID: ${{ vars.RIVT_RAILWAY_ENVIRONMENT_ID }}
+          RIVT_RAILWAY_PROJECT_ID: ${{ vars.RIVT_RAILWAY_PROJECT_ID }}
+          RIVT_RAILWAY_SERVICE_ID: ${{ vars.RIVT_RAILWAY_SERVICE_ID }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$RAILWAY_TOKEN" ]]; then
+            echo "The protected rehearsal Railway token is not configured."
+            exit 1
+          fi
+          if [[ -z "$RAILWAY_REHEARSAL_SSH_PRIVATE_KEY" ]]; then
+            echo "The protected rehearsal Railway SSH identity is not configured."
+            exit 1
+          fi
+          for resource_id in \
+            "$RIVT_RAILWAY_PROJECT_ID" \
+            "$RIVT_RAILWAY_ENVIRONMENT_ID" \
+            "$RIVT_RAILWAY_SERVICE_ID"; do
+            if [[ ! "$resource_id" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ ]]; then
+              echo "A protected Railway resource identifier is missing or invalid."
+              exit 1
+            fi
+          done
+          umask 077
+          raw_output="$(mktemp "$RUNNER_TEMP/rivt-rehearsal-gate-a.XXXXXX")"
+          identity_file="$(mktemp "$RUNNER_TEMP/rivt-rehearsal-ssh-key.XXXXXX")"
+          trap 'rm -f "$raw_output" "$identity_file"' EXIT
+          printf '%s\n' "$RAILWAY_REHEARSAL_SSH_PRIVATE_KEY" > "$identity_file"
+          chmod 600 "$identity_file"
+          if ! timeout 5s ssh-keygen -y -f "$identity_file" </dev/null >/dev/null 2>&1; then
+            echo "The protected rehearsal Railway SSH identity is invalid or requires a passphrase."
+            exit 1
+          fi
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          railway_host_key='ssh.railway.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ8X3z81/tuP7CvmK3ZqWgwEvHUR6b04oi2lQJGld2C1'
+          touch "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/known_hosts"
+          if ! grep -Fqx "$railway_host_key" "$HOME/.ssh/known_hosts"; then
+            printf '%s\n' "$railway_host_key" >> "$HOME/.ssh/known_hosts"
+          fi
+          remote_guard=$(cat <<'REMOTE_GUARD'
+          if [ "${RAILWAY_GIT_COMMIT_SHA:-}" != "${EXPECTED_SOURCE_COMMIT:-}" ]; then
+            echo "Remote Railway source does not match the protected rehearsal source." >&2
+            exit 1
+          fi
+          if [ "${RAILWAY_PROJECT_ID:-}" != "${EXPECTED_RAILWAY_PROJECT_ID:-}" ] ||
+             [ "${RAILWAY_ENVIRONMENT_ID:-}" != "${EXPECTED_RAILWAY_ENVIRONMENT_ID:-}" ] ||
+             [ "${RAILWAY_SERVICE_ID:-}" != "${EXPECTED_RAILWAY_SERVICE_ID:-}" ]; then
+            echo "Remote Railway resource identity does not match the protected rehearsal target." >&2
+            exit 1
+          fi
+          if [ "${RAILWAY_ENVIRONMENT_NAME:-}" != "production" ]; then
+            echo "Remote Railway environment is not production." >&2
+            exit 1
+          fi
+          exec node scripts/live-gate-a-hardening.js
+          REMOTE_GUARD
+          )
+          if ! railway ssh \
+            --identity-file "$identity_file" \
+            --project "$RIVT_RAILWAY_PROJECT_ID" \
+            --environment "$RIVT_RAILWAY_ENVIRONMENT_ID" \
+            --service "$RIVT_RAILWAY_SERVICE_ID" \
+            -- env \
+              EXPECTED_SOURCE_COMMIT="$EXPECTED_SOURCE_COMMIT" \
+              EXPECTED_RAILWAY_PROJECT_ID="$RIVT_RAILWAY_PROJECT_ID" \
+              EXPECTED_RAILWAY_ENVIRONMENT_ID="$RIVT_RAILWAY_ENVIRONMENT_ID" \
+              EXPECTED_RAILWAY_SERVICE_ID="$RIVT_RAILWAY_SERVICE_ID" \
+              RIVT_SMOKE_BASE_URL="$RIVT_MONITOR_BASE_URL" \
+              sh -eu -c "'$remote_guard'" >"$raw_output" 2>&1; then
+            echo "Live Gate A smoke failed inside Railway; raw production output is withheld."
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+
+          const baseUrl = new URL(process.env.RIVT_MONITOR_BASE_URL);
+          const response = await fetch(new URL("/api/health", baseUrl), {
+            headers: { Accept: "application/json", Origin: baseUrl.origin },
+            redirect: "error",
+            signal: AbortSignal.timeout(10_000),
+          });
+          assert.equal(response.status, 200);
+          const payload = await response.json();
+          assert.equal(payload?.ok, true);
+          assert.equal(payload?.build?.commit, process.env.EXPECTED_SOURCE_COMMIT);
+          NODE
+          printf '%s\n' "$EXPECTED_SOURCE_COMMIT" > "$RUNNER_TEMP/rivt-rehearsal-gate-a.ok"
+          echo "Live Gate A smoke passed inside the production service."
+
+      - name: Verify incident evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import fs from "node:fs";
+
+          const routing = JSON.parse(fs.readFileSync(
+            "docs/operations/incident-routing.json",
+            "utf8",
+          ));
+          const control = routing?.evidenceControls?.rehearsal;
+          assert.equal(process.env.GITHUB_EVENT_NAME, "workflow_dispatch");
+          assert.equal(process.env.GITHUB_REF, "refs/heads/master");
+          assert.equal(process.env.GITHUB_REF_PROTECTED, "true");
+          assert.equal(process.env.GITHUB_SHA, process.env.EXPECTED_SOURCE_COMMIT);
+          assert.equal(control?.adapterId, "incident-rehearsal");
+          assert.equal(control?.controlId, "gate-a-incident-rehearsal");
+          assert.equal(control?.provider, "github-actions");
+          assert.equal(control?.scenario, process.env.RIVT_REHEARSAL_SCENARIO);
+          assert.equal(
+            control?.commanderRoleId,
+            process.env.RIVT_REHEARSAL_COMMANDER_ROLE_ID,
+          );
+          for (const marker of [
+            "rivt-rehearsal-health.ok",
+            "rivt-rehearsal-monitor.ok",
+            "rivt-rehearsal-gate-a.ok",
+          ]) {
+            const markerPath = `${process.env.RUNNER_TEMP}/${marker}`;
+            assert.equal(fs.statSync(markerPath).isFile(), true);
+            assert.equal(fs.readFileSync(markerPath, "utf8").trim(), process.env.GITHUB_SHA);
+          }
+          console.log(JSON.stringify({
+            ok: true,
+            scenario: control.scenario,
+            commanderRoleId: control.commanderRoleId,
+            sourceCommit: process.env.GITHUB_SHA,
+            observation: "workflow-checks-passed",
+            providerReceipt: "pending-protected-evidence-revision",
+            launchAuthorized: false,
+          }));
+          NODE

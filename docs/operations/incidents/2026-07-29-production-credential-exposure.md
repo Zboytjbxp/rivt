@@ -3,19 +3,39 @@
 - Status: containment in progress
 - Severity: critical
 - Environment: Railway production
-- Incident owner: Michael
+- Incident owner role: founder-incident-commander
 - Source at detection: `92a8451b8190f5119384a4970fb1a324503df995`
 - Detected at: between `2026-07-29T19:01:00-04:00` and
   `2026-07-29T21:42:25-04:00` (repository-bounded; exact operator-observed time
   was not recorded)
 - Declared at: `2026-07-29T21:42:25-04:00` (first formal repository
   declaration; any earlier verbal declaration is unverified)
-- Last updated: 2026-07-31 America/New_York
+- Last updated: 2026-08-04 America/New_York
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
   followed by authorization to continue the remaining incident work unless
   incremental cost would exceed $2 total. Completed actions remained below
   that ceiling; no exact measured provider cost is claimed.
+
+## Current release evidence boundary - 2026-08-04
+
+- Production and `origin/master` remain at exact source
+  `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 provides
+  source-only backup tooling and does not prove recurrence or restore.
+- Release candidate `codex/final-release-candidate-20260804` is at
+  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` in draft PR #25, containing integration merge
+  `6726bbbad92e018cbd9992bebfc556c5f7dd7e60` and scheduler-source merge
+  `b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. It pins Node 22 and has not
+  been deployed.
+- Backup recurrence is still pending. No scheduler service, independent
+  provider, recurring artifact, or isolated current-artifact restore is
+  activated or proved. ACH remains disabled and `ACTIVE_LAUNCH_HOLD` remains
+  active. `GA-OPS-004` and `GA-OPS-009` remain blockers. Exact-candidate local
+  engineering gates pass, and launch readiness remains blocked with exactly 21
+  findings. Draft PR #25 Gate A Safety run `30955179943` completed with 14/14
+  pretest safety checks, 603/603 unit tests, 28/28 disposable-PostgreSQL
+  integration tests, and 4/4 browser E2E journeys passing. The final exit 1 is
+  the required refusal to clear those 21 operational blockers.
 
 ## Summary
 
@@ -36,6 +56,51 @@ incident commit at 21:42:25. The credential-containment worktree was created at
 but that repository event is not represented as the exact human detection
 moment.
 
+## 2026-08-03 recurrence
+
+During a separate read-only deployment-path audit on 2026-08-03, a prohibited
+broad Railway production-configuration command again returned rendered live
+credential values into restricted automation output. The command was stopped.
+No value from that output is reproduced in this record, source, tests, or
+evidence. No misuse indicator is currently known, but the affected current
+credentials are again treated as compromised and the prior rotation evidence
+does not close this recurrence.
+
+The name-only inventory identifies PostgreSQL, the shared Stripe live API
+credential, the billing and Connect webhook signing secrets, Resend, Google
+OAuth, the authentication metadata pepper, the VAPID private key, backup
+encryption, and the distinct rate-limit pepper. The inspected S3 settings were
+provider references rather than revealed access values. Public configuration
+identifiers are not classified as credentials. The existing
+`ACTIVE_LAUNCH_HOLD` remains active, and feature
+merges, release deployment, Railway Stage 1, new ACH activity, and public
+launch remain paused.
+
+The founder role approved emergency one-class-at-a-time rotation on 2026-08-03 with an
+incremental cost ceiling of `$2` before tax and up to 30 minutes of cumulative
+interruption. The approval includes owner-controlled email, OAuth, and push
+proofs; no-charge Stripe deliveries that may create audit/idempotency rows; a
+rolled-back database validation; one fresh encrypted backup; one isolated
+restore; and revocation of old credentials only after replacements verify. It
+does not authorize ACH, real payments, customer communication, customer-data
+deletion, public launch, or feature-release deployment.
+
+The safe operational order is PostgreSQL, Stripe API and both webhook secrets,
+Resend, Google OAuth, distinct authentication/rate-limit peppers, VAPID, then
+backup encryption. Rotation is proceeding one class at a time; only the
+classes with fresh recurrence evidence below are claimed complete.
+
+During VAPID bridge recovery on 2026-08-04, masked provider automation
+unexpectedly returned the then-current Resend credential, the VAPID
+predecessor, and one candidate VAPID replacement into restricted automation
+output. No secret value, token prefix, secret-derived fingerprint, or other
+secret material is reproduced in this record. Each exposed candidate was
+treated as compromised. The VAPID candidate was abandoned and replaced with a
+separate final pair; the predecessor remained only for the bounded device-
+migration bridge and was retired after three-device proof. The Resend class
+was reopened, then re-rotated and verified on 2026-08-04 using the restricted-
+output process recorded below.
+
 ## Potentially exposed credential classes
 
 - PostgreSQL connection credential
@@ -47,9 +112,535 @@ moment.
 - Web Push VAPID private key
 - backup-encryption key
 - authentication metadata pepper
+- rate-limit pepper
 - Sentry ingestion DSN
 
-## Rotation status
+## 2026-08-03 recurrence rotation status
+
+| Credential class | Current status |
+|---|---|
+| PostgreSQL | Rotated and verified on 2026-08-03; the exposed predecessor and one automation-exposed intermediate password are invalid; the final replacement was never read or copied |
+| Stripe API, billing webhook, and Connect webhook | Live API key plus both webhook signing secrets rotated and verified on 2026-08-03; the exposed API key is expired and both webhook predecessors completed Stripe's one-hour retirement window. Fresh post-retirement probes and exact-source monitoring passed |
+| Resend | Re-rotated and verified on 2026-08-04 after the then-current replacement appeared in restricted automation output during VAPID recovery; both that predecessor and an unused intermediate were retired after proof, exactly one final Sending-access key restricted to `rivt.pro` remains, and owner-only delivery was confirmed |
+| Google OAuth | Rotated and verified on 2026-08-03; the same production web client retained its reviewed origin and callback, owner-controlled sign-ins passed before disablement, after disablement, and after deletion, and provider inventory shows exactly one enabled secret |
+| Authentication metadata pepper | Rotated and verified on 2026-08-03; a fresh independent value replaced the prior value without overlap, exact-source monitoring passed, the existing owner session remained valid, and a fresh owner-controlled Google OAuth sign-in returned authenticated through new session issuance |
+| Rate-limit pepper | Rotated and verified on 2026-08-03; production now uses a fresh dedicated value instead of falling back to the authentication metadata pepper, exact-source monitoring and bounded public-job limiter probes passed before and after the independent authentication-pepper cutover, and final masked inventory shows one row for each separate pepper |
+| Web Push VAPID | Rotated and verified on 2026-08-04; all three controlled devices migrated to the final active generation and received alerts before and after predecessor retirement, previous configuration is absent, exact readiness is `3/3`, and all queues are empty |
+| Backup encryption | Pending active/previous rotation, one fresh encrypted artifact, and one isolated restore proof |
+| S3 application access | No new rotation triggered by this recurrence because only provider references, not access values, were returned |
+
+No 2026-08-03 replacement or retirement is complete until its new evidence is
+recorded below this table. Historical evidence from the earlier incident must
+not be read as closure of the recurrence.
+
+### PostgreSQL recurrence rotation evidence — 2026-08-03
+
+- **Provider and scope:** Railway project `8b0be329-5bd6-40df-8bce-7b745c6d36d8`,
+  production environment `b353080f-fb82-46ea-93f8-8eb88a57e009`, PostgreSQL
+  service `518129de-bb84-49df-89a0-4660b4cabd8d`, role `postgres`, attached
+  volume `dbc470a5-8928-4b07-82a7-a468a516326f`, and dependent RIVT service
+  `4e672e30-a351-41a5-91da-c1d07f50f370`.
+- **Operator and authority:** Codex operated the provider UI under the founder role's
+  explicit 2026-08-03 emergency approval. The action began at 18:58 EDT
+  (22:58 UTC) and narrow verification completed at 19:06 EDT (23:06 UTC).
+- **Cutover:** Railway's provider-defined no-overlap `Regenerate Password`
+  operation synchronized the managed connection reference and redeployed the
+  existing PostgreSQL service. A replacement password was unintentionally
+  rendered into automation inspection output, was immediately treated as
+  exposed, and was invalidated by a second regeneration before the application
+  cut over. The final replacement was not read, copied, logged, or stored by
+  the operator. Final PostgreSQL deployment
+  `a7e22798-b737-49d7-8b9a-5da4a7197b99` succeeded at
+  `2026-08-03T22:59:59.707Z`.
+- **Exact-source application pickup:** the existing production source was
+  redeployed only to resolve the updated managed database reference. Railway
+  deployment `47f99b41-3f90-47e3-b82a-037d80601244` became active from the same
+  production commit `29e3c613f2eb95a6583b52c671275e5046dde0d3`; no feature
+  release was deployed.
+- **Runtime proof:** immediate and delayed `GET /api/health` checks returned
+  HTTP 200 with `ok: true`, migration `0042_push_vapid_generation` in `ready`
+  state, database `postgres`, object storage `s3-compatible`, and the exact
+  expected source commit. `npm run monitor:production` passed with error
+  monitoring, email, Google OAuth, session security, and web push configured;
+  anonymous private checks remained fail-closed. Invoice bank payments
+  remained `enabled: false`, `configured: false`, and `setup_required`.
+- **Rolled-back database proof:** an application-container validation created
+  one temporary row inside a transaction, read exactly one matching row,
+  rolled back, and confirmed the temporary relation was removed. The sanitized
+  receipt was
+  `{"ok":true,"transaction":"rolled_back","rowsRead":1,"tempRelationRemoved":true}`.
+  No customer table or permanent row was changed.
+- **Retirement and recovery:** Railway's no-overlap regeneration invalidated
+  both the exposed predecessor and the exposed intermediate password. The
+  recovery path was the bound last-known-good RIVT source with the new managed
+  reference; it was not invoked because the normal redeploy and all checks
+  passed. Restoring either retired password is not an allowed rollback.
+- **Interruption and cost:** database-backed operations had a conservative
+  cutover window of approximately 2 minutes 8 seconds while the site remained
+  online on its prior instance. No service, volume, plan, or recurring resource
+  was added. Railway did not quote a separate charge for the two provider
+  regenerations and one application redeploy; only ordinary usage-based compute
+  applies, within the approved `$2` incident ceiling.
+- **Approval boundary:** this action did not enable ACH, attempt a real payment,
+  contact a customer, delete customer data, launch publicly, or deploy the
+  feature release.
+
+### Stripe live API-key recurrence rotation evidence — 2026-08-03
+
+- **Provider and scope:** Stripe live account `acct_1TnnyAIz6JDg8Lda`, standard
+  live secret-key class, replacement Workbench label
+  `RIVT Production Server - August 2026 Security Rotation`, and the single
+  dependent Railway variable `STRIPE_SECRET_KEY`. No credential value,
+  authorization header, or secret-derived fingerprint is recorded.
+- **Operator and authority:** Codex operated the provider and Railway UIs under
+  the founder role's explicit 2026-08-03 emergency rotation approval. Stripe created the
+  replacement on August 3; Railway recorded the cutover change at
+  `2026-08-04T00:06:37.458Z`, and post-retirement verification completed at
+  approximately 20:10 EDT (`2026-08-04T00:10Z`).
+- **Overlap and cutover:** the exposed July key remained active while the new
+  standard live key was created. The one-time value moved directly from the
+  signed-in Stripe page into Railway's masked `STRIPE_SECRET_KEY` editor without
+  being printed to chat, shell output, logs, or this record. Only that named
+  variable changed. The predecessor was expired only after the replacement
+  deployment, health check, and direct provider-authentication proof passed.
+- **Exact-source application pickup:** Railway deployment
+  `3481b13c-2249-4535-b64c-ece8ae4ca78e` succeeded from the unchanged production
+  commit `29e3c613f2eb95a6583b52c671275e5046dde0d3`. The automatic variable-change
+  deployment `5676be8d-e45c-4663-b1c4-c76e21a26011` was skipped by the configured
+  CI wait policy, so the operator explicitly redeployed the last-known-good
+  release. No feature release was deployed.
+- **Runtime and provider proof:** public `GET /api/health` returned HTTP 200 with
+  `ok: true`, migration `0042_push_vapid_generation` ready, database `postgres`,
+  object storage `s3-compatible`, and the exact expected commit. Before
+  predecessor expiry, a read-only application-container `GET /v1/account`
+  returned HTTP 200 for account `acct_1TnnyAIz6JDg8Lda` with Stripe request ID
+  `req_3yQqdwY6xuw8HI`. After expiry, the same read-only proof again returned
+  HTTP 200 for the same account with request ID `req_wc1PPyy0GZO3Yr`.
+  `npm run monitor:production` passed after cutover and after retirement. Invoice
+  bank payments remained `enabled: false`, `configured: false`, and
+  `setup_required`; no Stripe mutation or payment operation was attempted.
+- **Retirement and recovery:** Stripe removed
+  `RIVT Production Server - July 2026 Rotation` from the active key inventory
+  after the replacement proved healthy, while the August replacement remained
+  present. The recovery path before retirement was to correct or replace the new
+  key while leaving the old key active. After retirement, rollback may reuse the
+  last-known-good application source but must not restore the retired key.
+- **Interruption and cost:** the prior production instance remained online while
+  Railway built the replacement; no interruption was observed. No service,
+  database, bucket, plan, or recurring resource was added. Stripe quoted no
+  charge for key creation, read-only account checks, or key expiration, and only
+  ordinary Railway redeploy usage applies within the approved `$2` ceiling.
+- **Approval boundary:** this action did not rotate either webhook signing
+  secret, enable ACH, attempt a real payment, contact a customer, delete customer
+  data, launch publicly, or deploy the feature release.
+
+### Stripe billing-webhook recurrence rotation evidence — 2026-08-03
+
+- **Provider and scope:** Stripe live account `acct_1TnnyAIz6JDg8Lda`, billing
+  event destination `we_1TnpZWIz6JDg8LdahYHPwX0o`, endpoint
+  `https://rivt.pro/api/stripe/webhook`, `Your account` scope, and the four
+  subscription-billing events `checkout.session.completed`,
+  `customer.subscription.created`, `customer.subscription.updated`, and
+  `customer.subscription.deleted`. Only Railway variable
+  `STRIPE_WEBHOOK_SECRET` changed. No signing-secret value or secret-derived
+  fingerprint is recorded.
+- **Operator and authority:** Codex operated the signed-in Stripe and Railway
+  interfaces under the founder role's explicit 2026-08-03 emergency rotation approval.
+  Cutover verification began at approximately 20:24 EDT (`2026-08-04T00:24Z`),
+  and post-retirement verification completed at approximately 21:37 EDT
+  (`2026-08-04T01:37Z`).
+- **Overlap and cutover:** Stripe rolled the destination signing secret with
+  its provider-defined one-hour predecessor-expiry window. The replacement
+  moved directly from Stripe's one-time reveal into Railway's masked
+  `STRIPE_WEBHOOK_SECRET` editor without being printed to chat, shell output,
+  logs, or this record. Only that named variable was staged. The previous
+  secret remained available only through Stripe's bounded overlap while the
+  replacement was deployed and tested.
+- **Exact-source application pickup:** Railway's automatic variable-change
+  deployment `5642fb82-505a-43c6-bda3-626ffff52b52` was skipped by the CI wait
+  policy. Explicit redeployment `7bb9c3d5-b048-47d0-b33d-30905452dbf6`
+  succeeded from unchanged production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`; no feature release was
+  deployed.
+- **Runtime proof:** public `GET /api/health` returned HTTP 200 with `ok: true`,
+  migration `0042_push_vapid_generation` ready, PostgreSQL and S3-compatible
+  storage, and the exact expected source. Before predecessor expiry, locally
+  signed unknown event
+  `evt_rivt_billing_webhook_rotation_probe_1785803272580` returned HTTP 200,
+  `received: true`, and `duplicate: false`. After the one-hour retirement
+  window, the same bounded proof with event
+  `evt_rivt_billing_webhook_post_retirement_probe_1785807472571` again returned
+  HTTP 200, `received: true`, and `duplicate: false`. Each proof created only
+  its named immutable `billing_events` replay/audit row; neither event type can
+  update a customer, subscription, invoice, payment, or Stripe object.
+  `npm run monitor:production` passed after cutover and after retirement with
+  all seven anonymous private-route checks fail-closed. Invoice bank payments
+  remained `enabled: false`, `configured: false`, `webhookConfigured: true`,
+  and `setup_required`.
+- **Retirement and recovery:** the selected Stripe one-hour expiry elapsed
+  before the final proof. The provider page then exposed the normal active
+  signing-secret controls and a fresh roll flow with no pending-expiry state.
+  Before retirement, recovery was to correct or reroll the replacement while
+  the predecessor still verified signatures. After retirement, the
+  last-known-good source may be redeployed, but the retired predecessor must
+  not be restored.
+- **Interruption and cost:** the prior production instance remained available
+  while Railway built the exact-source replacement; no interruption was
+  observed. No service, database, bucket, plan, payment, or recurring resource
+  was created. Stripe quoted no charge for the roll, and only ordinary Railway
+  redeploy usage applies within the approved `$2` ceiling.
+- **Approval boundary:** this action did not rotate the Connected-accounts
+  webhook, enable ACH, attempt a real payment, contact a customer, delete
+  customer data, launch publicly, or deploy the feature release.
+
+### Stripe Connect-webhook recurrence rotation evidence - 2026-08-03
+
+- **Provider and scope:** Stripe live account `acct_1TnnyAIz6JDg8Lda`,
+  Connected-accounts destination `we_1TzS8YIz6JDg8LdaXdJA6Dzm`, endpoint
+  `https://rivt.pro/api/stripe/connect/webhook`, snapshot payload, API version
+  `2026-06-24.dahlia`, and these nine events:
+  `charge.dispute.created`, `charge.refunded`,
+  `checkout.session.async_payment_failed`,
+  `checkout.session.async_payment_succeeded`, `checkout.session.completed`,
+  `checkout.session.expired`, `payment_intent.payment_failed`,
+  `payment_intent.processing`, and `payment_intent.succeeded`. Only Railway
+  variable `STRIPE_CONNECT_WEBHOOK_SECRET` changed. No signing-secret value or
+  secret-derived fingerprint is recorded.
+- **Operator and authority:** Codex operated the signed-in Stripe and Railway
+  interfaces under the founder role's explicit 2026-08-03 emergency rotation approval.
+  Railway recorded the staged-variable deployment at
+  `2026-08-04T01:48:59.147Z`; cutover proof completed at approximately 21:54
+  EDT (`2026-08-04T01:54Z`).
+- **Overlap and cutover:** Stripe rolled the destination signing secret with
+  its provider-defined one-hour predecessor-expiry window. The replacement
+  moved directly from Stripe's one-time reveal into Railway's masked
+  `STRIPE_CONNECT_WEBHOOK_SECRET` editor without being printed to chat, shell
+  output, logs, or this record. Exactly one Railway variable was staged. At
+  cutover, the predecessor remained available only during the bounded provider
+  overlap and was not claimed retired before that window elapsed.
+- **Exact-source application pickup:** Railway's automatic variable-change
+  deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
+  policy. Explicit deployment `6152da11-1323-47a9-a258-d9013f040522`
+  succeeded from unchanged production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`; no feature release was
+  deployed.
+- **Runtime proof:** public `GET /api/health` returned HTTP 200 with `ok: true`,
+  migration `0042_push_vapid_generation` ready, PostgreSQL and S3-compatible
+  storage, and the exact expected source. Locally signed unknown event
+  `evt_rivt_connect_webhook_rotation_probe_1785808354434` returned HTTP 200,
+  `received: true`, and `duplicate: false`. It created only its named immutable
+  `stripe_connect_events` idempotency/audit row; its deliberately unknown type
+  cannot update an account, invoice, payment, refund, dispute, or Stripe
+  object. `npm run monitor:production` passed with all seven anonymous
+  private-route checks fail-closed. Invoice bank payments remained
+  `enabled: false`, `configured: false`, `webhookConfigured: true`, and
+  `setup_required`.
+- **Retirement and recovery:** after the one-hour overlap ended, the provider
+  destination showed one active masked signing-secret slot and no predecessor
+  or pending-expiry state. Post-retirement probe
+  `evt_rivt_connect_webhook_post_retirement_probe_1785812006253` returned HTTP
+  200 with `received: true` and `duplicate: false`. The exact-source production
+  monitor then passed again with all seven anonymous private routes
+  fail-closed. The Connected-accounts predecessor is retired and must never be
+  restored; recovery from a future failure is another fresh roll, not the
+  exposed secret.
+- **Interruption and cost:** the prior production instance remained available
+  while Railway built the exact-source replacement; no interruption was
+  observed. No service, database, bucket, plan, payment, or recurring resource
+  was created. Stripe quoted no charge for the roll, and only ordinary Railway
+  redeploy usage applies within the approved `$2` ceiling.
+- **Approval boundary:** this action did not enable ACH, attempt a real payment,
+  contact a customer, delete customer data, launch publicly, or deploy the
+  feature release.
+
+### Resend recurrence rotation evidence - 2026-08-03
+
+- **Provider and scope:** the replacement key is named
+  `RIVT Production Sending - August 2026 Recurrence`, has Sending access only,
+  and is restricted to the verified `rivt.pro` domain. Only Railway variable
+  `RESEND_API_KEY` changed. No credential value, token prefix, or
+  secret-derived fingerprint is recorded.
+- **Operator and authority:** Codex operated the signed-in Resend and Railway
+  interfaces under the founder role's explicit 2026-08-03 emergency rotation approval.
+  The action used only owner-controlled email proofs and did not contact a
+  customer.
+- **Cutover:** the replacement value moved directly from Resend's one-time
+  reveal into Railway's masked variable editor without being printed to chat,
+  shell output, logs, or this record. Railway's automatic variable deployment
+  `62614aa2-fea0-417a-adab-21f560faecbb` was skipped by the CI wait policy.
+  Explicit exact-source redeployment
+  `7a0873cf-d1db-4a26-8687-0475c7b1ce7a` succeeded from unchanged production
+  commit `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:8074916995723690145064cce772902039c084c69be416e92b72359fe2d5d033`.
+  No feature release was deployed.
+- **Pre-retirement proof:** deployed production sent owner-only proof
+  `rivt-resend-recurrence-pre-retirement-1785812675006`, Resend message
+  `e2f24752-f016-413e-b949-56107fac0b82`. Resend reported it delivered at
+  2026-08-03 11:04 PM EDT, and the incident owner confirmed receipt before predecessor
+  deletion.
+- **Retirement and inventory:** after the replacement and first proof verified,
+  predecessor `RIVT Production rotation 2026-07-29`, provider resource
+  `c79cf180-6401-484d-9389-ac262444a8a1`, was deleted. Resend inventory then
+  showed exactly one key: the named August replacement with Sending access and
+  the `rivt.pro` restriction. The deleted predecessor must never be restored.
+- **Post-retirement proof:** deployed production sent owner-only proof
+  `rivt-resend-recurrence-post-retirement-1785813474437`, Resend message
+  `cf7ef6c1-5648-49e9-b829-fd1b2cca0839`. Resend reported it delivered at
+  2026-08-03 11:17 PM EDT, and the incident owner confirmed receipt after predecessor
+  deletion.
+- **Runtime boundary:** the exact-source production monitor passed before and
+  after retirement. Invoice bank payments remained `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+- **Interruption and cost:** no interruption was observed. No service,
+  database, bucket, plan, payment, or recurring resource was created. Only
+  ordinary Railway redeploy usage applies within the approved `$2` ceiling;
+  no exact provider cost is claimed.
+- **Approval boundary:** this action did not enable ACH, attempt a real payment,
+  contact a customer, delete customer data, launch publicly, or deploy the
+  feature release.
+- **Superseding recurrence:** the then-current replacement subsequently
+  appeared in restricted automation output during VAPID recovery on
+  2026-08-04. The evidence above remains an accurate record of the 2026-08-03
+  rotation, but it no longer closes the Resend class. A separate fresh
+  replacement, predecessor retirement, and owner-only delivery proof were
+  subsequently completed as recorded below.
+
+### Resend restricted-output recurrence re-rotation evidence - 2026-08-04
+
+- **Authorization and scope:** The founder role's existing 2026-08-03 emergency
+  authorization covered one-class-at-a-time Resend replacement, exact-source
+  redeployment, owner-controlled email proofs, and retirement only after
+  replacement verification, within the existing `$2` incident ceiling. Only
+  Railway variable `RESEND_API_KEY` and Resend API-key resources were in scope.
+  This did not authorize ACH, a real payment, customer communication,
+  customer-data deletion, public launch, or the feature release.
+- **Provider least privilege:** the final key is named
+  `RIVT Production Sending - August 2026 Final Clean`, has Sending access only,
+  and is restricted to the verified `rivt.pro` domain. Final provider
+  inventory showed exactly this one key. No unmasked credential value,
+  secret-derived fingerprint, or usable secret material is recorded. A broad
+  provider inventory view rendered only provider-masked labels; it was
+  abandoned, nothing from those labels was copied into repository evidence,
+  and subsequent checks projected only non-secret fields. This did not expose
+  an authenticating value and therefore did not start another replacement
+  cycle.
+- **Initial clipboard-boundary failure and fail-closed behavior:** the first
+  re-rotation attempt encountered a browser-to-operating-system clipboard
+  boundary mismatch. The Railway value therefore did not become the intended
+  fresh provider value, and bounded post-retirement owner-proof attempts
+  failed closed with HTTP 502 `EMAIL_DELIVERY_FAILED`; no delivery success was
+  claimed. Exact-source deployment
+  `42da7fd3-824c-4f8f-85c6-aac0301d5d0d` made that failed transfer observable
+  without changing application source. Provider evidence showed the unused
+  intermediate had no activity.
+  No secret material was printed, copied into this record, or used as an
+  identifier.
+- **Protected transfer and exact-source pickup:** a separate final clean key
+  was created, read only inside the protected browser-control process, and
+  passed directly to Railway CLI standard input without exposing it through
+  chat, shell output, logs, or documentation. Railway exact-source deployment
+  `0528d1ec-f9dd-4987-b4e8-7620cf71ced0` succeeded from unchanged production
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d4f90bfe92152a07aad8ca4b42567b0b542c9fb64a93d2e2961a61149aaf849b`.
+  No feature release was deployed.
+- **Delivery proof and retirement:** deployed production sent owner-only
+  messages `ab1eb0a5-6bb9-44ed-a3c8-31dbaa603658` at 1:51 AM EDT and
+  `a2d6b4b6-5948-4405-b9b0-69fd6736257e` at 1:56 AM EDT. Resend reported both
+  delivered, and the incident owner confirmed receipt of the final one-key-state message.
+  The exposed predecessor and unused intermediate key were retired after
+  replacement proof. Exactly one final Sending-access, `rivt.pro`-restricted
+  key remains; neither retired key may be restored.
+- **Runtime and safety boundary:** public health returned HTTP 200 with
+  `ok: true`, migration `0042_push_vapid_generation` ready, PostgreSQL and
+  S3-compatible storage healthy, and the exact expected source. The exact-
+  source production monitor passed with anonymous private routes fail-closed.
+  Invoice bank payments remained `enabled: false`, `configured: false`,
+  `webhookConfigured: true`, and `setup_required`.
+- **Verification:** the focused email suite passed 5/5. `npm run build`,
+  `npm run lint`, `npm run lint:security`, `npm run test:e2e`, and the
+  production dependency audit passed, with the audit reporting zero known
+  production vulnerabilities. The complete test run passed 551 unit/frontend
+  checks plus four database-independent integration-harness checks; 23
+  database-backed integration cases skipped because `TEST_DATABASE_URL` was
+  absent. Those skips are not represented as database-backed proof.
+- **Interruption and cost:** no outage was observed and no new recurring
+  service, database, bucket, plan, or payment was created. Provider and
+  ordinary Railway usage were not separately itemized, so no exact
+  incremental cost is claimed.
+- **Closure boundary:** Resend is closed for the 2026-08-03 restricted-output
+  recurrence. This does not close the broader incident, clear
+  `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
+  release.
+
+### Google OAuth recurrence rotation evidence - 2026-08-03
+
+- **Provider and unchanged client boundary:** the existing Google Cloud project
+  `rivt-499402`, owned by `support@rivt.pro`, retained existing OAuth web client
+  `Web client 1` and client ID
+  `723503499133-chk58c9so5otflgl33o4b8nljok7io02.apps.googleusercontent.com`.
+  Authorized origin `https://rivt.pro` and redirect
+  `https://rivt.pro/api/auth/google/callback` were unchanged. No new OAuth
+  client, origin, redirect, provider project, or account was created.
+- **Cutover:** Google added the same-client replacement at 2026-08-03 11:23:53
+  PM EDT. Only Railway variable `GOOGLE_CLIENT_SECRET` changed. Railway's
+  automatic variable deployment `2e3c8ed3-3a2d-4cf7-aa8b-d54780ad69d2` was
+  skipped by the CI wait policy. Explicit exact-source redeployment
+  `c00add12-8048-4407-8e6f-9880a357eed8` succeeded from unchanged production
+  commit `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:5af9fd1934e0d4f4185633e8d4ae151a7448fed8604f0bf5d72de28fcb00a99f`.
+  No feature release was deployed.
+- **Pre-retirement proof:** the owner-controlled linked Google account completed
+  a fresh sign-in and returned
+  successfully to `rivt.pro` while both same-client secrets were enabled.
+- **Disablement proof:** predecessor secret created 2026-07-30 7:08:18 AM EDT
+  was disabled only after the replacement passed the first sign-in. The same
+  owner-controlled linked account then completed another fresh Google sign-in
+  and returned successfully to `rivt.pro` while the predecessor was disabled.
+- **Deletion and final proof:** the predecessor was deleted only after the
+  disabled-state proof passed. A third fresh owner-controlled Google sign-in
+  then returned successfully to `rivt.pro`. Final provider inventory showed
+  exactly one enabled secret on the unchanged production web client. The
+  deleted predecessor must never be restored.
+- **Runtime boundary:** the exact-source production monitor passed before and
+  after retirement. Invoice bank payments remained `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+- **Interruption and cost:** no interruption was observed. No service,
+  database, bucket, plan, payment, OAuth client, or recurring resource was
+  created. Only ordinary Railway redeploy usage applies within the approved
+  `$2` ceiling; no exact provider cost is claimed.
+- **Approval boundary:** this action did not enable ACH, attempt a real payment,
+  contact a customer, delete customer data, launch publicly, or deploy the
+  feature release.
+
+### Rate-limit pepper recurrence rotation evidence - 2026-08-03
+
+- **Prior state and separation:** Railway had no distinct `RATE_LIMIT_PEPPER`,
+  so the durable limiter used the configured `AUTH_METADATA_PEPPER` fallback.
+  Production now has a fresh, independently generated dedicated
+  `RATE_LIMIT_PEPPER`. No value, suffix, hash, or other secret-derived
+  identifier is recorded.
+- **Exact-source cutover:** Railway's automatic variable deployment
+  `d4eaa8e9-c5c9-471d-9fa5-fc387f972b05` was skipped by the CI wait policy.
+  Explicit deployment `5105fe71-4bfe-47b3-a2b5-cb23286d932f` succeeded from
+  unchanged production source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d54ed8045a948741a5b471363edcb20ab83c4b8f7ddacf26ed87882fca14be34`.
+  No feature release was deployed.
+- **Runtime proof:** the exact-source production synthetic monitor passed with
+  authentication configured. Invoice bank payments remained `enabled: false`,
+  `configured: false`, and `setup_required`. The existing owner session
+  remained valid through the cutover.
+- **Durable limiter proof:** two bounded
+  `GET /api/public/jobs?limit=1` requests returned HTTP 200. Their durable
+  limiter headers reported limit `90`, remaining `89` then `88`, and the same
+  reset value, proving consecutive requests shared the same active limiter
+  window after the dedicated-pepper cutover.
+- **Focused verification:** the focused security/authentication suite passed
+  all 60 tests, and `npm run lint:security` passed.
+- **Separation boundary:** this section closes only the rate-limit-pepper class
+  for the recurrence. Authentication-metadata closure is separately evidenced
+  below; the former shared fallback is not represented as proof of that
+  independent rotation.
+
+### Authentication metadata pepper recurrence rotation evidence - 2026-08-03
+
+- **Independent replacement:** a fresh independent `AUTH_METADATA_PEPPER`
+  replaced the prior value. There was no previous-value overlap and no rollback
+  was used. No value, suffix, hash, fingerprint, OAuth state, nonce, or
+  challenge is recorded.
+- **Exact-source cutover:** Railway's automatic variable deployment
+  `21316a72-8c11-4579-bc9b-c188f5d1e47d` was skipped by the CI wait policy.
+  Explicit deployment `16b0deb5-d5f5-4812-afec-70de53a33575` succeeded from
+  unchanged production source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:5471d1280f330d2b1be7bbfc068a8dda7be5ee77ec491fc669c99f4ebada6b69`.
+  No feature release was deployed.
+- **Runtime proof:** the exact-source production synthetic monitor passed with
+  authentication, session security, and Google OAuth configured. Invoice bank
+  payments remained `enabled: false`, `configured: false`,
+  `webhookConfigured: true`, and `setup_required`. The existing owner session
+  remained valid.
+- **New-session proof:** a fresh owner-controlled Google OAuth sign-in completed
+  and returned authenticated to `rivt.pro`, proving new session issuance after
+  the no-overlap cutover. No OAuth state, nonce, challenge, authorization code,
+  token, or cookie is retained in this evidence.
+- **Final separation inventory:** Railway's masked name-only inventory showed
+  exactly one `AUTH_METADATA_PEPPER` row and exactly one `RATE_LIMIT_PEPPER`
+  row. This proves the current two-variable configuration only; it does not
+  establish provider version history.
+- **Independent limiter continuity:** two post-cutover
+  `GET /api/public/jobs?limit=1` requests returned HTTP 200. Their durable
+  limiter headers reported limit `90`, remaining `89` then `88`, and the same
+  reset value, showing the separately configured rate-limit pepper continued
+  to drive one shared active limiter window.
+- **Focused verification:** the focused security/authentication suite passed
+  all 60 tests, and `npm run lint:security` passed.
+- **Remaining boundary:** both pepper classes are now independently configured
+  and closed for the 2026-08-03 recurrence. This evidence does not close the
+  broader incident, clear `ACTIVE_LAUNCH_HOLD`, or authorize launch.
+
+### Web Push VAPID recurrence rotation evidence - 2026-08-04
+
+- **Authorization and scope:** The founder role's existing emergency authorization
+  covered one-class-at-a-time VAPID replacement, exact-source redeployment,
+  and owner-controlled push proof. It did not authorize ACH, a real payment,
+  customer communication, customer-data deletion, public launch, or the
+  feature release.
+- **Initial fail-closed bridge:** automatic deployment
+  `d97d5f29-8844-4309-b80e-25b546dc0b8c` was skipped. Exact-source deployment
+  `f4cbdfce-50d4-42b3-a4a1-16a442e89438` succeeded from unchanged production
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d1b99f44be69301d5e6ee25387bbfc1238132547d2ca3113b2d93c78cfe4aaa9`.
+  The malformed predecessor bridge failed closed: provider status was invalid,
+  all three eligible registrations were retired rather than active, and all
+  delivery-queue counts were zero. No false delivery success is claimed.
+- **Restricted-output recurrence and containment:** masked provider automation
+  unexpectedly returned the then-current Resend credential, the VAPID
+  predecessor, and one candidate VAPID replacement into restricted automation
+  output. No value, token prefix, secret-derived fingerprint, or secret
+  material is recorded here. The exposed VAPID replacement was abandoned; a
+  separate final pair was created. The predecessor was retained only for the
+  bounded compatibility bridge, and Resend was reopened for another rotation.
+- **Corrected bridge:** automatic deployment
+  `9365f0e5-c059-4296-8ef5-d74f20abdc18` was skipped. Exact-source deployment
+  `22811563-97df-4278-bd22-1704c82c0141` succeeded from unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:c32b62f20694e0553f73b467e71d883aba742d74c302074a2af16dcdb5a15d63`.
+  Initial readiness showed three eligible registrations on the previous
+  generation, none on the active generation, and all five queue categories at
+  zero.
+- **Migration and pre-retirement proof:** the installed RIVT PWA was opened on
+  the controlled Android, iOS 16.7.16, and iOS 18.7.8 devices. Exact readiness
+  then reported total, eligible, active, and active-with-success counts of
+  `3`; previous, unknown, retired, and inactive counts of `0`; and all five
+  queue categories at `0`. The incident owner confirmed the owner-only alert arrived on
+  all three devices.
+- **Predecessor retirement:** `VAPID_PREVIOUS_PUBLIC_KEY` and
+  `VAPID_PREVIOUS_PRIVATE_KEY` were removed together without deploying the
+  intermediate configuration. Exact-source deployment
+  `1ab805db-e200-4e87-a49a-3e2b415f7428` succeeded from unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:3830de3674395f9c636be8eaa03d3e55b7cd277f04ddd88b1f982853a8464f77`.
+- **Post-retirement proof:** readiness returned `ready: true`, previous
+  configuration absent, and the same exact three eligible, active, and
+  successfully delivered registrations with all five queues at zero. The incident owner
+  confirmed a final post-retirement alert arrived on all three devices.
+  Production monitoring passed, and invoice bank payments remained
+  `enabled: false`, `configured: false`, `webhookConfigured: true`, and
+  `setup_required`.
+- **Verification:** `npm run build`, `npm run lint`, `npm run lint:security`,
+  and `npm run test` passed. The full run passed 551 unit/frontend checks and
+  four non-database integration-harness checks; 23 database-backed integration
+  cases skipped because `TEST_DATABASE_URL` was absent. A focused
+  push-notification/readiness run passed 26 tests and skipped one
+  database-backed integration case for the same reason.
+- **Closure boundary:** VAPID is closed for this recurrence and the predecessor
+  must never be restored. Backup-encryption rotation remains the only pending
+  recurrence credential rotation. This does not close the incident, clear
+  `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
+  release.
+
+## Historical rotation status before the 2026-08-03 recurrence
 
 | Credential class | Status | Nonsecret evidence |
 |---|---|---|
@@ -215,14 +806,19 @@ moment.
 - Email credential rotation is complete. The broader incident remains open and
   Railway Stage 1 remains paused.
 
-## Authentication metadata pepper evidence
+## Authentication metadata pepper evidence before the 2026-08-03 recurrence
 
-- The authentication metadata pepper was replaced in production. It protects
-  privacy-preserving request metadata and rate-limit subject hashes; it is not
-  a password or session-encryption key.
+- During the initial incident, the authentication metadata pepper was replaced
+  in production. At that time it protected privacy-preserving request metadata
+  and, because no dedicated rate-limit pepper existed, rate-limit subject
+  hashes; it is not a password or session-encryption key.
 - The application has no previous-pepper fallback, so replacing the production
   value removed the exposed value from active use. Exact-source production
   health remained green.
+- The later 2026-08-03 recurrence exposed the then-current authentication
+  metadata pepper again. The historical replacement above did not close that
+  recurrence; the independent recurrence replacement and new-session proof are
+  recorded in the current evidence section above.
 - The broader incident remains open and Railway Stage 1 remains paused.
 
 ## Google OAuth credential rotation evidence
@@ -271,9 +867,11 @@ moment.
   S3-compatible storage healthy, Sentry, Web Push, and Stripe Connect Accounts
   v2 configured, matching-job alerts enabled, operational controls open, and
   seven anonymous private-route checks closed.
-- VAPID rotation and previous-key retirement are complete. The broader
-  incident remains open for Sentry and the remaining bounded
-  provider/data-access review; Railway Stage 1 remains paused.
+- VAPID rotation and previous-key retirement are complete. At this point in
+  the response Sentry and the bounded provider/data-access review were still
+  open; those later reviews are reconciled below. The current exit criteria,
+  not this historical checkpoint, control closure. Railway Stage 1 remains
+  paused.
 
 ## Google OAuth callback evidence
 
@@ -284,7 +882,7 @@ moment.
   transaction that had remained open beyond RIVT's 10-minute lifetime. It
   redirected to the honest authentication error in 10 ms, before a provider
   token exchange, and is not counted as credential proof.
-- A completely fresh journey for `zboytjbxp@gmail.com` then completed at
+- A completely fresh journey for the owner-controlled linked Google account then completed at
   14:18:31 UTC. The callback returned its redirect in 131 ms, established the
   server session, and the controlled browser rendered the authenticated RIVT
   Home workspace. No password, token, code, cookie, or secret was recorded.
@@ -474,9 +1072,9 @@ moment.
   the most recent isolated CI run remains the 22/22 PostgreSQL integration
   proof recorded above.
 - Sentry credential rotation is complete. The broader incident and
-  `ACTIVE_LAUNCH_HOLD` remain open for the final provider-review synthesis,
-  explicit incident-owner acceptance of the historical PostgreSQL and object
-  storage forensic limits, and a fresh Railway Stage 1 re-review and approval.
+  `ACTIVE_LAUNCH_HOLD` remain open. The later bounded provider-review synthesis
+  and exact incident-owner forensic-limit acceptances are recorded below;
+  neither closes the incident nor proves that historical misuse did not occur.
 
 ## Bounded access-log review evidence
 
@@ -519,12 +1117,54 @@ moment.
   that no-new-service application control from later provider/external
   immutable logging whose cost, privacy, residency, and retention have not
   been approved. No part of that proposed design is represented as implemented.
-- No misuse indicator has been identified in the evidence reviewed so far.
-  The bounded PostgreSQL error review is complete for the repository-backed
-  incident window, subject to the historical auditing limitation above. The
-  review remains open for provider logs and the unavoidable database/object-
-  storage forensic limitations. The incident is not represented as proof of
-  no access or no exfiltration.
+- No misuse indicator has been identified in the bounded evidence reviewed.
+  The PostgreSQL error review is complete for the repository-backed incident
+  window, subject to the historical auditing limitation above. The incident is
+  not represented as proof of no access or no exfiltration.
+
+## Later bounded review and incident-owner forensic-limit acceptance
+
+The later `origin/codex/railway-stage1-packet87-integration` incident record
+preserves factual provider-review and owner-decision evidence collected after
+the sections above. It is historical incident evidence, not proof for the
+current release-candidate source, CI result, provider configuration, cost, or
+deployment readiness.
+
+- Read-only reviews of the bounded Stripe platform-account and configured
+  production destination views, Resend, Sentry, Google Cloud audit/activity,
+  Railway workspace audit/deployment history, retained PostgreSQL logs, and
+  minimized application-ledger aggregates found no identified misuse indicator
+  within their named query and retention bounds. Successful historical
+  PostgreSQL access and direct bucket reads cannot be reconstructed, and the
+  application-generated secrets below have no complete provider audit trail.
+  These limits prevent RIVT from proving that no historical access,
+  exfiltration, token exchange, or offline secret use occurred.
+- At `2026-07-31T12:22:03.895Z`, the incident-owner role stated: "I accept that
+  all available provider evidence was reviewed and no misuse indicator was
+  found, but historical successful PostgreSQL access and direct bucket reads
+  cannot be reconstructed. RIVT cannot honestly prove that no historical access
+  or exfiltration occurred." Later reconciliation found the statement's
+  provider-review premise incomplete at the moment it was made. Only its exact
+  acceptance of the PostgreSQL/direct-bucket historical limitation and its
+  no-proof-of-no-misuse conclusion are retained as closure evidence.
+- At `2026-07-31T19:39:34.5524830Z`, the incident-owner role stated: "I accept
+  these three forensic limits: RIVT cannot prove the retired VAPID private key
+  was never used outside RIVT; cannot prove an encrypted backup and retired
+  backup key were never copied and used offline; and cannot prove the retired
+  authentication metadata pepper was never used offline. This acceptance does
+  not prove no misuse occurred and does not authorize deployment or added
+  cost."
+- These owner decisions close only the five named unavailable/unobservable
+  forensic-decision requirements. They do not reconstruct missing history,
+  reduce incident severity, close this incident, clear `ACTIVE_LAUNCH_HOLD`,
+  authorize deployment, authorize launch, or approve cost.
+- On 2026-08-01, production invoice bank payments were recorded as disabled and
+  the owner approved only that exact disabled configuration. That approval did
+  not enable ACH, authorize a deployment or worker, clear this incident, or
+  authorize launch. It is time-bound provider evidence and must be refreshed
+  before clearance; any future ACH enablement separately requires a dedicated
+  `Connected accounts` destination, Stripe-signed delivery/state-transition
+  proof, scope attestation, and new approval.
 
 ## Recovery plan
 
@@ -537,25 +1177,40 @@ credential during application rollback.
 
 ## Exit criteria
 
-This incident remains open until:
+Completed containment and rotation evidence above remains required history.
+The still-open exit boundary is:
 
-- the hotfix is verified and exact-source production health passes;
-- every exposed provider-managed credential has been replaced and the old
-  credential has been revoked or disabled;
-- application-generated secrets have been replaced and removed from active use;
-- previous backup/VAPID material is constrained to transition-only use and then
-  retired at a measured safe boundary; if either remains configured, the
-  incident may be contained but not closed;
-- authentication, database, storage, email, payments/webhooks, OAuth, Web Push,
-  monitoring, and backup restore access are verified without printing secrets;
-- the existing backup artifact is still recoverable through the approved
-  previous-key path;
-- provider, PostgreSQL, and object-access logs have been reviewed for
-  unauthorized access or exfiltration;
-- the incident record contains only nonsecret evidence and timestamps;
-- a follow-up prevents secret-bearing environment enumeration in operator
-  workflows; and
-- Stage 1 is re-reviewed against its new exact source and configuration.
+- complete and verify the still-pending backup-encryption rotation; Resend,
+  Web Push VAPID, and both pepper classes are closed for this recurrence and
+  no longer part of this open item;
+- finish the consolidated release-candidate forward-port, then obtain a final
+  independent exact-source review and disposable-PostgreSQL CI evidence for
+  that exact documentation-inclusive candidate; historical branch SHAs, scan
+  receipts, test counts, and CI runs are not candidate proof;
+- obtain a fresh Railway/provider snapshot, operator review, cost and recovery
+  plan, owner-approved evidence digest, rollback target, and passing strict
+  activation preflight for the exact final candidate;
+- perform any deployment only under separate exact authorization, then capture
+  reviewed exact-runtime source, migration, health, monitor, and rollback
+  evidence for the final candidate;
+- immediately before launch-hold clearance, prove invoice bank payments remain
+  disabled, or separately complete the `Connected accounts` Stripe delivery,
+  durable state-transition, scope-attestation, and new approval boundary;
+- revoke or replace the exposed reusable production pilot invite through a
+  separately authorized live operation and record only its nonsecret record
+  identifier;
+- remove retired private incident-contact data from any hosted synthetic issue
+  through a separately authorized live operation;
+- point the backup incident role to an access-controlled private route and
+  record a recent successful route test with content-bound evidence;
+- preserve a nonsecret incident record, confirm each unavailable historical
+  limit has the exact owner decision above, and obtain the incident owner's
+  final closure decision; and
+- clear `ACTIVE_LAUNCH_HOLD` only through its reviewed, explicit process after
+  every criterion above is evidenced.
+
+Incident closure alone does not authorize deployment, spending, Railway Stage
+1 activation, ACH enablement, or public launch.
 
 ## Evidence rules
 

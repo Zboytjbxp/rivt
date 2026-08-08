@@ -1,6 +1,32 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { captureException, errorMonitoringStatus } from "../server/monitoring.js";
+import { assertProductionAuthProviders } from "../scripts/production-monitor-contract.js";
+
+test("production monitor rejects missing or unhealthy session security", () => {
+  const configured = {
+    providers: {
+      email: { ok: true },
+      sessionSecurity: { ok: true, mode: "configured" },
+    },
+  };
+  assert.doesNotThrow(() => assertProductionAuthProviders(configured));
+  assert.throws(
+    () => assertProductionAuthProviders({
+      providers: {
+        email: { ok: true },
+        sessionSecurity: { ok: false, mode: "setup_required" },
+      },
+    }),
+    /Session metadata security/,
+  );
+  assert.throws(
+    () => assertProductionAuthProviders({
+      providers: { email: { ok: true } },
+    }),
+    /Session metadata security/,
+  );
+});
 
 test("error monitoring status is honest and redacts DSN", () => {
   assert.deepEqual(errorMonitoringStatus({ env: {} }), {

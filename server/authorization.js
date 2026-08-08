@@ -1,5 +1,22 @@
 import { ApiError } from "./api.js";
 
+export const EXPECTED_ACCOUNT_HEADER = "X-RIVT-Expected-Account-Id";
+
+export function assertExpectedAccount(
+  request,
+  authenticatedAccountId = request.actor?.account?.id ?? request.authUser?.id,
+) {
+  const expectedAccountId = String(request.get?.(EXPECTED_ACCOUNT_HEADER) ?? "").trim();
+  if (!expectedAccountId) return;
+  if (!authenticatedAccountId || expectedAccountId !== authenticatedAccountId) {
+    throw new ApiError(
+      409,
+      "ACCOUNT_CONTEXT_CHANGED",
+      "This request belongs to a different RIVT account. Return to the account that started it and try again.",
+    );
+  }
+}
+
 export async function loadActorContext(database, accountId) {
   const accountResult = await database.query(
     `

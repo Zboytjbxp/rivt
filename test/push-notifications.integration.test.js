@@ -244,6 +244,33 @@ if (!testDatabaseUrl) {
       "SELECT count(*)::int AS count FROM push_delivery_outbox WHERE notification_id = $1 AND status = 'pending'",
       [testPush.payload.data.notificationId],
     )).rows[0].count, 1);
+
+    const competingClaims = await Promise.all([
+      pushNotificationInternals.claimDeliveries(database),
+      pushNotificationInternals.claimDeliveries(database),
+    ]);
+    const firstAttempt = competingClaims
+      .flat()
+      .filter((delivery) => delivery.notification_id === testPush.payload.data.notificationId);
+    assert.equal(firstAttempt.length, 1);
+    await database.query(
+      `UPDATE push_delivery_outbox
+       SET claimed_at = now() - interval '6 minutes'
+       WHERE id = $1`,
+      [firstAttempt[0].id],
+    );
+    const reclaimed = (await pushNotificationInternals.claimDeliveries(database))
+      .find((delivery) => delivery.id === firstAttempt[0].id);
+    assert.ok(reclaimed);
+    assert.equal(reclaimed.attempt_count, firstAttempt[0].attempt_count + 1);
+    assert.equal(
+      await pushNotificationInternals.markPushDeliverySuccess(database, firstAttempt[0], activeGeneration),
+      false,
+    );
+    assert.equal(
+      await pushNotificationInternals.markPushDeliverySuccess(database, reclaimed, activeGeneration),
+      true,
+    );
     await database.query(
       "UPDATE push_subscriptions SET last_success_at = now() WHERE endpoint = $1",
       [endpointOne],
