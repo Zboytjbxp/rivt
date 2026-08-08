@@ -109,6 +109,44 @@ function equivalentInvoicePayload(left, right) {
     === JSON.stringify(canonicalJson(stripServerOwnedInvoicePayload(right)));
 }
 
+function canonicalInvoiceRecordDate(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return value.trim().slice(0, 10);
+  }
+  return null;
+}
+
+function canonicalInvoiceAmount(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const amount = Number(value);
+  return Number.isSafeInteger(amount) ? amount : null;
+}
+
+function canonicalInvoiceBinding(value) {
+  return typeof value === "string" && value.trim() ? value.trim().toLowerCase() : null;
+}
+
+function canonicalInvoiceDocument(value) {
+  const record = objectValue(value);
+  return {
+    title: typeof record.title === "string" ? record.title.trim() : "",
+    recordDate: canonicalInvoiceRecordDate(record.record_date ?? record.recordDate),
+    amountCents: canonicalInvoiceAmount(record.amount_cents ?? record.amountCents),
+    standaloneProjectId: canonicalInvoiceBinding(record.standalone_project_id ?? record.standaloneProjectId),
+    activeWorkId: canonicalInvoiceBinding(record.active_work_id ?? record.activeWorkId),
+    customerId: canonicalInvoiceBinding(record.customer_id ?? record.customerId),
+    payload: canonicalJson(stripServerOwnedInvoicePayload(record.payload)),
+  };
+}
+
+function equivalentInvoiceDocument(left, right) {
+  return JSON.stringify(canonicalInvoiceDocument(left))
+    === JSON.stringify(canonicalInvoiceDocument(right));
+}
+
 function requireVerifiedDeliveryActor(actor) {
   if (actor?.account?.status !== "active") {
     throw new ApiError(403, "ACCOUNT_NOT_ACTIVE", "Only an active RIVT account can deliver customer documents.");
@@ -608,14 +646,18 @@ export function registerToolRecordRoutes({
                 "A saved job invoice cannot be relinked to a different project invoice.",
               );
             }
+            const documentUnchanged = equivalentInvoiceDocument(existingInvoice, {
+              ...input,
+              payload: incomingPayload,
+            });
             persistedPayload = {
               ...incomingPayload,
               ...(currentPayload.bankPayment ? { bankPayment: currentPayload.bankPayment } : {}),
-              ...(currentPayload.delivery ? { delivery: currentPayload.delivery } : {}),
+              ...(documentUnchanged && currentPayload.delivery ? { delivery: currentPayload.delivery } : {}),
             };
             if (
               objectValue(currentPayload.delivery).status === "sent"
-              && equivalentInvoicePayload(currentPayload, incomingPayload)
+              && documentUnchanged
             ) {
               persistedStatus = "sent";
             }
@@ -1463,6 +1505,7 @@ export function registerToolRecordRoutes({
 }
 
 export const toolRecordInternals = {
+  equivalentInvoiceDocument,
   equivalentInvoicePayload,
   expenseCsv,
   hasActiveProEntitlement,

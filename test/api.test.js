@@ -223,6 +223,44 @@ test("invoice browser payload cannot supply server-owned delivery or payment tru
   ), false);
 });
 
+test("invoice delivery proof is retained only for the identical canonical document", () => {
+  const existing = {
+    title: "Panel replacement",
+    record_date: new Date("2026-08-08T00:00:00.000Z"),
+    amount_cents: "12500",
+    standalone_project_id: "11111111-1111-4111-8111-111111111111",
+    active_work_id: null,
+    customer_id: "22222222-2222-4222-8222-222222222222",
+    payload: {
+      invoiceNumber: "INV-100",
+      customerLines: [],
+      delivery: { status: "sent", providerMessageId: "server-owned" },
+      bankPayment: { status: "open" },
+    },
+  };
+  const unchanged = {
+    title: "Panel replacement",
+    recordDate: "2026-08-08",
+    amountCents: 12500,
+    standaloneProjectId: "11111111-1111-4111-8111-111111111111",
+    activeWorkId: null,
+    customerId: "22222222-2222-4222-8222-222222222222",
+    payload: { invoiceNumber: "INV-100", customerLines: [] },
+  };
+
+  assert.equal(toolRecordInternals.equivalentInvoiceDocument(existing, unchanged), true);
+  assert.equal(toolRecordInternals.equivalentInvoiceDocument(existing, { ...unchanged, amountCents: 12600 }), false);
+  assert.equal(toolRecordInternals.equivalentInvoiceDocument(existing, { ...unchanged, title: "Changed fallback title" }), false);
+  assert.equal(toolRecordInternals.equivalentInvoiceDocument(existing, { ...unchanged, recordDate: "2026-08-09" }), false);
+  assert.equal(toolRecordInternals.equivalentInvoiceDocument(existing, { ...unchanged, standaloneProjectId: null }), false);
+  assert.equal(toolRecordInternals.equivalentInvoiceDocument(existing, { ...unchanged, activeWorkId: "33333333-3333-4333-8333-333333333333" }), false);
+  assert.equal(toolRecordInternals.equivalentInvoiceDocument(existing, { ...unchanged, customerId: null }), false);
+  assert.equal(toolRecordInternals.equivalentInvoiceDocument(existing, {
+    ...unchanged,
+    payload: { invoiceNumber: "INV-101", customerLines: [] },
+  }), false);
+});
+
 test("message send requires text or a managed staged attachment", () => {
   assert.equal(messageCreateSchema.safeParse({ body: "", attachments: [] }).success, false);
   assert.equal(messageCreateSchema.safeParse({

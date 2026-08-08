@@ -1912,17 +1912,6 @@ function JobChecklistTool() {
 
 // ── Payment Tracker Tool ──────────────────────────────────────────────────────
 
-const paymentsTrackerKey = "rivt.payments.v1";
-
-function readPaymentTrackerRecords(): PaymentTrackerRecord[] {
-  try {
-    const stored = localStorage.getItem(paymentsTrackerKey);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as PaymentTrackerRecord[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch { return []; }
-}
-
 function isPaymentTrackerRecord(value: unknown): value is PaymentTrackerRecord {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<PaymentTrackerRecord>;
@@ -1946,32 +1935,27 @@ function paymentRecordFromServer(record: ServerToolRecord): PaymentTrackerRecord
   };
 }
 
-function ReceivablesTool() {
-  const [records, setRecords] = useState<PaymentTrackerRecord[]>(readPaymentTrackerRecords);
-  const [loadMessage, setLoadMessage] = useState("Checking for earlier manual records...");
+function ReceivablesTool({ accountId }: { accountId: string }) {
+  const [records, setRecords] = useState<PaymentTrackerRecord[]>([]);
+  const [loadMessage, setLoadMessage] = useState("Checking your RIVT account...");
 
   useEffect(() => {
     let cancelled = false;
-    void fetchToolRecords("payment_record").then((serverRecords) => {
+    void fetchToolRecords("payment_record", accountId).then((serverRecords) => {
       if (cancelled) return;
       if (!serverRecords) {
-        setLoadMessage("RIVT could not check the account right now. Any earlier device records remain listed below as reference only.");
+        setRecords([]);
+        setLoadMessage("RIVT could not check this account right now. Try again when your connection is stable.");
         return;
       }
       const mapped = serverRecords.map(paymentRecordFromServer).filter((record): record is PaymentTrackerRecord => Boolean(record));
-      const localSnapshot = readPaymentTrackerRecords();
-      const merged = [...mapped];
-      const knownIds = new Set(mapped.map((record) => record.id));
-      localSnapshot.forEach((record) => {
-        if (!knownIds.has(record.id)) merged.push(record);
-      });
-      setRecords(merged);
-      setLoadMessage(merged.length
-        ? "Earlier manually entered records are shown for reference only."
+      setRecords(mapped);
+      setLoadMessage(mapped.length
+        ? "Earlier manual records from this RIVT account are shown for reference only."
         : "No earlier manual payment records were found.");
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [accountId]);
 
   const sorted = [...records].sort((a, b) => b.invoiceDate.localeCompare(a.invoiceDate));
 
@@ -2577,10 +2561,12 @@ function TimeCostsTool({
 }
 
 function InvoiceWorkspaceTool({
+  accountId,
   activeView,
   onViewChange,
   draft,
 }: {
+  accountId: string;
   activeView: InvoiceView;
   onViewChange: (view: InvoiceView) => void;
   draft: ReactNode;
@@ -2611,7 +2597,7 @@ function InvoiceWorkspaceTool({
       </nav>
       <div className="v2-invoice-workspace-content">
         {activeView === "draft" ? draft : null}
-        {activeView === "receivables" ? <ReceivablesTool /> : null}
+        {activeView === "receivables" ? <ReceivablesTool key={accountId} accountId={accountId} /> : null}
       </div>
     </div>
   );
@@ -3453,6 +3439,7 @@ export function ToolsStudio({ accountId, isDemo = false, jobs, paymentRecords, m
         title: "Invoice",
         node: (
           <InvoiceWorkspaceTool
+            accountId={accountId}
             activeView={activeInvoiceView}
             onViewChange={changeInvoiceView}
             draft={<InvoiceDraftTool key={`invoice:${activeJobScopeKey}:${focusedToolRecord?.recordType === "invoice_draft" ? focusedToolRecord.id : "default"}`} activeJob={activeJob} workContext={toolWorkContext} initialRecord={focusedToolRecord?.recordType === "invoice_draft" ? focusedToolRecord : null} estimateDraft={convertedEstimateDraft} activeWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null} />}
@@ -3560,6 +3547,7 @@ export function ToolsStudio({ accountId, isDemo = false, jobs, paymentRecords, m
         title: "Invoice",
         node: (
           <InvoiceWorkspaceTool
+            accountId={accountId}
             activeView="receivables"
             onViewChange={changeInvoiceView}
             draft={<InvoiceDraftTool key={`invoice-legacy:${activeJobScopeKey}`} activeJob={activeJob} workContext={toolWorkContext} estimateDraft={convertedEstimateDraft} activeWorkId={toolWorkContext.kind === "rivt" ? toolWorkContext.activeWorkId : null} />}

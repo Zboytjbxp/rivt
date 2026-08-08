@@ -1023,6 +1023,133 @@ if (!testDatabaseUrl) {
     assert.equal(identicalDocumentReplay.payload.meta.replayReason, "identical_document");
     assert.equal(capturedEmailMessages().filter((message) => message.to === "jordan.client@example.test").length, 1);
 
+    const integrityInvoicePayload = {
+      recipientEmail: "invoice-integrity@example.test",
+      recipientName: "Invoice Integrity Customer",
+      invoiceNumber: "RIVT-INTEGRITY",
+      paymentOptions: { bank: false, outside: true },
+      outsidePaymentInstructions: "Pay by check to RIVT Cabinet Co.",
+      customerLines: [],
+    };
+    const integrityDraft = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        recordType: "invoice_draft",
+        localId: "invoice:delivery-integrity",
+        title: "Original fallback title",
+        status: "draft",
+        recordDate: "2026-08-01",
+        amountCents: 10000,
+        payload: integrityInvoicePayload,
+      },
+    });
+    assert.equal(integrityDraft.response.status, 200);
+
+    const firstIntegritySend = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Adelivery-integrity/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(firstIntegritySend.response.status, 200);
+    assert.equal(firstIntegritySend.payload.data.record.status, "sent");
+    assert.equal(firstIntegritySend.payload.data.record.payload.delivery.status, "sent");
+    const firstIntegrityHash = firstIntegritySend.payload.data.record.payload.delivery.contentHash;
+
+    const unchangedIntegrityAutosave = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        ...integrityDraft.payload.data.record,
+        recordType: "invoice_draft",
+        status: "draft",
+        payload: integrityInvoicePayload,
+      },
+    });
+    assert.equal(unchangedIntegrityAutosave.response.status, 200);
+    assert.equal(unchangedIntegrityAutosave.payload.data.record.status, "sent");
+    assert.equal(unchangedIntegrityAutosave.payload.data.record.payload.delivery.contentHash, firstIntegrityHash);
+
+    const amountOnlyEdit = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        ...integrityDraft.payload.data.record,
+        recordType: "invoice_draft",
+        status: "draft",
+        amountCents: 11000,
+        payload: integrityInvoicePayload,
+      },
+    });
+    assert.equal(amountOnlyEdit.response.status, 200);
+    assert.equal(amountOnlyEdit.payload.data.record.status, "draft");
+    assert.equal(Object.hasOwn(amountOnlyEdit.payload.data.record.payload, "delivery"), false);
+
+    const resendAfterAmountEdit = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Adelivery-integrity/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(resendAfterAmountEdit.response.status, 200);
+    assert.equal(resendAfterAmountEdit.payload.data.record.status, "sent");
+    assert.notEqual(resendAfterAmountEdit.payload.data.record.payload.delivery.contentHash, firstIntegrityHash);
+    const amountEditedEmail = capturedEmailMessages()
+      .filter((message) => message.to === "invoice-integrity@example.test")
+      .at(-1);
+    assert.ok(amountEditedEmail);
+    assert.match(amountEditedEmail.text, /\$110\.00/);
+
+    const titleOnlyEdit = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        ...amountOnlyEdit.payload.data.record,
+        recordType: "invoice_draft",
+        title: "Changed fallback title",
+        status: "draft",
+        payload: integrityInvoicePayload,
+      },
+    });
+    assert.equal(titleOnlyEdit.response.status, 200);
+    assert.equal(titleOnlyEdit.payload.data.record.status, "draft");
+    assert.equal(Object.hasOwn(titleOnlyEdit.payload.data.record.payload, "delivery"), false);
+
+    const resendAfterTitleEdit = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Adelivery-integrity/send", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+    });
+    assert.equal(resendAfterTitleEdit.response.status, 200);
+    assert.equal(resendAfterTitleEdit.payload.data.record.status, "sent");
+
+    const dateOnlyEdit = await requestJson(baseUrl, "/api/v1/tool-records", {
+      method: "POST",
+      cookie: owner.cookie,
+      idempotencyKey: randomUUID(),
+      body: {
+        ...titleOnlyEdit.payload.data.record,
+        recordType: "invoice_draft",
+        status: "draft",
+        recordDate: "2026-08-02",
+        payload: integrityInvoicePayload,
+      },
+    });
+    assert.equal(dateOnlyEdit.response.status, 200);
+    assert.equal(dateOnlyEdit.payload.data.record.status, "draft");
+    assert.equal(Object.hasOwn(dateOnlyEdit.payload.data.record.payload, "delivery"), false);
+
+    const integrityList = await requestJson(baseUrl, "/api/v1/tool-records?type=invoice_draft", { cookie: owner.cookie });
+    assert.equal(integrityList.response.status, 200);
+    const persistedIntegrityInvoice = integrityList.payload.data.records
+      .find((record) => record.localId === "invoice:delivery-integrity");
+    assert.ok(persistedIntegrityInvoice);
+    assert.equal(persistedIntegrityInvoice.status, "draft");
+    assert.equal(Object.hasOwn(persistedIntegrityInvoice.payload, "delivery"), false);
+
     const otherCannotSendInvoice = await requestJson(baseUrl, "/api/v1/invoices/invoice%3Aemail-one/send", {
       method: "POST",
       cookie: other.cookie,

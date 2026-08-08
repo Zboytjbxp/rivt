@@ -18,6 +18,9 @@ let queuedDailyLogKey = "";
 let replayedDailyLogKeyCount = 0;
 let queuedMediaKey = "";
 let replayedMediaKeyCount = 0;
+let paymentRecordExpectedAccountHeader = null;
+let failPaymentRecordFetch = false;
+let activeMockAccount = null;
 
 const vite = spawn(process.execPath, [viteBin, "--host", "127.0.0.1", "--port", String(port)], {
   cwd: projectRoot,
@@ -141,6 +144,55 @@ const continuityInvoiceRecord = {
   updatedAt: "2026-07-26T12:00:00.000Z",
 };
 
+const priorAccount = {
+  ...account,
+  id: "tools-ui-prior-account",
+  email: "prior-account@example.com",
+  profile: {
+    ...account.profile,
+    displayName: "Prior Account",
+  },
+};
+
+const currentAccountPaymentRecord = {
+  id: "tool-record-current-account-payment",
+  recordType: "payment_record",
+  localId: "payment-current-account",
+  title: "Current account receivable",
+  status: "partial",
+  recordDate: "2026-07-27",
+  amountCents: 42550,
+  standaloneProjectId: null,
+  activeWorkId: null,
+  customerId: null,
+  payload: {
+    id: "payment-current-account",
+    jobId: "current-account-job",
+    jobTitle: "Current account receivable",
+    invoiceAmount: 425.5,
+    invoiceDate: "2026-07-27",
+    status: "partial",
+    notes: "Owned by the signed-in RIVT account.",
+  },
+  createdAt: "2026-07-27T12:00:00.000Z",
+  updatedAt: "2026-07-27T12:00:00.000Z",
+};
+
+const priorAccountPaymentRecord = {
+  ...currentAccountPaymentRecord,
+  id: "tool-record-prior-account-payment",
+  localId: "payment-prior-account",
+  title: "Prior account server receivable",
+  payload: {
+    ...currentAccountPaymentRecord.payload,
+    id: "payment-prior-account",
+    jobId: "prior-account-job",
+    jobTitle: "Prior account server receivable",
+    invoiceAmount: 775.25,
+    notes: "Owned by Account A on the server.",
+  },
+};
+
 async function waitForServer() {
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
@@ -161,7 +213,19 @@ async function configurePage(page) {
   replayedDailyLogKeyCount = 0;
   queuedMediaKey = "";
   replayedMediaKeyCount = 0;
+  paymentRecordExpectedAccountHeader = null;
+  failPaymentRecordFetch = false;
+  activeMockAccount = account;
   await page.addInitScript(() => {
+    localStorage.setItem("rivt.payments.v1", JSON.stringify([{
+      id: "payment-other-account",
+      jobId: "other-account-job",
+      jobTitle: "Other account private receivable",
+      invoiceAmount: 9876.54,
+      invoiceDate: "2026-07-26",
+      status: "overdue",
+      notes: "Must never appear for the next account using this browser.",
+    }]));
     localStorage.setItem("rivt.priceBook.v1", JSON.stringify([{
       id: "saved-price-1",
       name: "3/4 plywood",
@@ -458,7 +522,7 @@ async function configurePage(page) {
     });
   });
   await page.route("**/api/v1/me", (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: account }) }),
+    route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: activeMockAccount ?? account }) }),
   );
   await page.route("**/api/auth/providers", (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ providers: {} }) }),
@@ -694,9 +758,22 @@ async function configurePage(page) {
     const method = route.request().method();
     if (method === "GET") {
       const requestUrl = new URL(route.request().url());
-      const records = requestUrl.searchParams.get("type") === "invoice_draft"
+      const recordType = requestUrl.searchParams.get("type");
+      if (recordType === "payment_record") {
+        paymentRecordExpectedAccountHeader = route.request().headers()["x-rivt-expected-account-id"] ?? null;
+        if (failPaymentRecordFetch) {
+          return route.fulfill({
+            status: 503,
+            contentType: "application/json",
+            body: JSON.stringify({ error: { code: "TEMPORARILY_UNAVAILABLE" } }),
+          });
+        }
+      }
+      const records = recordType === "invoice_draft"
         ? [continuityInvoiceRecord]
-        : [];
+        : recordType === "payment_record"
+          ? [paymentRecordExpectedAccountHeader === priorAccount.id ? priorAccountPaymentRecord : currentAccountPaymentRecord]
+          : [];
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ data: { records } }) });
     }
     if (method === "POST") {
@@ -1721,6 +1798,25 @@ async function runToolsFlow(page, viewportName) {
     "Receivables should be reachable inside Invoice",
   );
   await page.getByText("Invoice status stays with the real invoice", { exact: true }).waitFor({ timeout: 15_000 });
+  await page.getByText("Current account receivable", { exact: true }).waitFor({ timeout: 15_000 });
+  assert.equal(
+    await page.getByText("Other account private receivable", { exact: true }).count(),
+    0,
+    "Receivables must never append an ownerless legacy browser row to the signed-in account",
+  );
+  assert.equal(
+    paymentRecordExpectedAccountHeader,
+    account.id,
+    "Receivables must bind its server read to the current account identity",
+  );
+  assert.equal(
+    await page.evaluate(() => {
+      const stored = JSON.parse(localStorage.getItem("rivt.payments.v1") ?? "[]");
+      return stored[0]?.jobTitle ?? null;
+    }),
+    "Other account private receivable",
+    "The privacy fix must quarantine ownerless legacy rows without silently deleting device data",
+  );
   assert.equal(await page.getByRole("button", { name: /Add Invoice/i }).count(), 0, "Receivables must not create a second manual invoice ledger");
   assert.equal(await page.getByRole("button", { name: /Mark Paid/i }).count(), 0, "Receivables must not claim payment from a manual toggle");
   await page.screenshot({ path: path.join(screenshotDir, `${viewportName}-invoice-receivables.png`), fullPage: true });
@@ -1733,6 +1829,22 @@ async function runToolsFlow(page, viewportName) {
     "page",
     "Legacy payments links should open Invoice on the Receivables section",
   );
+  if (viewportName === "desktop") {
+    failPaymentRecordFetch = true;
+    await page.reload({ waitUntil: "networkidle" });
+    await page.getByText("RIVT could not check this account right now. Try again when your connection is stable.", { exact: true }).waitFor({ timeout: 15_000 });
+    assert.equal(
+      await page.getByText("Other account private receivable", { exact: true }).count(),
+      0,
+      "Receivables must fail closed instead of exposing an ownerless browser row during an account API outage",
+    );
+    assert.equal(
+      await page.getByText("Current account receivable", { exact: true }).count(),
+      0,
+      "Receivables must clear the prior account result while the current account cannot be checked",
+    );
+    failPaymentRecordFetch = false;
+  }
   await page.getByLabel("Invoice", { exact: true }).getByRole("button", { name: "Tools" }).click();
 
   await toolTile("Jobsite").click();
@@ -1888,6 +2000,24 @@ try {
     page.on("pageerror", (error) => errors.push(error.message));
 
     await configurePage(page);
+    if (viewport.name === "desktop") {
+      activeMockAccount = priorAccount;
+      await page.goto(`${baseUrl}/app/tools?tool=payments`, { waitUntil: "networkidle" });
+      await page.getByText("Prior account server receivable", { exact: true }).waitFor({ timeout: 15_000 });
+      assert.equal(paymentRecordExpectedAccountHeader, priorAccount.id, "Account A Receivables must bind its read to Account A");
+
+      activeMockAccount = account;
+      await page.reload({ waitUntil: "networkidle" });
+      await page.getByText("Your toolbox", { exact: true }).waitFor({ timeout: 15_000 });
+      assert.equal(await page.getByText("Prior account server receivable", { exact: true }).count(), 0, "Account A server rows must clear as soon as the signed-in account changes");
+      assert.equal(await page.getByText("Other account private receivable", { exact: true }).count(), 0, "Ownerless legacy browser rows must stay quarantined while account-scoped UI resets");
+
+      await page.goto(`${baseUrl}/app/tools?tool=payments`, { waitUntil: "networkidle" });
+      await page.getByText("Current account receivable", { exact: true }).waitFor({ timeout: 15_000 });
+      assert.equal(paymentRecordExpectedAccountHeader, account.id, "Account B Receivables must replace Account A's read boundary after switching accounts");
+      assert.equal(await page.getByText("Prior account server receivable", { exact: true }).count(), 0, "Account A server rows must clear after switching to Account B");
+      assert.equal(await page.getByText("Other account private receivable", { exact: true }).count(), 0, "Ownerless legacy browser rows must stay quarantined after switching to Account B");
+    }
     await runToolsFlow(page, viewport.name);
     assert.equal(errors.length, 0, `${viewport.name} console errors: ${errors.join("\n")}`);
     await context.close();
