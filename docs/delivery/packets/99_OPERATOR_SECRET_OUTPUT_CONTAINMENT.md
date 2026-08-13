@@ -83,11 +83,11 @@ known, but transcript confidentiality is not accepted as a security boundary.
 The separately authorized one-class-at-a-time recurrence rotations are tracked
 in `docs/operations/incidents/2026-07-29-production-credential-exposure.md` and
 `docs/delivery/DEPLOYMENT_LEDGER.md`. PostgreSQL, Stripe API and both webhook
-classes, Resend, Google OAuth, both independent pepper classes, Web Push
-VAPID, and the bounded backup-encryption key rotation have current credential-
-rotation evidence. Recurring independent recovery remains unproved. The
-broader incident and `ACTIVE_LAUNCH_HOLD` remain open; ACH, the feature
-release, Railway Stage 1, and public launch remain paused.
+classes, Resend, Google OAuth, both independent pepper classes, and Web Push
+VAPID have current recurrence evidence. Backup-encryption recurrence rotation
+and recurring independent recovery remain unproved. The broader incident and
+`ACTIVE_LAUNCH_HOLD` remain open; ACH, the feature release, Railway Stage 1,
+and public launch remain paused.
 
 ## Rollback
 
@@ -113,10 +113,13 @@ must never reinstall material exposed in the transcript.
   refusal for those 21 operational blockers.
 
 These are source checks only. They do not replace provider evidence or
-owner-controlled proofs. The predecessor backup-encryption key was retired
-only after active- and predecessor-key restore proofs passed. The remaining
-recovery boundary is an independently retained, current database-and-object
-set plus an isolated complete-set restore under separate explicit approval.
+owner-controlled proofs. July's active- and predecessor-key restore proofs and
+predecessor retirement predate the August 3 recurrence and are historical
+evidence only. The remaining boundary includes a post-August-3 backup-key
+replacement, fresh encrypted artifact, isolated active-key restore and
+predecessor-removal proof, followed separately by an independently retained,
+current database-and-object set and isolated complete-set restore under
+explicit approval.
 
 ## Final-diff security remediation addendum - 2026-08-08
 

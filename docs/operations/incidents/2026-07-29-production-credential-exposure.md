@@ -10,7 +10,7 @@
   was not recorded)
 - Declared at: `2026-07-29T21:42:25-04:00` (first formal repository
   declaration; any earlier verbal declaration is unverified)
-- Last updated: 2026-08-04 America/New_York
+- Last updated: 2026-08-13 America/New_York
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
   followed by authorization to continue the remaining incident work unless
@@ -900,7 +900,7 @@ not be read as closure of the recurrence.
 - Google OAuth secret rotation is complete. The overall incident and
   `ACTIVE_LAUNCH_HOLD` remain open for unrelated remaining evidence.
 
-## Backup-encryption rotation and restore evidence
+## Historical July 30 backup-encryption rotation and restore evidence (before the August 3 recurrence)
 
 - Active/previous key-ring compatibility was deployed before rotating the
   backup-encryption key. New backup writes use only the active key; the previous
@@ -930,8 +930,8 @@ not be read as closure of the recurrence.
   `854eef63b4d169746faf87157aaa9f3c1345329d`; public health returned `ok: true`.
   Post-deployment runtime checks reported `primaryPreviousPresent=false` and
   `aliasPreviousPresent=false`, proving that the running process no longer
-  carries either supported previous-key alias. The previous backup key is
-  retired.
+  carried either supported previous-key alias after that July rotation. The
+  pre-recurrence predecessor was retired.
 - `RESTORE_DATABASE_URL` was also deleted from Railway configuration.
   Follow-up Railway deployment prefix `638e213e` succeeded on the same exact
   commit, public health returned `ok: true`, and runtime checks confirmed the
@@ -942,10 +942,12 @@ not be read as closure of the recurrence.
   `isPendingDeletion=true` with `deletedAt`
   `2026-08-01T04:21:26.274Z`. Railway keeps that volume recoverable during its
   deletion window, so physical removal is not yet claimed.
-- Backup restore coverage now proves fresh active-key writes and the named
-  2026-07-29 and 2026-07-25 previous-key artifacts, and the previous backup key
-  is retired. The broader incident remains open and Railway Stage 1 remains
-  paused until the remaining credential blockers are verified.
+- This July restore coverage proves active-key writes and the named 2026-07-29
+  and 2026-07-25 previous-key artifacts for that historical rotation, and its
+  predecessor was retired. It predates and does not close the August 3 backup-
+  encryption recurrence, which remains pending. The broader incident remains
+  open and Railway Stage 1 remains paused until the remaining credential
+  blockers are verified.
 
 ## Stripe billing webhook rotation evidence
 
@@ -1172,18 +1174,22 @@ Future rotations must follow
 [`CREDENTIAL_ROTATION_RUNBOOK.md`](../CREDENTIAL_ROTATION_RUNBOOK.md): rotate
 one provider at a time, verify the replacement, then revoke the predecessor.
 Never restore a compromised credential during application rollback. The VAPID
-and bounded backup-encryption rotations described above followed this sequence
-and are closed; this does not prove recurring independent recovery.
+recurrence rotation is closed. The bounded backup-encryption rotation recorded
+on July 30 followed this sequence but predates the August 3 recurrence, so it
+is historical evidence and does not close the current backup-key obligation.
 
 ## Exit criteria
 
 Completed containment and rotation evidence above remains required history.
 The still-open exit boundary is:
 
+- complete and verify the pending August 3 backup-encryption recurrence with a
+  replacement, one fresh encrypted artifact, an isolated active-key restore,
+  and proof that the exposed predecessor is absent;
 - complete and verify recurring independent recovery for the current database
-  and every referenced object byte; the bounded backup-encryption rotation,
-  Resend, Web Push VAPID, and both pepper classes are closed for this
-  recurrence and are no longer part of this open item;
+  and every referenced object byte; Resend, Web Push VAPID, and both pepper
+  classes are closed for this recurrence and are no longer part of this open
+  item;
 - finish the consolidated release-candidate forward-port, then obtain a final
   independent exact-source review and disposable-PostgreSQL CI evidence for
   that exact documentation-inclusive candidate; historical branch SHAs, scan

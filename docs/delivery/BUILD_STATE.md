@@ -54,10 +54,10 @@ proven on all three controlled devices before the predecessor was retired.
 The separately exposed Resend credential was replaced again, the predecessor
 and an unused intermediate were retired only after owner-controlled delivery
 proof, and final provider inventory shows exactly one restricted sending key.
-Backup-encryption rotation is closed: active- and predecessor-key restore
-proofs passed before the previous runtime key was removed. That bounded key
-rotation is not recurring independent recovery. The incident and
-`ACTIVE_LAUNCH_HOLD` remain open; the feature release, launch, and Railway
+Backup-encryption recurrence rotation remains pending. The active- and
+predecessor-key restore proofs and previous-key removal recorded on July 30
+predate the August 3 recurrence and therefore cannot close it. The incident
+and `ACTIVE_LAUNCH_HOLD` remain open; the feature release, launch, and Railway
 Stage 1 remain paused.
 
 ## Packet 99 independent-backup provider foundation - configured but inactive
@@ -183,7 +183,7 @@ Stage 1 remain paused.
   this addendum is merged to `master`, deployed, payment-enabling, provider-
   mutating, or launch-authorizing.
 
-## Packet 99 operator secret-output containment - active; named rotations closed
+## Packet 99 operator secret-output containment - active; backup encryption pending
 
 - The recurrence is recorded without any secret value or credential-bearing
   output.
@@ -220,7 +220,8 @@ Stage 1 remain paused.
   live API key, both Stripe webhooks, Google OAuth, the distinct authentication
   metadata and rate-limit peppers, and Web Push VAPID are closed for this
   recurrence. The 2026-08-04 Resend recurrence is now closed; backup
-  encryption remains pending.
+  encryption remains pending a post-August-3 replacement, fresh encrypted
+  artifact, isolated active-key restore, and predecessor-removal proof.
 - The Connect cutover changed only `STRIPE_CONNECT_WEBHOOK_SECRET`. Automatic
   deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
   policy; exact-source deployment `6152da11-1323-47a9-a258-d9013f040522`
@@ -388,8 +389,8 @@ Stage 1 remain paused.
   database-backed integration cases skipped because `TEST_DATABASE_URL` was
   absent. A focused push-notification/readiness run passed 26 tests and skipped
   one database-backed integration case for the same reason.
-- VAPID, the August 4 Resend recurrence, and the bounded backup-encryption key
-  rotation are closed. Recurring independent recovery remains unproved, so
+- VAPID and the August 4 Resend recurrence are closed. Backup-encryption
+  recurrence rotation and recurring independent recovery remain unproved, so
   Packet 99 stays active. This does not clear the incident or
   `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
   release.
@@ -841,7 +842,8 @@ decision.
   operational ceiling; no exact measured cost is claimed. A fast-follow must
   move the pinned Node 20 runtime to Node 22 before the AWS SDK's
   post-January-2027 Node 22 support requirement becomes applicable.
-- Backup-encryption rotation now has two isolated restore proofs. A fresh
+- Historical July 30 backup-encryption rotation evidence, recorded before the
+  August 3 recurrence, includes two isolated restore proofs. A fresh
   active-key artifact identified by timestamp `2026-07-30T03-58-45.931Z`
   restored 109 tables and 8,768 rows with zero manifest differences; an
   independent critical-table source/target comparison also returned zero
@@ -859,8 +861,9 @@ decision.
   Railway deployment prefix `b9920864` serves commit
   `854eef63b4d169746faf87157aaa9f3c1345329d`; public health returned `ok: true`.
   Runtime checks returned `primaryPreviousPresent=false` and
-  `aliasPreviousPresent=false`, proving the running process carries neither
-  previous-key alias. The previous backup key is retired.
+  `aliasPreviousPresent=false`, proving the running process carried neither
+  previous-key alias after that July rotation. That pre-recurrence predecessor
+  was retired; the August 3 recurrence remains pending.
 - `RESTORE_DATABASE_URL` is deleted from Railway configuration. Follow-up
   Railway deployment prefix `638e213e` succeeded on commit
   `854eef63b4d169746faf87157aaa9f3c1345329d`; public health returned `ok: true`,
