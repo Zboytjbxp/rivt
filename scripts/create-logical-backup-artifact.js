@@ -1,10 +1,11 @@
 import "dotenv/config";
-import crypto from "node:crypto";
 import {
   assertBackupDatabaseRoleReadOnly,
   assertBackupCatalogComplete,
+  assertBackupWriteDestination,
   acquireLogicalBackupLock,
   beginReadOnlyBackupSnapshot,
+  backupWriteWindowFromEnv,
   countTableRows,
   destinationS3Config,
   ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
@@ -12,6 +13,7 @@ import {
   isDirectExecution,
   LOGICAL_BACKUP_FORMAT_V2,
   LOGICAL_BACKUP_MANIFEST_FORMAT_V2,
+  logicalBackupObjectKey,
   poolFor,
   POSTGRES_TEXT_ROW_ENCODING,
   publicTables,
@@ -38,14 +40,16 @@ export async function createLogicalBackupArtifact({
   s3ClientFactory = s3ClientForConfig,
 } = {}) {
   const startedAt = Date.now();
+  const executionTime = now();
+  const writeWindow = backupWriteWindowFromEnv(env, executionTime);
   const sourceUrl = requireConfiguredEnv("BACKUP_DATABASE_URL", env);
   const destination = destinationS3Config(env);
+  assertBackupWriteDestination(destination, env);
   const sourceCommit = requiredSourceCommit(env);
   const retentionDays = retentionDaysFromEnv(env);
   const encryptionSecret = requireStrictActiveBackupEncryptionSecret(env);
-  const createdAt = now().toISOString();
-  const objectTimestamp = createdAt.replaceAll(":", "-");
-  const objectKey = `${destination.prefix}/${objectTimestamp}-${sourceCommit}-${crypto.randomUUID()}.json.gz.aes256gcm`;
+  const createdAt = executionTime.toISOString();
+  const objectKey = logicalBackupObjectKey(destination.prefix, executionTime);
   const s3 = s3ClientFactory(destination);
 
   await verifyBucketProtection(s3, destination, retentionDays);
@@ -103,15 +107,20 @@ export async function createLogicalBackupArtifact({
       createdAt,
       sourceCommit,
       retentionDays,
+      writeWindowStartAt: writeWindow.startAt,
+      writeWindowEndAt: writeWindow.endAt,
       now,
     });
 
     return {
       ok: true,
       mode: "create-logical-backup-artifact",
+      endpoint: destination.endpoint,
+      region: destination.region,
       bucket: destination.bucket,
       prefix: destination.prefix,
-      key: objectKey,
+      forcePathStyle: destination.forcePathStyle,
+      key: upload.key,
       versionId: upload.versionId,
       sha256: upload.sha256,
       byteLength: upload.byteLength,
@@ -120,6 +129,9 @@ export async function createLogicalBackupArtifact({
       sourceCommit,
       retentionDays,
       retentionUntil: upload.retentionUntil,
+      backupSlotStartAt: upload.backupSlotStartAt,
+      writeWindowStartAt: writeWindow.startAt,
+      writeWindowEndAt: writeWindow.endAt,
       tables: snapshot.manifest.tableCount,
       rows: snapshot.manifest.rowCount,
       durationMs: Date.now() - startedAt,

@@ -81,8 +81,11 @@ export async function verifyLogicalBackup({
   return {
     ok: true,
     mode: "verify-logical-backup",
+    endpoint: destination.endpoint,
+    region: destination.region,
     bucket: destination.bucket,
     prefix: destination.prefix,
+    forcePathStyle: destination.forcePathStyle,
     key: newest.Key,
     versionId: newest.VersionId,
     sha256: verified.sha256,

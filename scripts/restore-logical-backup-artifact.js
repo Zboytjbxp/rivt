@@ -222,8 +222,11 @@ export async function restoreLogicalBackupArtifact({
       return {
         ok: true,
         mode: applyMigrations ? "migrate-and-restore-logical-backup-artifact" : "restore-logical-backup-artifact",
+        endpoint: source.endpoint,
+        region: source.region,
         bucket: source.bucket,
         prefix: source.prefix,
+        forcePathStyle: source.forcePathStyle,
         key: objectKey,
         versionId,
         sha256: protectedArtifact.sha256,
