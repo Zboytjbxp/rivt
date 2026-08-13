@@ -1,9 +1,12 @@
 # RIVT network-first simplification plan
 
-Status: founder-directed product plan; implementation is intentionally paused
-until Packet 87 reaches its acceptance boundary.
+Status: founder-directed product roadmap preserved against release candidate
+`00926a93e4af46ea42fd9a8534d540ca38a70463`; implementation is intentionally
+paused while Packet 99 and the active launch hold remain open.
 
-Date: 2026-08-02
+Originally recorded: 2026-08-02
+
+Reconciled with the current release candidate: 2026-08-13
 
 ## Decision
 
@@ -23,9 +26,14 @@ field tools remain valuable. The simplification work must give each capability
 one obvious home and remove duplicate ways to represent the same person, work,
 record, or action.
 
-## Release boundary
+## Contract and release boundary
 
-The verified Packet 87 money/security candidate remains untouched. This plan:
+`RIVT_MASTER_BUILD_PROMPT.md` remains the executable product contract. This
+roadmap records the founder-directed long-term hierarchy and the reversible
+sequence for reaching it; it does not silently override conflicting contract
+language, authorization rules, or the active Gate A packet.
+
+The verified Packet 99 release candidate remains untouched. This plan:
 
 - does not authorize deployment or launch;
 - does not enable ACH or change any provider;
@@ -35,8 +43,9 @@ The verified Packet 87 money/security candidate remains untouched. This plan:
 - does not authorize a broad UI rewrite.
 
 Implementation begins only in separately reviewed, reversible packets after
-Packet 87 closes. Existing route aliases and stored records remain readable
-during every transition.
+Packet 99 reaches its acceptance boundary and the affected product-contract
+language is explicitly versioned. Existing route aliases and stored records
+remain readable during every transition.
 
 ## Product promise
 
@@ -97,7 +106,7 @@ The complete core loop is:
 
 ### Primary concepts
 
-The intended long-term concepts are:
+The founder-directed long-term concepts are:
 
 1. Home
 2. Work
@@ -108,13 +117,14 @@ The intended long-term concepts are:
 Camera remains a one-tap contextual field action for active work, private
 albums, Shop Talk media, and proof capture.
 
-There is a current source-of-truth conflict: `AGENTS.md` names Crew as a primary
-concept, while `RIVT_MASTER_BUILD_PROMPT.md` currently names Camera as the
-third persistent destination and places People under Work. The affected
-navigation implementation must pause until the master contract is versioned
-to resolve that conflict. No route is removed before contextual Camera access,
-deep-link compatibility, offline capture, and physical-device acceptance are
-proved.
+There is a current source-of-truth conflict: `AGENTS.md` and this founder
+direction name Crew as a primary concept, while `RIVT_MASTER_BUILD_PROMPT.md`
+currently names Camera as the third persistent destination and places People
+under Work. The current release therefore keeps Camera in navigation. The
+affected navigation implementation must pause until the master contract is
+versioned to resolve that conflict. No route is removed before contextual
+Camera access, deep-link compatibility, offline capture, and physical-device
+acceptance are proved.
 
 The first simplification packet therefore improves Home, Work, and People
 without changing the five bottom-navigation destinations. Crew promotion is a
