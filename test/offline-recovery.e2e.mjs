@@ -491,15 +491,26 @@ async function runSnapshotBoundaryRegressions(browserInstance) {
     viewport: { width: 390, height: 844 },
     serviceWorkers: "allow",
   });
-  const page = await context.newPage();
+  let page = await context.newPage();
   const apiRequests = [];
+  const browserEvents = [];
   let recordApiRequests = false;
+  const configurePage = (targetPage) => {
+    targetPage.on("pageerror", (error) => browserEvents.push(`pageerror:${error.message}`));
+    targetPage.on("requestfailed", (request) => {
+      const url = new URL(request.url());
+      if (!url.pathname.startsWith("/api/")) {
+        browserEvents.push(`requestfailed:${url.pathname}:${request.failure()?.errorText ?? "unknown"}`);
+      }
+    });
+  };
+  configurePage(page);
 
-  page.on("request", (request) => {
+  context.on("request", (request) => {
     const pathname = new URL(request.url()).pathname;
     if (recordApiRequests && pathname.startsWith("/api/")) apiRequests.push(pathname);
   });
-  await page.route("**/api/**", (route) => {
+  await context.route("**/api/**", (route) => {
     const url = new URL(route.request().url());
     return defaultApiResponse(route, url, { account, activeWork: [activeWork] });
   });
@@ -520,13 +531,13 @@ async function runSnapshotBoundaryRegressions(browserInstance) {
     await page.waitForFunction(() => navigator.onLine === false);
     apiRequests.length = 0;
     recordApiRequests = true;
-    await reopenInstalledAppOffline(page);
+    page = await reopenInstalledAppOfflineInFreshPage(context, page, configurePage);
     // This regression verifies snapshot age and purge boundaries, not the
     // separate sub-10-second cold-start requirement asserted by the primary
     // installed-app scenario below. Give a contended CI runner the same
     // bounded 15-second recovery allowance used by the surrounding boundary
     // regressions while still failing if the cached app never leaves boot.
-    await waitForToolsWithDiagnostics(page, 15_000);
+    await waitForToolsWithDiagnostics(page, 15_000, browserEvents);
     await page.getByRole("button", { name: "Work", exact: true }).click();
     await page.getByRole("navigation", { name: "Work stages" }).getByRole("button", { name: /^Active\b/ }).click();
     await page.getByRole("heading", { name: activeWork.job.title, exact: true }).waitFor({ timeout: 10_000 });
@@ -547,7 +558,7 @@ async function runSnapshotBoundaryRegressions(browserInstance) {
       localStorage.setItem("rivt.offlineSession.v1", JSON.stringify({ ...snapshot, lastServerValidatedAt }));
     }, expired);
     apiRequests.length = 0;
-    await reopenInstalledAppOffline(page);
+    page = await reopenInstalledAppOfflineInFreshPage(context, page, configurePage);
     await page.getByText(/RIVT is having trouble connecting/i).waitFor({ timeout: 10_000 });
     assert.equal(await page.evaluate(() => localStorage.getItem("rivt.offlineSession.v1")), null, "An expired offline snapshot must be purged");
     assert.equal(await page.getByText(activeWork.job.title, { exact: true }).count(), 0, "Expired private work must not render");
@@ -562,7 +573,7 @@ async function runSnapshotBoundaryRegressions(browserInstance) {
       }));
     }, { sourceAccount: account, sourceWork: activeWork });
     apiRequests.length = 0;
-    await reopenInstalledAppOffline(page);
+    page = await reopenInstalledAppOfflineInFreshPage(context, page, configurePage);
     await page.getByText(/RIVT is having trouble connecting/i).waitFor({ timeout: 10_000 });
     assert.equal(await page.evaluate(() => localStorage.getItem("rivt.offlineSession.v1")), null, "A legacy renewable snapshot must be purged instead of migrated as trusted identity");
     assert.equal(await page.getByText(activeWork.job.title, { exact: true }).count(), 0, "Legacy cached private work must not render");
