@@ -18,7 +18,8 @@
   inspection, or retention administration. It conditionally creates a unique
   object, binds an explicit SHA-256 checksum and SSE-S3, requires S3's returned
   version/checksum, then reads only that version's provider-applied retention.
-- `GA-SEC-004` also gains an unmerged prospective receipt-privacy forward-port.
+- `GA-SEC-004` also gains undeployed receipt-privacy hardening in release-
+  candidate merge `3c3777682993dca735f46d1cbb1ec4cabf07df45`.
   New typed backup and restore evidence uses an opaque SHA-256 artifact
   identity instead of an exact object identifier and requires positive safe-
   integer table and row counts. Exact identifiers must be stored in encrypted
@@ -28,8 +29,9 @@
   `verificationDurationMs` fields, with sanitizer-to-materializer coverage.
   Focused verification passes 152/152 and local non-database gates pass. Gate A
   run `31699823161` passed against exact source revision
-  `0756fa455d1da3a665a484528c9178331838c65d`; later documentation-only
-  descendants do not reinterpret that run as exact-head proof.
+  `0756fa455d1da3a665a484528c9178331838c65d`, and exact-final-head run
+  `31701345846` passed every check for
+  `f95126fd1db5dc13b0d382ce8147a8c1943b2359`.
 - `GA-OPS-004` and `GA-SEC-004` gain undeployed, source-enforced storage-growth
   containment for a single proving month: a canonical UTC calendar-month
   write window is checked before AWS or PostgreSQL access and immediately

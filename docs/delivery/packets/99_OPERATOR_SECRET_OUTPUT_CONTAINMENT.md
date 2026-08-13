@@ -216,7 +216,7 @@ explicit approval.
 
 ## Backup-receipt privacy forward-port - 2026-08-13
 
-- The current unmerged forward-port replaces exact backup object identifiers
+- Merged PR #30 replaces exact backup object identifiers
   in typed repository receipts with a deterministic SHA-256 artifact identity
   and rejects non-positive, fractional, or unsafe table and row counts.
 - New typed receipts keep exact identifiers only in encrypted or otherwise
@@ -232,8 +232,9 @@ explicit approval.
   all four browser E2E journeys, diff integrity, and the production dependency
   audit pass. Twenty-three PostgreSQL suites skip locally because
   `TEST_DATABASE_URL` is absent. Gate A run `31699823161` passed against exact
-  source revision `0756fa455d1da3a665a484528c9178331838c65d`; later
-  documentation-only descendants do not reinterpret that run as exact-head
-  proof. The source is unmerged, undeployed, and does not create an AWS
-  identity, object, scheduler, restore target, payment, customer communication,
-  or added cost.
+  source revision `0756fa455d1da3a665a484528c9178331838c65d`, and exact-final-
+  head run `31701345846` passed every check for
+  `f95126fd1db5dc13b0d382ce8147a8c1943b2359`. PR #30 is merged only to the
+  release candidate as `3c377768`; the source is undeployed and does not create
+  an AWS identity, object, scheduler, restore target, payment, customer
+  communication, or added cost.
