@@ -813,7 +813,7 @@ test("backup evidence requires a full source commit and bounded policy threshold
   assert.throws(() => recoveryRtoMinutesFromEnv({ RECOVERY_RTO_MINUTES: "241" }), /cannot exceed 240/);
   assert.deepEqual(enforceRecoveryRto(12_000, 3_000, 240), {
     restoreDurationMs: 12_000,
-    verifyDurationMs: 3_000,
+    verificationDurationMs: 3_000,
     combinedDurationMs: 15_000,
     rtoMinutes: 240,
   });
@@ -2293,6 +2293,46 @@ test("newest backup selection and sanitized failures do not expose credentials o
   assert.equal(success.backupSlotStartAt, "2026-08-01T12:00:00.000Z");
   assert.equal(success.writeWindowStartAt, "2026-08-01T00:00:00.000Z");
   assert.equal(success.writeWindowEndAt, "2026-09-01T00:00:00.000Z");
+});
+
+test("restore evidence keeps the exact count and duration fields required by readiness receipts", () => {
+  const success = sanitizedSuccess({
+    ok: true,
+    mode: "restore-and-verify",
+    endpoint: "https://s3.example.test",
+    region: "us-east-1",
+    bucket: "private-backup-bucket",
+    prefix: "rivt/postgres",
+    forcePathStyle: false,
+    key: "rivt/postgres/2026-08-01T12-00-00.000Z-slot.json.gz.aes256gcm",
+    versionId: "private-version",
+    sha256: "a".repeat(64),
+    tableCount: 82,
+    rowCount: 7100,
+    restoreDurationMs: 15_000,
+    verificationDurationMs: 2_000,
+  });
+
+  assert.deepEqual(
+    {
+      artifactIdentitySha256: success.artifactIdentitySha256,
+      tableCount: success.tableCount,
+      rowCount: success.rowCount,
+      restoreDurationMs: success.restoreDurationMs,
+      verificationDurationMs: success.verificationDurationMs,
+    },
+    {
+      artifactIdentitySha256: success.artifactIdentitySha256,
+      tableCount: 82,
+      rowCount: 7100,
+      restoreDurationMs: 15_000,
+      verificationDurationMs: 2_000,
+    },
+  );
+  assert.match(success.artifactIdentitySha256, /^[a-f0-9]{64}$/u);
+  assert.equal(Object.hasOwn(success, "tables"), false);
+  assert.equal(Object.hasOwn(success, "rows"), false);
+  assert.equal(Object.hasOwn(success, "verifyDurationMs"), false);
 });
 
 test("newest backup selection follows version pagination instead of trusting the first lexicographic page", async () => {
