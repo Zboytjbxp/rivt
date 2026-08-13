@@ -200,5 +200,9 @@ backup-encryption predecessor under separate explicit approval.
   four database-independent integration checks; all four browser E2E
   journeys; diff integrity; and the production dependency audit with zero
   known vulnerabilities. Twenty-three PostgreSQL integration suites are
-  explicitly skipped without `TEST_DATABASE_URL`; fresh exact-head PR CI is
-  still required before this source can advance.
+  explicitly skipped locally without `TEST_DATABASE_URL`. Gate A Safety run
+  `31668298490` passed against source revision
+  `4d3831d8afba424e8f8f536d3a4f9c0c59631aa0`, including 28/28
+  disposable-PostgreSQL integration tests and all four browser journeys. The
+  run's launch-readiness report remains blocked on the recorded operational
+  evidence; no launch-ready conclusion is inferred.

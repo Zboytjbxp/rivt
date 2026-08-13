@@ -2,7 +2,7 @@
 
 Last updated: 2026-08-13 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: The independent-backup provider foundation now exists as an empty, private, Object-Lock-configured AWS bucket with a saved deny-only transport/create-only bucket policy, while runtime identities, artifacts, recurrence, object-byte coverage, and isolated restore proof remain inactive. Least-privilege writer and one-month storage-growth-containment source controls are implemented and locally verified on a new unmerged, undeployed Codex branch; fresh PR CI remains pending. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Current phase: The independent-backup provider foundation now exists as an empty, private, Object-Lock-configured AWS bucket with a saved deny-only transport/create-only bucket policy, while runtime identities, artifacts, recurrence, object-byte coverage, and isolated restore proof remain inactive. Least-privilege writer and one-month storage-growth-containment source controls are implemented and verified on a new unmerged, undeployed Codex branch; Gate A Safety run `31668298490` passed on source revision `4d3831d8afba424e8f8f536d3a4f9c0c59631aa0`. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
 Repository branch: `codex/aws-backup-provider-hardening` (based on release-candidate source `3103048ba20d629a3352592c0317c846e716b2f1`; not deployed)
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
@@ -20,7 +20,9 @@ claimed. The recorded PR #25 Gate A Safety run `30955179943` reported exactly
 21 blockers while completing 14/14 pretest safety checks, 603/603 unit tests,
 28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys.
 Its exit 1 was the required readiness refusal for that historical candidate.
-The current backup-hardening working tree requires its own final gate record.
+Gate A Safety run `31668298490` supplies the backup-hardening source's fresh
+disposable-PostgreSQL and browser gate record. Its launch-readiness check still
+reports the documented operational blockers; no launch-ready result is inferred.
 
 Operational status: a 2026-08-03 Railway configuration audit caused a new
 restricted-output exposure of current production credentials. No misuse
@@ -101,8 +103,11 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   browser E2E journeys, diff integrity, and the production dependency audit
   with zero known vulnerabilities. Its focused hardening file passes 71/71
   tests. Twenty-three PostgreSQL integration suites were skipped because this
-  isolated checkout has no `TEST_DATABASE_URL`; no database-backed pass is
-  claimed for them. Fresh exact-head PR CI remains pending.
+  isolated checkout has no `TEST_DATABASE_URL`; no local database-backed pass is
+  claimed for them. Gate A Safety run `31668298490` passed against source
+  revision `4d3831d8afba424e8f8f536d3a4f9c0c59631aa0`, including 28/28
+  disposable-PostgreSQL integration tests and all four browser journeys. The
+  run's readiness report remains blocked on the recorded operational evidence.
 - Current backup source still covers PostgreSQL only. Photos, documents, and
   attachments remain solely in Railway object storage; `R-052` and
   `GA-OPS-004` therefore remain Critical/Blocker. No deployment, launch,
