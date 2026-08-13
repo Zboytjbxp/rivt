@@ -92,7 +92,8 @@ export async function verifyLogicalBackup({
     ageHours: Number(Math.max(0, ageHours, createdAgeHours).toFixed(3)),
     retentionUntil: verified.retentionUntil,
     retentionDays: verified.retentionDays,
-    lifecycleRuleId: protection.lifecycleRuleId,
+    objectLockMode: protection.objectLockMode,
+    defaultRetentionDays: protection.defaultRetentionDays,
     encryptionKeyMode: "active-only",
     durationMs: Date.now() - startedAt,
   };

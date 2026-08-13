@@ -15,7 +15,7 @@ automation transcript. The command was stopped and its output is not copied
 into source, documentation, chat, tests, or evidence. No misuse indicator is
 known, but transcript confidentiality is not accepted as a security boundary.
 
-## Current release boundary - 2026-08-04
+## Historical release-boundary checkpoint - 2026-08-04
 
 - Production and `origin/master` remain at
   `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 is
@@ -141,3 +141,30 @@ backup-encryption predecessor under separate explicit approval.
 - This addendum does not change the active packet, clear the incident or
   launch hold, enable ACH, authorize a payment, call a provider, deploy the
   feature release, delete legacy browser data, or add cost.
+
+## Independent-backup provider-foundation addendum - 2026-08-12
+
+- A separately administered AWS account and one empty dedicated S3 bucket now
+  exist in the approved US region. Root passkey MFA is enabled, root has zero
+  access keys, and a near-zero spend alert is configured at $0.01; it is an
+  alert, not a hard spending cap.
+- The empty bucket has all four bucket-level Block Public Access settings,
+  bucket-owner-enforced ownership with ACLs disabled, Versioning, SSE-S3, and
+  Object Lock enabled with default 30-day COMPLIANCE retention. No object has
+  yet received or validated that retention. A deny-only bucket policy was
+  saved and is configured to deny non-TLS traffic and non-conditional writes
+  on the reserved backup prefix. The AWS console reported a successful save
+  and displayed both deny statements, but live negative-request enforcement
+  remains unproved. That policy grants no identity access.
+- The undeployed writer correction uses explicit SHA-256 integrity checking,
+  requires a provider VersionId and matching checksum, and reads only that
+  exact version's provider-applied retention. Its policy fixture permits only
+  `GetBucketVersioning`, `GetBucketObjectLockConfiguration`, `PutObject`, and
+  `GetObjectRetention`; static regressions reject list, content-read, delete,
+  retention-administration, and bucket-mutation permissions.
+- No IAM runtime identity, key, backup object, lifecycle rule, scheduler,
+  monitor secret, restore target, deployment, payment, customer communication,
+  or launch action exists from this addendum. The no-deletion boundary keeps
+  recurrence disabled, and PostgreSQL-only source coverage keeps `R-052` and
+  `GA-OPS-004` open until object-byte backup and exact complete-set restore are
+  proved.

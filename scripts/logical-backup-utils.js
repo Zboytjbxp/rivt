@@ -3,11 +3,10 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { gunzipSync, gzipSync } from "node:zlib";
 import {
-  GetBucketLifecycleConfigurationCommand,
   GetBucketVersioningCommand,
   GetObjectCommand,
   GetObjectLockConfigurationCommand,
-  HeadBucketCommand,
+  GetObjectRetentionCommand,
   HeadObjectCommand,
   ListObjectVersionsCommand,
   PutObjectCommand,
@@ -22,6 +21,7 @@ export const DEFAULT_BACKUP_JOB_TIMEOUT_MINUTES = 45;
 export const MAX_BACKUP_JOB_TIMEOUT_MINUTES = 60;
 export const MAX_ENCRYPTED_BACKUP_BYTES = 512 * 1024 * 1024;
 export const MAX_DECOMPRESSED_BACKUP_BYTES = 1024 * 1024 * 1024;
+export const MAX_PROVIDER_CLOCK_SKEW_MS = 5 * 60 * 1000;
 export const LOGICAL_BACKUP_FORMAT_V2 = "rivt-logical-backup-v2";
 export const LOGICAL_BACKUP_MANIFEST_FORMAT_V2 = "rivt-logical-backup-manifest-v2";
 export const ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2 = "rivt-encrypted-logical-backup-v2";
@@ -84,6 +84,7 @@ export function sanitizedSuccess(result) {
     "mode",
     "createdAt",
     "uploadedAt",
+    "writeAcceptedAt",
     "sourceCommit",
     "backupCreatedAt",
     "backupSourceCommit",
@@ -1209,15 +1210,6 @@ export function protectedArtifactMetadata({ sha256, createdAt, sourceCommit, ret
   };
 }
 
-export function retentionUntilFor(createdAt, retentionDays) {
-  const createdMs = new Date(createdAt).getTime();
-  if (!Number.isFinite(createdMs)) {
-    throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "The backup creation time is invalid.");
-  }
-  // The small buffer keeps clock skew from making an exact 30-day lock a few milliseconds short.
-  return new Date(createdMs + retentionDays * 86_400_000 + 300_000);
-}
-
 export async function putProtectedJsonObject(client, config, key, value, options) {
   assertObjectKeyInPrefix(key, config.prefix);
   if (value?.format !== ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2) {
@@ -1225,6 +1217,40 @@ export async function putProtectedJsonObject(client, config, key, value, options
       "BACKUP_OBJECT_INVALID",
       "Only lossless logical backup v2 artifacts may be uploaded as current backup evidence.",
     );
+  }
+  if (!options || typeof options !== "object") {
+    throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "Protected backup upload options are required.");
+  }
+  const parsedCreatedAt = new Date(options.createdAt ?? "");
+  if (
+    typeof options.createdAt !== "string"
+    || !Number.isFinite(parsedCreatedAt.getTime())
+    || parsedCreatedAt.toISOString() !== options.createdAt
+    || value.createdAt !== options.createdAt
+  ) {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      "The protected backup createdAt value must be one matching canonical UTC timestamp.",
+    );
+  }
+  if (
+    typeof options.sourceCommit !== "string"
+    || !/^[a-f0-9]{40}$/.test(options.sourceCommit)
+    || value.sourceCommit !== options.sourceCommit
+  ) {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      "The protected backup sourceCommit must be one matching full lowercase Git commit SHA.",
+    );
+  }
+  if (!Number.isInteger(options.retentionDays) || options.retentionDays < MIN_BACKUP_RETENTION_DAYS) {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      `Protected backup retention must be at least ${MIN_BACKUP_RETENTION_DAYS} whole days.`,
+    );
+  }
+  if (options.now !== undefined && typeof options.now !== "function") {
+    throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "The backup clock must be a function when supplied.");
   }
   const body = Buffer.from(JSON.stringify(value));
   if (body.length > MAX_ENCRYPTED_BACKUP_BYTES) {
@@ -1235,15 +1261,16 @@ export async function putProtectedJsonObject(client, config, key, value, options
   if (!(uploadStartedAt instanceof Date) || !Number.isFinite(uploadStartedAt.getTime())) {
     throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "The backup upload time is invalid.");
   }
-  const retentionUntil = retentionUntilFor(uploadStartedAt.toISOString(), options.retentionDays);
+  const checksumSha256 = Buffer.from(sha256, "hex").toString("base64");
   const response = await client.send(new PutObjectCommand({
     Bucket: config.bucket,
     Key: key,
     Body: body,
     ContentType: "application/json",
+    ChecksumAlgorithm: "SHA256",
+    ChecksumSHA256: checksumSha256,
     IfNoneMatch: "*",
-    ObjectLockMode: "COMPLIANCE",
-    ObjectLockRetainUntilDate: retentionUntil,
+    ServerSideEncryption: "AES256",
     Metadata: protectedArtifactMetadata({
       sha256,
       createdAt: options.createdAt,
@@ -1252,15 +1279,25 @@ export async function putProtectedJsonObject(client, config, key, value, options
       format: value.format,
     }),
   }));
+  const writeAcceptedAt = options.now ? options.now() : new Date();
+  if (!(writeAcceptedAt instanceof Date) || !Number.isFinite(writeAcceptedAt.getTime())) {
+    throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "The backup completion time is invalid.");
+  }
   if (!response.VersionId || response.VersionId === "null") {
     throw new BackupConfigurationError(
       "BACKUP_DESTINATION_UNSAFE",
       "The backup upload did not return an immutable object version identifier.",
     );
   }
-  let uploadedHead;
+  if (response.ChecksumSHA256 !== checksumSha256) {
+    throw new BackupConfigurationError(
+      "BACKUP_PROVIDER_CHECK_FAILED",
+      "The backup provider did not confirm the uploaded content checksum.",
+    );
+  }
+  let verifiedRetention;
   try {
-    uploadedHead = await client.send(new HeadObjectCommand({
+    verifiedRetention = await client.send(new GetObjectRetentionCommand({
       Bucket: config.bucket,
       Key: key,
       VersionId: response.VersionId,
@@ -1268,25 +1305,25 @@ export async function putProtectedJsonObject(client, config, key, value, options
   } catch (error) {
     const wrapped = new BackupConfigurationError(
       "BACKUP_PROVIDER_CHECK_FAILED",
-      "The uploaded backup version could not be verified.",
+      "The uploaded backup retention could not be verified.",
     );
     wrapped.cause = error;
     throw wrapped;
   }
-  const providerUploadedAt = uploadedHead.LastModified;
-  const providerRetainUntil = uploadedHead.ObjectLockRetainUntilDate;
+  const providerRetainUntil = verifiedRetention.Retention?.RetainUntilDate;
   if (
-    (uploadedHead.VersionId && uploadedHead.VersionId !== response.VersionId)
-    || uploadedHead.ObjectLockMode !== "COMPLIANCE"
-    || !(providerUploadedAt instanceof Date)
-    || !Number.isFinite(providerUploadedAt.getTime())
+    verifiedRetention.Retention?.Mode !== "COMPLIANCE"
     || !(providerRetainUntil instanceof Date)
     || !Number.isFinite(providerRetainUntil.getTime())
-    || providerRetainUntil.getTime() < providerUploadedAt.getTime() + options.retentionDays * 86_400_000
+    || providerRetainUntil.getTime() < (
+      writeAcceptedAt.getTime()
+      + options.retentionDays * 86_400_000
+      - MAX_PROVIDER_CLOCK_SKEW_MS
+    )
   ) {
     throw new BackupConfigurationError(
       "BACKUP_DESTINATION_UNSAFE",
-      "The uploaded backup version does not have sufficient provider-anchored COMPLIANCE retention.",
+      "The uploaded backup version does not have sufficient provider-confirmed COMPLIANCE retention.",
     );
   }
   return {
@@ -1294,7 +1331,7 @@ export async function putProtectedJsonObject(client, config, key, value, options
     versionId: response.VersionId,
     etag: response.ETag ?? null,
     byteLength: body.length,
-    uploadedAt: providerUploadedAt.toISOString(),
+    writeAcceptedAt: writeAcceptedAt.toISOString(),
     retentionUntil: providerRetainUntil.toISOString(),
   };
 }
@@ -1316,14 +1353,8 @@ function retentionDaysFromDefault(defaultRetention) {
   return 0;
 }
 
-function lifecycleRulePrefix(rule) {
-  if (rule?.Filter?.And || rule?.Filter?.Tag) return "";
-  return rule?.Filter?.Prefix ?? rule?.Prefix ?? "";
-}
-
 export async function verifyBucketProtection(client, config, retentionDays) {
   try {
-    await client.send(new HeadBucketCommand({ Bucket: config.bucket }));
     const versioning = await client.send(new GetBucketVersioningCommand({ Bucket: config.bucket }));
     if (versioning.Status !== "Enabled") {
       throw new BackupConfigurationError("BACKUP_DESTINATION_UNSAFE", "Backup bucket versioning is not enabled.");
@@ -1340,29 +1371,10 @@ export async function verifyBucketProtection(client, config, retentionDays) {
         "Backup bucket COMPLIANCE Object Lock does not meet the retention requirement.",
       );
     }
-    const lifecycle = await client.send(new GetBucketLifecycleConfigurationCommand({ Bucket: config.bucket }));
-    const expectedPrefix = `${config.prefix}/`;
-    const lifecycleRule = (lifecycle.Rules ?? []).find((rule) => (
-      rule.Status === "Enabled"
-      && lifecycleRulePrefix(rule) === expectedPrefix
-      && Number.isInteger(rule.Expiration?.Days)
-      && rule.Expiration.Days >= retentionDays
-      && Number.isInteger(rule.NoncurrentVersionExpiration?.NoncurrentDays)
-      && rule.NoncurrentVersionExpiration.NoncurrentDays >= retentionDays
-    ));
-    if (!lifecycleRule) {
-      throw new BackupConfigurationError(
-        "BACKUP_DESTINATION_UNSAFE",
-        "No exact enabled lifecycle rule protects the configured backup prefix.",
-      );
-    }
     return {
       versioning: versioning.Status,
       objectLockMode: defaultRetention.Mode,
       defaultRetentionDays,
-      lifecycleRuleId: lifecycleRule.ID ?? null,
-      lifecycleExpirationDays: lifecycleRule.Expiration.Days,
-      lifecycleNoncurrentExpirationDays: lifecycleRule.NoncurrentVersionExpiration.NoncurrentDays,
     };
   } catch (error) {
     if (error instanceof BackupConfigurationError) throw error;
