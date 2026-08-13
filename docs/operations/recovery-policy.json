@@ -1,44 +1,77 @@
 {
-  "version": 1,
+  "version": 4,
   "status": "approved",
   "targets": {
     "rpoMinutes": 1440,
-    "rpoBasis": "Gate A pilot target: restore from the most recent daily logical backup artifact. RIVT does not process escrow, payroll, or platform-held job payments in Gate A.",
+    "rpoBasis": "Gate A target: recover from a named encrypted logical backup no more than 24 hours old.",
     "rtoMinutes": 240,
-    "rtoBasis": "Gate A pilot target: restore application service and managed PostgreSQL/object-storage-backed records within 4 hours using the documented logical backup artifact restore path."
+    "rtoBasis": "Gate A target: restore and verify the application data path within four hours."
+  },
+  "backupSchedule": {
+    "status": "pending_evidence",
+    "cadenceMinutes": 720,
+    "owner": "backup-operations-owner"
+  },
+  "missedBackupAlert": {
+    "status": "pending_evidence",
+    "retryAllowanceMinutes": 120,
+    "destination": "private-backup-route"
   },
   "backupRetention": {
     "days": 30,
-    "storage": "private S3-compatible managed object storage",
-    "encryption": "AES-256-GCM logical backup artifacts",
-    "owner": "Michael"
+    "owner": "backup-operations-owner",
+    "enforcement": {
+      "status": "pending_provider_selection",
+      "mode": "provider-selection-required"
+    }
+  },
+  "failureDomain": {
+    "status": "pending_provider_selection",
+    "primaryProvider": "railway",
+    "backupProvider": "provider-selection-required"
   },
   "restoreDrillCadence": {
     "days": 30,
-    "owner": "Michael",
-    "nextDueAt": "2026-08-24T15:43:08.361Z"
+    "owner": "backup-operations-owner"
   },
-  "latestNamedArtifactRestore": {
-    "status": "passed",
-    "completedAt": "2026-07-25T15:43:08.361Z",
-    "artifactKey": "backups/postgres/2026-07-25T15-38-43.889Z-3b82744.json.gz.aes256gcm",
-    "tableCount": 82,
-    "rowCount": 7028,
-    "restoreDurationMs": 84798,
-    "verificationDurationMs": 10618,
-    "target": "isolated Railway PostgreSQL service Postgres-r_TW, deleted after verification",
-    "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-25---launch-readiness-restore-and-incident-rehearsal"
+  "evidenceControls": {
+    "backupSchedule": {
+      "adapterId": "backup-schedule",
+      "controlId": "backup-schedule",
+      "provider": "backup-provider"
+    },
+    "latestSuccessfulBackup": {
+      "adapterId": "backup-completion",
+      "controlId": "latest-successful-backup",
+      "provider": "backup-provider"
+    },
+    "missedBackupAlert": {
+      "adapterId": "backup-alert-delivery",
+      "controlId": "missed-backup-alert",
+      "provider": "backup-provider"
+    },
+    "backupRetention": {
+      "adapterId": "backup-retention",
+      "controlId": "backup-retention-enforcement",
+      "provider": "backup-provider"
+    },
+    "failureDomain": {
+      "adapterId": "backup-failure-domain",
+      "controlId": "backup-failure-domain",
+      "provider": "failure-domain-review"
+    },
+    "latestNamedArtifactRestore": {
+      "adapterId": "backup-restore",
+      "controlId": "named-artifact-restore",
+      "provider": "restore-provider"
+    }
   },
   "approvals": {
     "founder": {
-      "status": "approved",
-      "approvedBy": "Michael",
-      "approvedAt": "2026-06-22T03:02:39.0867156Z"
+      "status": "pending"
     },
     "operations": {
-      "status": "approved",
-      "approvedBy": "Michael",
-      "approvedAt": "2026-06-22T03:02:39.0867156Z"
+      "status": "pending"
     }
   }
 }

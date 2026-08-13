@@ -4,6 +4,11 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   build: {
+    // The service worker consumes this public manifest to install one complete,
+    // version-matched app shell, including lazy feature chunks. Keeping the
+    // manifest outside Vite's dot-directory also lets the production static
+    // server expose it without enabling dotfile serving.
+    manifest: "asset-manifest.json",
     rollupOptions: {
       output: {
         manualChunks(id) {

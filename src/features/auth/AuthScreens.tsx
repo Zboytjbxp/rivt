@@ -25,7 +25,7 @@ import {
 import { brandConfig, type ThemeMode, type TrialPlan } from "../../brandConfig";
 import type { ThemeSource } from "../../app-shell/useAppTheme";
 import { tradeOptions } from "../../data";
-import { apiPath, fetchWithTimeout } from "../../lib/api";
+import { apiPath, fetchWithTimeout, RIVT_EXPECTED_ACCOUNT_HEADER } from "../../lib/api";
 import { tradeCodeByName } from "../work/work-mappings";
 import type { Role, Trade } from "../../types";
 
@@ -817,7 +817,7 @@ export function AuthGate({
   providers: ProviderStatus;
   inviteRequired: boolean;
   onModeChange: (mode: "login" | "signup") => void;
-  onSubmit: (form: { email: string; password: string; displayName?: string; role?: Role; inviteCode?: string }) => void;
+  onSubmit: (form: { email: string; password: string; displayName?: string; role?: Role; inviteCode?: string }) => void | Promise<void>;
   onForgotPassword: (email: string) => void;
   onBrowseAsGuest: () => void;
 }) {
@@ -827,6 +827,8 @@ export function AuthGate({
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<Role>("contractor");
   const [inviteCode, setInviteCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
   const visibleEntryStage = error ? "auth" : entryStage;
 
@@ -870,8 +872,15 @@ export function AuthGate({
         className="auth-card auth-card--entry"
         onSubmit={(event) => {
           event.preventDefault();
+          if (submittingRef.current) return;
+          submittingRef.current = true;
+          setSubmitting(true);
           setEntryStage("auth");
-          onSubmit({ email, password, displayName, role, inviteCode: inviteCode.trim() || undefined });
+          void Promise.resolve(onSubmit({ email, password, displayName, role, inviteCode: inviteCode.trim() || undefined }))
+            .finally(() => {
+              submittingRef.current = false;
+              setSubmitting(false);
+            });
         }}
       >
         {!error ? (
@@ -986,8 +995,10 @@ export function AuthGate({
         <button
           type="submit"
           className="primary-action"
+          disabled={submitting}
+          aria-busy={submitting}
         >
-          {mode === "signup" ? "Create account" : "Log in"}
+          {submitting ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
         </button>
         <button type="button" className="auth-browse-action" onClick={onBrowseAsGuest}>
           Browse first
@@ -1113,6 +1124,7 @@ function EmailIcon() {
 }
 
 export function OnboardingFlow({
+  accountId,
   themeMode,
   onToggleTheme,
   onComplete,
@@ -1128,6 +1140,7 @@ export function OnboardingFlow({
   notice,
   error,
 }: {
+  accountId: string;
   themeMode: ThemeMode;
   onToggleTheme: () => void;
   onComplete: (result: OnboardingResult) => void;
@@ -1273,7 +1286,10 @@ export function OnboardingFlow({
       await fetchWithTimeout(apiPath("/api/v1/profile"), {
         method: "PATCH",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          [RIVT_EXPECTED_ACCOUNT_HEADER]: accountId,
+        },
         body: JSON.stringify({
           displayName: trimmedName,
           serviceAreaCity: trimmedCity,

@@ -10789,11 +10789,11 @@ html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .fr
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .heavy-calc-main.length-mode .fraction-calc-left {
   height: 100%;
-  grid-template-rows: 100px 36px 120px 34px minmax(172px, 1fr);
+  grid-template-rows: minmax(100px, 1fr) 36px 120px 34px 172px;
 }
 
 html[data-rivt-compact-device="true"] .v2-tools-app.is-calculator-fullscreen .heavy-calc-main.length-mode .fraction-calc-left.fractions-hidden {
-  grid-template-rows: 254px 36px 34px minmax(172px, 1fr);
+  grid-template-rows: minmax(254px, 1fr) 36px 34px 172px;
 }
 
 .calc-settings-options.has-three {

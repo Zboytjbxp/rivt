@@ -216,14 +216,21 @@ export async function restoreLogicalBackupArtifact({
       assert.deepEqual(contentDiffs, [], `Restore target content differs from backup artifact: ${JSON.stringify(contentDiffs)}`);
       const contentDigest = aggregateTableDigest(actualTableDigests);
       const completedAt = Date.now();
-      const verifyDurationMs = completedAt - verificationStartedAt;
-      const restoreDurationMs = completedAt - recoveryStartedAt - verifyDurationMs;
-      const recoveryDurations = enforceRecoveryRto(restoreDurationMs, verifyDurationMs, rtoMinutes);
+      const verificationDurationMs = completedAt - verificationStartedAt;
+      const restoreDurationMs = completedAt - recoveryStartedAt - verificationDurationMs;
+      const recoveryDurations = enforceRecoveryRto(
+        restoreDurationMs,
+        verificationDurationMs,
+        rtoMinutes,
+      );
       return {
         ok: true,
         mode: applyMigrations ? "migrate-and-restore-logical-backup-artifact" : "restore-logical-backup-artifact",
+        endpoint: source.endpoint,
+        region: source.region,
         bucket: source.bucket,
         prefix: source.prefix,
+        forcePathStyle: source.forcePathStyle,
         key: objectKey,
         versionId,
         sha256: protectedArtifact.sha256,
@@ -235,8 +242,8 @@ export async function restoreLogicalBackupArtifact({
           : null,
         appliedMigrations: status.applied.length,
         pendingMigrations: status.pending.length,
-        tables: targetTables.length,
-        rows: Object.values(targetCounts).reduce((total, count) => total + count, 0),
+        tableCount: targetTables.length,
+        rowCount: Object.values(targetCounts).reduce((total, count) => total + count, 0),
         countDiffs,
         contentDigest,
         contentDiffCount: contentDiffs.length,

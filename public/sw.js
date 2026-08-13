@@ -1,23 +1,72 @@
 const BUILD_ID = new URL(self.location.href).searchParams.get('build') || 'development';
 const CACHE = `rivt-assets-${BUILD_ID.replace(/[^a-z0-9_-]+/gi, '-').slice(-72)}`;
+const ASSET_MANIFEST_PATH = '/asset-manifest.json';
+const ROOT_SHELL_ASSETS = new Set([
+  '/assets/fonts/instrument-sans-latin.woff2',
+  '/assets/fonts/ibm-plex-mono-600-latin.woff2',
+  '/brand/rivt-lockup-light-transparent.png',
+  '/brand/rivt-lockup-dark-transparent.png',
+  '/rivt-boot.css',
+  '/rivt-boot.js',
+  '/rivt-service-worker.js',
+]);
 const OFFLINE_DOCUMENT = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVT needs a connection</title><style>body{margin:0;display:grid;min-height:100vh;place-items:center;padding:24px;box-sizing:border-box;background:#ff4b00;color:#0b0b0b;font:16px/1.45 Arial,sans-serif}main{width:min(100%,380px)}h1{margin:10px 0;font-size:34px;line-height:1}strong{letter-spacing:.12em}</style></head><body><main><strong>RIVT</strong><h1>Connect to open RIVT.</h1><p>This app update needs a connection before it can open safely. Your server-backed account and records are not affected.</p></main></body></html>`;
 
 async function precacheAppShell() {
   const cache = await caches.open(CACHE);
-  const response = await fetch('/app', { cache: 'no-store' });
+  const [response, manifestResponse] = await Promise.all([
+    fetch('/app', { cache: 'no-store' }),
+    fetch(ASSET_MANIFEST_PATH, { cache: 'no-store' }),
+  ]);
   if (!response.ok) throw new Error(`App shell returned ${response.status}`);
-  const html = await response.clone().text();
+  if (!manifestResponse.ok) throw new Error(`Asset manifest returned ${manifestResponse.status}`);
+
+  const [html, manifest] = await Promise.all([
+    response.clone().text(),
+    manifestResponse.clone().json(),
+  ]);
   const assetPaths = [...html.matchAll(/(?:src|href)=["'](\/assets\/[^"'?#]+(?:\?[^"']*)?)["']/g)]
     .map((match) => match[1]);
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
+    throw new Error('Asset manifest is not an object.');
+  }
+  const manifestAssetPaths = Object.values(manifest).flatMap((entry) => {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return [];
+    return [entry.file, ...(Array.isArray(entry.css) ? entry.css : []), ...(Array.isArray(entry.assets) ? entry.assets : [])]
+      .filter((value) => typeof value === 'string')
+      .filter((value) => value.startsWith('assets/') && !value.includes('..'))
+      .map((value) => `/${value}`);
+  });
+  if (manifestAssetPaths.length === 0) throw new Error('Asset manifest did not contain a build bundle.');
+  const manifestAssetPathSet = new Set(manifestAssetPaths);
+  const htmlManifestMismatches = assetPaths
+    .map((value) => new URL(value, self.location.origin).pathname)
+    .filter((value) => !manifestAssetPathSet.has(value) && !ROOT_SHELL_ASSETS.has(value));
+  if (htmlManifestMismatches.length > 0) {
+    throw new Error(`App shell and asset manifest do not describe the same build: ${htmlManifestMismatches.join(', ')}`);
+  }
+  const registeredBuildPath = BUILD_ID === 'development'
+    ? null
+    : new URL(BUILD_ID, self.location.origin).pathname;
+  if (registeredBuildPath && !assetPaths.some((value) => new URL(value, self.location.origin).pathname === registeredBuildPath)) {
+    throw new Error(`App shell changed while installing ${registeredBuildPath}.`);
+  }
   const requiredPaths = [...new Set([
     ...assetPaths,
-    '/assets/fonts/instrument-sans-latin.woff2',
-    '/assets/fonts/ibm-plex-mono-600-latin.woff2',
+    ...manifestAssetPaths,
+    ...ROOT_SHELL_ASSETS,
   ])];
 
   // Do not activate a partial shell. If any required asset cannot be cached,
   // installation fails and the previous worker keeps serving its known-good cache.
-  await Promise.all(requiredPaths.map((assetPath) => cache.add(assetPath)));
+  // Cache the complete Vite manifest, not only the entry module referenced by
+  // HTML: the initial authenticated view is lazy-loaded and must also be
+  // available when an installed app is opened without a connection.
+  const batchSize = 8;
+  for (let offset = 0; offset < requiredPaths.length; offset += batchSize) {
+    await cache.addAll(requiredPaths.slice(offset, offset + batchSize));
+  }
+  await cache.put(ASSET_MANIFEST_PATH, manifestResponse);
   await cache.put('/', response.clone());
   await cache.put('/app', response);
 }
@@ -70,7 +119,12 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  if (!url.pathname.startsWith('/assets/') && !url.pathname.startsWith('/brand/')) return;
+  if (
+    !url.pathname.startsWith('/assets/')
+    && !url.pathname.startsWith('/brand/')
+    && url.pathname !== ASSET_MANIFEST_PATH
+    && !ROOT_SHELL_ASSETS.has(url.pathname)
+  ) return;
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(e.request, { ignoreSearch: true });

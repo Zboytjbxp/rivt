@@ -7,7 +7,7 @@ Do not mark Gate A approved while any required item is `TBD`, missing an owner, 
 ## 1. Incident Ownership
 
 - Primary incident owner recorded in `docs/operations/incident-routing.json`.
-- Backup incident owner recorded with real name and email.
+- Backup incident owner role and private contact-route reference recorded; personal identity remains in the access-controlled roster.
 - Support hours recorded in Eastern time and approved by founder.
 - Paging/escalation destination configured and tested.
 - Dedicated error-monitoring provider configured and tested.

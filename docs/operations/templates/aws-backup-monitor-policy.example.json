@@ -1,0 +1,37 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadBucketProtectionConfiguration",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketVersioning",
+        "s3:GetBucketObjectLockConfiguration"
+      ],
+      "Resource": "arn:aws:s3:::<BUCKET>"
+    },
+    {
+      "Sid": "ListOnlyBackupPrefixVersions",
+      "Effect": "Allow",
+      "Action": "s3:ListBucketVersions",
+      "Resource": "arn:aws:s3:::<BUCKET>",
+      "Condition": {
+        "StringEquals": {
+          "s3:prefix": "<PREFIX>/"
+        },
+        "NumericLessThanEquals": {
+          "s3:max-keys": "1000"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOnlyBackupPrefixVersions",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObjectVersion",
+        "s3:GetObjectRetention"
+      ],
+      "Resource": "arn:aws:s3:::<BUCKET>/<PREFIX>/*"
+    }
+  ]
+}

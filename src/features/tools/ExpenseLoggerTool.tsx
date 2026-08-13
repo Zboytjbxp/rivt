@@ -89,8 +89,8 @@ function downloadExpenseCsv(blob: Blob) {
   URL.revokeObjectURL(url);
 }
 
-function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: Job[] }) {
-  const { isPro } = usePro();
+function ExpenseLoggerTool({ accountId, activeJob, jobs }: { accountId: string; activeJob: Job | null; jobs: Job[] }) {
+  const { isPro } = usePro(accountId);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [expenses, setExpenses] = useState<ExpenseEntry[]>(readExpenses);
   const [syncMessage, setSyncMessage] = useState("Saved on this device.");
@@ -299,7 +299,7 @@ function ExpenseLoggerTool({ activeJob, jobs }: { activeJob: Job | null; jobs: J
         <p className="v2-record-notice" role="status">{syncMessage}</p>
       </Panel>
       <aside className="v2-invoice-side-stack">
-        {upgradeOpen && <UpgradeModal reason="Export CSV" onClose={() => setUpgradeOpen(false)} />}
+        {upgradeOpen && <UpgradeModal accountId={accountId} reason="Export CSV" onClose={() => setUpgradeOpen(false)} />}
         <Panel className="v2-tool-panel v2-tool-summary-panel" eyebrow="Total spent" title={currency(total)}>
           {byCategory.length ? (
             <div className="v2-tool-breakdown">

@@ -1,16 +1,424 @@
 # RIVT Build State
 
-Last updated: 2026-07-31 America/New_York
-Current gate: Gate B controlled engagement
-Current phase: Emergency production credential containment; feature activation paused.
-Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
-Repository branch: `master` (source: `codex/customer-documents-contact-import`)
-Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
-Production incident hotfix commit:
+Last updated: 2026-08-13 America/New_York
+Current gate: Gate B controlled engagement; public launch remains blocked
+Current phase: PR #28 merged least-privilege writer and one-month storage-growth containment into the undeployed release candidate, PR #29 merged the fresh-page offline boundary correction without relaxing the primary performance contract, and PR #30 merged prospective backup-receipt privacy, strict positive aggregate-count validation, and the restore-evidence field seam. The empty AWS provider foundation remains inactive: no runtime identity, object, recurrence, object-byte coverage, or isolated restore exists. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
+Repository branch: `codex/final-release-candidate-20260804` at merge `3c3777682993dca735f46d1cbb1ec4cabf07df45` (not deployed)
+Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
+Current release-candidate application source: `3c3777682993dca735f46d1cbb1ec4cabf07df45`, including PR #28 backup hardening, PR #29's offline boundary test correction, PR #30's receipt-privacy and restore-evidence hardening, security remediation `6b2f7d8a64b17899f87c8d409353689738fdf294`, and transitive Nano ID patch `e06a6218e6c9047569e3140d24a7f25a9c710de8`.
+Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
+Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
-Operational status: launch and Railway Stage 1 are paused while production
-credential-exposure containment is in progress.
+Release evidence boundary: production remains on Node 20 while the undeployed
+release candidate pins Node 22. Invoice bank payments/ACH remain disabled, the
+`ACTIVE_LAUNCH_HOLD` remains active, and `GA-OPS-004` plus `GA-OPS-009` remain
+blockers. Backup recurrence is not proved: no scheduler/runtime identity/backup
+data-path activation, current recurring artifact, or isolated restore is
+claimed. The recorded PR #25 Gate A Safety run `30955179943` reported exactly
+21 blockers while completing 14/14 pretest safety checks, 603/603 unit tests,
+28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys.
+Its exit 1 was the required readiness refusal for that historical candidate.
+Gate A Safety run `31668298490` supplies the backup-hardening source's fresh
+disposable-PostgreSQL and browser gate record. Exact-candidate run
+`31697561395` then passed build, lint, and all unit/database integration steps
+but failed one offline snapshot-boundary browser check while the service worker
+controlled the page and the complete shell was cached. PR #25 stays draft; no
+launch-ready result is inferred from that run. PR #29 Gate A run
+`31698593771` passed every engineering check, including the complete browser
+suite, and its tree merged as candidate `1153d418`. PR #30 exact-head Gate A
+run `31701345846` then passed every check for source `f95126fd`; that source is
+now merged as candidate `3c377768`. PR #25 run `31701693358` on that exact
+merge passed build, application/security lint, all unit and disposable-
+PostgreSQL integration tests, the full browser suite, formatting, and the
+production dependency audit. Its final step then correctly refused promotion
+because launch readiness still reports the same 21 operational blockers.
+
+Operational status: a 2026-08-03 Railway configuration audit caused a new
+restricted-output exposure of current production credentials. No misuse
+indicator is known, but every affected class is again treated as compromised.
+Michael approved one-class-at-a-time emergency rotation with up to 30 minutes
+of cumulative interruption and a `$2` before-tax incremental-cost ceiling.
+PostgreSQL, the Stripe live API key, both Stripe webhook secrets, Google OAuth,
+both independent pepper classes, Web Push VAPID, and the August 4 Resend
+recurrence are closed.
+The Google rotation preserved the existing project, web client, origin,
+redirect, and client ID; owner-controlled sign-ins passed before predecessor
+disablement, after disablement, and after deletion, and provider inventory
+shows exactly one enabled secret. The new dedicated `RATE_LIMIT_PEPPER` removes
+the limiter's former fallback to `AUTH_METADATA_PEPPER`; its bounded durable-
+limiter probes passed. The independent authentication metadata replacement kept
+the existing owner session valid, issued a new authenticated owner session
+through Google OAuth, and passed exact-source monitoring. ACH remains disabled.
+During VAPID recovery, restricted automation output unexpectedly exposed the
+then-current Resend credential, the VAPID predecessor, and one candidate VAPID
+replacement. No value is reproduced or retained in repository evidence. The
+affected VAPID candidate was abandoned and a separate final replacement was
+proven on all three controlled devices before the predecessor was retired.
+The separately exposed Resend credential was replaced again, the predecessor
+and an unused intermediate were retired only after owner-controlled delivery
+proof, and final provider inventory shows exactly one restricted sending key.
+Backup-encryption recurrence rotation remains pending. The active- and
+predecessor-key restore proofs and previous-key removal recorded on July 30
+predate the August 3 recurrence and therefore cannot close it. The incident
+and `ACTIVE_LAUNCH_HOLD` remain open; the feature release, launch, and Railway
+Stage 1 remain paused.
+
+## Packet 99 independent-backup provider foundation - configured but inactive
+
+- A separately administered founder-controlled AWS account now exists in the
+  approved US region. Root passkey MFA is enabled, root has no access keys, and
+  a near-zero spend alert is configured at $0.01; it is an alert, not a hard
+  spending cap. Exact provider identifiers are intentionally omitted from
+  repository evidence and must be recorded in access-restricted operator
+  evidence before activation.
+- One empty dedicated S3 bucket now has all four bucket-level Block Public Access settings,
+  bucket-owner-enforced ownership with ACLs disabled, Versioning, SSE-S3,
+  and Object Lock enabled with default 30-day COMPLIANCE retention. No object
+  has yet received or validated that retention. A saved deny-only bucket
+  policy is configured to deny non-TLS traffic and writes to the reserved
+  backup prefix unless `If-None-Match` makes them create-only. The AWS console
+  reported a successful save and displayed both deny statements; live
+  negative-request behavior remains unproved.
+  No object, IAM runtime identity or access key, lifecycle rule, scheduler,
+  AWS monitor read credential/configuration, or restore target was created.
+  The pre-existing protected GitHub monitor environment does hold the backup
+  encryption secret; it cannot independently inspect AWS without that missing
+  AWS read credential and destination configuration.
+- A read-only sizing check measured approximately 44.1 MB of current
+  application objects and a 1.31 MB encrypted database artifact. A
+  hypothetical twice-daily 30-day database-plus-object-byte set is modeled at
+  about 2.72 GB and approximately
+  $0.26/month, with a conservative envelope below $0.50/month before tax and
+  scheduler-compute uncertainty. AWS Budgets alerts but does not cap spend.
+- The current approval forbids backup-object deletion. Consequently no
+  lifecycle expiration is configured and recurring 12-hour writes remain
+  blocked: without expiry, retained versions and cost grow indefinitely.
+- The undeployed source now requires one explicit UTC calendar-month write
+  window, uses one deterministic create-only key per `00:00`/`12:00` UTC slot,
+  and caps each new encrypted PostgreSQL artifact at a fixed 16 MiB. This
+  binds the window to one exact normalized endpoint, region, bucket, prefix,
+  and addressing-mode identity, and bounds RIVT's
+  writer to at most 62 accepted objects and 992 MiB in one 31-day proving
+  window. Window expiry is checked before AWS/PostgreSQL access and again
+  immediately before the upload attempt.
+  The controls do not bound direct use of a stolen provider key, do not cap
+  cumulative storage across renewed months, and do not cap duplicate-attempt
+  S3 requests or Railway/database compute. They do not authorize a write,
+  scheduler, provider identity, or monthly renewal.
+- The undeployed source hardening removes writer list/content-read and
+  retention-administration requirements. A writer conditionally creates a
+  unique object with SHA-256 and SSE-S3, requires the returned version and
+  checksum, and verifies that exact version's provider-applied
+  COMPLIANCE retention. The writer needs only four S3 actions and has no
+  content-read, list, delete, lifecycle, or bucket-mutation authority.
+- The current storage-growth-containment revision passes production build,
+  application/public-document lint, 14/14 pretest checks, 641/641
+  unit/frontend tests, four database-independent integration checks, all four
+  browser E2E journeys, diff integrity, and the production dependency audit
+  with zero known vulnerabilities. Its focused hardening file passes 71/71
+  tests. Twenty-three PostgreSQL integration suites were skipped because this
+  isolated checkout has no `TEST_DATABASE_URL`; no local database-backed pass is
+  claimed for them. Gate A Safety run `31668298490` passed against source
+  revision `4d3831d8afba424e8f8f536d3a4f9c0c59631aa0`, including 28/28
+  disposable-PostgreSQL integration tests and all four browser journeys. The
+  run's readiness report remains blocked on the recorded operational evidence.
+- Current backup source still covers PostgreSQL only. Photos, documents, and
+  attachments remain solely in Railway object storage; `R-052` and
+  `GA-OPS-004` therefore remain Critical/Blocker. No deployment, launch,
+  payment, ACH, customer communication, backup upload, recurring scheduler,
+  object-storage usage, or charged workload is claimed.
+
+## Packet 99 backup-receipt privacy hardening - merged to candidate, undeployed
+
+- PR #30 replaces exact backup object identifiers
+  in typed repository receipts with a deterministic SHA-256 artifact identity.
+  It also requires positive safe-integer table and row counts before backup or
+  restore evidence can satisfy readiness.
+- Runtime restore output now uses the same `tableCount`, `rowCount`, and
+  `verificationDurationMs` field names required by the strict provider receipt;
+  the sanitizer-to-materializer seam is covered so a genuine restore cannot be
+  lost merely because two source layers named the same evidence differently.
+- New typed receipts keep exact provider identifiers out of repository
+  evidence. Those identifiers must be recorded in encrypted or otherwise
+  access-restricted operator evidence before activation. Existing historical
+  repository records are not retroactively erased, and this source change is
+  not represented as proof that they never contained identifiers.
+- Focused backup/readiness/materializer verification passes 152/152. Local
+  build, application/security/public-document lint, 645/645 unit/frontend
+  tests, four database-independent integration checks, all four browser E2E
+  journeys, diff integrity, and the production dependency audit pass. Twenty-
+  three PostgreSQL suites skip locally because `TEST_DATABASE_URL` is absent;
+  Gate A run `31699823161` passed against exact source revision
+  `0756fa455d1da3a665a484528c9178331838c65d`; exact-final-head run
+  `31701345846` passed every check for `f95126fd1db5dc13b0d382ce8147a8c1943b2359`.
+  PR #30 is merged only to the release candidate as `3c377768`; the source is
+  undeployed and provider-inactive, so requirement maturity, the incident hold,
+  and all recovery blockers remain unchanged.
+
+## Packet 99 final-diff security remediation addendum - fully verified in the release candidate
+
+- Completed Codex Security diff scan
+  `ad843b09-ef72-4a08-b2ab-d792bc914821` reported two low-severity findings
+  against exact range `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b..aa5b5361374bce0ae51d71cbe4b6d8031a605c61`.
+- Source commit `6b2f7d8a64b17899f87c8d409353689738fdf294`
+  now invalidates invoice `sent` status and delivery proof whenever any
+  canonical document field changes: title, date, amount, project/customer
+  binding, or customer-facing payload. An identical autosave after a lost send
+  response still preserves the original delivery proof.
+- The same commit removes the account-agnostic `rivt.payments.v1` merge from
+  authenticated Receivables. Receivables now renders only current-account
+  server records, sends the expected-account header, clears on account change
+  or fetch failure, and leaves legacy ownerless browser rows quarantined in
+  place rather than displaying, uploading, or deleting them.
+- Commit `e06a6218e6c9047569e3140d24a7f25a9c710de8` updates the transitive
+  `nanoid` lock from `3.3.16` to patched `3.3.18`; the production dependency
+  audit returns zero known vulnerabilities.
+- Local verification passes: `git diff --check`, production build,
+  application/security/public-documentation lint, 604/604 unit tests plus
+  14/14 prechecks, Tools UI smoke, all four browser E2E journeys, and
+  `npm audit --omit=dev`. Local integration execution still skips 23 database
+  cases because this machine has no `TEST_DATABASE_URL` or Docker, but draft
+  PR #25 Gate A Safety run `31269498552` passed 14/14 prechecks, 604/604 unit
+  tests, 28/28 disposable-PostgreSQL integration tests, and all four browser
+  journeys. The workflow failed only at the deliberate final readiness
+  enforcement, which correctly reported the existing 21 incident, recovery,
+  and disabled-payment evidence blockers.
+- Independent review found no bypass in either patch. No source in
+  this addendum is merged to `master`, deployed, payment-enabling, provider-
+  mutating, or launch-authorizing.
+
+## Packet 99 operator secret-output containment - active; backup encryption pending
+
+- The recurrence is recorded without any secret value or credential-bearing
+  output.
+- The exact affected classes and bounded owner authorization are recorded in
+  the incident record.
+- Repository-level AI/operator instructions and an automated command-policy
+  guard are added as source-only recurrence prevention. The guard covers
+  tracked package scripts, root and `scripts/` executables, GitHub
+  workflows/actions, Dockerfiles, and Railway configuration and emits only
+  file paths plus rule identifiers.
+- Exact local evidence for candidate
+  `aa5b5361374bce0ae51d71cbe4b6d8031a605c61` in draft PR #25 is: production
+  build, application lint, security lint, and public-documentation lint pass;
+  617/617 unit and precheck tests pass; the integration aggregate reports 27
+  cases with four passing and 23 skipped because local `TEST_DATABASE_URL` is
+  absent; all four browser E2E journeys and all four required UI smokes pass;
+  the production dependency audit reports zero known vulnerabilities; and
+  diff integrity passes. Launch readiness remains intentionally blocked with
+  exactly 21 findings. PR #25 Gate A Safety run `30955179943` adds
+  database-backed final-candidate proof: 14/14 pretest safety checks, 603/603
+  unit tests, 28/28 disposable-PostgreSQL integration tests, and 4/4 browser
+  E2E journeys passed. Its final exit 1 is the intentional launch-readiness
+  refusal caused by those same 21 operational blockers, not a code or test
+  failure. Historical packet-level checks remain context only.
+- The Shop Talk / Trade News browser smoke now pins its page clock to the
+  fixture date. Its time-sensitive featured-story assertion can no longer fail
+  merely because the real calendar advanced beyond the fixture's seven-day
+  window. Tools, Shop Talk / Trade News, mobile actions, and Work lifecycle UI
+  smokes pass after this deterministic-clock fix.
+- A Windows CRLF checkout exposed a latent LF-only incident-workflow test;
+  the fixture loader now normalizes CRLF and the six focused workflow checks
+  pass on the Windows worktree.
+- Production rotation continues one class at a time. PostgreSQL, the Stripe
+  live API key, both Stripe webhooks, Google OAuth, the distinct authentication
+  metadata and rate-limit peppers, and Web Push VAPID are closed for this
+  recurrence. The 2026-08-04 Resend recurrence is now closed; backup
+  encryption remains pending a post-August-3 replacement, fresh encrypted
+  artifact, isolated active-key restore, and predecessor-removal proof.
+- The Connect cutover changed only `STRIPE_CONNECT_WEBHOOK_SECRET`. Automatic
+  deployment `3b206913-9eb5-4b27-a84e-513a0fcbac2b` was skipped by the CI wait
+  policy; exact-source deployment `6152da11-1323-47a9-a258-d9013f040522`
+  succeeded on production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3`. Public health and the production
+  monitor passed. Signed no-charge probe
+  `evt_rivt_connect_webhook_rotation_probe_1785808354434` was accepted once.
+  After Stripe's one-hour overlap expired, the destination exposed one active
+  masked signing-secret slot with no predecessor or pending-expiry state.
+  Post-retirement probe
+  `evt_rivt_connect_webhook_post_retirement_probe_1785812006253` was accepted
+  once, and the exact-source production monitor passed again.
+  Invoice bank payments remain `enabled: false`, `configured: false`, and
+  `setup_required`.
+- The Resend cutover changed only `RESEND_API_KEY`. Automatic deployment
+  `62614aa2-fea0-417a-adab-21f560faecbb` was skipped by the CI wait policy;
+  exact-source deployment `7a0873cf-d1db-4a26-8687-0475c7b1ce7a` succeeded
+  from unchanged production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:8074916995723690145064cce772902039c084c69be416e92b72359fe2d5d033`.
+  The sending-only replacement is restricted to `rivt.pro`. Resend marked the
+  pre-retirement proof delivered at 11:04 PM EDT and the post-retirement proof
+  delivered at 11:17 PM EDT; Michael confirmed receipt of both. The predecessor
+  was deleted only after the first proof, and provider inventory now shows
+  exactly one replacement key. Exact-source monitoring passed before and after
+  retirement. Invoice bank payments remain `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+- The Google OAuth cutover retained project `rivt-499402`, existing web client
+  `Web client 1`, client ID
+  `723503499133-chk58c9so5otflgl33o4b8nljok7io02.apps.googleusercontent.com`,
+  authorized origin `https://rivt.pro`, and redirect
+  `https://rivt.pro/api/auth/google/callback`. Only
+  `GOOGLE_CLIENT_SECRET` changed. Automatic deployment
+  `2e3c8ed3-3a2d-4cf7-aa8b-d54780ad69d2` was skipped by the CI wait policy;
+  exact-source deployment `c00add12-8048-4407-8e6f-9880a357eed8` succeeded
+  from unchanged production commit
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:5af9fd1934e0d4f4185633e8d4ae151a7448fed8604f0bf5d72de28fcb00a99f`.
+  The owner-controlled linked Google account completed fresh production
+  sign-ins before predecessor disablement, after
+  disablement, and after deletion. The predecessor created July 30 at 7:08:18
+  AM EDT was disabled only after the first proof and deleted only after the
+  second. Final provider inventory shows exactly one enabled secret on the
+  unchanged web client. Exact-source monitoring passed before and after
+  retirement; invoice bank payments remain `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+- Railway previously had no distinct `RATE_LIMIT_PEPPER`, so the durable
+  limiter fell back to `AUTH_METADATA_PEPPER`. A fresh independent dedicated
+  rate-limit pepper was added without recording any secret value or
+  secret-derived identifier. Automatic deployment
+  `d4eaa8e9-c5c9-471d-9fa5-fc387f972b05` was skipped; explicit exact-source
+  deployment `5105fe71-4bfe-47b3-a2b5-cb23286d932f` succeeded from unchanged
+  production commit `29e3c613f2eb95a6583b52c671275e5046dde0d3`
+  with image digest
+  `sha256:d54ed8045a948741a5b471363edcb20ab83c4b8f7ddacf26ed87882fca14be34`.
+  The production synthetic monitor passed, authentication remained configured,
+  the existing owner session remained valid, and invoice bank payments stayed
+  `enabled: false`, `configured: false`, and `setup_required`. Two bounded
+  `GET /api/public/jobs?limit=1` probes returned HTTP 200 with durable limiter
+  limit `90`, remaining `89` then `88`, and the same reset. Focused
+  security/authentication tests passed 60/60 and `npm run lint:security` passed.
+  This closes only `RATE_LIMIT_PEPPER`; the independent authentication-metadata
+  closure is recorded separately below.
+- A fresh independent `AUTH_METADATA_PEPPER` replaced the prior value with no
+  previous-value overlap and no rollback. No value, suffix, hash, fingerprint,
+  OAuth state, nonce, or challenge is recorded. Automatic deployment
+  `21316a72-8c11-4579-bc9b-c188f5d1e47d` was skipped; explicit exact-source
+  deployment `16b0deb5-d5f5-4812-afec-70de53a33575` succeeded from unchanged
+  production commit `29e3c613f2eb95a6583b52c671275e5046dde0d3`
+  with image digest
+  `sha256:5471d1280f330d2b1be7bbfc068a8dda7be5ee77ec491fc669c99f4ebada6b69`.
+  The production synthetic monitor passed with authentication, session
+  security, and Google OAuth configured; the existing owner session remained
+  valid, and a fresh owner-controlled Google OAuth sign-in returned
+  authenticated to `rivt.pro`, proving new session issuance. ACH remained
+  `enabled: false`, `configured: false`, `webhookConfigured: true`, and
+  `setup_required`. Railway's masked name-only inventory showed exactly one
+  `AUTH_METADATA_PEPPER` row and exactly one `RATE_LIMIT_PEPPER` row without
+  proving provider version history. Two post-cutover public-job probes returned
+  HTTP 200 with durable limiter limit `90`, remaining `89` then `88`, and the
+  same reset. Focused security/authentication tests passed 60/60 and
+  `npm run lint:security` passed. Both independent pepper classes are closed for
+  this recurrence.
+- The 2026-08-04 VAPID recurrence rotation is closed. Automatic deployment
+  `d97d5f29-8844-4309-b80e-25b546dc0b8c` was skipped. The first exact-source
+  bridge deployment, `f4cbdfce-50d4-42b3-a4a1-16a442e89438`, served unchanged
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d1b99f44be69301d5e6ee25387bbfc1238132547d2ca3113b2d93c78cfe4aaa9`.
+  Its malformed predecessor bridge failed closed: the provider reported
+  invalid configuration, all three eligible registrations were classified
+  retired rather than delivered, and all delivery queues remained empty.
+  No false delivery success is claimed.
+- Restricted automation output during that recovery unexpectedly exposed the
+  then-current Resend credential, the VAPID predecessor, and one candidate
+  replacement. No value, token prefix, secret-derived fingerprint, or secret
+  material is reproduced in repository evidence. Every affected candidate was
+  treated as compromised; the VAPID candidate was abandoned, and Resend was
+  reopened for another replacement and proof.
+- Corrected automatic deployment
+  `9365f0e5-c059-4296-8ef5-d74f20abdc18` was skipped. Corrected bridge
+  deployment `22811563-97df-4278-bd22-1704c82c0141` succeeded from unchanged
+  source `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:c32b62f20694e0553f73b467e71d883aba742d74c302074a2af16dcdb5a15d63`.
+  Its initial inventory showed three eligible registrations on the previous
+  generation, none on the active generation, and all five queue categories at
+  zero. The installed RIVT PWA was then opened on the controlled Android,
+  iOS 16.7.16, and iOS 18.7.8 devices. Before retirement, exact readiness
+  reported total, eligible, active, and active-with-success counts of `3`,
+  previous/unknown/retired/inactive counts of `0`, and all five queue counts
+  at `0`; Michael confirmed the owner-only alert arrived on all three devices.
+- Both previous-key variables were removed together without deploying the
+  skipped intermediate configuration. Exact-source retirement deployment
+  `1ab805db-e200-4e87-a49a-3e2b415f7428` succeeded from unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:3830de3674395f9c636be8eaa03d3e55b7cd277f04ddd88b1f982853a8464f77`.
+  Post-retirement readiness returned `ready: true`, previous configuration
+  absent, the same exact `3/3` active and successful-device evidence, and an
+  empty queue. Michael then confirmed a final post-retirement alert arrived on
+  all three devices. Production monitoring passed, and invoice bank payments
+  remained `enabled: false`, `configured: false`,
+  `webhookConfigured: true`, and `setup_required`.
+- The 2026-08-04 Resend recurrence rotation is closed. The first attempted
+  one-time-key transfer crossed a browser/operating-system clipboard boundary
+  incorrectly and did not install the intended replacement. No unmasked
+  credential value, provider token, secret-derived hash, fingerprint, or
+  usable secret material is retained in repository evidence. The first two
+  exact-source restart attempts preserved the approved source but did not
+  establish use of that replacement; the owner-only
+  post-retirement proofs failed closed with HTTP 502 and were not presented as
+  successful delivery.
+- A later provider inventory view rendered only provider-masked credential
+  labels. The broad view was abandoned, no label was copied into repository
+  evidence, and subsequent checks projected only key name, permission,
+  last-use state, domain restriction, and count. Because no usable credential
+  material was exposed, this tooling-hygiene deviation did not trigger another
+  replacement cycle.
+- Recovery created the clean provider key named
+  `RIVT Production Sending - August 2026 Final Clean`, with Sending access
+  restricted to `rivt.pro`, and transferred it without secret-bearing command
+  output. Final exact-source deployment
+  `0528d1ec-f9dd-4987-b4e8-7620cf71ced0` serves unchanged source
+  `29e3c613f2eb95a6583b52c671275e5046dde0d3` with image digest
+  `sha256:d4f90bfe92152a07aad8ca4b42567b0b542c9fb64a93d2e2961a61149aaf849b`.
+  Public health and the exact-source production monitor passed in 539 ms.
+- Resend marked provider messages
+  `ab1eb0a5-6bb9-44ed-a3c8-31dbaa603658` and
+  `a2d6b4b6-5948-4405-b9b0-69fd6736257e` delivered at 1:51 AM EDT and
+  1:56 AM EDT, respectively. The predecessor and unused intermediate were
+  removed only after proof on the clean replacement. Provider inventory then
+  showed exactly one key: `RIVT Production Sending - August 2026 Final Clean`,
+  with Sending access restricted to `rivt.pro`. Michael confirmed receipt of
+  the final one-key-state email. No observed outage or new recurring service
+  resulted. Exact incremental provider cost was not separately itemized, so
+  this record makes no more precise cost claim.
+- After closure, invoice bank payments remain `enabled: false`,
+  `configured: false`, `webhookConfigured: true`, and `setup_required`.
+  Focused email tests pass 5/5. The previously completed production build,
+  application lint, security lint, full test, browser E2E, and production
+  dependency-audit gates remain the applicable source-verification evidence;
+  23 database-backed integration cases skipped because this worktree has no
+  `TEST_DATABASE_URL`.
+- Verification for this boundary passed: `npm run build`, `npm run lint`,
+  `npm run lint:security`, and `npm run test`. The full test run passed 551
+  unit/frontend checks plus four non-database integration-harness checks; 23
+  database-backed integration cases skipped because `TEST_DATABASE_URL` was
+  absent. A focused push-notification/readiness run passed 26 tests and skipped
+  one database-backed integration case for the same reason.
+- VAPID and the August 4 Resend recurrence are closed. Backup-encryption
+  recurrence rotation and recurring independent recovery remain unproved, so
+  Packet 99 stays active. This does not clear the incident or
+  `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
+  release.
+- `master` currently has no branch protection/ruleset, so the Packet 98
+  rehearsal's protected-branch guard cannot pass. No bypass is authorized.
+- The feature release remains separate from containment and is not authorized
+  by this packet.
+
+PR #22 is present on production/`origin/master` as source
+`7ee9b30a77bbed2cb1ca4aeda330066884e3d59b`; it adds source-only backup tooling
+and does not prove recurring execution or recovery. The hardened scheduler
+source was then merged only into `codex/final-release-candidate-20260804` by
+`b17043a6c2f7b708675f3a155ac2dbf09dcd8e86`. Its bounded runtime, shutdown,
+advisory-lock, and exact-source guards remain candidate controls only. No
+Railway scheduler service, schedule, independent retention provider, backup
+artifact generated by that recurrence, or isolated restore has been activated
+or proved. Application photos/documents also remain outside the PostgreSQL-only
+logical-backup boundary. Candidate engineering gates and provider acceptance
+are separate: exact local gates and PR #25's 28/28 disposable-PostgreSQL tests
+pass for `aa5b5361374bce0ae51d71cbe4b6d8031a605c61`, while all provider acceptance
+remains pending. No provider action, cost, deployment, or readiness is inferred
+from the source merges or engineering results.
 
 Current incident packet: Sentry replacement-key rotation is deployed from
 `codex/vapid-generation-tracking` through `master` at exact source
@@ -45,9 +453,331 @@ outbox. This closes the Web Push key-retirement acceptance boundary without
 clearing the broader incident or `ACTIVE_LAUNCH_HOLD`. Sentry provider audit
 and usage views now also show only the expected rotation actions, 20 accepted
 errors in 14 days, zero filtered, rate-limited, or invalid events, and no
-significant spike. The remaining exit work is final evidence synthesis,
-explicit acceptance of the known historical database/object-storage forensic
-gaps, and a fresh Railway Stage 1 re-review and approval.
+significant spike. The later bounded provider review and exact incident-owner
+acceptances of the five unavailable/unobservable forensic limits are now
+reconciled into the incident record. They do not prove no misuse occurred or
+clear the hold. The remaining boundary is the final consolidated candidate and
+CI, fresh provider and cost evidence, separately authorized reviewed
+deployment, live cleanup of the recorded pilot-invite/private-contact/backup-
+route items, strict preflight, and an explicit incident closure and launch-hold
+decision.
+
+## Packet 98 protected incident-rehearsal workflow - source merged to release candidate; protected credential configured; no run
+
+- A dedicated manual-only workflow at
+  `.github/workflows/incident-rehearsal.yml` is bound to the RIVT repository,
+  protected default `master` branch, exact deployed source commit, fixed
+  `public-health-provider-failure` scenario, and `incident-commander` role.
+- The single `rehearsal` job exposes exactly the four critical step identities
+  required by the Packet 97 provider adapter: `Check production health`,
+  `Run production monitor`, `Run live Gate A smoke`, and
+  `Verify incident evidence`.
+- The workflow requires human confirmation that a controlled failure was
+  exercised, the assigned owner received the alert, incident roles were
+  assigned, recovery was observed, the kill-switch decision was recorded, and
+  a bounded decision-log reference exists. Automated health checks alone
+  cannot masquerade as the complete human rehearsal.
+- Production health must report the workflow SHA with PostgreSQL and
+  S3-compatible storage healthy. The synthetic monitor runs outside Railway,
+  while the live Gate A smoke executes inside the existing production service
+  so the production database URL is not copied into GitHub. Before Node or
+  database access, the remote guard independently requires the exact runtime
+  commit, project, environment, service, literal `production` environment
+  name, and fixed `https://rivt.pro` smoke origin. Public health is rechecked
+  afterward. A stale or wrong active instance therefore fails closed.
+- GitHub permissions are read-only. Third-party actions are commit-pinned, the
+  official Railway CLI archive is version- and SHA-256-pinned, checkout
+  credentials are not persisted, and the Railway token plus a dedicated SSH
+  identity are scoped only to the live-smoke step. The SSH private key is
+  checked, written mode `0600`, passed explicitly, and deleted; the
+  `ssh.railway.com` ED25519 host key is pinned. Raw production output is
+  withheld and deleted, and no workflow artifact is uploaded.
+- The live Gate A smoke now checks migration history with the read-only
+  `assertMigrationsCurrent()` path rather than the ledger-creating
+  `migrationStatus()` path. The workflow performs no deployment, migration,
+  backup, restore, provider creation/configuration, payment activation, or
+  production-data mutation.
+- PR #19 merged into `codex/release-candidate-consolidation` as
+  `f5b42b68fd133f2880cd0e8792e98f2742bed8d3`. Release-candidate Gate A run
+  `30823461905` passed every engineering check and stopped only at the
+  intentional launch-readiness enforcement. The workflow is not on `master`
+  and is not deployed.
+- Under Michael's explicit 2026-08-03 approval, GitHub environment
+  `production-rehearsal` now requires reviewer `Zboytjbxp` and admits only the
+  `master` branch. `prevent_self_review` is `false` because `Zboytjbxp` is the
+  repository's only administrator. GitHub now reports
+  `can_admins_bypass=false`, so administrators cannot skip the configured
+  protection rules. The reviewer gate remains single-owner and therefore is
+  not independent approval.
+- Railway workspace `zboytjbxp's Projects` now contains only the dedicated
+  workspace key `rivt-production-rehearsal-20260803`, type `ssh-ed25519`, with
+  fingerprint `SHA256:oOWKlKo88YhJsRDhUMJNNK6+wD2aGdYgRATtyS6+XVE`.
+  The setup supplied the newly generated private key to environment secret
+  `RIVT_REHEARSAL_RAILWAY_SSH_PRIVATE_KEY`, and GitHub lists that protected
+  secret name. GitHub does not expose its stored value, so post-upload content,
+  key-pair matching, and exclusivity were not independently verified. The known
+  temporary local private and public files were deleted after registration.
+- This is a configuration checkpoint, not protected evidence revision `E` or
+  proof of a rehearsal. GitHub still lists no rehearsal Railway token and no
+  exact source/project/environment/service variables, and the workflow has
+  zero runs. No workflow dispatch, deployment, production-data access or
+  mutation, provider receipt, added cost, or launch action occurred.
+- The documentation-only follow-up passes production build, application and
+  security lint, 551/551 unit/frontend tests, all four database-independent
+  integration checks, all four browser E2E journeys, diff integrity, and the
+  production dependency audit with zero known vulnerabilities. Twenty-three
+  PostgreSQL-backed integration cases skip locally because this clean worktree
+  has no `TEST_DATABASE_URL`; the unchanged release-candidate code already
+  passed the full disposable-PostgreSQL suite in Gate A run `30823461905`.
+- The workflow records an operator-attested human exercise plus exact automated
+  observations; it does not independently prove that a person told the truth.
+  The decision log, provider receipts, later approvals, and complete runbook
+  review remain separately required.
+- The workflow cannot become trusted provider evidence until it is reviewed
+  onto protected `master`, production serves that exact source, and a
+  separately authorized manual dispatch succeeds. A receipt must then be
+  materialized through the reviewed provider adapter; it must never be hand-
+  authored.
+- Focused provider/workflow and migration-safety tests pass 41/41. Build,
+  lint, security lint, the 551-test unit/frontend suite, aggregate tests, all
+  four E2E journeys, `npm audit --omit=dev`, and diff-integrity checks pass
+  locally. The aggregate integration phase passed four available cases and
+  skipped 23 PostgreSQL-backed cases because no isolated
+  `TEST_DATABASE_URL` was present. PR #19 Gate A run `30821741994` passed on
+  exact implementation source `d700980fb2dc63f05b1eded05f4fa801d13112b4`,
+  including the full disposable-PostgreSQL integration suite, production
+  build, repository/security lint, browser suite, formatting, launch-readiness
+  evaluation, and production-dependency audit. Launch-readiness enforcement
+  correctly remained out of scope because the PR targets the release-
+  candidate branch rather than `master`.
+- A fresh sealed working-tree security diff review covered all three source-
+  like/security-critical files and found zero reportable findings. The prior
+  Railway SSH wrong-instance/source-binding concern is closed by the new
+  fail-closed remote runtime identity guard.
+- Readiness remains blocked with 21 findings led by `ACTIVE_LAUNCH_HOLD`;
+  incident readiness separately remains blocked by eight missing operational
+  evidence/approval records. Requirement maturity does not change. No
+  workflow run, provider receipt,
+  protected evidence revision `E`, post-evidence approval revision `A`,
+  incident closure, launch-hold clearance, deployment, or launch is claimed.
+
+## Packet 97 provider-control contract hardening - accepted into release candidate
+
+- The checked-in source policies now declare the exact five incident, six
+  recovery, and one disabled-payment evidence controls expected by the
+  Packet 96 materializer. Every control pins its reviewed adapter ID,
+  provider ID, receipt type, and stable control ID; a later evidence plan
+  cannot substitute those bindings.
+- The payment policy remains explicitly disabled. The recovery policy keeps
+  schedule, retention, failure-domain, and restore observations pending; a
+  future materialization can derive their statuses and the next restore due
+  date only from fresh, exact evidence.
+- A read-only GitHub Actions incident-rehearsal adapter is implemented. It
+  requires one active dedicated workflow, the protected default branch, the
+  exact source commit, an exact scenario/commander run title, one successful
+  rehearsal job, all four critical steps, and no failed or skipped non-post
+  step.
+- Sentry paging stays blocked because current provider APIs do not prove
+  downstream human delivery. Private backup-route delivery stays blocked
+  until a provider and safe evidence route are selected. Recovery controls
+  stay blocked until an independent backup provider, account, US region,
+  retention mode, custody model, and proof seams are approved.
+- Unsupported controls now return specific fail-closed reasons rather than
+  one ambiguous `ADAPTER_NOT_IMPLEMENTED` result.
+- Focused materializer/provider tests pass 41/41, including a fail-closed
+  extreme-date regression that prevents malformed restore evidence from
+  crashing the materializer. Full build, lint, unit/integration aggregate,
+  four-journey E2E, production-dependency audit, and diff-integrity gates pass.
+- Independent diff security review found no reportable candidate across the
+  provider runner or materializer. It confirmed the exact source/provider/run
+  bindings, evidence freshness and proof uniqueness, S/E/A authority split,
+  payment-disabled posture, and final `verification.ok && readiness.ok` gate.
+  Pull request #18 passed Gate A run `30811623328` and merged into
+  `codex/release-candidate-consolidation` as
+  `c8d1596d0a1dd371f3951fdf484cac8704391f38`.
+- Release-candidate pull request #16 then passed every engineering check in
+  Gate A run `30812346351` and stopped only at the intentional final launch-
+  readiness enforcement with the unchanged 21 blockers.
+- Packet 97 is not merged to `master` or deployed and supplies no protected
+  provider evidence or later approval.
+- The unchanged readiness evaluator remains blocked with 21 findings, led by
+  `ACTIVE_LAUNCH_HOLD`. No provider call, credential use, workflow dispatch,
+  production-data action, backup/restore, deployment, added cost, hold
+  clearance, ACH activation, incident closure, or launch is claimed or
+  authorized.
+
+## Packet 96 provider-evidence approval lifecycle - accepted for release-candidate merge
+
+- Packet 95 correctly separated immutable source policy `S` from later
+  provider evidence `E`, but it left approvals in `S`. Because readiness
+  requires approvals to postdate the evidence they approve, the full gate was
+  fail-closed but could never truthfully become ready.
+- Packet 96 introduces a third, later, separately protected approval revision
+  `A`. `S` defines policy and stable control identities; `E` supplies only
+  plan-bound receipts; `A` supplies only post-evidence approvals and the
+  explicit launch-hold decision.
+- The proposed approval path is bound to both exact revisions:
+  `docs/delivery/evidence/railway-stage1/approval/<S>/<E>/launch-readiness.json`.
+  Validation requires clean exact-revision worktrees, `S -> E -> A` ancestry,
+  one regular manifest file, exact plan/policy/receipt digests, and approvals
+  strictly later than `E`.
+- The workflow now asks GitHub's read-only branch API to confirm that the `E`
+  and `A` trust-root branches are protected before checkout, dependencies, or
+  provider credentials. Exact protected heads remain pinned independently.
+- A bounded materializer understands exactly 12 stable controls: five
+  incident, six recovery, and one payment-provider state control. Unknown,
+  missing, duplicate, or mismatched controls fail closed. It combines policy
+  intent from `S`, observed facts from `E`, and approvals/hold disposition
+  from `A` only in memory for the existing readiness evaluator.
+- A valid `A` decision may suppress only `ACTIVE_LAUNCH_HOLD`; it cannot
+  suppress any other readiness finding. Provider-only verification rejects
+  approval inputs, and launch-ready verification requires a full distinct
+  approval revision.
+- This packet creates no provider, recovery, resilience, deployment, cost, or
+  production evidence. The checked-in operations policies still need a
+  separate reviewed update for the stable control declarations, and nine
+  provider adapters remain separate bounded work.
+- Independent review found and closed three concrete issues before publication:
+  the preinstall approval validator indirectly required `dotenv`; hold
+  clearance was not bound to the source incident; and `E`/`A` protection was
+  named but not machine-attested. The clean-runner import regression, exact-
+  incident checks at overlay/materializer/readiness layers, and read-only
+  branch-protection check now fail closed.
+- No-cost local verification passes: build, application lint, security lint,
+  538/538 unit tests, the combined test command, all four browser E2E journeys,
+  diff integrity, and the production dependency audit with zero known
+  vulnerabilities. The combined test command runs 4 database-independent
+  integration cases and skips 23 PostgreSQL-backed cases because this isolated
+  worktree has no `TEST_DATABASE_URL`. Gate A run `30794141827` supplied a
+  disposable PostgreSQL 16 service and passed the complete unit/integration,
+  browser, build, lint, formatting, and dependency-audit sequence.
+- `npm run launch:readiness -- --require-ready` remains intentionally blocked
+  with 21 findings, including `ACTIVE_LAUNCH_HOLD`; the lifecycle fix makes a
+  truthful future decision reachable but supplies none of the missing proof.
+- The first PR run passed its build, lint, security lint, disposable-PostgreSQL
+  aggregate, browser, formatting, and audit steps, then failed only because
+  Gate A enforced the intentionally blocked production-readiness result on a
+  release-candidate PR. Gate A now still evaluates readiness on every PR, but
+  enforces it only for a PR into `master` or a push to `master`; regression
+  coverage locks that release boundary. Corrected Gate A run `30794141827`
+  passed; Packet 96 is accepted for merge into the release candidate only.
+- Launch readiness remains blocked; no merge to `master`,
+  deployment, provider call, credential access, production-data action, cost,
+  hold clearance, Railway Stage 1, ACH activation, incident closure, or launch
+  is authorized.
+
+## Packet 95 provider-evidence policy boundary — merged into release candidate
+
+- The sealed Codex Security diff scan of
+  `29e3d3a5e8773ff66fb5f255190e979431583074..f5e71b75c713c5a92eb20c8a1098009ca742c163`
+  reviewed 78/78 paths and reported one Medium/P2 finding:
+  `csf_04e2d7dfe8fbe53f254d821c`.
+- The finding proved that the evidence overlay could rewrite incident and
+  recovery policy and have those values reach launch readiness outside the
+  provider-evidence plan.
+- Packet 95 removes policy authority from the overlay and separates a clean,
+  exact-source immutable policy root from a clean, exact-revision evidence
+  root. Policy and approvals come only from source; plan-bound receipts come
+  only from the protected overlay. Missing or untrusted roots block before
+  provider adapters and readiness.
+- Red-before-patch regressions reproduced incident-hold and recovery-target
+  rewrites. The original PoC no longer reaches its vulnerable assertion, and
+  split-root sink coverage proves an overlay policy copy cannot clear the
+  source hold. The payment-disabled invariant remains enforced.
+- Current evidence passes the provider overlay/runner suites (66/66),
+  original packaged exploit reproduction, independent change-aware security
+  review, production build, application/security lint, 486/486 unit/frontend
+  tests, all four browser E2E journeys, diff integrity, and the production
+  dependency audit with zero known vulnerabilities. The exact local
+  `npm run test` command exits zero; four database-independent integration
+  checks pass and PostgreSQL-backed tests explicitly skip because the isolated
+  worktree has no `TEST_DATABASE_URL`.
+- Pull-request Gate A run
+  [`30788718976`](https://github.com/Zboytjbxp/rivt/actions/runs/30788718976)
+  verified head `d0244f21fbcfce0680167d0145f049a7d014b54c`: build,
+  application/security lint, 486/486 unit/frontend tests, all 28
+  disposable-PostgreSQL integration tests, all four browser journeys, patch
+  formatting, and the zero-vulnerability production dependency audit passed.
+  The prior installed-app offline-browser failure is cleared.
+- That workflow is red only at its final intentional readiness-enforcement
+  step. The readiness command preserved all 21 blockers, led by
+  `ACTIVE_LAUNCH_HOLD`; there was no pre-readiness engineering failure.
+- Documentation-only Gate A run
+  [`30789376060`](https://github.com/Zboytjbxp/rivt/actions/runs/30789376060)
+  repeated the same result: every engineering and audit step passed, followed
+  only by the intentional final readiness-enforcement stop.
+- `launch:readiness --require-ready` correctly remains blocked with 21 findings,
+  led by `ACTIVE_LAUNCH_HOLD`; Packet 95 neither suppresses nor clears them.
+- Reviewed PR #15 merged into `codex/release-candidate-consolidation` as
+  `ce757652fa49d4592dcf6e13c4291cd8e4db18aa`. It is not merged to `master` or
+  deployed and
+  authorizes no provider call, added cost, credential access, production-data
+  action, launch-hold clearance, Railway Stage 1, ACH activation, or incident
+  closure.
+- Existing launch blockers remain unchanged, including `R-051`, `R-052`,
+  `R-055`, `GA-OPS-004`, and `GA-OPS-009`.
+- Packet 95's acceptance boundary is complete. Packet 96 now addresses the
+  separate post-evidence approval lifecycle while the active hold remains
+  unchanged. Deployment and exact-source provider/recovery acceptance remain
+  separately authorized work.
+
+## Packet 94 release-candidate consolidation — merged candidate, not deployed
+
+- Branch `codex/release-candidate-consolidation` selectively forward-ports the
+  Packet 88-94 security, recovery, monitoring, push-delivery, replica-safety,
+  and Railway activation controls onto current `origin/master`. It deliberately
+  preserves the later credential-containment fixes and does not merge an old
+  branch wholesale.
+- The final code-only implementation checkpoint before this evidence update is
+  `c936dd00fbe87db493e1ebeca142bbf50599eb9f`. It includes explicit hosted
+  web/worker/migrate roles, fail-closed migration ownership, bounded database
+  pools, leased maintenance, fenced push attempts, hard delivery/shutdown
+  deadlines, privacy-safe request/capacity telemetry, strict content-digested
+  logical recovery, source-bound provider receipts, and activation
+  preflight/config contracts. It also binds stale browser writes to the rendered
+  account, reserves Stripe payment requests durably before provider calls,
+  converges ambiguous retries, keeps raw Stripe Checkout URLs server-side, and
+  installs a complete version-matched offline bundle rather than only the entry
+  chunk.
+- Packet 95 is included through merge commit
+  `ce757652fa49d4592dcf6e13c4291cd8e4db18aa`, so the candidate also enforces
+  an immutable source-policy root separate from the mutable provider-evidence
+  root before any adapter or readiness call.
+- No-cost local verification on that checkpoint passed: production build,
+  application lint, security lint, 477/477 unit/frontend tests, all four browser
+  E2E journeys, Tools/Trade News/mobile-actions/Work-lifecycle UI smokes, diff
+  integrity, the guarded local recovery harness, and the production dependency
+  audit with zero known vulnerabilities. The offline journey additionally
+  passed three consecutive focused runs after the installed-app reopen harness
+  was corrected, and verifies every manifest chunk plus both theme lockups is
+  cached before a worker activates. The local recovery harness used only three
+  synthetic in-memory objects (81 plaintext bytes), performed no provider I/O,
+  read no production data, and incurred no charge-bearing action.
+- The full PostgreSQL integration aggregate is not claimed locally. This
+  workstation does not provide an authenticated PostgreSQL 16 acceptance
+  target; final candidate pull-request CI must supply disposable PostgreSQL 16
+  proof, including the Stripe ambiguous-retry and account-context routes.
+- The 2026-08-02 approved backup refresh created one new encrypted logical
+  artifact in the existing private Railway bucket for 109 tables and 8,811
+  rows. It refreshes same-provider RPO evidence only. It does not restore that
+  artifact, copy referenced object bytes to an independent provider, create a
+  recurring schedule, or close `R-052` / `GA-OPS-004`.
+- This release candidate has not been merged, deployed, or activated. No
+  Railway service, replica, worker, variable, database, bucket, volume, plan,
+  DNS, traffic, production record, or payment was changed by consolidation.
+  Packet 94's earlier branch CI and dated provider observations remain
+  historical evidence, not proof for this candidate.
+- `launch:readiness --require-ready` correctly remains blocked with 21 findings:
+  the active incident hold; missing/untested incident owners, monitoring,
+  paging, rehearsal, and approvals; unproved recurring/retained/independent
+  recovery evidence and current approvals; and an unapproved payment-provider
+  state. This fail-closed result is a safety success, not launch evidence.
+- Next acceptance boundary: commit and push the consolidated branch, use the
+  public repository's disposable PostgreSQL 16 CI to verify the full aggregate,
+  retain the active incident hold, complete a Codex Security diff review, and
+  obtain fresh exact-source provider, recovery, payment, cost, deployment, and
+  incident-closure approvals. A push or draft pull request is not deployment
+  approval.
 
 ## Active operational incident - Production credential exposure
 
@@ -55,9 +785,11 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   values into a restricted automation transcript on 2026-07-29. No secret is
   recorded in repository evidence, and no unauthorized use is currently known.
   All exposed credential classes are nevertheless treated as compromised.
-- Packet 86 remains the active product packet. The separately approved Railway
-  Stage 1 activation is paused and its approval cannot be reused after this
-  incident hotfix or any credential change.
+- Packet 86 remains the last deployed product packet in this incident record;
+  Packet 94 is now the active repository-hardening packet. The separately
+  approved Railway Stage 1 activation remains paused, and its old approval
+  cannot be reused after this incident hotfix, credential changes, or release-
+  candidate rebase.
 - A narrow compatibility hotfix was prepared from exact production source
   `92a8451b8190f5119384a4970fb1a324503df995` and deployed by Railway. The final
   Stripe Connect credential cutover deployment was
@@ -116,7 +848,8 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   operational ceiling; no exact measured cost is claimed. A fast-follow must
   move the pinned Node 20 runtime to Node 22 before the AWS SDK's
   post-January-2027 Node 22 support requirement becomes applicable.
-- Backup-encryption rotation now has two isolated restore proofs. A fresh
+- Historical July 30 backup-encryption rotation evidence, recorded before the
+  August 3 recurrence, includes two isolated restore proofs. A fresh
   active-key artifact identified by timestamp `2026-07-30T03-58-45.931Z`
   restored 109 tables and 8,768 rows with zero manifest differences; an
   independent critical-table source/target comparison also returned zero
@@ -134,8 +867,9 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   Railway deployment prefix `b9920864` serves commit
   `854eef63b4d169746faf87157aaa9f3c1345329d`; public health returned `ok: true`.
   Runtime checks returned `primaryPreviousPresent=false` and
-  `aliasPreviousPresent=false`, proving the running process carries neither
-  previous-key alias. The previous backup key is retired.
+  `aliasPreviousPresent=false`, proving the running process carried neither
+  previous-key alias after that July rotation. That pre-recurrence predecessor
+  was retired; the August 3 recurrence remains pending.
 - `RESTORE_DATABASE_URL` is deleted from Railway configuration. Follow-up
   Railway deployment prefix `638e213e` succeeded on commit
   `854eef63b4d169746faf87157aaa9f3c1345329d`; public health returned `ok: true`,
@@ -152,9 +886,12 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   inbox. The superseded key was deleted only after that proof, and provider
   dashboard confirmation and inventory showed the deletion succeeded with one
   replacement key remaining.
-- The authentication metadata pepper is rotated and has no previous-value
-  compatibility fallback. The replacement exact-source deployment is healthy;
-  the exposed value is no longer configured for active use.
+- Before the 2026-08-03 recurrence, the authentication metadata pepper had been
+  rotated with no previous-value compatibility fallback, and that historical
+  exact-source deployment was healthy. The recurrence exposed the then-current
+  value again, so the historical rotation alone is not current recurrence
+  closure. The fresh independent recurrence replacement and new-session proof
+  are recorded in the current Packet 99 evidence above.
 - Web Push VAPID rotation is complete. The incident owner confirmed a real
   alert reached an already opted-in owner-controlled physical device through
   the transition bridge. Both previous-key variables were then removed;
@@ -189,7 +926,7 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   secret-safe provider-configuration probe, and the expected-source production
   monitor pass. Two unused replacement candidates were deleted before
   installation. A fresh production OAuth journey for
-  `zboytjbxp@gmail.com` completed at 14:18:31 UTC on July 30: the callback
+  the owner-controlled linked Google account completed at 14:18:31 UTC on July 30: the callback
   returned its redirect in 131 ms and the browser rendered the authenticated
   RIVT Home workspace. An earlier callback from a transaction held open longer
   than the 10-minute ticket lifetime failed closed before token exchange and
@@ -4580,15 +5317,15 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   - `npm run lint` (pass)
   - `npm run lint:security` (pass)
 
-## Latest Packet 08 Pass - Jacksonville Beta Invite Code
+## Latest Packet 08 Pass - Jacksonville Beta Invite Record
 
-- Added support for the named Jacksonville beta access code `JAX26`:
-  - signup request validation now accepts 5-character pilot codes while invite consumption remains server-side and hash-backed
-  - `scripts/create-pilot-invite.js` can now create a reviewed fixed code with `--code=...` instead of only random one-time strings
-  - `scripts/create-pilot-invite.js` can also raise the capacity of an existing active fixed code with `--update-max-uses=...`, avoiding one-off production SQL for launch-code adjustments
+- Historical support was added for a reviewed Jacksonville beta invite record; raw invite authority is redacted from public documentation:
+  - signup request validation accepts the reviewed short pilot-code format while invite consumption remains server-side and hash-backed
+  - the earlier operator CLI accepted fixed codes through process arguments; the consolidated candidate retires that unsafe path and accepts exceptional manual values only through protected input with `--allow-manual-code`
+  - current inspection, capacity changes, and revocation require the non-secret invite record ID, with `--update-max-uses=...` available only alongside `--update --invite-id=<uuid>`
   - integration coverage includes a short-code invite signup path so this does not regress silently
 - Created the production invite through Railway SSH inside the production service network:
-  - code: `JAX26`
+  - code: `[redacted]`
   - invite id: `b6ce645b-bb30-4279-875a-405b85ec5879`
   - email lock: none
   - role lock: none
@@ -4597,8 +5334,8 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   - expires: `2026-10-05T01:09:24.224Z`
 - Live verification:
   - production `/api/health` reported exact build commit `8be08d7768f3796257d7b669a0c9eddd38d38df9`
-  - Railway SSH update returned the active `JAX26` invite with `maxUses: 500`, `useCount: 0`, and `revokedAt: null`
-  - non-consuming signup probe with `JAX26` reached password-policy validation instead of request-shape rejection, proving the short code is accepted by the deployed API without consuming the invite
+  - Railway SSH update returned the reviewed invite record with `maxUses: 500`, `useCount: 0`, and `revokedAt: null`
+  - a non-consuming signup probe using the reviewed invite record reached password-policy validation instead of request-shape rejection, proving the short-code path was accepted by the deployed API without consuming the invite
   - `EXPECTED_SOURCE_COMMIT=8be08d7768f3796257d7b669a0c9eddd38d38df9 npm run monitor:production` passed with PostgreSQL, S3-compatible object storage, configured Sentry, operational controls off, seven anonymous private-route checks, and 593 ms duration
 - Preserved boundaries:
   - the code remains revocable, expiring, max-use-limited, and stored only as a hash
@@ -6791,7 +7528,7 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 - Rendered QA passed for Tools and Shop Talk/Trade News at desktop and mobile sizes. Screenshot evidence was saved outside the repo at `C:\Users\zboyt\AppData\Local\Temp\rivt-tools-pass` and `C:\Users\zboyt\AppData\Local\Temp\rivt-shop-talk-news-pass`.
 - Required local gates passed after this slice: `npm run build`, `npm run lint`, `npm run lint:security`, `npm run test:ui:tools`, `npm run test:ui:shop-talk-news`, `npm run test`, `npm run test:e2e`, `npm audit --omit=dev`, and `git diff --check`.
 - The full `npm run test` command used the isolated test Postgres through local `TEST_DATABASE_URL`.
-- Production deployment was performed through Railway from `master`. Deployment `97915261-3fc8-499d-bfcd-04a7811990a5` served the new frontend assets, and follow-up deployment `2cf692b0-b88e-45c8-98da-f164d07b2c7d` corrected the reported health commit metadata. Live `/api/health` returned healthy PostgreSQL, S3-compatible object storage, ready migrations, and configured Sentry. Live `/api/news?location=Jacksonville%2C%20FL` returned 30 items with 13 article thumbnails, 9 feed thumbnails, and 8 fallback thumbnails. Authenticated production UI publish testing remains blocked until a valid production test login is available; the provided `rivttesting@gmail.com` credentials returned invalid credentials.
+- Production deployment was performed through Railway from `master`. Deployment `97915261-3fc8-499d-bfcd-04a7811990a5` served the new frontend assets, and follow-up deployment `2cf692b0-b88e-45c8-98da-f164d07b2c7d` corrected the reported health commit metadata. Live `/api/health` returned healthy PostgreSQL, S3-compatible object storage, ready migrations, and configured Sentry. Live `/api/news?location=Jacksonville%2C%20FL` returned 30 items with 13 article thumbnails, 9 feed thumbnails, and 8 fallback thumbnails. Authenticated production UI publish testing remains blocked until a valid production test login is available; the provided production test account credentials returned invalid credentials.
 
 ## Latest Packet 08 Pass - Improvement Backlog and Truthful Entitlement Cleanup
 
@@ -7105,7 +7842,7 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 
 ## Latest Packet 08 Pass - Incident Rehearsal Passed
 
-- Re-authenticated Railway CLI as `zboytjbxp@gmail.com` and verified the linked project/service: project `RIVT`, production environment, service `RIVT`, public URL `https://rivt.pro`.
+- Re-authenticated Railway CLI through the owner-controlled workspace account and verified the linked project/service: project `RIVT`, production environment, service `RIVT`, public URL `https://rivt.pro`.
 - `npm run monitor:production` passed against production, confirming exact source `6d8e276e036553c5f861f1f8ab97cc3333a3494b`, PostgreSQL and S3-compatible storage healthy, Sentry configured, operational controls off, and seven anonymous private-route checks failing closed.
 - Local live smoke failed against the Railway internal DB hostname, then passed inside the service with `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live`.
 - The service-local live smoke verified migration `0011_shop_talk_reaction_events_immutable`, zero seed/demo findings, seven anonymous private-route checks, operational controls off, five active accounts, zero network profiles, zero open jobs, two open support cases, zero active restrictions, 115 legacy app-state rows, and 111 rate-limit windows.
@@ -7145,10 +7882,10 @@ Do not discard or overwrite the pre-existing Trade News work when committing or 
 
 ## Latest Packet 08 Pass - Backup Incident Owner Recorded
 
-- Recorded backup incident owner in `docs/operations/incident-routing.json`: Anya Tingle, partner / wife, `abota1994@gmail.com`.
+- Recorded the backup-incident-owner role in `docs/operations/incident-routing.json`; personal identity, relationship, and contact route remain in the access-controlled roster.
 - Phone status is `recorded`; the actual phone number is intentionally not stored in the repository.
 - `node scripts/incident-readiness-check.js --json` stopped reporting `BACKUP_OWNER_MISSING`; support hours were recorded in the follow-up pass above.
-- Remaining honesty boundary: backup ownership is recorded, but Anya still needs access/runbook orientation before we should treat incident response as operationally rehearsed.
+- Remaining honesty boundary: backup ownership is recorded, but the backup-incident-owner still needs access/runbook orientation before we should treat incident response as operationally rehearsed.
 
 ## Latest Packet 08 Pass - Sentry Error Monitoring Configured
 
@@ -7726,7 +8463,7 @@ Implemented on 2026-06-20:
 - Added `scripts/production-synthetic-monitor.js` and `npm run monitor:production`.
 - Added `.github/workflows/production-synthetic.yml` to run the public production synthetic check every 30 minutes and on manual dispatch.
 - The monitor verifies public health, deployed source presence, managed PostgreSQL/S3-compatible dependency status, invite-gated email/password provider configuration, operational-control state, and seven anonymous private-route 401 boundaries.
-- Hardened the scheduled workflow so it installs dependencies from `package-lock.json`, uploads `production-monitor.log` evidence on every run, opens or updates one GitHub issue titled `Production synthetic check failing` when checks fail, and comments/closes that issue when production recovers.
+- Hardened the scheduled workflow so it installs dependencies from `package-lock.json`, uploads only allowlisted `production-monitor-summary.json` evidence on every run, fails visibly when the production ref is not protected, opens or updates one sanitized GitHub issue titled `Production synthetic check failing` when checks fail, and comments/closes that issue when production recovers.
 - Latest local run against `https://rivt.pro` passed with source `f5a68d9c16364c94dd727bb91e03a25f33e283df`, operational controls disabled, seven anonymous private checks, and a 606 ms duration.
 - This is partial monitoring progress only. Dedicated error monitoring, alert routing, paging destination, named incident owner, and rehearsal remain launch blockers.
 
@@ -7738,7 +8475,7 @@ Implemented on 2026-06-20:
 - Added `scripts/incident-readiness-check.js` and `npm run incident:readiness`.
 - Added unit coverage proving incident readiness passes only with owners, support hours, synthetic monitoring, error monitoring, paging, recent rehearsal, and founder/support/legal-safety approvals.
 - Updated the production synthetic GitHub issue workflow so a failing monitor issue includes incident-routing context: primary owner, backup owner, dedicated error-monitoring status, and paging status.
-- Current readiness output is blocked, with primary owner recorded as Michael at `support@rivt.pro`, synthetic monitoring configured, and these missing blockers: backup owner, founder-approved support hours, dedicated error monitoring, paging route, incident rehearsal, founder approval, support approval, and legal/safety approval.
+- Current readiness output is blocked, with the founder-incident-commander role routed through `support@rivt.pro`, synthetic monitoring configured, and these missing blockers: backup owner, founder-approved support hours, dedicated error monitoring, paging route, incident rehearsal, founder approval, support approval, and legal/safety approval.
 
 ## Packet 08 Restore Drill Tooling Progress
 

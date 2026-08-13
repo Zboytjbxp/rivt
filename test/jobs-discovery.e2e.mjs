@@ -228,7 +228,7 @@ async function waitForServer() {
   throw new Error("Timed out waiting for Vite.");
 }
 
-async function configurePage(page, jobs, { activeWork = [], project = null } = {}) {
+async function configurePage(page, jobs, { activeWork = [], project = null, beforeReactionResponse = null } = {}) {
   let currentAccount = structuredClone(account);
   await page.addInitScript(() => {
     window.localStorage.setItem("rivt.localSetupDone.v1", "true");
@@ -380,6 +380,7 @@ async function configurePage(page, jobs, { activeWork = [], project = null } = {
   });
   await page.route("**/api/v1/shop-talk/reactions", async (route) => {
     const body = route.request().postDataJSON();
+    if (beforeReactionResponse) await beforeReactionResponse(body);
     return route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -550,6 +551,74 @@ async function assertTopBarActions(page) {
   await page.getByRole("button", { name: "Customer notes" }).waitFor();
 }
 
+async function assertSameAccountReactionRefreshRace(browserInstance) {
+  const context = await browserInstance.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+  const page = await context.newPage();
+  let releaseVoteResponse;
+  let markVoteStarted;
+  const voteResponseGate = new Promise((resolve) => { releaseVoteResponse = resolve; });
+  const voteStarted = new Promise((resolve) => { markVoteStarted = resolve; });
+  const targetPost = shopTalkPosts[1];
+
+  await configurePage(page, [], {
+    beforeReactionResponse: async (body) => {
+      markVoteStarted(body);
+      await voteResponseGate;
+    },
+  });
+
+  try {
+    await page.goto(`${baseUrl}/app`, { waitUntil: "networkidle" });
+    const homeCard = page.locator(".trade-post").filter({ hasText: targetPost.title }).first();
+    await homeCard.waitFor({ timeout: 10_000 });
+    const homeUpvote = homeCard.getByRole("button", { name: "Upvote", exact: true });
+    assert.equal(await homeUpvote.isEnabled(), true, "The test vote must start from an enabled reaction control");
+
+    const voteResponse = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/shop-talk/reactions");
+    await homeUpvote.click();
+    const voteBody = await voteStarted;
+    assert.deepEqual(
+      { targetType: voteBody.targetType, targetKey: voteBody.targetKey, reaction: voteBody.reaction },
+      { targetType: "thread", targetKey: `post:${targetPost.id}`, reaction: "up" },
+      "The held request must be the target post's upvote",
+    );
+    assert.equal(await homeUpvote.isDisabled(), true, "A vote must disable its control while the request is in flight");
+
+    const postsRefresh = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/shop-talk/posts");
+    const targetsRefresh = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/shop-talk/reactions/batch");
+    await page.getByRole("button", { name: /^Shop Talk$/ }).first().click();
+    await Promise.all([postsRefresh, targetsRefresh]);
+
+    releaseVoteResponse();
+    await voteResponse;
+    const refreshedCard = page.locator(".trade-post").filter({ hasText: targetPost.title }).first();
+    await refreshedCard.waitFor();
+    const refreshedUpvote = refreshedCard.getByRole("button", { name: "Upvote", exact: true });
+    await page.waitForFunction((title) => {
+      const card = [...document.querySelectorAll(".trade-post")].find((candidate) => candidate.textContent?.includes(title));
+      const button = card?.querySelector('button[aria-label="Upvote"]');
+      return button instanceof HTMLButtonElement
+        && !button.disabled
+        && button.getAttribute("aria-pressed") === "true";
+    }, targetPost.title);
+    assert.equal(await refreshedUpvote.isEnabled(), true, "Same-account post hydration must not strand a completed vote in the disabled state");
+
+    const clearVoteResponse = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/v1/shop-talk/reactions");
+    await refreshedUpvote.click();
+    await clearVoteResponse;
+    await page.waitForFunction((title) => {
+      const card = [...document.querySelectorAll(".trade-post")].find((candidate) => candidate.textContent?.includes(title));
+      const button = card?.querySelector('button[aria-label="Upvote"]');
+      return button instanceof HTMLButtonElement
+        && !button.disabled
+        && button.getAttribute("aria-pressed") === "false";
+    }, targetPost.title);
+  } finally {
+    releaseVoteResponse();
+    await context.close();
+  }
+}
+
 let browser;
 try {
   await waitForServer();
@@ -585,6 +654,8 @@ try {
     assert.deepEqual(consoleErrors, []);
     await context.close();
   }
+
+  await assertSameAccountReactionRefreshRace(browser);
 
   console.log("Jobs and discovery E2E passed at desktop and mobile viewports.");
 } finally {

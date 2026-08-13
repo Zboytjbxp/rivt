@@ -92,7 +92,7 @@ APPLE_PRIVATE_KEY=
 APPLE_REDIRECT_URI=https://rivt.pro/api/auth/apple/callback
 ```
 
-Verify `rivt.pro` with the email provider before inviting users. Never use capture delivery in production. Generate invitation codes from an authorized operations terminal with `npm run invite:create -- --email=user@example.com --role=contractor`; only the one-time raw code is printed.
+Verify `rivt.pro` with the email provider before inviting users. Never use capture delivery in production. Generate invitation codes from an authorized operations terminal with `npm run invite:create -- --create --email=user@example.com --role=contractor`; only the newly generated raw code is printed once. Later inspection, capacity changes, and revocation use the non-secret record ID: `npm run invite:create -- --status --invite-id=<uuid>`, `npm run invite:create -- --update --invite-id=<uuid> --update-max-uses=25`, or `npm run invite:create -- --revoke --invite-id=<uuid>`. Revocation only succeeds for an active invite and does not print the invite code or its hashes. Generated codes are preferred. If an exceptional operator-selected code is required, run `npm run invite:create -- --create --allow-manual-code` from an interactive terminal and enter the value at the hidden prompt, or provide it through protected standard input from an approved secret-handling tool. Never place a raw invite in argv, an environment variable, a literal shell pipeline, or retained command history; manual values are not echoed by the CLI.
 
 Production sender verification was completed on 2026-06-19. The Resend API key is sending-only and restricted to `rivt.pro`; the verified sender remains `RIVT <support@rivt.pro>`. Keep the existing Google Workspace root MX record intact. Resend uses only the `send.rivt.pro` return-path MX/SPF records.
 
@@ -147,7 +147,7 @@ Production activation requires:
 
 1. Confirm the platform and every connected merchant can request the `us_bank_account_ach_payments` capability.
 2. Create a Connect webhook endpoint at `https://rivt.pro/api/stripe/connect/webhook` with events from connected accounts enabled.
-3. Subscribe to `account.updated`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.dispute.created`, and `charge.refunded`.
+3. Subscribe to the nine Accounts v2 settlement events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `payment_intent.processing`, `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.dispute.created`, and `charge.refunded`. Do not add legacy `account.updated` to this settlement destination; RIVT handles that event only for any retained Accounts v1 record, while current merchant readiness comes from the Accounts v2 configuration flow.
 4. Store that endpoint's signing secret in `STRIPE_CONNECT_WEBHOOK_SECRET`. Do not reuse `STRIPE_WEBHOOK_SECRET`.
 5. Exercise onboarding and one ACH lifecycle in Stripe test mode, including asynchronous success and failure, before setting `STRIPE_CONNECT_ACH_ENABLED=true` in production.
 6. After activation, verify the public payment return page discloses processing honestly and that signed events—not the browser redirect—change invoice paid state.
@@ -166,6 +166,20 @@ S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
 S3_SIGNED_URL_SECONDS=900
 MAX_UPLOAD_MB=10
+HTTP_REQUEST_TIMEOUT_MS=120000
+HTTP_HEADERS_TIMEOUT_MS=15000
+HTTP_KEEP_ALIVE_TIMEOUT_MS=5000
+HTTP_MAX_HEADERS_COUNT=100
+HTTP_MAX_REQUESTS_PER_SOCKET=1000
+HTTP_SHUTDOWN_TIMEOUT_MS=10000
+PROVIDER_REQUEST_TIMEOUT_MS=10000
+API_BURST_RATE_LIMIT=600
+AUTH_ACCOUNT_RATE_LIMIT=10
+DATABASE_MAINTENANCE_INTERVAL_MS=3600000
+DATABASE_MAINTENANCE_BATCH_SIZE=500
+HEALTH_DEPENDENCY_TIMEOUT_MS=2500
+HEALTH_DEPENDENCY_SUCCESS_CACHE_MS=30000
+HEALTH_DEPENDENCY_FAILURE_CACHE_MS=5000
 ```
 
 For Railway Object Storage, copy the bucket name, endpoint, access key, and secret key from the Railway storage service into the web service variables. Keep `S3_REGION=auto` when Railway reports `auto`, keep `S3_FORCE_PATH_STYLE=false` unless the provider explicitly requires path-style requests, and leave `S3_PUBLIC_BASE_URL` blank for private customer files. The API intentionally fails closed with `503 OBJECT_STORAGE_UNAVAILABLE` / setup-required health output when object storage is missing; there is no local upload fallback.
@@ -174,11 +188,18 @@ For Railway Object Storage, copy the bucket name, endpoint, access key, and secr
 
 The repo includes `railway.json` for a single Railway web service:
 
+- Builder: Railway Railpack, with Node 22 selected by `.nvmrc`
 - Build command: `npm run build`
 - Start command: `npm start`
-- Process healthcheck: `/`
+- Process healthcheck: `/api/health`
 
-The process healthcheck only proves the site is online. Customer readiness is still controlled by `/api/health` and `/api/storage`.
+The process healthcheck returns `200` only after cached bounded PostgreSQL and
+object-storage liveness probes pass, production session metadata security is
+configured, and database migrations reach `ready`. Successful probes are
+cached for 30 seconds, failed probes for 5 seconds, and each attempt is
+bounded to 2.5 seconds by default. Railway keeps the deployment out of service
+while dependencies are unavailable or migrations are pending, running, or
+failed. `/api/storage` remains the authenticated storage-detail endpoint.
 
 1. Create a Railway project for the web app.
 2. Add a Railway PostgreSQL service.
@@ -264,7 +285,7 @@ The Express server serves the built frontend from `dist/` and exposes the `/api/
 - `POST /api/events`
 - `GET /api/payments/export.csv`
 - `GET /api/uploads`
-- `POST /api/uploads`
+- `POST /api/uploads` (retired legacy write route; returns `410 Gone`; use scoped project-media upload endpoints)
 - `GET /api/uploads/:id/url`
 - `POST /api/identity/verify`
 - `POST /api/subscriptions/checkout` (retired legacy compatibility route; must not grant entitlements)

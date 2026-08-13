@@ -2,7 +2,67 @@
 
 Gate A is approved only with automated and manual evidence against production-like infrastructure. Screenshots alone are insufficient.
 
-## Current Evidence Snapshot - 2026-06-30
+## Current Evidence Snapshot - 2026-08-08
+
+Final-diff remediation application source
+`e06a6218e6c9047569e3140d24a7f25a9c710de8` closes two low-severity
+candidate-only security findings: stale invoice delivery proof after a
+top-level edit and cross-account rendering of an ownerless legacy Receivables
+row. Evidence on this descendant is:
+
+- `npm run build`, `npm run lint`, and `npm run lint:security` pass.
+- 14/14 prechecks and 604/604 unit tests pass.
+- `npm run test:ui:tools` passes, including orphaned-row quarantine,
+  account-switch, and API-outage cases.
+- `npm run test:e2e` passes all four browser journeys.
+- `npm audit --omit=dev` reports zero known vulnerabilities after transitive
+  `nanoid` was updated from `3.3.16` to `3.3.18`.
+- `git diff --check` passes.
+- Local `npm run test:integration` exits zero with four provider-free cases
+  passing and 23 PostgreSQL cases skipped because no local `TEST_DATABASE_URL`
+  or Docker engine is available.
+- Draft PR #25 Gate A Safety run `31269498552` passed 28/28 tests against its
+  disposable PostgreSQL 16 service, including the new invoice route
+  regression. It also repeated 14/14 prechecks, 604/604 unit tests, and all
+  four browser journeys successfully.
+
+Both low-severity findings are fully verified in the release candidate. The
+workflow's final exit remains intentionally nonzero because launch-readiness
+enforcement correctly reported the existing 21 incident, recovery, and
+disabled-payment evidence blockers. Production, ACH, payment, provider,
+deployment, cost, and launch state are unchanged.
+
+## Prior Evidence Snapshot - 2026-08-04
+
+Draft PR #25 binds the un-deployed Node 22 release candidate to exact source
+`aa5b5361374bce0ae51d71cbe4b6d8031a605c61`. Local evidence on that source is:
+
+- `npm run build` passes.
+- `npm run lint`, `npm run lint:security`, and `npm run lint:public-docs` pass.
+- All 617 unit and precheck tests pass.
+- The integration aggregate reports 27 cases: four pass and 23 skip because
+  local `TEST_DATABASE_URL` is absent.
+- All four browser E2E journeys pass.
+- Tools, Shop Talk / Trade News, mobile actions, and Work lifecycle UI smokes
+  pass.
+- `npm audit --omit=dev` reports zero known vulnerabilities.
+- `git diff --check` passes.
+- `npm run launch:readiness -- --require-ready` remains blocked with exactly 21
+  findings.
+
+Draft PR #25 Gate A Safety run `30955179943` supplies the database-backed
+candidate proof: 14/14 pretest safety checks, 603/603 unit tests, 28/28
+disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys pass.
+The workflow's final exit 1 is the required launch-readiness refusal because
+the 21 operational findings above remain open; it is not a code or test
+failure.
+Production and `origin/master` remain at
+`7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. No candidate deployment,
+provider activation, scheduler, independent restore, topology proof, ACH
+activation, incident closure, launch-hold clearance, or public-launch approval
+is claimed. `GA-OPS-004` and `GA-OPS-009` remain blockers.
+
+## Historical Evidence Snapshot - 2026-06-30
 
 Gate A machine readiness is approved for the recorded incident, recovery, support, and legal/safety scopes. Physical-device and deeper manual accessibility evidence remains the next non-machine launch-quality boundary before broader rollout.
 
@@ -44,8 +104,8 @@ Packet 08 hardening evidence now exists for:
 - Legacy bridge retirement: authenticated `/api/app-state`, `/api/events`, and `/api/payments/export.csv` bridge routes were retired in source `00147c8e3f70e246b41ed48b46550ae33cf0eb54` and remain absent from the current deployed source; live hardening smoke still reports zero seed/demo findings and anonymous fail-closed behavior.
 - Manual and scripted accessibility/device smoke: `docs/quality/ACCESSIBILITY_DEVICE_MATRIX.md` records 1280x720, 390x844, and 360x800 public-shell checks with no console warnings/errors or horizontal overflow; one sub-44px auth input target-size defect was fixed and post-deploy verification measured 46px fields at 390x844. Expanded authenticated production smoke `ui-a11y-20260621043529-3efa9b` covered contractor/tradesperson 360x800 and 390x844 phones, contractor 768x1024 tablet, 1366x768 laptop, 1440x900 desktop, and contractor 390x844 with 200% root text scale. It verified top-bar search/messages/notifications/profile present, no role toggle, no More tab, no horizontal overflow after fixing Crew/network shell overflow, zero post-login console warnings/errors, zero small tap-target findings, reduced-motion preference enabled, and keyboard focus reaching named top-bar and primary-navigation targets. The smoke now fails on those authenticated-shell regressions instead of only reporting them.
 - Expanded 2026-06-22 production accessibility smoke: `ui-a11y-20260622041456-3d6a3d` passed against source `d4e6f06a70e3dad8f59d54b6698b79ab08d6fd2d` after Railway deployment `17cc18db-0ac5-4f23-bf5f-955b98af38cb`. It covered eight role/viewport scenarios, six route audits per scenario, four opened top-bar surface audits per scenario, 200% root text scale, reduced motion, keyboard focus targets, landmarks, visible-image alt checks, visible-field naming checks, touch targets, console warnings/errors, and horizontal overflow. It captured 72 screenshots at `C:\Users\zboyt\AppData\Local\Temp\rivt-ui-a11y-20260622041456-3d6a3d`, found and verified fixes for a sub-44px Shop Talk search input and 200% text Inbox metric clipping, and cleaned up two disposable production accounts.
-- Production synthetic monitoring: `npm run monitor:production` passes against `https://rivt.pro` and `.github/workflows/production-synthetic.yml` schedules the same public health/provider/fail-closed check every 30 minutes. The workflow now installs from lockfile, uploads `production-monitor.log` evidence on every run, opens or updates a single GitHub incident issue when checks fail, and comments/closes that issue after recovery.
-- Incident readiness gate: `docs/operations/incident-routing.json` and `npm run incident:readiness` now make incident owner, support-hours, alert destination, rehearsal, and approval gaps machine-checkable. The synthetic incident issue body includes routing context. Current readiness has primary owner `Michael <support@rivt.pro>`, backup owner Anya Tingle, support hours, synthetic monitoring, Sentry error monitoring, first pilot escalation, incident-routing approval, a passed Scenario A incident rehearsal, and founder/support/legal-safety approvals recorded by Michael at `2026-06-22T03:48:04.1166525Z`. The rehearsal on 2026-06-22 passed with `npm run monitor:production`, service-local `npm run smoke:gate-a:live` through Railway SSH, and Sentry event `43fc7567f458490582db1f6642e2e0ea` accepted with HTTP 200. `node scripts/incident-readiness-check.js --json` now reports `ready` with zero findings.
+- Production synthetic monitoring: `npm run monitor:production` passes against `https://rivt.pro` and `.github/workflows/production-synthetic.yml` schedules the same public health/provider/fail-closed check every 30 minutes. The workflow installs from lockfile, uploads only the allowlisted `production-monitor-summary.json` evidence on every run, fails visibly when the production ref is not protected, opens or updates a single sanitized GitHub incident issue when checks fail, and comments/closes that issue after recovery.
+- Incident readiness gate: `docs/operations/incident-routing.json` and `npm run incident:readiness` make incident-owner roles, support hours, alert destinations, rehearsals, and approval gaps machine-checkable. The synthetic incident issue body includes only public routing context. The recorded route uses `founder-incident-commander`, `founder-support-owner`, and `backup-incident-owner` role IDs; personal identities and contact routes remain in the access-controlled roster. The route also records support hours, synthetic monitoring, Sentry error monitoring, first-pilot escalation, incident-routing approval, and founder/support/legal-safety approvals by the founder role at `2026-06-22T03:48:04.1166525Z`. The 2026-06-22 rehearsal passed with `npm run monitor:production`, service-local `npm run smoke:gate-a:live` through Railway SSH, and Sentry event `43fc7567f458490582db1f6642e2e0ea` accepted with HTTP 200. `node scripts/incident-readiness-check.js --json` then reported `ready` with zero findings.
 - Timed isolated logical restore: temporary Railway PostgreSQL target `Postgres-3Ei3` was provisioned, migrated, populated from production through `npm run restore:logical-copy -- --apply-migrations`, and then strictly verified through `npm run restore:drill`. The copy covered 59 public tables and 1,524 rows in 1,421 ms; the verifier confirmed migration `0009_durable_rate_limits`, nine applied migrations, zero pending migrations, source/target parity across critical Gate A tables, zero count diffs, and a 220 ms verifier duration. The temporary target was deleted and no temporary restore variables remain.
 - Named backup artifact restore: `npm run backup:logical-artifact` created AES-256-GCM encrypted object `backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm` in private S3-compatible storage from 59 tables / 1,524 rows in 630 ms. `npm run restore:logical-artifact -- --apply-migrations` restored that named object into isolated Railway target `Postgres-_FQz`, applied nine migrations through `0009_durable_rate_limits`, restored 59 tables / 1,524 rows, verified table/column/sequence and strict manifest-count parity with zero diffs in 13,411 ms, and `npm run restore:drill` verified the target in 1,862 ms. The temporary target was deleted, detached restore volumes were marked for deletion, and temporary restore variables were removed.
 - Launch readiness gate: `docs/operations/recovery-policy.json`, `docs/operations/LAUNCH_OPS_CHECKLIST.md`, `docs/operations/INCIDENT_REHEARSAL_RUNBOOK.md`, and `npm run launch:readiness` now combine incident readiness with recovery-policy evidence. The recovery policy is approved for Gate A with RPO 24 hours, RTO 4 hours, 30-day backup retention, 30-day restore-drill cadence, and next restore drill due `2026-07-21T04:18:59.000Z`. `node scripts/launch-readiness-check.js --json` now reports `ready` with zero findings.

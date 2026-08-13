@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import test from "node:test";
-import { logError, logInfo } from "../server/logger.js";
+import { createRequestLogger, logError, logInfo } from "../server/logger.js";
 
 function captureRecord(method, callback) {
   const original = console[method];
@@ -130,4 +131,74 @@ test("structured logging remains usable for circular diagnostic context", () => 
   assert.equal(record.context.requestId, "req-circular");
   assert.equal(record.context.status, "retrying");
   assert.equal(record.context.self, "[Circular]");
+});
+
+test("request logging completes once and exposes safe optional telemetry hooks", () => {
+  const response = new EventEmitter();
+  response.statusCode = 201;
+  response.writableEnded = true;
+  const started = [];
+  const completed = [];
+  const request = {
+    method: "POST",
+    path: "/api/v1/uploads",
+    headers: { "content-type": "multipart/form-data; boundary=test" },
+    requestId: "req-upload",
+    authUser: { id: "account-123" },
+    file: { size: 42 },
+  };
+  let nextCalls = 0;
+  const { record } = captureRecord("log", () => {
+    createRequestLogger({
+      onStart: (start) => {
+        started.push(start);
+        return (finish) => completed.push(finish);
+      },
+      onComplete: () => assert.fail("A start completion callback takes precedence."),
+    })(request, response, () => {
+      nextCalls += 1;
+    });
+    response.emit("finish");
+    response.emit("close");
+  });
+
+  assert.equal(nextCalls, 1);
+  assert.deepEqual(started, [{ multipart: true }]);
+  assert.equal(completed.length, 1);
+  const { durationMs, ...completion } = completed[0];
+  assert.deepEqual(completion, {
+    method: "POST",
+    routeFamily: "uploads_media",
+    statusCode: 201,
+    aborted: false,
+    multipart: true,
+    uploadBytes: 42,
+  });
+  assert.equal(typeof durationMs, "number");
+  assert.equal(record.event, "http.request");
+  assert.equal(record.multipart, true);
+  assert.equal(record.aborted, false);
+  assert.equal(record.uploadBytes, 42);
+});
+
+test("request logging marks an unfinished close as aborted", () => {
+  const response = new EventEmitter();
+  response.statusCode = 499;
+  response.writableEnded = false;
+  const completed = [];
+  const request = {
+    method: "GET",
+    path: "/api/v1/jobs",
+    headers: {},
+  };
+
+  captureRecord("log", () => {
+    createRequestLogger({ onComplete: (record) => completed.push(record) })(request, response, () => {});
+    response.emit("close");
+  });
+
+  assert.equal(completed.length, 1);
+  assert.equal(completed[0].aborted, true);
+  assert.equal(completed[0].multipart, false);
+  assert.equal(completed[0].uploadBytes, 0);
 });

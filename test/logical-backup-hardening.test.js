@@ -1,13 +1,24 @@
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import { EventEmitter } from "node:events";
 import { Readable } from "node:stream";
 import test from "node:test";
 import { gunzipSync, gzipSync } from "node:zlib";
 import {
   BackupConfigurationError,
+  acquireLogicalBackupLock,
+  assertBackupWriteDestination,
+  backupDestinationIdentitySha256,
+  backupJobTimeoutMsFromEnv,
+  backupSlotStart,
+  backupWriteWindowFromEnv,
+  BACKUP_SLOT_HOURS,
   ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
   LOGICAL_BACKUP_FORMAT_V2,
   LOGICAL_BACKUP_MANIFEST_FORMAT_V2,
+  logicalBackupObjectKey,
+  MAX_BACKUP_WRITES_PER_UTC_MONTH,
+  MAX_NEW_LOGICAL_BACKUP_BYTES,
   POSTGRES_TEXT_ROW_ENCODING,
   aggregateTableDigest,
   assertBackupCatalogComplete,
@@ -59,6 +70,7 @@ import {
 } from "../scripts/restore-logical-backup-artifact.js";
 import { completeInventory, verifyRestoreDrill } from "../scripts/restore-drill.js";
 import { backupKeyIdReceipt } from "../scripts/backup-key-id.js";
+import { runScheduledLogicalBackup } from "../scripts/run-scheduled-logical-backup.js";
 
 const snapshot = {
   format: "rivt-logical-backup-v1",
@@ -469,7 +481,90 @@ const destinationEnv = {
   BACKUP_DESTINATION_S3_PREFIX: "postgres/daily",
   BACKUP_DESTINATION_S3_ACCESS_KEY_ID: "backup-only-key",
   BACKUP_DESTINATION_S3_SECRET_ACCESS_KEY: "backup-only-secret",
+  BACKUP_WRITE_WINDOW_START_AT: "2026-08-01T00:00:00.000Z",
+  BACKUP_WRITE_WINDOW_END_AT: "2026-09-01T00:00:00.000Z",
+  BACKUP_WRITE_WINDOW_DESTINATION_SHA256: sha256Hex(Buffer.from([
+    "https://s3.us-west-004.backblazeb2.com",
+    "us-west-004",
+    "rivt-backups-prod",
+    "postgres/daily",
+    "virtual-hosted",
+  ].join("\0"))),
 };
+const activeWriteWindow = {
+  writeWindowStartAt: destinationEnv.BACKUP_WRITE_WINDOW_START_AT,
+  writeWindowEndAt: destinationEnv.BACKUP_WRITE_WINDOW_END_AT,
+};
+
+test("backup write windows are canonical UTC calendar months and fail closed outside them", () => {
+  assert.deepEqual(
+    backupWriteWindowFromEnv(destinationEnv, new Date("2026-08-31T23:59:59.999Z")),
+    {
+      startAt: "2026-08-01T00:00:00.000Z",
+      endAt: "2026-09-01T00:00:00.000Z",
+    },
+  );
+  for (const currentTime of [
+    new Date("2026-07-31T23:59:59.999Z"),
+    new Date("2026-09-01T00:00:00.000Z"),
+  ]) {
+    assert.throws(
+      () => backupWriteWindowFromEnv(destinationEnv, currentTime),
+      (error) => error.code === "BACKUP_WRITE_WINDOW_CLOSED",
+    );
+  }
+  for (const invalid of [
+    { BACKUP_WRITE_WINDOW_START_AT: "2026-08-01T00:00:00Z" },
+    { BACKUP_WRITE_WINDOW_START_AT: "2026-08-01T12:00:00.000Z" },
+    { BACKUP_WRITE_WINDOW_END_AT: "2026-09-01T12:00:00.000Z" },
+    { BACKUP_WRITE_WINDOW_END_AT: "2026-10-01T00:00:00.000Z" },
+  ]) {
+    assert.throws(
+      () => backupWriteWindowFromEnv({ ...destinationEnv, ...invalid }, new Date("2026-08-15T00:00:00.000Z")),
+      (error) => error.code === "BACKUP_CONFIG_INVALID",
+    );
+  }
+});
+
+test("backup slots are deterministic, twelve hours apart, and bounded below one GiB per month", () => {
+  assert.equal(BACKUP_SLOT_HOURS, 12);
+  const first = new Date("2026-08-01T00:01:00.000Z");
+  const sameSlot = new Date("2026-08-01T11:59:59.999Z");
+  const nextSlot = new Date("2026-08-01T12:00:00.000Z");
+  assert.equal(backupSlotStart(first).toISOString(), "2026-08-01T00:00:00.000Z");
+  assert.equal(logicalBackupObjectKey("postgres/daily", first), logicalBackupObjectKey("postgres/daily", sameSlot));
+  assert.notEqual(logicalBackupObjectKey("postgres/daily", first), logicalBackupObjectKey("postgres/daily", nextSlot));
+  assert.equal(MAX_BACKUP_WRITES_PER_UTC_MONTH, 62);
+  assert.equal(MAX_BACKUP_WRITES_PER_UTC_MONTH * MAX_NEW_LOGICAL_BACKUP_BYTES, 992 * 1024 * 1024);
+});
+
+test("backup write window is bound to exact nonsecret destination coordinates", () => {
+  const config = destinationS3Config(destinationEnv);
+  assert.equal(backupDestinationIdentitySha256(config), destinationEnv.BACKUP_WRITE_WINDOW_DESTINATION_SHA256);
+  assert.equal(assertBackupWriteDestination(config, destinationEnv), undefined);
+  assert.throws(
+    () => assertBackupWriteDestination({ ...config, prefix: "postgres/another" }, destinationEnv),
+    (error) => error.code === "BACKUP_CONFIG_INVALID",
+  );
+  for (const changedCoordinate of [
+    { endpoint: "https://s3.us-east-1.amazonaws.com" },
+    { region: "us-east-1" },
+    { bucket: "rivt-backups-other" },
+    { forcePathStyle: true },
+  ]) {
+    assert.throws(
+      () => assertBackupWriteDestination({ ...config, ...changedCoordinate }, destinationEnv),
+      (error) => error.code === "BACKUP_CONFIG_INVALID",
+    );
+  }
+  assert.throws(
+    () => assertBackupWriteDestination(config, {
+      ...destinationEnv,
+      BACKUP_WRITE_WINDOW_DESTINATION_SHA256: "A".repeat(64),
+    }),
+    (error) => error.code === "BACKUP_CONFIG_INVALID",
+  );
+});
 
 const losslessSnapshot = {
   format: LOGICAL_BACKUP_FORMAT_V2,
@@ -543,6 +638,7 @@ test("backup creation never falls back to DATABASE_URL and restore never falls b
         SOURCE_COMMIT: "a".repeat(40),
         BACKUP_ENCRYPTION_KEY: "1".repeat(64),
       },
+      now: () => new Date("2026-08-01T12:00:00.000Z"),
     }),
     /BACKUP_DATABASE_URL is required/,
   );
@@ -685,7 +781,30 @@ test("backup key-id helper emits only the nonsecret active-key fingerprint", () 
 
 test("backup evidence requires a full source commit and bounded policy thresholds", () => {
   assert.equal(requiredSourceCommit({ SOURCE_COMMIT: "A".repeat(40) }), "a".repeat(40));
+  assert.equal(requiredSourceCommit({
+    SOURCE_COMMIT: "A".repeat(40),
+    RAILWAY_GIT_COMMIT_SHA: "a".repeat(40),
+    RAILWAY_SERVICE_ID: "service-id",
+  }), "a".repeat(40));
   assert.throws(() => requiredSourceCommit({ SOURCE_COMMIT: "abc1234" }), /full 40-character/);
+  assert.throws(
+    () => requiredSourceCommit({ SOURCE_COMMIT: "a".repeat(40), RAILWAY_SERVICE_ID: "service-id" }),
+    (error) => error.code === "BACKUP_CONFIG_INVALID",
+  );
+  assert.throws(
+    () => requiredSourceCommit({
+      SOURCE_COMMIT: "a".repeat(40),
+      RAILWAY_GIT_COMMIT_SHA: "b".repeat(40),
+      RAILWAY_SERVICE_ID: "service-id",
+    }),
+    (error) => error.code === "BACKUP_SOURCE_MISMATCH",
+  );
+  assert.equal(backupJobTimeoutMsFromEnv({}), 45 * 60_000);
+  assert.equal(backupJobTimeoutMsFromEnv({ BACKUP_JOB_TIMEOUT_MINUTES: "60" }), 60 * 60_000);
+  assert.throws(
+    () => backupJobTimeoutMsFromEnv({ BACKUP_JOB_TIMEOUT_MINUTES: "61" }),
+    /cannot exceed 60/,
+  );
   assert.equal(retentionDaysFromEnv({}), 30);
   assert.throws(() => retentionDaysFromEnv({ BACKUP_RETENTION_DAYS: "29" }), /at least 30/);
   assert.equal(maxBackupAgeHoursFromEnv({}), 14);
@@ -694,11 +813,209 @@ test("backup evidence requires a full source commit and bounded policy threshold
   assert.throws(() => recoveryRtoMinutesFromEnv({ RECOVERY_RTO_MINUTES: "241" }), /cannot exceed 240/);
   assert.deepEqual(enforceRecoveryRto(12_000, 3_000, 240), {
     restoreDurationMs: 12_000,
-    verifyDurationMs: 3_000,
+    verificationDurationMs: 3_000,
     combinedDurationMs: 15_000,
     rtoMinutes: 240,
   });
   assert.throws(() => enforceRecoveryRto(14_400_000, 1, 240), (error) => error.code === "BACKUP_RTO_EXCEEDED");
+});
+
+test("logical backup advisory lock fails closed when another run holds it", async () => {
+  await acquireLogicalBackupLock({
+    async query(sql) {
+      assert.match(sql, /pg_try_advisory_lock/);
+      return { rows: [{ acquired: true }] };
+    },
+  });
+  await assert.rejects(
+    () => acquireLogicalBackupLock({ async query() { return { rows: [{ acquired: false }] }; } }),
+    (error) => error.code === "BACKUP_ALREADY_RUNNING",
+  );
+});
+
+test("scheduled backup wrapper passes through success and stops a run after its deadline", async () => {
+  const successfulChild = new EventEmitter();
+  successfulChild.kill = () => true;
+  let spawnCall;
+  const success = runScheduledLogicalBackup({
+    env: { SAFE: "value" },
+    timeoutMs: 1_000,
+    spawnImpl(command, args, options) {
+      spawnCall = { command, args, options };
+      queueMicrotask(() => successfulChild.emit("exit", 0, null));
+      return successfulChild;
+    },
+  });
+  assert.deepEqual(await success, { ok: true });
+  assert.equal(spawnCall.command, process.execPath);
+  assert.equal(spawnCall.args.length, 1);
+  assert.match(spawnCall.args[0], /create-logical-backup-artifact\.js$/);
+  assert.deepEqual(spawnCall.options.env, { SAFE: "value" });
+  assert.equal(spawnCall.options.stdio, "inherit");
+
+  const timedOutChild = new EventEmitter();
+  const signals = [];
+  timedOutChild.kill = (signal) => {
+    signals.push(signal);
+    if (signal === "SIGTERM") queueMicrotask(() => timedOutChild.emit("exit", null, signal));
+    return true;
+  };
+  await assert.rejects(
+    () => runScheduledLogicalBackup({
+      env: {},
+      timeoutMs: 5,
+      terminationGraceMs: 5,
+      spawnImpl: () => timedOutChild,
+    }),
+    (error) => error.code === "BACKUP_JOB_TIMEOUT",
+  );
+  assert.deepEqual(signals, ["SIGTERM"]);
+
+  const uncooperativeChild = new EventEmitter();
+  const escalatedSignals = [];
+  uncooperativeChild.kill = (signal) => {
+    escalatedSignals.push(signal);
+    if (signal === "SIGKILL") queueMicrotask(() => uncooperativeChild.emit("exit", null, signal));
+    return true;
+  };
+  await assert.rejects(
+    () => runScheduledLogicalBackup({
+      env: {},
+      timeoutMs: 5,
+      terminationGraceMs: 5,
+      spawnImpl: () => uncooperativeChild,
+    }),
+    (error) => error.code === "BACKUP_JOB_TIMEOUT",
+  );
+  assert.deepEqual(escalatedSignals, ["SIGTERM", "SIGKILL"]);
+});
+
+test("scheduled backup wrapper bounds failed termination and forwards host shutdown signals", async () => {
+  const stuckChild = new EventEmitter();
+  const stuckSignals = [];
+  let stuckChildUnrefCount = 0;
+  stuckChild.kill = (signal) => {
+    stuckSignals.push(signal);
+    if (signal === "SIGTERM") {
+      queueMicrotask(() => stuckChild.emit("error", new Error("simulated kill failure")));
+    }
+    return false;
+  };
+  stuckChild.unref = () => {
+    stuckChildUnrefCount += 1;
+  };
+  await assert.rejects(
+    () => runScheduledLogicalBackup({
+      env: {},
+      timeoutMs: 5,
+      terminationGraceMs: 5,
+      spawnImpl: () => stuckChild,
+      signalSource: new EventEmitter(),
+    }),
+    (error) => error.code === "BACKUP_JOB_TIMEOUT",
+  );
+  assert.deepEqual(stuckSignals, ["SIGTERM", "SIGKILL"]);
+  assert.equal(stuckChildUnrefCount, 1);
+  assert.equal(stuckChild.listenerCount("error"), 0);
+  assert.equal(stuckChild.listenerCount("exit"), 0);
+
+  const signalSource = new EventEmitter();
+  const interruptedChild = new EventEmitter();
+  const interruptedSignals = [];
+  interruptedChild.kill = (signal) => {
+    interruptedSignals.push(signal);
+    queueMicrotask(() => interruptedChild.emit("exit", null, signal));
+    return true;
+  };
+  const interrupted = runScheduledLogicalBackup({
+    env: {},
+    timeoutMs: 1_000,
+    terminationGraceMs: 5,
+    spawnImpl: () => interruptedChild,
+    signalSource,
+  });
+  signalSource.emit("SIGINT");
+  await assert.rejects(interrupted, (error) => error.code === "BACKUP_JOB_INTERRUPTED");
+  assert.deepEqual(interruptedSignals, ["SIGINT"]);
+  assert.equal(signalSource.listenerCount("SIGINT"), 0);
+  assert.equal(signalSource.listenerCount("SIGTERM"), 0);
+});
+
+test("scheduled backup wrapper reports spawn, nonzero, and unexpected-signal failures", async () => {
+  const spawnFailureChild = new EventEmitter();
+  spawnFailureChild.kill = () => true;
+  const spawnFailure = new Error("spawn failed");
+  const spawnResult = runScheduledLogicalBackup({
+    env: {},
+    timeoutMs: 1_000,
+    spawnImpl: () => {
+      queueMicrotask(() => spawnFailureChild.emit("error", spawnFailure));
+      return spawnFailureChild;
+    },
+    signalSource: new EventEmitter(),
+  });
+  await assert.rejects(spawnResult, (error) => error === spawnFailure);
+
+  const nonzeroChild = new EventEmitter();
+  nonzeroChild.kill = () => true;
+  const nonzeroResult = runScheduledLogicalBackup({
+    env: {},
+    timeoutMs: 1_000,
+    spawnImpl: () => {
+      queueMicrotask(() => nonzeroChild.emit("exit", 2, null));
+      return nonzeroChild;
+    },
+    signalSource: new EventEmitter(),
+  });
+  await assert.rejects(
+    nonzeroResult,
+    (error) => error.childReportedFailure === true && /\(2\)/.test(error.message),
+  );
+
+  const signaledChild = new EventEmitter();
+  signaledChild.kill = () => true;
+  const signaledResult = runScheduledLogicalBackup({
+    env: {},
+    timeoutMs: 1_000,
+    spawnImpl: () => {
+      queueMicrotask(() => signaledChild.emit("exit", null, "SIGABRT"));
+      return signaledChild;
+    },
+    signalSource: new EventEmitter(),
+  });
+  await assert.rejects(
+    signaledResult,
+    (error) => error.childReportedFailure === true && /SIGABRT/.test(error.message),
+  );
+});
+
+test("backup creation rejects Railway source mismatch before opening database or storage clients", async () => {
+  let databaseOpened = false;
+  let storageOpened = false;
+  await assert.rejects(
+    () => createLogicalBackupArtifact({
+      env: {
+        ...destinationEnv,
+        BACKUP_DATABASE_URL: "postgresql://backup_reader:secret@db.example.test/rivt",
+        BACKUP_ENCRYPTION_KEY: "1".repeat(64),
+        SOURCE_COMMIT: "a".repeat(40),
+        RAILWAY_GIT_COMMIT_SHA: "b".repeat(40),
+        RAILWAY_SERVICE_ID: "service-id",
+      },
+      now: () => new Date("2026-08-01T12:00:00.000Z"),
+      poolFactory() {
+        databaseOpened = true;
+        throw new Error("database should not open");
+      },
+      s3ClientFactory() {
+        storageOpened = true;
+        throw new Error("storage should not open");
+      },
+    }),
+    (error) => error.code === "BACKUP_SOURCE_MISMATCH",
+  );
+  assert.equal(databaseOpened, false);
+  assert.equal(storageOpened, false);
 });
 
 test("backup snapshot starts repeatable-read and refuses a role with any write capability", async () => {
@@ -966,7 +1283,6 @@ function protectedBucketClient(overrides = {}) {
     async send(command) {
       this.commands.push(command);
       switch (command.constructor.name) {
-        case "HeadBucketCommand": return {};
         case "GetBucketVersioningCommand": return { Status: overrides.versioning ?? "Enabled" };
         case "GetObjectLockConfigurationCommand": return {
           ObjectLockConfiguration: {
@@ -974,32 +1290,28 @@ function protectedBucketClient(overrides = {}) {
             Rule: { DefaultRetention: { Mode: overrides.lockMode ?? "COMPLIANCE", Days: 30 } },
           },
         };
-        case "GetBucketLifecycleConfigurationCommand": return {
-          Rules: [{
-            ID: "expire-daily-after-lock",
-            Status: "Enabled",
-            Filter: overrides.lifecycleFilter ?? { Prefix: overrides.lifecyclePrefix ?? "postgres/daily/" },
-            Expiration: { Days: 30 },
-            NoncurrentVersionExpiration: { NoncurrentDays: overrides.noncurrentDays ?? 30 },
-          }],
-        };
         default: throw new Error(`Unexpected command ${command.constructor.name}`);
       }
     },
   };
 }
 
-test("bucket protection requires versioning, COMPLIANCE default retention, and an exact lifecycle prefix", async () => {
+test("bucket protection requires versioning and COMPLIANCE default retention without lifecycle access", async () => {
   const config = destinationS3Config(destinationEnv);
-  const verified = await verifyBucketProtection(protectedBucketClient(), config, 30);
+  const protectedClient = protectedBucketClient();
+  const verified = await verifyBucketProtection(protectedClient, config, 30);
   assert.deepEqual(verified, {
     versioning: "Enabled",
     objectLockMode: "COMPLIANCE",
     defaultRetentionDays: 30,
-    lifecycleRuleId: "expire-daily-after-lock",
-    lifecycleExpirationDays: 30,
-    lifecycleNoncurrentExpirationDays: 30,
   });
+  assert.deepEqual(
+    protectedClient.commands.map((command) => command.constructor.name),
+    [
+      "GetBucketVersioningCommand",
+      "GetObjectLockConfigurationCommand",
+    ],
+  );
   await assert.rejects(
     () => verifyBucketProtection(protectedBucketClient({ versioning: "Suspended" }), config, 30),
     (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
@@ -1008,27 +1320,15 @@ test("bucket protection requires versioning, COMPLIANCE default retention, and a
     () => verifyBucketProtection(protectedBucketClient({ lockMode: "GOVERNANCE" }), config, 30),
     (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
   );
-  await assert.rejects(
-    () => verifyBucketProtection(protectedBucketClient({ lifecyclePrefix: "postgres/" }), config, 30),
-    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
-  );
-  await assert.rejects(
-    () => verifyBucketProtection(protectedBucketClient({ noncurrentDays: 29 }), config, 30),
-    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
-  );
-  await assert.rejects(
-    () => verifyBucketProtection(protectedBucketClient({
-      lifecycleFilter: { And: { Prefix: "postgres/daily/", Tags: [{ Key: "scope", Value: "partial" }] } },
-    }), config, 30),
-    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
-  );
 });
 
 test("backup creation reads one repeatable snapshot with a read-only role and uploads a unique protected version", async () => {
   const queries = [];
+  const lifecycle = [];
   const client = {
     async query(sql) {
       queries.push(sql);
+      if (sql.includes("pg_try_advisory_lock")) return { rows: [{ acquired: true }] };
       if (sql.includes("FROM pg_roles")) {
         return {
           rows: [{
@@ -1057,18 +1357,20 @@ test("backup creation reads one repeatable snapshot with a read-only role and up
       if (sql.includes("information_schema.sequences")) return { rows: [] };
       return { rows: [] };
     },
-    release() {},
+    release() { lifecycle.push("client-release"); },
   };
   let poolEnded = false;
   const pool = {
     async connect() { return client; },
-    async end() { poolEnded = true; },
+    async end() {
+      poolEnded = true;
+      lifecycle.push("pool-end");
+    },
   };
   let putInput;
   const s3 = {
     async send(command) {
       switch (command.constructor.name) {
-        case "HeadBucketCommand": return {};
         case "GetBucketVersioningCommand": return { Status: "Enabled" };
         case "GetObjectLockConfigurationCommand": return {
           ObjectLockConfiguration: {
@@ -1076,24 +1378,21 @@ test("backup creation reads one repeatable snapshot with a read-only role and up
             Rule: { DefaultRetention: { Mode: "COMPLIANCE", Days: 30 } },
           },
         };
-        case "GetBucketLifecycleConfigurationCommand": return {
-          Rules: [{
-            ID: "expire-daily-after-lock",
-            Status: "Enabled",
-            Filter: { Prefix: "postgres/daily/" },
-            Expiration: { Days: 30 },
-            NoncurrentVersionExpiration: { NoncurrentDays: 30 },
-          }],
-        };
         case "PutObjectCommand":
+          lifecycle.push("upload");
           putInput = command.input;
-          return { VersionId: "protected-version" };
-        case "HeadObjectCommand": return {
-          VersionId: "protected-version",
-          LastModified: new Date("2026-08-01T12:00:01.000Z"),
-          ObjectLockMode: "COMPLIANCE",
-          ObjectLockRetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
-        };
+          return {
+            VersionId: "protected-version",
+            ChecksumSHA256: command.input.ChecksumSHA256,
+          };
+        case "GetObjectRetentionCommand":
+          lifecycle.push("retention-verified");
+          return {
+            Retention: {
+              Mode: "COMPLIANCE",
+              RetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
+            },
+          };
         default: throw new Error(`Unexpected command ${command.constructor.name}`);
       }
     },
@@ -1110,30 +1409,45 @@ test("backup creation reads one repeatable snapshot with a read-only role and up
     s3ClientFactory: () => s3,
   });
   assert.equal(result.versionId, "protected-version");
-  assert.equal(result.uploadedAt, "2026-08-01T12:00:01.000Z");
-  assert.match(result.key, /^postgres\/daily\/2026-08-01T12-00-00\.000Z-a{40}-[a-f0-9-]+\.json\.gz\.aes256gcm$/);
+  assert.equal(result.writeAcceptedAt, "2026-08-01T12:00:00.000Z");
+  assert.equal(result.key, "postgres/daily/2026-08-01T12-00-00.000Z-slot.json.gz.aes256gcm");
+  assert.equal(result.backupSlotStartAt, "2026-08-01T12:00:00.000Z");
+  assert.equal(result.writeWindowStartAt, "2026-08-01T00:00:00.000Z");
+  assert.equal(result.writeWindowEndAt, "2026-09-01T00:00:00.000Z");
   assert.equal(putInput.IfNoneMatch, "*");
-  assert.equal(putInput.ObjectLockMode, "COMPLIANCE");
-  assert.equal(queries[0], "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
+  assert.equal(putInput.ChecksumAlgorithm, "SHA256");
+  assert.equal(putInput.ServerSideEncryption, "AES256");
+  assert.equal(putInput.ObjectLockMode, undefined);
+  assert.equal(putInput.ObjectLockRetainUntilDate, undefined);
+  assert.match(putInput.ChecksumSHA256, /^[A-Za-z0-9+/]{43}=$/);
+  assert.match(queries[0], /pg_try_advisory_lock/);
+  assert.equal(queries[1], "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
   assert.equal(queries.at(-1), "COMMIT");
   assert.equal(poolEnded, true);
+  assert.deepEqual(lifecycle, ["upload", "retention-verified", "client-release", "pool-end"]);
 });
 
 test("protected backup upload is unique, versioned, digest-bound, and COMPLIANCE locked", async () => {
   const config = destinationS3Config(destinationEnv);
   let input;
+  const commands = [];
   const client = {
     async send(command) {
+      commands.push(command.constructor.name);
       if (command.constructor.name === "PutObjectCommand") {
         input = command.input;
-        return { VersionId: "4_zversion", ETag: "etag" };
-      }
-      if (command.constructor.name === "HeadObjectCommand") {
         return {
           VersionId: "4_zversion",
-          LastModified: new Date("2026-08-01T12:00:01.000Z"),
-          ObjectLockMode: "COMPLIANCE",
-          ObjectLockRetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
+          ETag: "etag",
+          ChecksumSHA256: command.input.ChecksumSHA256,
+        };
+      }
+      if (command.constructor.name === "GetObjectRetentionCommand") {
+        return {
+          Retention: {
+            Mode: "COMPLIANCE",
+            RetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
+          },
         };
       }
       throw new Error(`Unexpected command ${command.constructor.name}`);
@@ -1141,17 +1455,21 @@ test("protected backup upload is unique, versioned, digest-bound, and COMPLIANCE
   };
   const createdAt = "2026-08-01T12:00:00.000Z";
   const sourceCommit = "a".repeat(40);
-  const key = `${config.prefix}/artifact.json.gz.aes256gcm`;
+  const key = logicalBackupObjectKey(config.prefix, new Date(createdAt));
   const artifact = { format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2, createdAt, sourceCommit };
   const result = await putProtectedJsonObject(client, config, key, artifact, {
     createdAt,
     sourceCommit,
     retentionDays: 30,
+    ...activeWriteWindow,
     now: () => new Date(createdAt),
   });
   assert.equal(input.IfNoneMatch, "*");
-  assert.equal(input.ObjectLockMode, "COMPLIANCE");
-  assert.ok(input.ObjectLockRetainUntilDate.getTime() >= new Date(createdAt).getTime() + 30 * 86_400_000);
+  assert.equal(input.ChecksumAlgorithm, "SHA256");
+  assert.equal(input.ServerSideEncryption, "AES256");
+  assert.equal(input.ObjectLockMode, undefined);
+  assert.equal(input.ObjectLockRetainUntilDate, undefined);
+  assert.equal(input.ChecksumSHA256, Buffer.from(result.sha256, "hex").toString("base64"));
   assert.deepEqual(input.Metadata, protectedArtifactMetadata({
     sha256: result.sha256,
     createdAt,
@@ -1160,8 +1478,416 @@ test("protected backup upload is unique, versioned, digest-bound, and COMPLIANCE
     format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
   }));
   assert.equal(result.versionId, "4_zversion");
-  assert.equal(result.uploadedAt, "2026-08-01T12:00:01.000Z");
+  assert.equal(result.key, key);
+  assert.equal(result.backupSlotStartAt, "2026-08-01T12:00:00.000Z");
+  assert.equal(result.writeAcceptedAt, createdAt);
+  assert.equal(result.retentionUntil, "2026-09-01T12:05:00.000Z");
   assert.equal(result.sha256, sha256Hex(input.Body));
+  assert.deepEqual(commands, ["PutObjectCommand", "GetObjectRetentionCommand"]);
+});
+
+test("protected backup upload rejects any key outside the current deterministic slot", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const createdAt = "2026-08-01T12:00:00.000Z";
+  let storageCalls = 0;
+  for (const key of [
+    `${config.prefix}/arbitrary-1.json.gz.aes256gcm`,
+    `${config.prefix}/arbitrary-2.json.gz.aes256gcm`,
+  ]) {
+    await assert.rejects(
+      () => putProtectedJsonObject({
+        async send() {
+          storageCalls += 1;
+          throw new Error("storage must not be contacted for an arbitrary slot key");
+        },
+      }, config, key, {
+        format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+        createdAt,
+        sourceCommit: "a".repeat(40),
+      }, {
+        createdAt,
+        sourceCommit: "a".repeat(40),
+        retentionDays: 30,
+        ...activeWriteWindow,
+        now: () => new Date(createdAt),
+      }),
+      (error) => error.code === "BACKUP_CONFIG_INVALID",
+    );
+  }
+  assert.equal(storageCalls, 0);
+});
+
+test("protected backup upload maps provider precondition failures to a safe cadence receipt", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const createdAt = "2026-08-01T12:00:00.000Z";
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        assert.equal(command.constructor.name, "PutObjectCommand");
+        const error = new Error("provider details must not escape");
+        error.name = "PreconditionFailed";
+        error.$metadata = { httpStatusCode: 412 };
+        throw error;
+      },
+    }, config, logicalBackupObjectKey(config.prefix, new Date(createdAt)), {
+      format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+      createdAt,
+      sourceCommit: "a".repeat(40),
+    }, {
+      createdAt,
+      sourceCommit: "a".repeat(40),
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => new Date(createdAt),
+    }),
+    (error) => {
+      assert.equal(error.code, "BACKUP_CADENCE_LIMIT_REACHED");
+      assert.deepEqual(sanitizedFailure(error, "create-logical-backup"), {
+        ok: false,
+        mode: "create-logical-backup",
+        errorCode: "BACKUP_CADENCE_LIMIT_REACHED",
+        message: "The protected backup slot already contains an accepted write.",
+      });
+      return true;
+    },
+  );
+});
+
+test("new backup upload rejects more than sixteen MiB before contacting storage", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const createdAt = "2026-08-01T12:00:00.000Z";
+  let storageCalls = 0;
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send() {
+        storageCalls += 1;
+        throw new Error("storage must not be contacted");
+      },
+    }, config, logicalBackupObjectKey(config.prefix, new Date(createdAt)), {
+      format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+      createdAt,
+      sourceCommit: "a".repeat(40),
+      ciphertext: "a".repeat(MAX_NEW_LOGICAL_BACKUP_BYTES),
+    }, {
+      createdAt,
+      sourceCommit: "a".repeat(40),
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_UPLOAD_LIMIT_EXCEEDED",
+  );
+  assert.equal(storageCalls, 0);
+});
+
+test("new backup upload accepts exactly sixteen MiB and rejects the next byte", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const createdAt = "2026-08-01T12:00:00.000Z";
+  const baseArtifact = {
+    format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+    createdAt,
+    sourceCommit: "a".repeat(40),
+    ciphertext: "",
+  };
+  const fixedJsonBytes = Buffer.byteLength(JSON.stringify(baseArtifact));
+  const artifactAtLimit = {
+    ...baseArtifact,
+    ciphertext: "a".repeat(MAX_NEW_LOGICAL_BACKUP_BYTES - fixedJsonBytes),
+  };
+  assert.equal(Buffer.byteLength(JSON.stringify(artifactAtLimit)), MAX_NEW_LOGICAL_BACKUP_BYTES);
+  let storageCalls = 0;
+  const client = {
+    async send(command) {
+      storageCalls += 1;
+      if (command.constructor.name === "PutObjectCommand") {
+        return { VersionId: "v-limit", ChecksumSHA256: command.input.ChecksumSHA256 };
+      }
+      if (command.constructor.name === "GetObjectRetentionCommand") {
+        return {
+          Retention: {
+            Mode: "COMPLIANCE",
+            RetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
+          },
+        };
+      }
+      throw new Error(`Unexpected command ${command.constructor.name}`);
+    },
+  };
+  const key = logicalBackupObjectKey(config.prefix, new Date(createdAt));
+  const options = {
+    createdAt,
+    sourceCommit: baseArtifact.sourceCommit,
+    retentionDays: 30,
+    ...activeWriteWindow,
+    now: () => new Date(createdAt),
+  };
+  const accepted = await putProtectedJsonObject(client, config, key, artifactAtLimit, options);
+  assert.equal(accepted.byteLength, MAX_NEW_LOGICAL_BACKUP_BYTES);
+  assert.equal(storageCalls, 2);
+
+  await assert.rejects(
+    () => putProtectedJsonObject(client, config, key, {
+      ...artifactAtLimit,
+      ciphertext: `${artifactAtLimit.ciphertext}a`,
+    }, options),
+    (error) => error.code === "BACKUP_UPLOAD_LIMIT_EXCEEDED",
+  );
+  assert.equal(storageCalls, 2);
+});
+
+test("protected upload rechecks the write window immediately before S3", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const createdAt = "2026-08-31T23:59:00.000Z";
+  let storageCalls = 0;
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send() {
+        storageCalls += 1;
+        throw new Error("storage must not be contacted after window expiry");
+      },
+    }, config, logicalBackupObjectKey(config.prefix, new Date(createdAt)), {
+      format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+      createdAt,
+      sourceCommit: "a".repeat(40),
+    }, {
+      createdAt,
+      sourceCommit: "a".repeat(40),
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => new Date("2026-09-01T00:00:00.000Z"),
+    }),
+    (error) => error.code === "BACKUP_WRITE_WINDOW_CLOSED",
+  );
+  assert.equal(storageCalls, 0);
+});
+
+test("closed backup write window rejects creation before database or storage clients open", async () => {
+  let databaseOpened = false;
+  let storageOpened = false;
+  await assert.rejects(
+    () => createLogicalBackupArtifact({
+      env: {
+        ...destinationEnv,
+        BACKUP_DATABASE_URL: "postgresql://backup_reader:secret@db.example.test/rivt",
+        BACKUP_ENCRYPTION_KEY: "1".repeat(64),
+        SOURCE_COMMIT: "a".repeat(40),
+      },
+      now: () => new Date("2026-09-01T00:00:00.000Z"),
+      poolFactory() {
+        databaseOpened = true;
+        throw new Error("database must not open");
+      },
+      s3ClientFactory() {
+        storageOpened = true;
+        throw new Error("storage must not open");
+      },
+    }),
+    (error) => error.code === "BACKUP_WRITE_WINDOW_CLOSED",
+  );
+  assert.equal(databaseOpened, false);
+  assert.equal(storageOpened, false);
+});
+
+test("protected backup retention is anchored when the provider accepts the write", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const startedAt = new Date("2026-08-01T12:00:00.000Z");
+  const acceptedAt = new Date("2026-08-01T12:10:00.000Z");
+  const tooShort = new Date(acceptedAt.getTime() + 30 * 86_400_000 - 300_001);
+  const clock = [startedAt, acceptedAt];
+  let retentionInput;
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v-slow-upload", ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        if (command.constructor.name === "GetObjectRetentionCommand") {
+          retentionInput = command.input;
+          return { Retention: { Mode: "COMPLIANCE", RetainUntilDate: tooShort } };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, logicalBackupObjectKey(config.prefix, startedAt), {
+      format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+      createdAt: startedAt.toISOString(),
+      sourceCommit: "a".repeat(40),
+    }, {
+      createdAt: startedAt.toISOString(),
+      sourceCommit: "a".repeat(40),
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => clock.shift(),
+    }),
+    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
+  );
+  assert.deepEqual(retentionInput, {
+    Bucket: config.bucket,
+    Key: logicalBackupObjectKey(config.prefix, startedAt),
+    VersionId: "v-slow-upload",
+  });
+});
+
+test("protected backup upload rejects malformed irreversible-write metadata before contacting S3", async (t) => {
+  const config = destinationS3Config(destinationEnv);
+  const key = `${config.prefix}/invalid-options`;
+  const validCreatedAt = "2026-08-01T12:00:00.000Z";
+  const validSourceCommit = "a".repeat(40);
+  const baseArtifact = {
+    format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+    createdAt: validCreatedAt,
+    sourceCommit: validSourceCommit,
+  };
+  let sends = 0;
+  const client = {
+    async send() {
+      sends += 1;
+      throw new Error("S3 must not be contacted for invalid upload metadata");
+    },
+  };
+  const validUploadOptions = {
+    createdAt: validCreatedAt,
+    sourceCommit: validSourceCommit,
+    retentionDays: 30,
+    ...activeWriteWindow,
+  };
+  const invalidCases = [
+    ["missing options", undefined],
+    ["non-canonical timestamp", { ...validUploadOptions, createdAt: "2026-08-01T12:00:00Z" }],
+    ["mismatched timestamp", { ...validUploadOptions, createdAt: "2026-08-01T12:00:01.000Z" }],
+    ["short source commit", { ...validUploadOptions, sourceCommit: "abc123" }],
+    ["uppercase source commit", { ...validUploadOptions, sourceCommit: "A".repeat(40) }],
+    ["mismatched source commit", { ...validUploadOptions, sourceCommit: "b".repeat(40) }],
+    ["short retention", { ...validUploadOptions, retentionDays: 29 }],
+    ["fractional retention", { ...validUploadOptions, retentionDays: 30.5 }],
+    ["invalid clock", { ...validUploadOptions, now: "not-a-function" }],
+  ];
+
+  for (const [label, options] of invalidCases) {
+    await t.test(label, async () => {
+      await assert.rejects(
+        () => putProtectedJsonObject(client, config, key, baseArtifact, options),
+        (error) => error.code === "BACKUP_CONFIG_INVALID",
+      );
+    });
+  }
+  assert.equal(sends, 0);
+});
+
+test("protected backup upload fails closed without provider checksum or retention confirmation", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const createdAt = "2026-08-01T12:00:00.000Z";
+  const artifact = {
+    format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+    createdAt,
+    sourceCommit: "a".repeat(40),
+  };
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, logicalBackupObjectKey(config.prefix, new Date(createdAt)), artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") return { VersionId: "v1" };
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, logicalBackupObjectKey(config.prefix, new Date(createdAt)), artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_PROVIDER_CHECK_FAILED",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v-bad-checksum", ChecksumSHA256: "not-the-upload-checksum" };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, logicalBackupObjectKey(config.prefix, new Date(createdAt)), artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_PROVIDER_CHECK_FAILED",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v2", ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        if (command.constructor.name === "GetObjectRetentionCommand") {
+          return { Retention: { Mode: "GOVERNANCE", RetainUntilDate: new Date("2026-09-01T12:05:00.000Z") } };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, logicalBackupObjectKey(config.prefix, new Date(createdAt)), artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v-short", ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        if (command.constructor.name === "GetObjectRetentionCommand") {
+          return { Retention: { Mode: "COMPLIANCE", RetainUntilDate: new Date("2026-08-31T11:54:59.999Z") } };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, logicalBackupObjectKey(config.prefix, new Date(createdAt)), artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v-retention-read-error", ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        if (command.constructor.name === "GetObjectRetentionCommand") throw new Error("denied");
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, logicalBackupObjectKey(config.prefix, new Date(createdAt)), artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      ...activeWriteWindow,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_PROVIDER_CHECK_FAILED",
+  );
 });
 
 function protectedArtifactFixture({
@@ -1368,6 +2094,8 @@ test("freshness verifier binds provider controls to the newest current version",
   assert.equal(result.ageHours, 1);
   assert.equal(result.versionId, "4_zversion");
   assert.equal(result.sha256, fixture.sha256);
+  assert.equal(result.tableCount, losslessSnapshot.manifest.tableCount);
+  assert.equal(result.rowCount, losslessSnapshot.manifest.rowCount);
 
   assert.equal(result.encryptionKeyMode, "active-only");
 
@@ -1530,8 +2258,11 @@ test("newest backup selection and sanitized failures do not expose credentials o
   const success = sanitizedSuccess({
     ok: true,
     mode: "verify-logical-backup",
+    endpoint: "https://s3.example.test",
+    region: "us-east-1",
     bucket: "secret-bucket",
     prefix: "secret/prefix",
+    forcePathStyle: false,
     key: "secret/prefix/object",
     versionId: "secret-version",
     sha256: "a".repeat(64),
@@ -1539,16 +2270,75 @@ test("newest backup selection and sanitized failures do not expose credentials o
     ageHours: 1,
     retentionDays: 30,
     retentionUntil: "2026-09-01T00:00:00.000Z",
+    byteLength: 1024,
+    backupSlotStartAt: "2026-08-01T12:00:00.000Z",
+    writeWindowStartAt: "2026-08-01T00:00:00.000Z",
+    writeWindowEndAt: "2026-09-01T00:00:00.000Z",
     encryptionKeyMode: "active-only",
+    tableCount: 109,
+    rowCount: 8768,
     durationMs: 10,
   });
   const serializedSuccess = JSON.stringify(success);
-  for (const rawIdentity of ["secret-bucket", "secret/prefix", "secret-version", "a".repeat(64)]) {
+  for (const rawIdentity of [
+    "s3.example.test",
+    "us-east-1",
+    "secret-bucket",
+    "secret/prefix",
+    "secret-version",
+    "a".repeat(64),
+  ]) {
     assert.equal(serializedSuccess.includes(rawIdentity), false);
   }
   assert.match(success.destinationIdentitySha256, /^[a-f0-9]{64}$/);
   assert.match(success.artifactIdentitySha256, /^[a-f0-9]{64}$/);
   assert.equal(success.encryptionKeyMode, "active-only");
+  assert.equal(success.byteLength, 1024);
+  assert.equal(success.backupSlotStartAt, "2026-08-01T12:00:00.000Z");
+  assert.equal(success.writeWindowStartAt, "2026-08-01T00:00:00.000Z");
+  assert.equal(success.writeWindowEndAt, "2026-09-01T00:00:00.000Z");
+  assert.equal(success.tableCount, 109);
+  assert.equal(success.rowCount, 8768);
+});
+
+test("restore evidence keeps the exact count and duration fields required by readiness receipts", () => {
+  const success = sanitizedSuccess({
+    ok: true,
+    mode: "restore-and-verify",
+    endpoint: "https://s3.example.test",
+    region: "us-east-1",
+    bucket: "private-backup-bucket",
+    prefix: "rivt/postgres",
+    forcePathStyle: false,
+    key: "rivt/postgres/2026-08-01T12-00-00.000Z-slot.json.gz.aes256gcm",
+    versionId: "private-version",
+    sha256: "a".repeat(64),
+    tableCount: 82,
+    rowCount: 7100,
+    restoreDurationMs: 15_000,
+    verificationDurationMs: 2_000,
+  });
+
+  assert.deepEqual(
+    {
+      artifactIdentitySha256: success.artifactIdentitySha256,
+      tableCount: success.tableCount,
+      rowCount: success.rowCount,
+      restoreDurationMs: success.restoreDurationMs,
+      verificationDurationMs: success.verificationDurationMs,
+    },
+    {
+      artifactIdentitySha256: success.artifactIdentitySha256,
+      tableCount: 82,
+      rowCount: 7100,
+      restoreDurationMs: 15_000,
+      verificationDurationMs: 2_000,
+    },
+  );
+  assert.match(success.artifactIdentitySha256, /^[a-f0-9]{64}$/u);
+  assert.equal(Object.hasOwn(success, "tables"), false);
+  assert.equal(Object.hasOwn(success, "rows"), false);
+  assert.equal(Object.hasOwn(success, "verifyDurationMs"), false);
 });
 
 test("newest backup selection follows version pagination instead of trusting the first lexicographic page", async () => {

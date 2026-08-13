@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiPath, fetchWithTimeout } from "../../lib/api";
 import { idempotencyKey } from "../../lib/app-helpers";
 import type { CommunityReactionTargetType } from "./community-utils";
@@ -29,12 +29,14 @@ type CommunityReactionSyncStatus = "idle" | "loading" | "ready" | "error";
 
 interface UseCommunityReactionsParams {
   authReady: boolean;
+  accountId: string | null;
   communityPosts: CommunityPost[];
   onReactionError: (message: string) => void;
 }
 
 export function useCommunityReactions({
   authReady,
+  accountId,
   communityPosts,
   onReactionError,
 }: UseCommunityReactionsParams) {
@@ -42,6 +44,11 @@ export function useCommunityReactions({
   const [communityReactionSummary, setCommunityReactionSummary] = useState<CommunityReactionSummary | null>(null);
   const [communityReactionStatus, setCommunityReactionStatus] = useState<CommunityReactionSyncStatus>("idle");
   const [pendingCommunityReactions, setPendingCommunityReactions] = useState<Set<string>>(new Set());
+  const reactionIdentityEpochRef = useRef(0);
+
+  useEffect(() => {
+    reactionIdentityEpochRef.current += 1;
+  }, [accountId, authReady]);
 
   const communityReactionTargets = useMemo(() => {
     const targets: { targetType: CommunityReactionTargetType; targetKey: string }[] = [];
@@ -98,6 +105,7 @@ export function useCommunityReactions({
 
     let cancelled = false;
     async function loadCommunityReactionLedger() {
+      const requestIdentityEpoch = reactionIdentityEpochRef.current;
       setCommunityReactionStatus("loading");
       try {
         const response = await fetchWithTimeout(apiPath("/api/v1/shop-talk/reactions/batch"), {
@@ -111,7 +119,10 @@ export function useCommunityReactions({
           error?: { message?: string };
         };
         if (!response.ok) throw new Error(body.error?.message || "Shop Talk reactions could not be loaded.");
-        if (cancelled) return;
+        if (
+          cancelled
+          || requestIdentityEpoch !== reactionIdentityEpochRef.current
+        ) return;
         setCommunityReactionLedger(
           (body.data?.reactions ?? []).reduce<CommunityReactionLedger>((ledger, reaction) => {
             ledger[communityReactionLedgerKey(reaction.targetType, reaction.targetKey)] = reaction;
@@ -121,7 +132,10 @@ export function useCommunityReactions({
         setCommunityReactionSummary(body.data?.reputation ?? null);
         setCommunityReactionStatus("ready");
       } catch {
-        if (cancelled) return;
+        if (
+          cancelled
+          || requestIdentityEpoch !== reactionIdentityEpochRef.current
+        ) return;
         setCommunityReactionLedger({});
         setCommunityReactionSummary(null);
         setCommunityReactionStatus("error");
@@ -132,7 +146,7 @@ export function useCommunityReactions({
     return () => {
       cancelled = true;
     };
-  }, [authReady, communityReactionTargets, communityReactionTargetsKey]);
+  }, [accountId, authReady, communityReactionTargets, communityReactionTargetsKey]);
 
   const setCommunityReactionPending = useCallback((ledgerKey: string, pending: boolean) => {
     setPendingCommunityReactions((current) => {
@@ -151,6 +165,9 @@ export function useCommunityReactions({
     targetKey: string,
     direction: "up" | "down",
   ) => {
+    const requestAccountId = accountId;
+    const requestIdentityEpoch = reactionIdentityEpochRef.current;
+    if (!requestAccountId) return;
     const ledgerKey = communityReactionLedgerKey(targetType, targetKey);
     if (pendingCommunityReactions.has(ledgerKey)) return;
     const previousReaction = communityReactionLedger[ledgerKey]?.viewerReaction ?? null;
@@ -173,15 +190,20 @@ export function useCommunityReactions({
       if (!response.ok || !body.data?.reaction) {
         throw new Error(body.error?.message || "Shop Talk reaction could not be saved.");
       }
+      if (requestIdentityEpoch !== reactionIdentityEpochRef.current) return;
       mergeCommunityReactionAggregate(body.data.reaction);
       setCommunityReactionSummary(body.data.reputation ?? null);
       setCommunityReactionStatus("ready");
     } catch (error) {
+      if (requestIdentityEpoch !== reactionIdentityEpochRef.current) return;
       onReactionError(error instanceof Error ? error.message : "Shop Talk reaction could not be saved.");
     } finally {
-      setCommunityReactionPending(ledgerKey, false);
+      if (requestIdentityEpoch === reactionIdentityEpochRef.current) {
+        setCommunityReactionPending(ledgerKey, false);
+      }
     }
   }, [
+    accountId,
     communityReactionLedger,
     mergeCommunityReactionAggregate,
     onReactionError,
@@ -198,6 +220,7 @@ export function useCommunityReactions({
   }, [commitCommunityReaction]);
 
   const resetCommunityReactions = useCallback(() => {
+    reactionIdentityEpochRef.current += 1;
     setCommunityReactionLedger({});
     setCommunityReactionSummary(null);
     setCommunityReactionStatus("idle");

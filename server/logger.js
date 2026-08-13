@@ -1,3 +1,5 @@
+import { capacityRouteFamily } from "./capacity-telemetry.js";
+
 const service = "rivt-api";
 const redacted = "[REDACTED]";
 const circular = "[Circular]";
@@ -176,19 +178,48 @@ export function logError(event, fields) {
   write("error", event, fields);
 }
 
-export function createRequestLogger() {
+export function createRequestLogger({ onStart = null, onComplete = null } = {}) {
   return function requestLogger(request, response, next) {
     const startedAt = Date.now();
-    response.on("finish", () => {
-      logInfo("http.request", {
-        requestId: request.requestId ?? null,
+    const multipart = /^multipart\/form-data(?:;|$)/i.test(String(request.headers["content-type"] ?? ""));
+    let finishTelemetry = null;
+    try {
+      finishTelemetry = onStart?.({ multipart }) ?? null;
+    } catch {
+      // Optional telemetry must never change request handling.
+    }
+    let completed = false;
+    const complete = ({ aborted = false } = {}) => {
+      if (completed) return;
+      completed = true;
+      const routeFamily = capacityRouteFamily(
+        `${String(request.baseUrl ?? "")}${String(request.path ?? "")}`,
+      );
+      const record = {
         method: request.method,
-        path: request.path,
+        routeFamily,
         statusCode: response.statusCode,
         durationMs: Date.now() - startedAt,
-        actorId: request.authUser?.id ?? null,
+        aborted,
+        multipart,
+        uploadBytes: Number(request.file?.size ?? 0),
+      };
+      logInfo("http.request", {
+        requestId: request.requestId ?? null,
+        ...record,
       });
-    });
+      try {
+        if (typeof finishTelemetry === "function") {
+          finishTelemetry(record);
+        } else {
+          onComplete?.(record);
+        }
+      } catch {
+        // Optional telemetry must never change response completion.
+      }
+    };
+    response.once("finish", () => complete());
+    response.once("close", () => complete({ aborted: !response.writableEnded }));
     next();
   };
 }

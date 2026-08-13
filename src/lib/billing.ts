@@ -1,4 +1,9 @@
-import { makeRequest, RivtApiError, type ApiErrorBody } from "./api";
+import {
+  makeRequest,
+  RIVT_EXPECTED_ACCOUNT_HEADER,
+  RivtApiError,
+  type ApiErrorBody,
+} from "./api";
 
 export interface BillingStatus {
   active: boolean;
@@ -25,70 +30,88 @@ export class BillingApiError extends RivtApiError {
 
 const billingRequest = makeRequest((status, body) => new BillingApiError(status, body));
 
-export async function getBillingStatus() {
-  const body = await billingRequest<{ data: { billing: BillingStatus } }>("/api/v1/billing/status");
+function accountBoundOptions(accountId: string, options: RequestInit = {}): RequestInit {
+  const headers = new Headers(options.headers);
+  headers.set(RIVT_EXPECTED_ACCOUNT_HEADER, accountId);
+  return { ...options, headers };
+}
+
+export async function getBillingStatus(accountId: string, signal?: AbortSignal) {
+  const body = await billingRequest<{ data: { billing: BillingStatus } }>(
+    "/api/v1/billing/status",
+    accountBoundOptions(accountId, { signal }),
+  );
   return body.data.billing;
 }
 
-export async function startStripeCheckout() {
+export async function startStripeCheckout(accountId: string, signal?: AbortSignal) {
   const body = await billingRequest<{ data: { url: string; sessionId: string } }>("/api/v1/billing/checkout", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    ...accountBoundOptions(accountId, {
+      signal,
+      headers: { "Content-Type": "application/json" },
+    }),
     body: "{}",
   });
   return body.data;
 }
 
-export async function startBillingPortal() {
+export async function startBillingPortal(accountId: string, signal?: AbortSignal) {
   const body = await billingRequest<{ data: { url: string } }>("/api/v1/billing/portal", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    ...accountBoundOptions(accountId, {
+      signal,
+      headers: { "Content-Type": "application/json" },
+    }),
     body: "{}",
   });
   return body.data;
 }
 
-export async function reconcileStripeCheckout(sessionId: string) {
+export async function reconcileStripeCheckout(accountId: string, sessionId: string, signal?: AbortSignal) {
   const body = await billingRequest<{ data: { billing: BillingStatus; reconciled: boolean; sessionId: string } }>(
     "/api/v1/billing/reconcile",
-    {
+    accountBoundOptions(accountId, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": crypto.randomUUID(),
       },
       body: JSON.stringify({ sessionId }),
-    },
+    }),
   );
   return body.data;
 }
 
-export async function cancelSubscription() {
+export async function cancelSubscription(accountId: string, signal?: AbortSignal) {
   const body = await billingRequest<{ data: { billing: BillingStatus; changed: boolean; subscriptionId: string } }>(
     "/api/v1/billing/subscription/cancel",
-    {
+    accountBoundOptions(accountId, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": crypto.randomUUID(),
       },
       body: "{}",
-    },
+    }),
   );
   return body.data;
 }
 
-export async function resumeSubscription() {
+export async function resumeSubscription(accountId: string, signal?: AbortSignal) {
   const body = await billingRequest<{ data: { billing: BillingStatus; changed: boolean; subscriptionId: string } }>(
     "/api/v1/billing/subscription/resume",
-    {
+    accountBoundOptions(accountId, {
       method: "POST",
+      signal,
       headers: {
         "Content-Type": "application/json",
         "Idempotency-Key": crypto.randomUUID(),
       },
       body: "{}",
-    },
+    }),
   );
   return body.data;
 }

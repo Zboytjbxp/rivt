@@ -93,7 +93,6 @@ export interface ProjectInvoiceOnlinePayment {
   currency: "usd";
   status: ProjectInvoiceOnlinePaymentStatus;
   paymentMethodType: "us_bank_account" | "card" | "unknown" | null;
-  checkoutUrl: string | null;
   paymentUrl?: string | null;
   expiresAt: string | null;
   paidAt: string | null;
@@ -139,6 +138,7 @@ export interface StripeConnectStatus {
   dashboardType: "express" | "full" | "none" | null;
   providerConfigured: boolean;
   webhookConfigured: boolean;
+  webhookScopeConfigured: boolean;
   missing: string[];
   connected: boolean;
   onboardingStatus: "not_started" | "pending" | "ready" | "restricted";
@@ -146,6 +146,9 @@ export interface StripeConnectStatus {
   chargesEnabled: boolean;
   payoutsEnabled: boolean;
   detailsSubmitted: boolean;
+  accountReady: boolean;
+  managementAvailable: boolean;
+  paymentLinksAvailable: boolean;
   ready: boolean;
   lastSyncedAt: string | null;
 }

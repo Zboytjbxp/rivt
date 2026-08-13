@@ -1,18 +1,37 @@
 # RIVT Gate A Approval Packet
 
-Prepared: 2026-06-22
+Prepared: 2026-06-22; superseded for approval mechanics by Packets 96-97 on
+2026-08-03.
 
-This packet is the final signoff aid for the first named Gate A customer cohort. It does not approve launch by itself. Approval is recorded only in `docs/operations/incident-routing.json` after the founder explicitly approves each required signoff.
+This packet is a signoff aid for the first named Gate A customer cohort. It
+does not approve launch by itself. Do not record later approvals in
+`docs/operations/incident-routing.json`: that file is source intent `S`.
+Fresh provider evidence belongs in protected revision `E`; approvals and the
+launch-hold decision belong in a later protected revision `A` and must bind the
+exact materialized configuration.
 
 ## Current Gate Status
 
-- Incident ownership: ready for approval.
-- Support coverage: ready for approval for the named-cohort pilot only.
-- Legal/safety posture: ready for founder review with known limits.
-- Recovery policy: approved for Gate A.
-- Incident rehearsal: passed on 2026-06-22.
-- Launch readiness command: blocked only by founder/support/legal-safety approvals.
-- Physical/deeper manual accessibility evidence: still required before broad launch and should be reviewed before inviting a named cohort.
+- Public launch is blocked by an active credential-containment launch hold.
+- Exact release candidate `aa5b5361374bce0ae51d71cbe4b6d8031a605c61`
+  in draft PR #25 passes the recorded local engineering gates. Launch readiness
+  still reports exactly 21 findings, not merely missing founder/support/legal-
+  safety approvals.
+- PR #25 Gate A Safety run `30955179943` supplies database-backed candidate
+  proof: 14/14 pretest safety checks, 603/603 unit tests, 28/28 disposable-
+  PostgreSQL integration tests, and 4/4 browser E2E journeys pass. The final
+  exit 1 is the required launch-readiness refusal for the 21 open operational
+  findings, not a code or test failure.
+- Incident, recovery, and disabled-payment controls are declared in source,
+  but fresh protected `E` receipts and later protected `A` approvals do not
+  exist.
+- Paging downstream delivery and the private backup route are not yet
+  observable through an approved evidence provider.
+- No independent immutable recovery provider is selected; schedule,
+  retention, failure-domain, alert, current artifact, and restore proof remain
+  missing.
+- Historical provider checks, rehearsal notes, backups, device checks, and
+  approvals are useful context but do not prove the final candidate ready.
 
 ## Evidence Already Recorded
 
@@ -21,8 +40,8 @@ This packet is the final signoff aid for the first named Gate A customer cohort.
 - Live Gate A smoke: `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live` passed inside Railway with zero seed/demo findings and seven anonymous private-route checks.
 - Incident rehearsal: Scenario A passed; Sentry accepted event `43fc7567f458490582db1f6642e2e0ea`.
 - Recovery: RPO 24 hours, RTO 4 hours, 30-day backup retention, 30-day restore-drill cadence, and named backup-artifact restore evidence are approved.
-- Support owner: Michael at `support@rivt.pro`.
-- Backup owner: Anya Tingle, phone status recorded outside the repo.
+- Support owner role: founder-support-owner via `support@rivt.pro`.
+- Backup owner role: backup-incident-owner; private contact-route status is recorded outside the repo.
 
 ## Approval 1: Founder
 
@@ -42,7 +61,7 @@ Founder approval confirms:
 
 Recommended signoff scope:
 
-> I approve the Gate A support plan for the named-cohort pilot: support@rivt.pro, Monday-Saturday, 9:00 AM-5:00 PM America/New_York, with Michael as primary support owner and Anya Tingle as backup incident owner.
+> I approve the Gate A support plan for the named-cohort pilot: support@rivt.pro, Monday-Saturday, 9:00 AM-5:00 PM America/New_York, with the founder-support-owner as primary support owner and the backup-incident-owner role as backup incident owner.
 
 Support approval confirms:
 
@@ -77,20 +96,23 @@ These items should remain visible even if Gate A approvals are recorded:
 - Tools such as invoice drafts and calculators are local/utility support, not guaranteed professional outputs.
 - RIVT should keep the pilot small enough that Michael can personally support and observe it.
 
-## Exact Approval Command
+## Exact Approval Boundary
 
-If Michael approves all three final signoffs, record them in `docs/operations/incident-routing.json`:
+After every plan-bound provider receipt in `E` has been verified, create the
+one separately protected approval manifest `A`. It must contain the named-role
+incident, recovery, and disabled-payment approvals, timestamps later than
+`E`, exact configuration digests, and an explicit decision on the exact source
+incident hold. Do not use a generic approval sentence and do not clear the hold
+while any other readiness finding remains.
 
-- `approvals.founder.status = "approved"`
-- `approvals.support.status = "approved"`
-- `approvals.legalSafety.status = "approved"`
-- `approvedBy = "Michael"`
-- `approvedAt = current UTC timestamp`
-
-Then run:
+Then run the protected provider-evidence workflow and:
 
 ```text
 npm run incident:readiness -- --require-ready
 npm run launch:readiness -- --require-ready
 ```
+
+A failed readiness result is a stop condition. This document never authorizes
+deployment, provider access, spending, ACH activation, incident closure, hold
+clearance, or launch.
 
