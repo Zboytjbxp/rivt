@@ -81,8 +81,11 @@ export async function verifyLogicalBackup({
   return {
     ok: true,
     mode: "verify-logical-backup",
+    endpoint: destination.endpoint,
+    region: destination.region,
     bucket: destination.bucket,
     prefix: destination.prefix,
+    forcePathStyle: destination.forcePathStyle,
     key: newest.Key,
     versionId: newest.VersionId,
     sha256: verified.sha256,
@@ -92,7 +95,8 @@ export async function verifyLogicalBackup({
     ageHours: Number(Math.max(0, ageHours, createdAgeHours).toFixed(3)),
     retentionUntil: verified.retentionUntil,
     retentionDays: verified.retentionDays,
-    lifecycleRuleId: protection.lifecycleRuleId,
+    objectLockMode: protection.objectLockMode,
+    defaultRetentionDays: protection.defaultRetentionDays,
     encryptionKeyMode: "active-only",
     durationMs: Date.now() - startedAt,
   };

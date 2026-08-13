@@ -1,27 +1,28 @@
 # RIVT Build State
 
-Last updated: 2026-08-08 America/New_York
+Last updated: 2026-08-13 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: Two low-severity final-diff security findings are remediated and fully verified in the un-deployed release candidate. Draft PR #25 passed every engineering gate, including fresh disposable-PostgreSQL proof; its only failing step is the deliberate launch-readiness enforcement. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Current phase: The independent-backup provider foundation now exists as an empty, private, Object-Lock-configured AWS bucket with a saved deny-only transport/create-only bucket policy, while runtime identities, artifacts, recurrence, object-byte coverage, and isolated restore proof remain inactive. Least-privilege writer and one-month storage-growth-containment source controls are implemented and verified on a new unmerged, undeployed Codex branch; Gate A Safety run `31668298490` passed on source revision `4d3831d8afba424e8f8f536d3a4f9c0c59631aa0`. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
-Repository branch: `codex/final-release-candidate-20260804`
+Repository branch: `codex/aws-backup-provider-hardening` (based on release-candidate source `3103048ba20d629a3352592c0317c846e716b2f1`; not deployed)
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
 Current release-candidate application source: `e06a6218e6c9047569e3140d24a7f25a9c710de8`, including security remediation `6b2f7d8a64b17899f87c8d409353689738fdf294` and the transitive Nano ID patch. Draft PR #25 Gate A Safety run `31269498552` supplies fresh disposable-PostgreSQL evidence for this descendant.
 Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
 
-Release evidence boundary: production remains on Node 20 while the un-deployed
+Release evidence boundary: production remains on Node 20 while the undeployed
 release candidate pins Node 22. Invoice bank payments/ACH remain disabled, the
 `ACTIVE_LAUNCH_HOLD` remains active, and `GA-OPS-004` plus `GA-OPS-009` remain
-blockers. Backup recurrence is not proved: no scheduler activation, independent
-backup-provider activation, current recurring artifact, or isolated restore is
-claimed. Exact-candidate local engineering gates pass, but launch readiness
-remains blocked with exactly 21 findings. Draft PR #25 Gate A Safety run
-`30955179943` completed with 14/14 pretest safety checks, 603/603 unit tests,
-28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys
-passing. The workflow ended with exit 1 only because the required launch-
-readiness enforcement correctly preserved those 21 operational blockers.
+blockers. Backup recurrence is not proved: no scheduler/runtime identity/backup
+data-path activation, current recurring artifact, or isolated restore is
+claimed. The recorded PR #25 Gate A Safety run `30955179943` reported exactly
+21 blockers while completing 14/14 pretest safety checks, 603/603 unit tests,
+28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys.
+Its exit 1 was the required readiness refusal for that historical candidate.
+Gate A Safety run `31668298490` supplies the backup-hardening source's fresh
+disposable-PostgreSQL and browser gate record. Its launch-readiness check still
+reports the documented operational blockers; no launch-ready result is inferred.
 
 Operational status: a 2026-08-03 Railway configuration audit caused a new
 restricted-output exposure of current production credentials. No misuse
@@ -49,6 +50,69 @@ and an unused intermediate were retired only after owner-controlled delivery
 proof, and final provider inventory shows exactly one restricted sending key.
 Backup encryption remains pending. The incident and `ACTIVE_LAUNCH_HOLD`
 remain open; the feature release, launch, and Railway Stage 1 remain paused.
+
+## Packet 99 independent-backup provider foundation - configured but inactive
+
+- A separately administered founder-controlled AWS account now exists in the
+  approved US region. Root passkey MFA is enabled, root has no access keys, and
+  a near-zero spend alert is configured at $0.01; it is an alert, not a hard
+  spending cap. Exact provider identifiers are intentionally omitted from
+  repository evidence and must be recorded in access-restricted operator
+  evidence before activation.
+- One empty dedicated S3 bucket now has all four bucket-level Block Public Access settings,
+  bucket-owner-enforced ownership with ACLs disabled, Versioning, SSE-S3,
+  and Object Lock enabled with default 30-day COMPLIANCE retention. No object
+  has yet received or validated that retention. A saved deny-only bucket
+  policy is configured to deny non-TLS traffic and writes to the reserved
+  backup prefix unless `If-None-Match` makes them create-only. The AWS console
+  reported a successful save, displayed both deny statements, and reported
+  zero policy-linter errors; live negative-request behavior remains unproved.
+  No object, IAM runtime
+  identity, access key, lifecycle rule, scheduler, monitor secret, or restore
+  target was created.
+- A read-only sizing check measured approximately 44.1 MB of current
+  application objects and a 1.31 MB encrypted database artifact. A
+  hypothetical twice-daily 30-day database-plus-object-byte set is modeled at
+  about 2.72 GB and approximately
+  $0.26/month, with a conservative envelope below $0.50/month before tax and
+  scheduler-compute uncertainty. AWS Budgets alerts but does not cap spend.
+- The current approval forbids backup-object deletion. Consequently no
+  lifecycle expiration is configured and recurring 12-hour writes remain
+  blocked: without expiry, retained versions and cost grow indefinitely.
+- The undeployed source now requires one explicit UTC calendar-month write
+  window, uses one deterministic create-only key per `00:00`/`12:00` UTC slot,
+  and caps each new encrypted PostgreSQL artifact at a fixed 16 MiB. This
+  binds the window to one exact normalized endpoint, region, bucket, prefix,
+  and addressing-mode identity, and bounds RIVT's
+  writer to at most 62 accepted objects and 992 MiB in one 31-day proving
+  window. Window expiry is checked before AWS/PostgreSQL access and again
+  immediately before the upload attempt.
+  The controls do not bound direct use of a stolen provider key, do not cap
+  cumulative storage across renewed months, and do not cap duplicate-attempt
+  S3 requests or Railway/database compute. They do not authorize a write,
+  scheduler, provider identity, or monthly renewal.
+- The undeployed source hardening removes writer list/content-read and
+  retention-administration requirements. A writer conditionally creates a
+  unique object with SHA-256 and SSE-S3, requires the returned immutable
+  version/checksum, and verifies that exact version's provider-applied
+  COMPLIANCE retention. The writer needs only four S3 actions and has no
+  content-read, list, delete, lifecycle, or bucket-mutation authority.
+- The current storage-growth-containment revision passes production build,
+  application/public-document lint, 14/14 pretest checks, 641/641
+  unit/frontend tests, four database-independent integration checks, all four
+  browser E2E journeys, diff integrity, and the production dependency audit
+  with zero known vulnerabilities. Its focused hardening file passes 71/71
+  tests. Twenty-three PostgreSQL integration suites were skipped because this
+  isolated checkout has no `TEST_DATABASE_URL`; no local database-backed pass is
+  claimed for them. Gate A Safety run `31668298490` passed against source
+  revision `4d3831d8afba424e8f8f536d3a4f9c0c59631aa0`, including 28/28
+  disposable-PostgreSQL integration tests and all four browser journeys. The
+  run's readiness report remains blocked on the recorded operational evidence.
+- Current backup source still covers PostgreSQL only. Photos, documents, and
+  attachments remain solely in Railway object storage; `R-052` and
+  `GA-OPS-004` therefore remain Critical/Blocker. No deployment, launch,
+  payment, ACH, customer communication, backup upload, recurring scheduler,
+  object-storage usage, or charged workload is claimed.
 
 ## Packet 99 final-diff security remediation addendum - fully verified in the release candidate
 

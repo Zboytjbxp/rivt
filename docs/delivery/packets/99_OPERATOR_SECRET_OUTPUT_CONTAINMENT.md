@@ -15,7 +15,7 @@ automation transcript. The command was stopped and its output is not copied
 into source, documentation, chat, tests, or evidence. No misuse indicator is
 known, but transcript confidentiality is not accepted as a security boundary.
 
-## Current release boundary - 2026-08-04
+## Historical release-boundary checkpoint - 2026-08-04
 
 - Production and `origin/master` remain at
   `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on Node 20. PR #22 is
@@ -141,3 +141,68 @@ backup-encryption predecessor under separate explicit approval.
 - This addendum does not change the active packet, clear the incident or
   launch hold, enable ACH, authorize a payment, call a provider, deploy the
   feature release, delete legacy browser data, or add cost.
+
+## Independent-backup provider-foundation addendum - 2026-08-12
+
+- A separately administered AWS account and one empty dedicated S3 bucket now
+  exist in the approved US region. Root passkey MFA is enabled, root has zero
+  access keys, and a near-zero spend alert is configured at $0.01; it is an
+  alert, not a hard spending cap.
+- The empty bucket has all four bucket-level Block Public Access settings,
+  bucket-owner-enforced ownership with ACLs disabled, Versioning, SSE-S3, and
+  Object Lock enabled with default 30-day COMPLIANCE retention. No object has
+  yet received or validated that retention. A deny-only bucket policy was
+  saved and is configured to deny non-TLS traffic and non-conditional writes
+  on the reserved backup prefix. The AWS console reported a successful save
+  and displayed both deny statements, but live negative-request enforcement
+  remains unproved. That policy grants no identity access.
+- The undeployed writer correction uses explicit SHA-256 integrity checking,
+  requires a provider VersionId and matching checksum, and reads only that
+  exact version's provider-applied retention. Its policy fixture permits only
+  `GetBucketVersioning`, `GetBucketObjectLockConfiguration`, `PutObject`, and
+  `GetObjectRetention`; static regressions reject list, content-read, delete,
+  retention-administration, and bucket-mutation permissions.
+- No IAM runtime identity, key, backup object, lifecycle rule, scheduler,
+  monitor secret, restore target, deployment, payment, customer communication,
+  or launch action exists from this addendum. The no-deletion boundary keeps
+  recurrence disabled, and PostgreSQL-only source coverage keeps `R-052` and
+  `GA-OPS-004` open until object-byte backup and exact complete-set restore are
+  proved.
+
+## Independent-backup source storage-growth-containment addendum - 2026-08-13
+
+- Backup creation now requires one canonical UTC calendar-month write window
+  and rejects an expired, future, malformed, or non-calendar-month window before
+  opening either an AWS or PostgreSQL client. It rechecks the window
+  immediately before the upload attempt and binds the approval to one exact
+  normalized endpoint/region/bucket/prefix/addressing-mode identity. The
+  irreversible upload helper itself rejects any key other than the current
+  deterministic slot.
+- The writer uses one deterministic key per 12-hour UTC slot. Combined with
+  `If-None-Match: *`, retries, redeployments, or duplicate scheduler invocations
+  cannot create a second RIVT object in the same slot; provider `412` responses
+  become a sanitized `BACKUP_CADENCE_LIMIT_REACHED` receipt.
+- New encrypted PostgreSQL artifacts have a non-configurable 16 MiB write cap.
+  The maximum source-authorized storage growth in a 31-day proving window is
+  therefore 62 objects / 992 MiB. Existing named restores retain their separate 512 MiB
+  compatibility read limit.
+- This is source-only containment, not a provider spending cap. It cannot stop
+  direct use of a stolen AWS credential, and renewed monthly windows would
+  accumulate storage forever while lifecycle deletion is forbidden. Duplicate
+  attempts may still incur S3 request and Railway/database compute cost, and
+  exact provider-time enforcement remains unproved until live IAM conformance.
+  Runtime
+  identity creation, a first write, scheduler activation, monthly renewal,
+  lifecycle expiry, deployment, and any added cost remain outside this
+  addendum and require their own approval/evidence.
+- Local verification passes production build; application and
+  public-document lint; 14/14 pretest checks; 641/641 unit/frontend tests;
+  four database-independent integration checks; all four browser E2E
+  journeys; diff integrity; and the production dependency audit with zero
+  known vulnerabilities. Twenty-three PostgreSQL integration suites are
+  explicitly skipped locally without `TEST_DATABASE_URL`. Gate A Safety run
+  `31668298490` passed against source revision
+  `4d3831d8afba424e8f8f536d3a4f9c0c59631aa0`, including 28/28
+  disposable-PostgreSQL integration tests and all four browser journeys. The
+  run's launch-readiness report remains blocked on the recorded operational
+  evidence; no launch-ready conclusion is inferred.
