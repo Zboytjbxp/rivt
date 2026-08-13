@@ -18,6 +18,17 @@
   inspection, or retention administration. It conditionally creates a unique
   object, binds an explicit SHA-256 checksum and SSE-S3, requires S3's returned
   version/checksum, then reads only that version's provider-applied retention.
+- `GA-OPS-004` and `GA-SEC-004` gain undeployed, source-enforced storage-growth
+  containment for a single proving month: a canonical UTC calendar-month
+  write window is checked before AWS or PostgreSQL access and immediately
+  before upload, and is bound to one normalized endpoint/region/bucket/prefix/
+  addressing-mode identity; the irreversible upload helper accepts only the
+  deterministic current-slot key, and conditional create permits at most one
+  accepted RIVT write per slot; and each new encrypted PostgreSQL artifact is
+  fixed at 16 MiB. The maximum RIVT writer growth in a 31-day window is 62
+  objects / 992 MiB of storage growth. This is not an AWS account spending
+  cap, stolen-key containment, duplicate-request/compute limit,
+  cumulative-storage limit, or activation approval.
 - `GA-OPS-004` remains **Blocker**. No runtime IAM identity or access key,
   backup object, Railway scheduler, GitHub monitor secret, alert receipt, or
   isolated restore proof exists. Current source protects PostgreSQL only; it
@@ -25,7 +36,8 @@
   attachments.
 - The approved no-deletion boundary remains controlling. No lifecycle rule is
   configured and the 12-hour schedule remains inactive because cost would grow
-  indefinitely without approved expiry or a tested hard stop. No deployment,
+  indefinitely across renewed months without approved expiry or a separate
+  provider-enforced cumulative stop. No deployment,
   launch, ACH/payment activation, customer communication, or feature release
   is authorized or claimed.
 

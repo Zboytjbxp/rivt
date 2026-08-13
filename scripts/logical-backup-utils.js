@@ -20,8 +20,11 @@ export const DEFAULT_RECOVERY_RTO_MINUTES = 240;
 export const DEFAULT_BACKUP_JOB_TIMEOUT_MINUTES = 45;
 export const MAX_BACKUP_JOB_TIMEOUT_MINUTES = 60;
 export const MAX_ENCRYPTED_BACKUP_BYTES = 512 * 1024 * 1024;
+export const MAX_NEW_LOGICAL_BACKUP_BYTES = 16 * 1024 * 1024;
 export const MAX_DECOMPRESSED_BACKUP_BYTES = 1024 * 1024 * 1024;
 export const MAX_PROVIDER_CLOCK_SKEW_MS = 5 * 60 * 1000;
+export const BACKUP_SLOT_HOURS = 12;
+export const MAX_BACKUP_WRITES_PER_UTC_MONTH = 62;
 export const LOGICAL_BACKUP_FORMAT_V2 = "rivt-logical-backup-v2";
 export const LOGICAL_BACKUP_MANIFEST_FORMAT_V2 = "rivt-logical-backup-manifest-v2";
 export const ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2 = "rivt-encrypted-logical-backup-v2";
@@ -56,6 +59,9 @@ export function sanitizedFailure(error, mode) {
     "BACKUP_JOB_TIMEOUT",
     "BACKUP_ALREADY_RUNNING",
     "BACKUP_JOB_INTERRUPTED",
+    "BACKUP_WRITE_WINDOW_CLOSED",
+    "BACKUP_CADENCE_LIMIT_REACHED",
+    "BACKUP_UPLOAD_LIMIT_EXCEEDED",
   ]);
   const errorCode = safeCodes.has(error?.code) ? error.code : "BACKUP_OPERATION_FAILED";
   const safeMessages = {
@@ -73,6 +79,9 @@ export function sanitizedFailure(error, mode) {
     BACKUP_JOB_TIMEOUT: "The scheduled backup exceeded its maximum runtime and was stopped.",
     BACKUP_ALREADY_RUNNING: "Another logical backup is already running.",
     BACKUP_JOB_INTERRUPTED: "The scheduled backup was stopped before it completed.",
+    BACKUP_WRITE_WINDOW_CLOSED: "The approved backup write window is not active.",
+    BACKUP_CADENCE_LIMIT_REACHED: "The protected backup slot already contains an accepted write.",
+    BACKUP_UPLOAD_LIMIT_EXCEEDED: "The new backup exceeds the fixed upload safety limit.",
     BACKUP_OPERATION_FAILED: "The backup operation failed.",
   };
   return { ok: false, mode, errorCode, message: safeMessages[errorCode] };
@@ -90,6 +99,10 @@ export function sanitizedSuccess(result) {
     "backupSourceCommit",
     "retentionDays",
     "retentionUntil",
+    "byteLength",
+    "backupSlotStartAt",
+    "writeWindowStartAt",
+    "writeWindowEndAt",
     "ageHours",
     "durationMs",
     "restoreDurationMs",
@@ -110,8 +123,14 @@ export function sanitizedSuccess(result) {
       .filter((name) => result[name] !== undefined)
       .map((name) => [name, result[name]]),
   );
-  if (result.bucket && result.prefix) {
-    receipt.destinationIdentitySha256 = sha256Hex(Buffer.from(`${result.bucket}\0${result.prefix}`));
+  if (
+    result.endpoint
+    && result.region
+    && result.bucket
+    && result.prefix
+    && typeof result.forcePathStyle === "boolean"
+  ) {
+    receipt.destinationIdentitySha256 = backupDestinationIdentitySha256(result);
   }
   if (result.bucket && result.key && result.versionId && result.sha256) {
     receipt.artifactIdentitySha256 = sha256Hex(
@@ -1253,32 +1272,62 @@ export async function putProtectedJsonObject(client, config, key, value, options
     throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "The backup clock must be a function when supplied.");
   }
   const body = Buffer.from(JSON.stringify(value));
-  if (body.length > MAX_ENCRYPTED_BACKUP_BYTES) {
-    throw new BackupConfigurationError("BACKUP_OBJECT_INVALID", "The encrypted backup exceeds the safe artifact limit.");
+  if (body.length > MAX_NEW_LOGICAL_BACKUP_BYTES) {
+    throw new BackupConfigurationError(
+      "BACKUP_UPLOAD_LIMIT_EXCEEDED",
+      "The new encrypted backup exceeds the fixed upload safety limit.",
+    );
   }
   const sha256 = sha256Hex(body);
   const uploadStartedAt = options.now ? options.now() : new Date();
   if (!(uploadStartedAt instanceof Date) || !Number.isFinite(uploadStartedAt.getTime())) {
     throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "The backup upload time is invalid.");
   }
+  backupWriteWindowFromEnv({
+    BACKUP_WRITE_WINDOW_START_AT: options.writeWindowStartAt,
+    BACKUP_WRITE_WINDOW_END_AT: options.writeWindowEndAt,
+  }, uploadStartedAt);
+  const expectedKey = logicalBackupObjectKey(config.prefix, uploadStartedAt);
+  if (key !== expectedKey) {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      "The protected backup object key must match the current deterministic write slot.",
+    );
+  }
+  const backupSlotStartAt = backupSlotStart(uploadStartedAt).toISOString();
   const checksumSha256 = Buffer.from(sha256, "hex").toString("base64");
-  const response = await client.send(new PutObjectCommand({
-    Bucket: config.bucket,
-    Key: key,
-    Body: body,
-    ContentType: "application/json",
-    ChecksumAlgorithm: "SHA256",
-    ChecksumSHA256: checksumSha256,
-    IfNoneMatch: "*",
-    ServerSideEncryption: "AES256",
-    Metadata: protectedArtifactMetadata({
-      sha256,
-      createdAt: options.createdAt,
-      sourceCommit: options.sourceCommit,
-      retentionDays: options.retentionDays,
-      format: value.format,
-    }),
-  }));
+  let response;
+  try {
+    response = await client.send(new PutObjectCommand({
+      Bucket: config.bucket,
+      Key: key,
+      Body: body,
+      ContentType: "application/json",
+      ChecksumAlgorithm: "SHA256",
+      ChecksumSHA256: checksumSha256,
+      IfNoneMatch: "*",
+      ServerSideEncryption: "AES256",
+      Metadata: protectedArtifactMetadata({
+        sha256,
+        createdAt: options.createdAt,
+        sourceCommit: options.sourceCommit,
+        retentionDays: options.retentionDays,
+        format: value.format,
+      }),
+    }));
+  } catch (error) {
+    if (
+      error?.name === "PreconditionFailed"
+      || error?.Code === "PreconditionFailed"
+      || error?.$metadata?.httpStatusCode === 412
+    ) {
+      throw new BackupConfigurationError(
+        "BACKUP_CADENCE_LIMIT_REACHED",
+        "The protected backup slot already contains an accepted write.",
+      );
+    }
+    throw error;
+  }
   const writeAcceptedAt = options.now ? options.now() : new Date();
   if (!(writeAcceptedAt instanceof Date) || !Number.isFinite(writeAcceptedAt.getTime())) {
     throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "The backup completion time is invalid.");
@@ -1327,13 +1376,108 @@ export async function putProtectedJsonObject(client, config, key, value, options
     );
   }
   return {
+    key,
     sha256,
     versionId: response.VersionId,
     etag: response.ETag ?? null,
     byteLength: body.length,
+    backupSlotStartAt,
     writeAcceptedAt: writeAcceptedAt.toISOString(),
     retentionUntil: providerRetainUntil.toISOString(),
   };
+}
+
+function canonicalUtcTimestamp(raw, name) {
+  const value = raw?.trim();
+  const parsed = new Date(value ?? "");
+  if (!value || !Number.isFinite(parsed.getTime()) || parsed.toISOString() !== value) {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      `${name} must be a canonical UTC timestamp such as 2026-08-01T00:00:00.000Z.`,
+    );
+  }
+  return parsed;
+}
+
+export function backupWriteWindowFromEnv(env = process.env, currentTime = new Date()) {
+  if (!(currentTime instanceof Date) || !Number.isFinite(currentTime.getTime())) {
+    throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "The backup execution time is invalid.");
+  }
+  const start = canonicalUtcTimestamp(env.BACKUP_WRITE_WINDOW_START_AT, "BACKUP_WRITE_WINDOW_START_AT");
+  const end = canonicalUtcTimestamp(env.BACKUP_WRITE_WINDOW_END_AT, "BACKUP_WRITE_WINDOW_END_AT");
+  const expectedEnd = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1));
+  const isCalendarMonthStart = (
+    start.getUTCDate() === 1
+    && start.getUTCHours() === 0
+    && start.getUTCMinutes() === 0
+    && start.getUTCSeconds() === 0
+    && start.getUTCMilliseconds() === 0
+  );
+  if (!isCalendarMonthStart || end.getTime() !== expectedEnd.getTime()) {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      "The backup write window must be exactly one UTC calendar month.",
+    );
+  }
+  if (currentTime.getTime() < start.getTime() || currentTime.getTime() >= end.getTime()) {
+    throw new BackupConfigurationError(
+      "BACKUP_WRITE_WINDOW_CLOSED",
+      "The current time is outside the approved backup write window.",
+    );
+  }
+  return {
+    startAt: start.toISOString(),
+    endAt: end.toISOString(),
+  };
+}
+
+export function backupSlotStart(currentTime) {
+  if (!(currentTime instanceof Date) || !Number.isFinite(currentTime.getTime())) {
+    throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "The backup slot time is invalid.");
+  }
+  const slotHour = currentTime.getUTCHours() < BACKUP_SLOT_HOURS ? 0 : BACKUP_SLOT_HOURS;
+  return new Date(Date.UTC(
+    currentTime.getUTCFullYear(),
+    currentTime.getUTCMonth(),
+    currentTime.getUTCDate(),
+    slotHour,
+  ));
+}
+
+export function logicalBackupObjectKey(prefix, currentTime) {
+  const slotStart = backupSlotStart(currentTime);
+  const slotTimestamp = slotStart.toISOString().replaceAll(":", "-");
+  return `${prefix}/${slotTimestamp}-slot.json.gz.aes256gcm`;
+}
+
+export function backupDestinationIdentitySha256(config) {
+  const endpoint = validateHttpsEndpoint(config.endpoint);
+  const region = typeof config.region === "string" ? config.region.trim() : "";
+  const bucket = typeof config.bucket === "string" ? config.bucket.trim() : "";
+  const prefix = normalizeS3Prefix(config.prefix);
+  if (!region || !bucket || typeof config.forcePathStyle !== "boolean") {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      "The backup destination identity is incomplete.",
+    );
+  }
+  return sha256Hex(Buffer.from([
+    endpoint,
+    region,
+    bucket,
+    prefix,
+    config.forcePathStyle ? "path" : "virtual-hosted",
+  ].join("\0")));
+}
+
+export function assertBackupWriteDestination(config, env = process.env) {
+  const expected = requireConfiguredEnv("BACKUP_WRITE_WINDOW_DESTINATION_SHA256", env);
+  if (!/^[a-f0-9]{64}$/.test(expected) || backupDestinationIdentitySha256(config) !== expected) {
+    throw new BackupConfigurationError(
+      "BACKUP_CONFIG_INVALID",
+      "The backup destination does not match the approved write window.",
+    );
+  }
 }
 
 export async function getJsonObject(client, bucket, key, versionId, maxBytes = MAX_ENCRYPTED_BACKUP_BYTES) {

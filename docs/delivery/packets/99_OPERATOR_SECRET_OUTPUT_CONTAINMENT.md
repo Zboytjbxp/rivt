@@ -168,3 +168,37 @@ backup-encryption predecessor under separate explicit approval.
   recurrence disabled, and PostgreSQL-only source coverage keeps `R-052` and
   `GA-OPS-004` open until object-byte backup and exact complete-set restore are
   proved.
+
+## Independent-backup source storage-growth-containment addendum - 2026-08-13
+
+- Backup creation now requires one canonical UTC calendar-month write window
+  and rejects an expired, future, malformed, or non-calendar-month window before
+  opening either an AWS or PostgreSQL client. It rechecks the window
+  immediately before the upload attempt and binds the approval to one exact
+  normalized endpoint/region/bucket/prefix/addressing-mode identity. The
+  irreversible upload helper itself rejects any key other than the current
+  deterministic slot.
+- The writer uses one deterministic key per 12-hour UTC slot. Combined with
+  `If-None-Match: *`, retries, redeployments, or duplicate scheduler invocations
+  cannot create a second RIVT object in the same slot; provider `412` responses
+  become a sanitized `BACKUP_CADENCE_LIMIT_REACHED` receipt.
+- New encrypted PostgreSQL artifacts have a non-configurable 16 MiB write cap.
+  The maximum source-authorized storage growth in a 31-day proving window is
+  therefore 62 objects / 992 MiB. Existing named restores retain their separate 512 MiB
+  compatibility read limit.
+- This is source-only containment, not a provider spending cap. It cannot stop
+  direct use of a stolen AWS credential, and renewed monthly windows would
+  accumulate storage forever while lifecycle deletion is forbidden. Duplicate
+  attempts may still incur S3 request and Railway/database compute cost, and
+  exact provider-time enforcement remains unproved until live IAM conformance.
+  Runtime
+  identity creation, a first write, scheduler activation, monthly renewal,
+  lifecycle expiry, deployment, and any added cost remain outside this
+  addendum and require their own approval/evidence.
+- Local verification passes production build; application and
+  public-document lint; 14/14 pretest checks; 641/641 unit/frontend tests;
+  four database-independent integration checks; all four browser E2E
+  journeys; diff integrity; and the production dependency audit with zero
+  known vulnerabilities. Twenty-three PostgreSQL integration suites are
+  explicitly skipped without `TEST_DATABASE_URL`; fresh exact-head PR CI is
+  still required before this source can advance.

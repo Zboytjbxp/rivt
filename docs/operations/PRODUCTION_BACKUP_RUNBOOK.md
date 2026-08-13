@@ -25,6 +25,9 @@ must all agree with the final deployed source.
 - RTO: restore plus verification within 240 minutes.
 - Immutable retention: at least 30 days in COMPLIANCE mode.
 - Failure domain: backup copy outside Railway.
+- Source-enforced storage-growth ceiling: one deterministic object per 12-hour
+  UTC slot, no new PostgreSQL artifact above 16 MiB, and no upload attempt that
+  begins outside one explicitly configured UTC calendar month.
 
 These targets currently cover the PostgreSQL database only. Project photos,
 documents, and other objects in the application `S3_*` bucket do **not** yet
@@ -67,6 +70,27 @@ The backup also takes a PostgreSQL advisory lock before opening its read-only
 snapshot, so a second manual or duplicate-service run fails instead of doing
 the same work concurrently.
 
+Backup creation additionally fails closed unless
+`BACKUP_WRITE_WINDOW_START_AT` and `BACKUP_WRITE_WINDOW_END_AT` describe one
+exact UTC calendar month. Object names are deterministic for the `00:00` and
+`12:00` UTC slots, and the conditional create request permits at most one
+accepted application write in each slot. A provider `412 Precondition Failed`
+is reported only as `BACKUP_CADENCE_LIMIT_REACHED`. New encrypted PostgreSQL
+artifacts have a non-configurable 16 MiB upload ceiling; the older 512 MiB
+read ceiling remains only for compatibility with named restore artifacts.
+For one unchanged, approved normalized endpoint, region, bucket, prefix, and
+addressing mode, these controls bound a 31-day
+proving window to at most 62 accepted writes and 992 MiB uploaded by RIVT's
+writer. The window is also bound to a SHA-256 identity of those exact five
+nonsecret destination coordinates. The irreversible upload helper independently rejects any key other
+than the deterministic current-slot key. The nonsecret destination digest is
+a drift check against a separately protected approval value, not an
+authorization boundary; an actor able to change both values can recompute it.
+The local check occurs immediately before the S3 request; exact
+provider-time enforcement remains a live IAM conformance requirement. These
+controls do not cap duplicate-attempt S3 requests or Railway/database compute,
+are not a provider account spending cap, and do not authorize a write.
+
 ## Provider selection and setup boundary
 
 The founder approved AWS S3 in `us-east-1` as the independent recovery
@@ -104,7 +128,11 @@ Completed provider foundation and remaining activation steps:
    be proved without deletion authority. Recurring activation remains blocked
    until either (a) a separate explicit approval allows one exact-prefix rule
    to expire current and noncurrent backup versions after the lock expires, or
-   (b) a tested hard stop prevents further writes before the spending ceiling.
+   (b) a separately approved total-storage control prevents cumulative growth.
+   The source now provides a one-calendar-month proving window, deterministic
+   12-hour slots, and a fixed 16 MiB per-write cap. That bounds RIVT's writer
+   for one approved month but does not make indefinite recurrence safe: every
+   renewed month would retain more data without expiry.
 4. Create three restricted application keys from the reviewed policy fixtures:
    backup writer, monitor reader, and restore reader. The writer may inspect
    only Versioning/default Object Lock, conditionally create a new object, and
@@ -129,6 +157,12 @@ Completed provider foundation and remaining activation steps:
    capacity update. Record and review the provider-owned source binding,
    variables, limits, and resulting deployment before activation; the
    repository config does not create or activate the service.
+   Configure a canonical UTC calendar-month
+   `BACKUP_WRITE_WINDOW_START_AT`/`BACKUP_WRITE_WINDOW_END_AT` pair. Renewal is
+   a deliberate monthly operator action and must never be automated under the
+   current no-deletion boundary. Bind the same approval to the exact bucket
+   and prefix through `BACKUP_WRITE_WINDOW_DESTINATION_SHA256`; changing either
+   destination component requires a new reviewed binding.
 7. Add the monitor's read-only provider values/secrets to the dedicated GitHub
    `production-backup-monitor` environment. Restrict that environment to
    `master` and owner-controlled configuration changes, but do not require a
@@ -167,10 +201,15 @@ conservative envelope is below $0.50/month before tax and scheduler-compute
 uncertainty. This is planning evidence, not a hard AWS cap or new spending
 authorization. With no lifecycle expiry, storage grows indefinitely, so the
 12-hour scheduler must remain inactive under the current no-deletion boundary.
+The new source caps make one proving month mathematically bounded; they do not
+approve that month or change the long-term activation block.
 
 ## First-backup acceptance
 
 1. Confirm the cron is built from the exact reviewed/deployed full commit.
+   Confirm its approved UTC write window is current, exact, and limited to one
+   calendar month. Confirm the deterministic slot key and 16 MiB fixed cap are
+   present in that exact source.
 2. Confirm HTTPS, versioning, and COMPLIANCE default retention through the
    reviewed provider configuration. The backup command re-checks those controls
    and fails before writing if they disagree. Confirm the bucket policy rejects

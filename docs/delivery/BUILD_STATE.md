@@ -1,8 +1,8 @@
 # RIVT Build State
 
-Last updated: 2026-08-12 America/New_York
+Last updated: 2026-08-13 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: The independent-backup provider foundation now exists as an empty, private, Object-Lock-configured AWS bucket with a saved deny-only transport/create-only bucket policy, while runtime identities, artifacts, recurrence, object-byte coverage, and isolated restore proof remain inactive. Least-privilege writer source hardening is implemented and locally verified on a new unmerged, undeployed Codex branch. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Current phase: The independent-backup provider foundation now exists as an empty, private, Object-Lock-configured AWS bucket with a saved deny-only transport/create-only bucket policy, while runtime identities, artifacts, recurrence, object-byte coverage, and isolated restore proof remain inactive. Least-privilege writer and one-month storage-growth-containment source controls are implemented and locally verified on a new unmerged, undeployed Codex branch; fresh PR CI remains pending. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
 Repository branch: `codex/aws-backup-provider-hardening` (based on release-candidate source `3103048ba20d629a3352592c0317c846e716b2f1`; not deployed)
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
@@ -77,19 +77,32 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
 - The current approval forbids backup-object deletion. Consequently no
   lifecycle expiration is configured and recurring 12-hour writes remain
   blocked: without expiry, retained versions and cost grow indefinitely.
+- The undeployed source now requires one explicit UTC calendar-month write
+  window, uses one deterministic create-only key per `00:00`/`12:00` UTC slot,
+  and caps each new encrypted PostgreSQL artifact at a fixed 16 MiB. This
+  binds the window to one exact normalized endpoint, region, bucket, prefix,
+  and addressing-mode identity, and bounds RIVT's
+  writer to at most 62 accepted objects and 992 MiB in one 31-day proving
+  window. Window expiry is checked before AWS/PostgreSQL access and again
+  immediately before the upload attempt.
+  The controls do not bound direct use of a stolen provider key, do not cap
+  cumulative storage across renewed months, and do not cap duplicate-attempt
+  S3 requests or Railway/database compute. They do not authorize a write,
+  scheduler, provider identity, or monthly renewal.
 - The undeployed source hardening removes writer list/content-read and
   retention-administration requirements. A writer conditionally creates a
   unique object with SHA-256 and SSE-S3, requires the returned immutable
   version/checksum, and verifies that exact version's provider-applied
   COMPLIANCE retention. The writer needs only four S3 actions and has no
   content-read, list, delete, lifecycle, or bucket-mutation authority.
-- Current change-set evidence passes production build, application/public-doc
-  lint, 14/14 pretest safety checks, 632/632 unit/frontend tests, four
-  database-independent integration checks, all four browser E2E journeys, 88
-  focused backup/freshness/IAM checks, diff integrity, and the production
-  dependency audit with zero known vulnerabilities. Twenty-three PostgreSQL
-  integration suites were skipped because this isolated checkout has no
-  `TEST_DATABASE_URL`; no database-backed pass is claimed for them.
+- The current storage-growth-containment revision passes production build,
+  application/public-document lint, 14/14 pretest checks, 641/641
+  unit/frontend tests, four database-independent integration checks, all four
+  browser E2E journeys, diff integrity, and the production dependency audit
+  with zero known vulnerabilities. Its focused hardening file passes 71/71
+  tests. Twenty-three PostgreSQL integration suites were skipped because this
+  isolated checkout has no `TEST_DATABASE_URL`; no database-backed pass is
+  claimed for them. Fresh exact-head PR CI remains pending.
 - Current backup source still covers PostgreSQL only. Photos, documents, and
   attachments remain solely in Railway object storage; `R-052` and
   `GA-OPS-004` therefore remain Critical/Blocker. No deployment, launch,
