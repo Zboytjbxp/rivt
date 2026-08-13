@@ -12,6 +12,7 @@ import {
   paymentProviderConfigurationDigest,
   recoveryPolicyConfigurationDigest,
 } from "../scripts/launch-readiness-check.js";
+import { sanitizedSuccess } from "../scripts/logical-backup-utils.js";
 import { providerEvidenceIdentity } from "../scripts/repository-evidence.js";
 import {
   materializeProviderReadiness,
@@ -28,7 +29,6 @@ const evidenceCommit = "b".repeat(40);
 const evidenceOverlayDigest = "c".repeat(64);
 const recordedAt = "2026-08-03T14:00:00.000Z";
 const latestBackupIdentity = "d".repeat(64);
-const restoredBackupIdentity = "e".repeat(64);
 
 function digest(value) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -230,6 +230,22 @@ function sourcePolicies() {
 }
 
 function evidenceReceipts() {
+  const sanitizedRestore = sanitizedSuccess({
+    ok: true,
+    mode: "restore-and-verify",
+    endpoint: "https://s3.us-east-1.amazonaws.com",
+    region: "us-east-1",
+    bucket: "private-provider-identifier",
+    prefix: "rivt/postgres",
+    forcePathStyle: false,
+    key: "rivt/postgres/2026-08-03T12-00-00.000Z-slot.json.gz.aes256gcm",
+    versionId: "private-provider-version",
+    sha256: "f".repeat(64),
+    tableCount: 82,
+    rowCount: 7100,
+    restoreDurationMs: 15000,
+    verificationDurationMs: 2000,
+  });
   return [
     receipt("backup-support-route", "private-route-delivery-test", "github-actions", {
       status: "delivered",
@@ -301,11 +317,11 @@ function evidenceReceipts() {
     receipt("named-artifact-restore", "provider-restore-verification", "railway", {
       status: "passed",
       timestamp: "2026-08-03T13:09:00.000Z",
-      artifactIdentitySha256: restoredBackupIdentity,
-      tableCount: 82,
-      rowCount: 7100,
-      restoreDurationMs: 15000,
-      verificationDurationMs: 2000,
+      artifactIdentitySha256: sanitizedRestore.artifactIdentitySha256,
+      tableCount: sanitizedRestore.tableCount,
+      rowCount: sanitizedRestore.rowCount,
+      restoreDurationMs: sanitizedRestore.restoreDurationMs,
+      verificationDurationMs: sanitizedRestore.verificationDurationMs,
     }),
     receipt("bank-payment-provider-state", "provider-payment-state-verification", "railway-stripe", {
       status: "verified",

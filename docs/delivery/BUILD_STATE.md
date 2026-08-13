@@ -129,13 +129,17 @@ Stage 1 remain paused.
   in typed repository receipts with a deterministic SHA-256 artifact identity.
   It also requires positive safe-integer table and row counts before backup or
   restore evidence can satisfy readiness.
+- Runtime restore output now uses the same `tableCount`, `rowCount`, and
+  `verificationDurationMs` field names required by the strict provider receipt;
+  the sanitizer-to-materializer seam is covered so a genuine restore cannot be
+  lost merely because two source layers named the same evidence differently.
 - New typed receipts keep exact provider identifiers out of repository
   evidence. Those identifiers must be recorded in encrypted or otherwise
   access-restricted operator evidence before activation. Existing historical
   repository records are not retroactively erased, and this source change is
   not represented as proof that they never contained identifiers.
-- Focused backup/readiness/materializer verification passes 151/151. Local
-  build, application/security/public-document lint, 644/644 unit/frontend
+- Focused backup/readiness/materializer verification passes 152/152. Local
+  build, application/security/public-document lint, 645/645 unit/frontend
   tests, four database-independent integration checks, all four browser E2E
   journeys, diff integrity, and the production dependency audit pass. Twenty-
   three PostgreSQL suites skip locally because `TEST_DATABASE_URL` is absent;

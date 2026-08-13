@@ -218,9 +218,12 @@ set plus an isolated complete-set restore under separate explicit approval.
   access-restricted operator evidence. Existing historical repository records
   are not retroactively erased; this change is prospective and does not claim
   that historical identifiers never appeared in repository evidence.
+- Runtime restore results now preserve the exact `tableCount`, `rowCount`, and
+  `verificationDurationMs` fields consumed by the strict receipt materializer,
+  and the sanitizer-to-materializer seam is covered by the focused tests.
 - Focused backup freshness, readiness, materializer, and restore verification
-  passes 151/151. Local build, application/security/public-document lint,
-  644/644 unit/frontend tests, four database-independent integration checks,
+  passes 152/152. Local build, application/security/public-document lint,
+  645/645 unit/frontend tests, four database-independent integration checks,
   all four browser E2E journeys, diff integrity, and the production dependency
   audit pass. Twenty-three PostgreSQL suites skip locally because
   `TEST_DATABASE_URL` is absent; fresh PR CI remains pending. The source is

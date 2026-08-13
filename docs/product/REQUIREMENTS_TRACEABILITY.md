@@ -23,9 +23,11 @@
   identity instead of an exact object identifier and requires positive safe-
   integer table and row counts. Exact identifiers must be stored in encrypted
   or otherwise access-restricted operator evidence before activation. Existing
-  historical repository records are not retroactively erased. Focused
-  verification passes 151/151 and local non-database gates pass; fresh PR CI
-  remains pending.
+  historical repository records are not retroactively erased. Runtime restore
+  output now uses the strict receipt's `tableCount`, `rowCount`, and
+  `verificationDurationMs` fields, with sanitizer-to-materializer coverage.
+  Focused verification passes 152/152 and local non-database gates pass; fresh
+  PR CI remains pending.
 - `GA-OPS-004` and `GA-SEC-004` gain undeployed, source-enforced storage-growth
   containment for a single proving month: a canonical UTC calendar-month
   write window is checked before AWS or PostgreSQL access and immediately
