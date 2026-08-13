@@ -106,7 +106,7 @@ export function sanitizedSuccess(result) {
     "ageHours",
     "durationMs",
     "restoreDurationMs",
-    "verifyDurationMs",
+    "verificationDurationMs",
     "combinedDurationMs",
     "rtoMinutes",
     "latestMigration",
@@ -117,6 +117,8 @@ export function sanitizedSuccess(result) {
     "encryptionKeyMode",
     "contentDigest",
     "contentDiffCount",
+    "tableCount",
+    "rowCount",
   ];
   const receipt = Object.fromEntries(
     allowed
@@ -371,20 +373,20 @@ export function recoveryRtoMinutesFromEnv(env = process.env) {
   return minutes;
 }
 
-export function enforceRecoveryRto(restoreDurationMs, verifyDurationMs, rtoMinutes) {
+export function enforceRecoveryRto(restoreDurationMs, verificationDurationMs, rtoMinutes) {
   if (
     !Number.isSafeInteger(restoreDurationMs)
     || restoreDurationMs < 0
-    || !Number.isSafeInteger(verifyDurationMs)
-    || verifyDurationMs < 0
+    || !Number.isSafeInteger(verificationDurationMs)
+    || verificationDurationMs < 0
   ) {
     throw new BackupConfigurationError("BACKUP_CONFIG_INVALID", "Recovery durations must be nonnegative integers.");
   }
-  const combinedDurationMs = restoreDurationMs + verifyDurationMs;
+  const combinedDurationMs = restoreDurationMs + verificationDurationMs;
   if (!Number.isSafeInteger(combinedDurationMs) || combinedDurationMs > rtoMinutes * 60_000) {
     throw new BackupConfigurationError("BACKUP_RTO_EXCEEDED", "Restore and verification exceeded the RTO.");
   }
-  return { restoreDurationMs, verifyDurationMs, combinedDurationMs, rtoMinutes };
+  return { restoreDurationMs, verificationDurationMs, combinedDurationMs, rtoMinutes };
 }
 
 export function sslFor(url, env = process.env) {

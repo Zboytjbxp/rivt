@@ -12,6 +12,7 @@ import {
   paymentProviderConfigurationDigest,
   recoveryPolicyConfigurationDigest,
 } from "../scripts/launch-readiness-check.js";
+import { sanitizedSuccess } from "../scripts/logical-backup-utils.js";
 import { providerEvidenceIdentity } from "../scripts/repository-evidence.js";
 import {
   materializeProviderReadiness,
@@ -27,6 +28,7 @@ const sourceCommit = "a".repeat(40);
 const evidenceCommit = "b".repeat(40);
 const evidenceOverlayDigest = "c".repeat(64);
 const recordedAt = "2026-08-03T14:00:00.000Z";
+const latestBackupIdentity = "d".repeat(64);
 
 function digest(value) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -228,6 +230,22 @@ function sourcePolicies() {
 }
 
 function evidenceReceipts() {
+  const sanitizedRestore = sanitizedSuccess({
+    ok: true,
+    mode: "restore-and-verify",
+    endpoint: "https://s3.us-east-1.amazonaws.com",
+    region: "us-east-1",
+    bucket: "private-provider-identifier",
+    prefix: "rivt/postgres",
+    forcePathStyle: false,
+    key: "rivt/postgres/2026-08-03T12-00-00.000Z-slot.json.gz.aes256gcm",
+    versionId: "private-provider-version",
+    sha256: "f".repeat(64),
+    tableCount: 82,
+    rowCount: 7100,
+    restoreDurationMs: 15000,
+    verificationDurationMs: 2000,
+  });
   return [
     receipt("backup-support-route", "private-route-delivery-test", "github-actions", {
       status: "delivered",
@@ -273,7 +291,7 @@ function evidenceReceipts() {
     receipt("latest-successful-backup", "provider-backup-completion", "railway", {
       status: "passed",
       timestamp: "2026-08-03T13:30:00.000Z",
-      artifactKey: "backups/postgres/2026-08-03.json.gz.aes256gcm",
+      artifactIdentitySha256: latestBackupIdentity,
       tableCount: 82,
       rowCount: 7100,
     }),
@@ -299,11 +317,11 @@ function evidenceReceipts() {
     receipt("named-artifact-restore", "provider-restore-verification", "railway", {
       status: "passed",
       timestamp: "2026-08-03T13:09:00.000Z",
-      artifactKey: "backups/postgres/2026-08-03.json.gz.aes256gcm",
-      tableCount: 82,
-      rowCount: 7100,
-      restoreDurationMs: 15000,
-      verificationDurationMs: 2000,
+      artifactIdentitySha256: sanitizedRestore.artifactIdentitySha256,
+      tableCount: sanitizedRestore.tableCount,
+      rowCount: sanitizedRestore.rowCount,
+      restoreDurationMs: sanitizedRestore.restoreDurationMs,
+      verificationDurationMs: sanitizedRestore.verificationDurationMs,
     }),
     receipt("bank-payment-provider-state", "provider-payment-state-verification", "railway-stripe", {
       status: "verified",
@@ -399,7 +417,7 @@ function fixture() {
   recoveryPolicy.latestSuccessfulBackup = {
     status: "passed",
     completedAt: evidenceByControl["latest-successful-backup"].timestamp,
-    artifactKey: evidenceByControl["latest-successful-backup"].artifactKey,
+    artifactIdentitySha256: evidenceByControl["latest-successful-backup"].artifactIdentitySha256,
     tableCount: evidenceByControl["latest-successful-backup"].tableCount,
     rowCount: evidenceByControl["latest-successful-backup"].rowCount,
     ...evidenceFields("latest-successful-backup", "completedAt"),
@@ -411,7 +429,7 @@ function fixture() {
   recoveryPolicy.latestNamedArtifactRestore = {
     status: restore.status,
     completedAt: restore.timestamp,
-    artifactKey: restore.artifactKey,
+    artifactIdentitySha256: restore.artifactIdentitySha256,
     tableCount: restore.tableCount,
     rowCount: restore.rowCount,
     restoreDurationMs: restore.restoreDurationMs,
@@ -627,6 +645,51 @@ test("rejects plan, receipt, source, evidence, and approval binding changes", ()
     assert.equal(result.ok, false, code);
     assert.equal(result.findingCodes.includes(code), true, `${code}: ${JSON.stringify(result)}`);
     assert.equal(Object.hasOwn(result, "incidentConfig"), false);
+  }
+});
+
+test("rejects private backup object keys even when plan and evidence agree", () => {
+  const input = fixture();
+  const index = input.plan.claims.findIndex((claim) => claim.controlId === "latest-successful-backup");
+  const changed = { ...input.plan.claims[index].expectedReceipt };
+  delete changed.artifactIdentitySha256;
+  changed.artifactKey = "private/backups/postgres/named-object.json.gz.aes256gcm";
+  const changedDigest = digest(changed);
+  input.plan.claims[index].expectedReceipt = changed;
+  input.plan.claims[index].evidenceSha256 = changedDigest;
+  input.evidenceRecords[index].receipt = structuredClone(changed);
+  input.evidenceRecords[index].sha256 = changedDigest;
+  refreshPlanBindings(input);
+
+  const result = materializeProviderReadiness(input);
+  assert.equal(result.ok, false);
+  assert.equal(result.findingCodes.includes("MATERIALIZER_RECEIPT_MISMATCH"), true);
+});
+
+test("rejects impossible backup aggregate counts even when plan and evidence agree", () => {
+  for (const [controlId, field, value] of [
+    ["latest-successful-backup", "tableCount", 0.5],
+    ["latest-successful-backup", "rowCount", Number.MAX_SAFE_INTEGER + 1],
+    ["named-artifact-restore", "tableCount", 0.5],
+    ["named-artifact-restore", "rowCount", Number.MAX_SAFE_INTEGER + 1],
+  ]) {
+    const input = fixture();
+    const index = input.plan.claims.findIndex((claim) => claim.controlId === controlId);
+    const changed = { ...input.plan.claims[index].expectedReceipt, [field]: value };
+    const changedDigest = digest(changed);
+    input.plan.claims[index].expectedReceipt = changed;
+    input.plan.claims[index].evidenceSha256 = changedDigest;
+    input.evidenceRecords[index].receipt = structuredClone(changed);
+    input.evidenceRecords[index].sha256 = changedDigest;
+    refreshPlanBindings(input);
+
+    const result = materializeProviderReadiness(input);
+    assert.equal(result.ok, false, `${controlId}.${field}`);
+    assert.equal(
+      result.findingCodes.includes("MATERIALIZER_POLICY_OVERRIDE_ATTEMPT"),
+      true,
+      `${controlId}.${field}`,
+    );
   }
 });
 

@@ -84,9 +84,10 @@ The separately authorized one-class-at-a-time recurrence rotations are tracked
 in `docs/operations/incidents/2026-07-29-production-credential-exposure.md` and
 `docs/delivery/DEPLOYMENT_LEDGER.md`. PostgreSQL, Stripe API and both webhook
 classes, Resend, Google OAuth, both independent pepper classes, and Web Push
-VAPID have current recurrence evidence. Backup-encryption rotation remains
-pending. The broader incident and `ACTIVE_LAUNCH_HOLD` remain open; ACH, the
-feature release, Railway Stage 1, and public launch remain paused.
+VAPID have current recurrence evidence. Backup-encryption recurrence rotation
+and recurring independent recovery remain unproved. The broader incident and
+`ACTIVE_LAUNCH_HOLD` remain open; ACH, the feature release, Railway Stage 1,
+and public launch remain paused.
 
 ## Rollback
 
@@ -112,9 +113,13 @@ must never reinstall material exposed in the transcript.
   refusal for those 21 operational blockers.
 
 These are source checks only. They do not replace provider evidence or
-owner-controlled proofs. The remaining recurrence boundary is a fresh
-encrypted backup, isolated restore proof, and safe retirement of the exposed
-backup-encryption predecessor under separate explicit approval.
+owner-controlled proofs. July's active- and predecessor-key restore proofs and
+predecessor retirement predate the August 3 recurrence and are historical
+evidence only. The remaining boundary includes a post-August-3 backup-key
+replacement, fresh encrypted artifact, isolated active-key restore and
+predecessor-removal proof, followed separately by an independently retained,
+current database-and-object set and isolated complete-set restore under
+explicit approval.
 
 ## Final-diff security remediation addendum - 2026-08-08
 
@@ -162,12 +167,14 @@ backup-encryption predecessor under separate explicit approval.
   `GetBucketVersioning`, `GetBucketObjectLockConfiguration`, `PutObject`, and
   `GetObjectRetention`; static regressions reject list, content-read, delete,
   retention-administration, and bucket-mutation permissions.
-- No IAM runtime identity, key, backup object, lifecycle rule, scheduler,
-  monitor secret, restore target, deployment, payment, customer communication,
-  or launch action exists from this addendum. The no-deletion boundary keeps
-  recurrence disabled, and PostgreSQL-only source coverage keeps `R-052` and
-  `GA-OPS-004` open until object-byte backup and exact complete-set restore are
-  proved.
+- No IAM runtime identity or key, backup object, lifecycle rule, scheduler,
+  AWS monitor read credential/configuration, restore target, deployment,
+  payment, customer communication, or launch action exists from this addendum.
+  The pre-existing protected GitHub monitor environment holds the backup
+  encryption secret but cannot inspect AWS independently. The no-deletion
+  boundary keeps recurrence disabled, and PostgreSQL-only source coverage
+  keeps `R-052` and `GA-OPS-004` open until object-byte backup and exact
+  complete-set restore are proved.
 
 ## Independent-backup source storage-growth-containment addendum - 2026-08-13
 
@@ -206,3 +213,27 @@ backup-encryption predecessor under separate explicit approval.
   disposable-PostgreSQL integration tests and all four browser journeys. The
   run's launch-readiness report remains blocked on the recorded operational
   evidence; no launch-ready conclusion is inferred.
+
+## Backup-receipt privacy forward-port - 2026-08-13
+
+- The current unmerged forward-port replaces exact backup object identifiers
+  in typed repository receipts with a deterministic SHA-256 artifact identity
+  and rejects non-positive, fractional, or unsafe table and row counts.
+- New typed receipts keep exact identifiers only in encrypted or otherwise
+  access-restricted operator evidence. Existing historical repository records
+  are not retroactively erased; this change is prospective and does not claim
+  that historical identifiers never appeared in repository evidence.
+- Runtime restore results now preserve the exact `tableCount`, `rowCount`, and
+  `verificationDurationMs` fields consumed by the strict receipt materializer,
+  and the sanitizer-to-materializer seam is covered by the focused tests.
+- Focused backup freshness, readiness, materializer, and restore verification
+  passes 152/152. Local build, application/security/public-document lint,
+  645/645 unit/frontend tests, four database-independent integration checks,
+  all four browser E2E journeys, diff integrity, and the production dependency
+  audit pass. Twenty-three PostgreSQL suites skip locally because
+  `TEST_DATABASE_URL` is absent. Gate A run `31699823161` passed against exact
+  source revision `0756fa455d1da3a665a484528c9178331838c65d`; later
+  documentation-only descendants do not reinterpret that run as exact-head
+  proof. The source is unmerged, undeployed, and does not create an AWS
+  identity, object, scheduler, restore target, payment, customer communication,
+  or added cost.

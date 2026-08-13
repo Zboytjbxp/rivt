@@ -18,6 +18,18 @@
   inspection, or retention administration. It conditionally creates a unique
   object, binds an explicit SHA-256 checksum and SSE-S3, requires S3's returned
   version/checksum, then reads only that version's provider-applied retention.
+- `GA-SEC-004` also gains an unmerged prospective receipt-privacy forward-port.
+  New typed backup and restore evidence uses an opaque SHA-256 artifact
+  identity instead of an exact object identifier and requires positive safe-
+  integer table and row counts. Exact identifiers must be stored in encrypted
+  or otherwise access-restricted operator evidence before activation. Existing
+  historical repository records are not retroactively erased. Runtime restore
+  output now uses the strict receipt's `tableCount`, `rowCount`, and
+  `verificationDurationMs` fields, with sanitizer-to-materializer coverage.
+  Focused verification passes 152/152 and local non-database gates pass. Gate A
+  run `31699823161` passed against exact source revision
+  `0756fa455d1da3a665a484528c9178331838c65d`; later documentation-only
+  descendants do not reinterpret that run as exact-head proof.
 - `GA-OPS-004` and `GA-SEC-004` gain undeployed, source-enforced storage-growth
   containment for a single proving month: a canonical UTC calendar-month
   write window is checked before AWS or PostgreSQL access and immediately
@@ -30,9 +42,12 @@
   cap, stolen-key containment, duplicate-request/compute limit,
   cumulative-storage limit, or activation approval.
 - `GA-OPS-004` remains **Blocker**. No runtime IAM identity or access key,
-  backup object, Railway scheduler, GitHub monitor secret, alert receipt, or
-  isolated restore proof exists. Current source protects PostgreSQL only; it
-  does not independently retain or restore project photos, documents, or
+  backup object, Railway scheduler, AWS monitor read credential/configuration,
+  alert receipt, or isolated restore proof exists. The pre-existing protected
+  GitHub monitor environment holds the backup encryption secret but cannot
+  independently inspect AWS without the missing read credential and
+  destination configuration. Current source protects PostgreSQL only; it does
+  not independently retain or restore project photos, documents, or
   attachments.
 - The approved no-deletion boundary remains controlling. No lifecycle rule is
   configured and the 12-hour schedule remains inactive because cost would grow
@@ -67,7 +82,7 @@
   at `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b`; no deployment, ACH, payment,
   provider, launch, or cost action occurred.
 
-## Current release evidence boundary - 2026-08-04
+## Historical release evidence boundary - 2026-08-04
 
 - Production and `origin/master` are at
   `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` and remain on Node 20. PR #22
@@ -88,7 +103,7 @@
   journeys pass. Its final exit 1 is the intended launch-readiness refusal;
   historical packet counts below remain context only.
 
-## Packet 99 - Operator secret-output containment (source controls complete; rotation in progress)
+## Packet 99 - Operator secret-output containment (source controls complete; backup encryption pending)
 
 - `GA-OPS-007` remains **Partial**. Root Codex and Claude instructions now
   prohibit broad production-provider enumeration, and the collaboration
@@ -118,8 +133,11 @@
   one sending-only key restricted to `rivt.pro`, the final one-key-state proof
   was provider-delivered and owner-confirmed, and the 539 ms production
   monitor passed with ACH still disabled and unconfigured. Backup-encryption
-  rotation remains pending, so no incident closure, feature-release deploy,
-  public launch, or launch-hold clearance is claimed.
+  recurrence rotation remains pending because the recorded active- and
+  predecessor-key restore proof and predecessor removal occurred before the
+  August 3 recurrence. Recurring independent recovery also remains unproved,
+  so no incident closure, feature-release deploy, public launch, or launch-hold
+  clearance is claimed.
 - Requirement maturity does not change. The repository guard reduces
   recurrence from tracked automation but cannot prevent an unsafe command
   entered outside the repository. Provider RBAC/workstation enforcement and
@@ -432,8 +450,10 @@
   `a3be803cc5ad2563d100870663dbf6dc51307126`. The 730 ms monitor passed with
   PostgreSQL/S3-compatible storage healthy, Sentry/Web Push/Stripe Connect
   configured, and seven anonymous private-route checks closed. PostgreSQL,
-  object storage, Stripe API/webhooks, Resend, backup encryption, and the
-  authentication metadata pepper have completed rotation evidence.
+  object storage, Stripe API/webhooks, Resend, and the authentication metadata
+  pepper have completed evidence for that July incident response. Backup-
+  encryption evidence in this dated addendum is historical and predates the
+  August 3 recurrence, which remains pending.
 - Transitional Web Push continuity tries the active VAPID pair first, retries
   the previous pair only after a definitive authentication rejection, and
   migrates only existing opted-in clients.

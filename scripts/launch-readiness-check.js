@@ -243,6 +243,10 @@ function positiveNumber(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
+function positiveSafeInteger(value) {
+  return Number.isSafeInteger(value) && value > 0;
+}
+
 function safeMillisecondsFromMinutes(value) {
   if (!positiveNumber(value)) return null;
   const milliseconds = value * 60 * 1000;
@@ -330,15 +334,15 @@ function evaluateRecoveryPolicy(
   const latestBackup = policy.latestSuccessfulBackup;
   if (
     latestBackup?.status !== "passed"
-    || !hasValue(latestBackup.artifactKey)
-    || !positiveNumber(latestBackup.tableCount)
-    || !positiveNumber(latestBackup.rowCount)
+    || !sha256Value(latestBackup.artifactIdentitySha256)
+    || !positiveSafeInteger(latestBackup.tableCount)
+    || !positiveSafeInteger(latestBackup.rowCount)
     || !evidenceRecord(latestBackup, "completedAt", {
       ...recoveryEvidenceOptions,
       controlId: "latest-successful-backup",
       type: "provider-backup-completion",
       substantiveFields: {
-        artifactKey: latestBackup?.artifactKey,
+        artifactIdentitySha256: latestBackup?.artifactIdentitySha256,
         tableCount: latestBackup?.tableCount,
         rowCount: latestBackup?.rowCount,
       },
@@ -479,9 +483,9 @@ function evaluateRecoveryPolicy(
 
   const latestRestoreReady = (
     latestRestore?.status === "passed"
-    && hasValue(latestRestore?.artifactKey)
-    && positiveNumber(latestRestore?.tableCount)
-    && positiveNumber(latestRestore?.rowCount)
+    && sha256Value(latestRestore?.artifactIdentitySha256)
+    && positiveSafeInteger(latestRestore?.tableCount)
+    && positiveSafeInteger(latestRestore?.rowCount)
     && measuredRecoveryDurationMs !== null
     && positiveNumber(restoreCadenceDays)
     && evidenceRecord(latestRestore, "completedAt", {
@@ -489,7 +493,7 @@ function evaluateRecoveryPolicy(
       controlId: "named-artifact-restore",
       type: "provider-restore-verification",
       substantiveFields: {
-        artifactKey: latestRestore?.artifactKey,
+        artifactIdentitySha256: latestRestore?.artifactIdentitySha256,
         tableCount: latestRestore?.tableCount,
         rowCount: latestRestore?.rowCount,
         restoreDurationMs: latestRestore?.restoreDurationMs,

@@ -27,6 +27,8 @@ const arbitraryEvidenceSha256 = crypto.createHash("sha256").update(arbitraryEvid
 const paymentProviderEvidenceControlId = "bank-payment-provider-state";
 const paymentProviderEvidenceType = "provider-payment-state-verification";
 const paymentProviderEvidenceStatus = "verified";
+const latestBackupIdentity = "d".repeat(64);
+const restoredBackupIdentity = "e".repeat(64);
 
 function paymentProviderReceipt(configuration) {
   const state = configuration.verifiedProductionState ?? {};
@@ -161,7 +163,7 @@ const recoveryEvidenceFixtures = {
       provider: "railway",
       status: "passed",
       timestamp: "2026-06-21T11:30:00.000Z",
-      artifactKey: "backups/postgres/2026-06-21T11-30-00.000Z-aaaaaaa.json.gz.aes256gcm",
+      artifactIdentitySha256: latestBackupIdentity,
       tableCount: 59,
       rowCount: 1524,
     },
@@ -215,7 +217,7 @@ const recoveryEvidenceFixtures = {
       provider: "railway",
       status: "passed",
       timestamp: "2026-06-21T04:18:59.000Z",
-      artifactKey: "backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm",
+      artifactIdentitySha256: restoredBackupIdentity,
       tableCount: 59,
       rowCount: 1524,
       restoreDurationMs: 13411,
@@ -402,7 +404,7 @@ const readyRecoveryConfiguration = {
   latestSuccessfulBackup: {
     status: "passed",
     completedAt: "2026-06-21T11:30:00.000Z",
-    artifactKey: "backups/postgres/2026-06-21T11-30-00.000Z-aaaaaaa.json.gz.aes256gcm",
+    artifactIdentitySha256: latestBackupIdentity,
     tableCount: 59,
     rowCount: 1524,
     evidenceProvider: recoveryEvidenceFixtures.latestSuccessfulBackup.receipt.provider,
@@ -447,7 +449,7 @@ const readyRecoveryConfiguration = {
   latestNamedArtifactRestore: {
     status: "passed",
     completedAt: "2026-06-21T04:18:59.000Z",
-    artifactKey: "backups/postgres/2026-06-21T04-14-48.795Z-332dbc0.json.gz.aes256gcm",
+    artifactIdentitySha256: restoredBackupIdentity,
     tableCount: 59,
     rowCount: 1524,
     restoreDurationMs: 13411,
@@ -913,6 +915,21 @@ test("launch readiness rejects stale and future-dated successful-backup evidence
   }
 });
 
+test("launch readiness rejects fractional or unsafe successful-backup counts", () => {
+  for (const [field, value] of [
+    ["tableCount", 0.5],
+    ["rowCount", Number.MAX_SAFE_INTEGER + 1],
+  ]) {
+    assert.deepEqual(recoveryFindingCodes({
+      ...readyRecoveryConfiguration,
+      latestSuccessfulBackup: {
+        ...readyRecoveryConfiguration.latestSuccessfulBackup,
+        [field]: value,
+      },
+    }), ["RECENT_BACKUP_CHECKPOINT_MISSING"], field);
+  }
+});
+
 test("launch readiness requires backup cadence plus alert retry allowance to fit the RPO", () => {
   assert.deepEqual(recoveryFindingCodes({
     ...readyRecoveryConfiguration,
@@ -972,6 +989,14 @@ test("launch readiness rejects restore evidence without matched content and posi
     {
       ...readyRecoveryConfiguration.latestNamedArtifactRestore,
       rowCount: 0,
+    },
+    {
+      ...readyRecoveryConfiguration.latestNamedArtifactRestore,
+      tableCount: 0.5,
+    },
+    {
+      ...readyRecoveryConfiguration.latestNamedArtifactRestore,
+      rowCount: Number.MAX_SAFE_INTEGER + 1,
     },
   ]) {
     assert.deepEqual(recoveryFindingCodes({
@@ -1288,7 +1313,7 @@ test("recovery receipts bind every readiness-driving provider field", () => {
         ...policy,
         latestSuccessfulBackup: {
           ...policy.latestSuccessfulBackup,
-          artifactKey: "backups/postgres/different-artifact.json.gz.aes256gcm",
+          artifactIdentitySha256: "f".repeat(64),
         },
       }),
     },

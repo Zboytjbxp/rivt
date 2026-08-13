@@ -100,9 +100,13 @@ export async function verifyRestoreDrill({
       "Restore target sequence state differs from source.",
     );
 
-    const verifyDurationMs = Date.now() - verificationStartedAt;
+    const verificationDurationMs = Date.now() - verificationStartedAt;
     const restoreDurationMs = verificationStartedAt - drillStartedAt;
-    const recoveryDurations = enforceRecoveryRto(restoreDurationMs, verifyDurationMs, rtoMinutes);
+    const recoveryDurations = enforceRecoveryRto(
+      restoreDurationMs,
+      verificationDurationMs,
+      rtoMinutes,
+    );
     return {
       ...restoreResult,
       mode: applyMigrations ? "migrate-restore-and-verify" : "restore-and-verify",
