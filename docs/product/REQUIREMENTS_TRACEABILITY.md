@@ -18,6 +18,14 @@
   inspection, or retention administration. It conditionally creates a unique
   object, binds an explicit SHA-256 checksum and SSE-S3, requires S3's returned
   version/checksum, then reads only that version's provider-applied retention.
+- `GA-SEC-004` also gains an unmerged prospective receipt-privacy forward-port.
+  New typed backup and restore evidence uses an opaque SHA-256 artifact
+  identity instead of an exact object identifier and requires positive safe-
+  integer table and row counts. Exact identifiers must be stored in encrypted
+  or otherwise access-restricted operator evidence before activation. Existing
+  historical repository records are not retroactively erased. Focused
+  verification passes 151/151 and local non-database gates pass; fresh PR CI
+  remains pending.
 - `GA-OPS-004` and `GA-SEC-004` gain undeployed, source-enforced storage-growth
   containment for a single proving month: a canonical UTC calendar-month
   write window is checked before AWS or PostgreSQL access and immediately
@@ -67,7 +75,7 @@
   at `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b`; no deployment, ACH, payment,
   provider, launch, or cost action occurred.
 
-## Current release evidence boundary - 2026-08-04
+## Historical release evidence boundary - 2026-08-04
 
 - Production and `origin/master` are at
   `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` and remain on Node 20. PR #22
@@ -88,7 +96,7 @@
   journeys pass. Its final exit 1 is the intended launch-readiness refusal;
   historical packet counts below remain context only.
 
-## Packet 99 - Operator secret-output containment (source controls complete; rotation in progress)
+## Packet 99 - Operator secret-output containment (source controls complete; named rotations closed)
 
 - `GA-OPS-007` remains **Partial**. Root Codex and Claude instructions now
   prohibit broad production-provider enumeration, and the collaboration
@@ -117,9 +125,11 @@
   deployment `0528d1ec-f9dd-4987-b4e8-7620cf71ced0`; provider inventory shows
   one sending-only key restricted to `rivt.pro`, the final one-key-state proof
   was provider-delivered and owner-confirmed, and the 539 ms production
-  monitor passed with ACH still disabled and unconfigured. Backup-encryption
-  rotation remains pending, so no incident closure, feature-release deploy,
-  public launch, or launch-hold clearance is claimed.
+  monitor passed with ACH still disabled and unconfigured. The bounded backup-
+  encryption key rotation is also closed after active- and predecessor-key
+  restore proof and predecessor removal. Recurring independent recovery remains
+  unproved, so no incident closure, feature-release deploy, public launch, or
+  launch-hold clearance is claimed.
 - Requirement maturity does not change. The repository guard reduces
   recurrence from tracked automation but cannot prevent an unsafe command
   entered outside the repository. Provider RBAC/workstation enforcement and

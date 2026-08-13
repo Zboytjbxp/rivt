@@ -1168,21 +1168,22 @@ deployment readiness.
 
 ## Recovery plan
 
-Follow
-[`CREDENTIAL_ROTATION_RUNBOOK.md`](../CREDENTIAL_ROTATION_RUNBOOK.md).
-Deploy and verify the narrow compatibility hotfix before rotating the
-backup-encryption or VAPID keys. Rotate one provider at a time, verify the new
-credential, then revoke the old credential. Never restore a compromised
-credential during application rollback.
+Future rotations must follow
+[`CREDENTIAL_ROTATION_RUNBOOK.md`](../CREDENTIAL_ROTATION_RUNBOOK.md): rotate
+one provider at a time, verify the replacement, then revoke the predecessor.
+Never restore a compromised credential during application rollback. The VAPID
+and bounded backup-encryption rotations described above followed this sequence
+and are closed; this does not prove recurring independent recovery.
 
 ## Exit criteria
 
 Completed containment and rotation evidence above remains required history.
 The still-open exit boundary is:
 
-- complete and verify the still-pending backup-encryption rotation; Resend,
-  Web Push VAPID, and both pepper classes are closed for this recurrence and
-  no longer part of this open item;
+- complete and verify recurring independent recovery for the current database
+  and every referenced object byte; the bounded backup-encryption rotation,
+  Resend, Web Push VAPID, and both pepper classes are closed for this
+  recurrence and are no longer part of this open item;
 - finish the consolidated release-candidate forward-port, then obtain a final
   independent exact-source review and disposable-PostgreSQL CI evidence for
   that exact documentation-inclusive candidate; historical branch SHAs, scan

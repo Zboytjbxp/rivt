@@ -2,11 +2,11 @@
 
 Last updated: 2026-08-13 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: The independent-backup provider foundation now exists as an empty, private, Object-Lock-configured AWS bucket with a saved deny-only transport/create-only bucket policy, while runtime identities, artifacts, recurrence, object-byte coverage, and isolated restore proof remain inactive. Least-privilege writer and one-month storage-growth-containment source controls are implemented and verified on a new unmerged, undeployed Codex branch; Gate A Safety run `31668298490` passed on source revision `4d3831d8afba424e8f8f536d3a4f9c0c59631aa0`. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Current phase: PR #28 merged least-privilege writer and one-month storage-growth containment into the undeployed release candidate. This forward-port adds prospective backup-receipt privacy and strict positive aggregate-count validation without changing the provider. Exact-head PR #25 CI passed build, lint, and disposable-PostgreSQL tests but failed one reused-page offline boundary scenario; a test-model correction is pending. The empty AWS provider foundation remains inactive: no runtime identity, object, recurrence, object-byte coverage, or isolated restore exists. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
-Repository branch: `codex/aws-backup-provider-hardening` (based on release-candidate source `3103048ba20d629a3352592c0317c846e716b2f1`; not deployed)
+Repository branch: `codex/packet99-forwardport-final` (based on release-candidate merge `d4dd7ead7a0b62b279a511f9a08357825ca34cd1`; not deployed)
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
-Current release-candidate application source: `e06a6218e6c9047569e3140d24a7f25a9c710de8`, including security remediation `6b2f7d8a64b17899f87c8d409353689738fdf294` and the transitive Nano ID patch. Draft PR #25 Gate A Safety run `31269498552` supplies fresh disposable-PostgreSQL evidence for this descendant.
+Current release-candidate application source: `d4dd7ead7a0b62b279a511f9a08357825ca34cd1`, including PR #28 backup hardening, security remediation `6b2f7d8a64b17899f87c8d409353689738fdf294`, and transitive Nano ID patch `e06a6218e6c9047569e3140d24a7f25a9c710de8`. The current receipt-privacy forward-port is not yet merged into that candidate.
 Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -21,8 +21,11 @@ claimed. The recorded PR #25 Gate A Safety run `30955179943` reported exactly
 28/28 disposable-PostgreSQL integration tests, and 4/4 browser E2E journeys.
 Its exit 1 was the required readiness refusal for that historical candidate.
 Gate A Safety run `31668298490` supplies the backup-hardening source's fresh
-disposable-PostgreSQL and browser gate record. Its launch-readiness check still
-reports the documented operational blockers; no launch-ready result is inferred.
+disposable-PostgreSQL and browser gate record. Exact-candidate run
+`31697561395` then passed build, lint, and all unit/database integration steps
+but failed one offline snapshot-boundary browser check while the service worker
+controlled the page and the complete shell was cached. PR #25 stays draft; no
+launch-ready result is inferred until a corrected exact-head run is green.
 
 Operational status: a 2026-08-03 Railway configuration audit caused a new
 restricted-output exposure of current production credentials. No misuse
@@ -48,8 +51,11 @@ proven on all three controlled devices before the predecessor was retired.
 The separately exposed Resend credential was replaced again, the predecessor
 and an unused intermediate were retired only after owner-controlled delivery
 proof, and final provider inventory shows exactly one restricted sending key.
-Backup encryption remains pending. The incident and `ACTIVE_LAUNCH_HOLD`
-remain open; the feature release, launch, and Railway Stage 1 remain paused.
+Backup-encryption rotation is closed: active- and predecessor-key restore
+proofs passed before the previous runtime key was removed. That bounded key
+rotation is not recurring independent recovery. The incident and
+`ACTIVE_LAUNCH_HOLD` remain open; the feature release, launch, and Railway
+Stage 1 remain paused.
 
 ## Packet 99 independent-backup provider foundation - configured but inactive
 
@@ -65,8 +71,8 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   has yet received or validated that retention. A saved deny-only bucket
   policy is configured to deny non-TLS traffic and writes to the reserved
   backup prefix unless `If-None-Match` makes them create-only. The AWS console
-  reported a successful save, displayed both deny statements, and reported
-  zero policy-linter errors; live negative-request behavior remains unproved.
+  reported a successful save and displayed both deny statements; live
+  negative-request behavior remains unproved.
   No object, IAM runtime
   identity, access key, lifecycle rule, scheduler, monitor secret, or restore
   target was created.
@@ -93,8 +99,8 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   scheduler, provider identity, or monthly renewal.
 - The undeployed source hardening removes writer list/content-read and
   retention-administration requirements. A writer conditionally creates a
-  unique object with SHA-256 and SSE-S3, requires the returned immutable
-  version/checksum, and verifies that exact version's provider-applied
+  unique object with SHA-256 and SSE-S3, requires the returned version and
+  checksum, and verifies that exact version's provider-applied
   COMPLIANCE retention. The writer needs only four S3 actions and has no
   content-read, list, delete, lifecycle, or bucket-mutation authority.
 - The current storage-growth-containment revision passes production build,
@@ -113,6 +119,26 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   `GA-OPS-004` therefore remain Critical/Blocker. No deployment, launch,
   payment, ACH, customer communication, backup upload, recurring scheduler,
   object-storage usage, or charged workload is claimed.
+
+## Packet 99 backup-receipt privacy forward-port - source only
+
+- The current unmerged forward-port replaces exact backup object identifiers
+  in typed repository receipts with a deterministic SHA-256 artifact identity.
+  It also requires positive safe-integer table and row counts before backup or
+  restore evidence can satisfy readiness.
+- New typed receipts keep exact provider identifiers out of repository
+  evidence. Those identifiers must be recorded in encrypted or otherwise
+  access-restricted operator evidence before activation. Existing historical
+  repository records are not retroactively erased, and this source change is
+  not represented as proof that they never contained identifiers.
+- Focused backup/readiness/materializer verification passes 151/151. Local
+  build, application/security/public-document lint, 644/644 unit/frontend
+  tests, four database-independent integration checks, all four browser E2E
+  journeys, diff integrity, and the production dependency audit pass. Twenty-
+  three PostgreSQL suites skip locally because `TEST_DATABASE_URL` is absent;
+  fresh PR CI remains pending. The source is unmerged, undeployed, and provider-
+  inactive; requirement maturity, the incident hold, and all recovery blockers
+  remain unchanged.
 
 ## Packet 99 final-diff security remediation addendum - fully verified in the release candidate
 
@@ -146,7 +172,7 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   this addendum is merged to `master`, deployed, payment-enabling, provider-
   mutating, or launch-authorizing.
 
-## Packet 99 operator secret-output containment - active; backup-encryption rotation pending
+## Packet 99 operator secret-output containment - active; named rotations closed
 
 - The recurrence is recorded without any secret value or credential-bearing
   output.
@@ -351,10 +377,11 @@ remain open; the feature release, launch, and Railway Stage 1 remain paused.
   database-backed integration cases skipped because `TEST_DATABASE_URL` was
   absent. A focused push-notification/readiness run passed 26 tests and skipped
   one database-backed integration case for the same reason.
-- VAPID and the August 4 Resend recurrence are closed. Backup-encryption
-  rotation remains pending; Packet 99 stays active. This does not clear the
-  incident or `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the
-  feature release.
+- VAPID, the August 4 Resend recurrence, and the bounded backup-encryption key
+  rotation are closed. Recurring independent recovery remains unproved, so
+  Packet 99 stays active. This does not clear the incident or
+  `ACTIVE_LAUNCH_HOLD`, authorize launch, enable ACH, or deploy the feature
+  release.
 - `master` currently has no branch protection/ruleset, so the Packet 98
   rehearsal's protected-branch guard cannot pass. No bypass is authorized.
 - The feature release remains separate from containment and is not authorized

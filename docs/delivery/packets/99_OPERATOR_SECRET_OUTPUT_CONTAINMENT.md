@@ -83,10 +83,11 @@ known, but transcript confidentiality is not accepted as a security boundary.
 The separately authorized one-class-at-a-time recurrence rotations are tracked
 in `docs/operations/incidents/2026-07-29-production-credential-exposure.md` and
 `docs/delivery/DEPLOYMENT_LEDGER.md`. PostgreSQL, Stripe API and both webhook
-classes, Resend, Google OAuth, both independent pepper classes, and Web Push
-VAPID have current recurrence evidence. Backup-encryption rotation remains
-pending. The broader incident and `ACTIVE_LAUNCH_HOLD` remain open; ACH, the
-feature release, Railway Stage 1, and public launch remain paused.
+classes, Resend, Google OAuth, both independent pepper classes, Web Push
+VAPID, and the bounded backup-encryption key rotation have current credential-
+rotation evidence. Recurring independent recovery remains unproved. The
+broader incident and `ACTIVE_LAUNCH_HOLD` remain open; ACH, the feature
+release, Railway Stage 1, and public launch remain paused.
 
 ## Rollback
 
@@ -112,9 +113,10 @@ must never reinstall material exposed in the transcript.
   refusal for those 21 operational blockers.
 
 These are source checks only. They do not replace provider evidence or
-owner-controlled proofs. The remaining recurrence boundary is a fresh
-encrypted backup, isolated restore proof, and safe retirement of the exposed
-backup-encryption predecessor under separate explicit approval.
+owner-controlled proofs. The predecessor backup-encryption key was retired
+only after active- and predecessor-key restore proofs passed. The remaining
+recovery boundary is an independently retained, current database-and-object
+set plus an isolated complete-set restore under separate explicit approval.
 
 ## Final-diff security remediation addendum - 2026-08-08
 
@@ -206,3 +208,21 @@ backup-encryption predecessor under separate explicit approval.
   disposable-PostgreSQL integration tests and all four browser journeys. The
   run's launch-readiness report remains blocked on the recorded operational
   evidence; no launch-ready conclusion is inferred.
+
+## Backup-receipt privacy forward-port - 2026-08-13
+
+- The current unmerged forward-port replaces exact backup object identifiers
+  in typed repository receipts with a deterministic SHA-256 artifact identity
+  and rejects non-positive, fractional, or unsafe table and row counts.
+- New typed receipts keep exact identifiers only in encrypted or otherwise
+  access-restricted operator evidence. Existing historical repository records
+  are not retroactively erased; this change is prospective and does not claim
+  that historical identifiers never appeared in repository evidence.
+- Focused backup freshness, readiness, materializer, and restore verification
+  passes 151/151. Local build, application/security/public-document lint,
+  644/644 unit/frontend tests, four database-independent integration checks,
+  all four browser E2E journeys, diff integrity, and the production dependency
+  audit pass. Twenty-three PostgreSQL suites skip locally because
+  `TEST_DATABASE_URL` is absent; fresh PR CI remains pending. The source is
+  unmerged, undeployed, and does not create an AWS identity, object, scheduler,
+  restore target, payment, customer communication, or added cost.
