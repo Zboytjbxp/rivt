@@ -1,6 +1,6 @@
 # RIVT production backup runbook
 
-Status: **prepared in source; not configured or launch evidence**.
+Status: **provider foundation configured; identities, artifacts, recurrence, and restore proof still inactive**.
 
 This runbook separates four different jobs that must not share credentials:
 
@@ -70,28 +70,47 @@ the same work concurrently.
 ## Provider selection and setup boundary
 
 The founder approved AWS S3 in `us-east-1` as the independent recovery
-provider, owned through `support@rivt.pro`, with a private bucket, Versioning,
+provider, in a separately administered founder-controlled account, with a private bucket, Versioning,
 30-day Object Lock COMPLIANCE retention, least-privilege credentials, and the
 recorded one-time and monthly cost ceilings. Backblaze B2 was an earlier
-alternative and is not the active plan. AWS account creation is currently
-blocked under support case `178585620400417`; no AWS account, bucket, key,
-schedule, or retained object exists from this preparation. Automatic or manual
-deletion of retained backup objects remains outside the approval.
+alternative and is not the active plan. The AWS account and an empty dedicated
+bucket now exist. Root passkey MFA is enabled, root has no access keys, a
+near-zero spend alert is configured at $0.01 (an alert, not a hard cap), and
+all four bucket-level Block Public Access settings are on.
+Object Ownership is bucket-owner-enforced, Versioning is enabled, default
+encryption is SSE-S3, and default Object Lock is 30-day COMPLIANCE. Exact
+provider identifiers are intentionally omitted from repository evidence and
+must be recorded in access-restricted operator evidence before activation. No IAM
+runtime identity, access key, bucket object, lifecycle rule, scheduler, monitor
+secret, or restore proof exists yet. A deny-only bucket policy was saved and is
+configured to deny non-TLS traffic and writes to the reserved backup prefix
+unless the caller supplies `If-None-Match` for create-only semantics. The AWS
+console reported a successful save and displayed both deny statements, but no
+live negative request has proved enforcement. The policy grants no identity any
+access. Automatic or manual deletion of retained backup objects remains outside
+the approval.
 
-When the provider account is available, the approved setup must:
+Completed provider foundation and remaining activation steps:
 
-1. Create a private bucket with versioning and provider-enforced Object
-   Lock/WORM retention enabled at creation time.
-2. Apply the approved 30-day COMPLIANCE retention. Treat that retention as
+1. Preserve the private bucket with versioning and provider-enforced Object
+   Lock/WORM retention enabled.
+2. Preserve the configured 30-day default COMPLIANCE retention. Treat the
+   retention on each future retained object version as
    irreversible: neither RIVT nor AWS can shorten it or delete a locked version
    during the retention window.
-3. Do not configure lifecycle deletion under the current approval. Before
-   activation, obtain a separate explicit approval for one exact-prefix rule
-   that may expire current and noncurrent versions only after the 30-day
-   retention floor; the verifier intentionally fails closed without that rule.
-4. Create three restricted application keys: backup writer, monitor reader,
-   and restore reader. The monitor cannot write or delete; the writer cannot
-   administer retention; the restore key is not stored on the web service.
+3. Do not configure lifecycle deletion under the current approval. The source
+   verifier checks Versioning and bucket-default COMPLIANCE retention without
+   requiring lifecycle permissions. A one-time immutable artifact can therefore
+   be proved without deletion authority. Recurring activation remains blocked
+   until either (a) a separate explicit approval allows one exact-prefix rule
+   to expire current and noncurrent backup versions after the lock expires, or
+   (b) a tested hard stop prevents further writes before the spending ceiling.
+4. Create three restricted application keys from the reviewed policy fixtures:
+   backup writer, monitor reader, and restore reader. The writer may inspect
+   only Versioning/default Object Lock, conditionally create a new object, and
+   read that exact version's retention; it cannot list or read object content,
+   delete, or administer retention. The monitor cannot write or delete. The
+   restore key has no list access and is not stored on the web service.
 5. Create a dedicated PostgreSQL login with CONNECT/USAGE/SELECT only. Verify
    it can see and select every public table and sequence and has no CREATE,
    INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, sequence UPDATE,
@@ -131,18 +150,31 @@ When the provider account is available, the approved setup must:
    requires separate provider evidence that the running scheduler deployment
    really uses that immutable commit; metadata equality alone is not source
    provenance.
+9. Before recurring activation, add a separate read-only provider-control
+   auditor for bucket-level Block Public Access, Object Ownership, default
+   encryption, and the deny-only bucket policy. The current writer and
+   freshness monitor intentionally verify only the controls needed for each
+   data-path operation; they do not detect drift in those broader provider
+   settings. Keep these audit permissions out of the writer identity.
 
-Historical free-tier estimates are not a current quote or spending
-authorization. Recalculate storage, requests, retrieval, provider egress,
-Railway egress/compute, monitoring, restore, taxes, and retained-version growth
-for the selected provider immediately before approval.
+The 2026-08-12 bounded sizing check found approximately 44.1 MB of application
+objects plus a 1.31 MB encrypted database artifact per hypothetical
+database-plus-object-byte set. This is a sizing model only; object-byte
+packaging, integrity verification, and complete-set restore are not yet built.
+At two sets daily for 30 days, the modeled retained footprint is about 2.72 GB;
+estimated storage, requests, and Railway egress total about $0.26/month and a
+conservative envelope is below $0.50/month before tax and scheduler-compute
+uncertainty. This is planning evidence, not a hard AWS cap or new spending
+authorization. With no lifecycle expiry, storage grows indefinitely, so the
+12-hour scheduler must remain inactive under the current no-deletion boundary.
 
 ## First-backup acceptance
 
 1. Confirm the cron is built from the exact reviewed/deployed full commit.
-2. Confirm HTTPS, versioning, COMPLIANCE default retention, and the exact
-   lifecycle prefix through the reviewed provider configuration. The backup
-   command re-checks those controls and fails before writing if they disagree.
+2. Confirm HTTPS, versioning, and COMPLIANCE default retention through the
+   reviewed provider configuration. The backup command re-checks those controls
+   and fails before writing if they disagree. Confirm the bucket policy rejects
+   non-TLS requests and unconditional writes to the exact backup prefix.
    The freshness verifier cannot pass before the first artifact exists.
 3. Run one backup. Do not paste raw keys, object identifiers, digests, database
    URLs, or encryption material into tickets or public logs.
@@ -226,7 +258,9 @@ Keep the launch hold active if any of these are true:
 
 - backup job or monitor source does not equal the reviewed commit;
 - database role can write or cannot read every required public table;
-- bucket protection/lifecycle cannot be queried and verified;
+- bucket Versioning/default COMPLIANCE retention cannot be queried and verified;
+- recurring writes are enabled without approved lifecycle expiry or a tested
+  cost-ceiling hard stop;
 - latest artifact is older than 14 hours or lacks an immutable version;
 - alert receipt is untested or the human route did not receive it;
 - restore target isolation is uncertain;

@@ -48,7 +48,7 @@ export async function createLogicalBackupArtifact({
   const objectKey = `${destination.prefix}/${objectTimestamp}-${sourceCommit}-${crypto.randomUUID()}.json.gz.aes256gcm`;
   const s3 = s3ClientFactory(destination);
 
-  const destinationProtection = await verifyBucketProtection(s3, destination, retentionDays);
+  await verifyBucketProtection(s3, destination, retentionDays);
   const pool = poolFactory(sourceUrl);
   let client;
   let snapshot;
@@ -103,6 +103,7 @@ export async function createLogicalBackupArtifact({
       createdAt,
       sourceCommit,
       retentionDays,
+      now,
     });
 
     return {
@@ -115,11 +116,10 @@ export async function createLogicalBackupArtifact({
       sha256: upload.sha256,
       byteLength: upload.byteLength,
       createdAt,
-      uploadedAt: upload.uploadedAt,
+      writeAcceptedAt: upload.writeAcceptedAt,
       sourceCommit,
       retentionDays,
       retentionUntil: upload.retentionUntil,
-      lifecycleRuleId: destinationProtection.lifecycleRuleId,
       tables: snapshot.manifest.tableCount,
       rows: snapshot.manifest.rowCount,
       durationMs: Date.now() - startedAt,

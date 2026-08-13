@@ -1190,7 +1190,6 @@ function protectedBucketClient(overrides = {}) {
     async send(command) {
       this.commands.push(command);
       switch (command.constructor.name) {
-        case "HeadBucketCommand": return {};
         case "GetBucketVersioningCommand": return { Status: overrides.versioning ?? "Enabled" };
         case "GetObjectLockConfigurationCommand": return {
           ObjectLockConfiguration: {
@@ -1198,52 +1197,34 @@ function protectedBucketClient(overrides = {}) {
             Rule: { DefaultRetention: { Mode: overrides.lockMode ?? "COMPLIANCE", Days: 30 } },
           },
         };
-        case "GetBucketLifecycleConfigurationCommand": return {
-          Rules: [{
-            ID: "expire-daily-after-lock",
-            Status: "Enabled",
-            Filter: overrides.lifecycleFilter ?? { Prefix: overrides.lifecyclePrefix ?? "postgres/daily/" },
-            Expiration: { Days: 30 },
-            NoncurrentVersionExpiration: { NoncurrentDays: overrides.noncurrentDays ?? 30 },
-          }],
-        };
         default: throw new Error(`Unexpected command ${command.constructor.name}`);
       }
     },
   };
 }
 
-test("bucket protection requires versioning, COMPLIANCE default retention, and an exact lifecycle prefix", async () => {
+test("bucket protection requires versioning and COMPLIANCE default retention without lifecycle access", async () => {
   const config = destinationS3Config(destinationEnv);
-  const verified = await verifyBucketProtection(protectedBucketClient(), config, 30);
+  const protectedClient = protectedBucketClient();
+  const verified = await verifyBucketProtection(protectedClient, config, 30);
   assert.deepEqual(verified, {
     versioning: "Enabled",
     objectLockMode: "COMPLIANCE",
     defaultRetentionDays: 30,
-    lifecycleRuleId: "expire-daily-after-lock",
-    lifecycleExpirationDays: 30,
-    lifecycleNoncurrentExpirationDays: 30,
   });
+  assert.deepEqual(
+    protectedClient.commands.map((command) => command.constructor.name),
+    [
+      "GetBucketVersioningCommand",
+      "GetObjectLockConfigurationCommand",
+    ],
+  );
   await assert.rejects(
     () => verifyBucketProtection(protectedBucketClient({ versioning: "Suspended" }), config, 30),
     (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
   );
   await assert.rejects(
     () => verifyBucketProtection(protectedBucketClient({ lockMode: "GOVERNANCE" }), config, 30),
-    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
-  );
-  await assert.rejects(
-    () => verifyBucketProtection(protectedBucketClient({ lifecyclePrefix: "postgres/" }), config, 30),
-    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
-  );
-  await assert.rejects(
-    () => verifyBucketProtection(protectedBucketClient({ noncurrentDays: 29 }), config, 30),
-    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
-  );
-  await assert.rejects(
-    () => verifyBucketProtection(protectedBucketClient({
-      lifecycleFilter: { And: { Prefix: "postgres/daily/", Tags: [{ Key: "scope", Value: "partial" }] } },
-    }), config, 30),
     (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
   );
 });
@@ -1297,7 +1278,6 @@ test("backup creation reads one repeatable snapshot with a read-only role and up
   const s3 = {
     async send(command) {
       switch (command.constructor.name) {
-        case "HeadBucketCommand": return {};
         case "GetBucketVersioningCommand": return { Status: "Enabled" };
         case "GetObjectLockConfigurationCommand": return {
           ObjectLockConfiguration: {
@@ -1305,26 +1285,20 @@ test("backup creation reads one repeatable snapshot with a read-only role and up
             Rule: { DefaultRetention: { Mode: "COMPLIANCE", Days: 30 } },
           },
         };
-        case "GetBucketLifecycleConfigurationCommand": return {
-          Rules: [{
-            ID: "expire-daily-after-lock",
-            Status: "Enabled",
-            Filter: { Prefix: "postgres/daily/" },
-            Expiration: { Days: 30 },
-            NoncurrentVersionExpiration: { NoncurrentDays: 30 },
-          }],
-        };
         case "PutObjectCommand":
           lifecycle.push("upload");
           putInput = command.input;
-          return { VersionId: "protected-version" };
-        case "HeadObjectCommand":
-          lifecycle.push("upload-verified");
           return {
             VersionId: "protected-version",
-            LastModified: new Date("2026-08-01T12:00:01.000Z"),
-            ObjectLockMode: "COMPLIANCE",
-            ObjectLockRetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
+            ChecksumSHA256: command.input.ChecksumSHA256,
+          };
+        case "GetObjectRetentionCommand":
+          lifecycle.push("retention-verified");
+          return {
+            Retention: {
+              Mode: "COMPLIANCE",
+              RetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
+            },
           };
         default: throw new Error(`Unexpected command ${command.constructor.name}`);
       }
@@ -1342,32 +1316,42 @@ test("backup creation reads one repeatable snapshot with a read-only role and up
     s3ClientFactory: () => s3,
   });
   assert.equal(result.versionId, "protected-version");
-  assert.equal(result.uploadedAt, "2026-08-01T12:00:01.000Z");
+  assert.equal(result.writeAcceptedAt, "2026-08-01T12:00:00.000Z");
   assert.match(result.key, /^postgres\/daily\/2026-08-01T12-00-00\.000Z-a{40}-[a-f0-9-]+\.json\.gz\.aes256gcm$/);
   assert.equal(putInput.IfNoneMatch, "*");
-  assert.equal(putInput.ObjectLockMode, "COMPLIANCE");
+  assert.equal(putInput.ChecksumAlgorithm, "SHA256");
+  assert.equal(putInput.ServerSideEncryption, "AES256");
+  assert.equal(putInput.ObjectLockMode, undefined);
+  assert.equal(putInput.ObjectLockRetainUntilDate, undefined);
+  assert.match(putInput.ChecksumSHA256, /^[A-Za-z0-9+/]{43}=$/);
   assert.match(queries[0], /pg_try_advisory_lock/);
   assert.equal(queries[1], "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY");
   assert.equal(queries.at(-1), "COMMIT");
   assert.equal(poolEnded, true);
-  assert.deepEqual(lifecycle, ["upload", "upload-verified", "client-release", "pool-end"]);
+  assert.deepEqual(lifecycle, ["upload", "retention-verified", "client-release", "pool-end"]);
 });
 
 test("protected backup upload is unique, versioned, digest-bound, and COMPLIANCE locked", async () => {
   const config = destinationS3Config(destinationEnv);
   let input;
+  const commands = [];
   const client = {
     async send(command) {
+      commands.push(command.constructor.name);
       if (command.constructor.name === "PutObjectCommand") {
         input = command.input;
-        return { VersionId: "4_zversion", ETag: "etag" };
-      }
-      if (command.constructor.name === "HeadObjectCommand") {
         return {
           VersionId: "4_zversion",
-          LastModified: new Date("2026-08-01T12:00:01.000Z"),
-          ObjectLockMode: "COMPLIANCE",
-          ObjectLockRetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
+          ETag: "etag",
+          ChecksumSHA256: command.input.ChecksumSHA256,
+        };
+      }
+      if (command.constructor.name === "GetObjectRetentionCommand") {
+        return {
+          Retention: {
+            Mode: "COMPLIANCE",
+            RetainUntilDate: new Date("2026-09-01T12:05:00.000Z"),
+          },
         };
       }
       throw new Error(`Unexpected command ${command.constructor.name}`);
@@ -1384,8 +1368,11 @@ test("protected backup upload is unique, versioned, digest-bound, and COMPLIANCE
     now: () => new Date(createdAt),
   });
   assert.equal(input.IfNoneMatch, "*");
-  assert.equal(input.ObjectLockMode, "COMPLIANCE");
-  assert.ok(input.ObjectLockRetainUntilDate.getTime() >= new Date(createdAt).getTime() + 30 * 86_400_000);
+  assert.equal(input.ChecksumAlgorithm, "SHA256");
+  assert.equal(input.ServerSideEncryption, "AES256");
+  assert.equal(input.ObjectLockMode, undefined);
+  assert.equal(input.ObjectLockRetainUntilDate, undefined);
+  assert.equal(input.ChecksumSHA256, Buffer.from(result.sha256, "hex").toString("base64"));
   assert.deepEqual(input.Metadata, protectedArtifactMetadata({
     sha256: result.sha256,
     createdAt,
@@ -1394,8 +1381,199 @@ test("protected backup upload is unique, versioned, digest-bound, and COMPLIANCE
     format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
   }));
   assert.equal(result.versionId, "4_zversion");
-  assert.equal(result.uploadedAt, "2026-08-01T12:00:01.000Z");
+  assert.equal(result.writeAcceptedAt, createdAt);
+  assert.equal(result.retentionUntil, "2026-09-01T12:05:00.000Z");
   assert.equal(result.sha256, sha256Hex(input.Body));
+  assert.deepEqual(commands, ["PutObjectCommand", "GetObjectRetentionCommand"]);
+});
+
+test("protected backup retention is anchored when the provider accepts the write", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const startedAt = new Date("2026-08-01T12:00:00.000Z");
+  const acceptedAt = new Date("2026-08-01T12:10:00.000Z");
+  const tooShort = new Date(acceptedAt.getTime() + 30 * 86_400_000 - 300_001);
+  const clock = [startedAt, acceptedAt];
+  let retentionInput;
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v-slow-upload", ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        if (command.constructor.name === "GetObjectRetentionCommand") {
+          retentionInput = command.input;
+          return { Retention: { Mode: "COMPLIANCE", RetainUntilDate: tooShort } };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, `${config.prefix}/slow-upload`, {
+      format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+      createdAt: startedAt.toISOString(),
+      sourceCommit: "a".repeat(40),
+    }, {
+      createdAt: startedAt.toISOString(),
+      sourceCommit: "a".repeat(40),
+      retentionDays: 30,
+      now: () => clock.shift(),
+    }),
+    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
+  );
+  assert.deepEqual(retentionInput, {
+    Bucket: config.bucket,
+    Key: `${config.prefix}/slow-upload`,
+    VersionId: "v-slow-upload",
+  });
+});
+
+test("protected backup upload rejects malformed irreversible-write metadata before contacting S3", async (t) => {
+  const config = destinationS3Config(destinationEnv);
+  const key = `${config.prefix}/invalid-options`;
+  const validCreatedAt = "2026-08-01T12:00:00.000Z";
+  const validSourceCommit = "a".repeat(40);
+  const baseArtifact = {
+    format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+    createdAt: validCreatedAt,
+    sourceCommit: validSourceCommit,
+  };
+  let sends = 0;
+  const client = {
+    async send() {
+      sends += 1;
+      throw new Error("S3 must not be contacted for invalid upload metadata");
+    },
+  };
+  const invalidCases = [
+    ["missing options", undefined],
+    ["non-canonical timestamp", { createdAt: "2026-08-01T12:00:00Z", sourceCommit: validSourceCommit, retentionDays: 30 }],
+    ["mismatched timestamp", { createdAt: "2026-08-01T12:00:01.000Z", sourceCommit: validSourceCommit, retentionDays: 30 }],
+    ["short source commit", { createdAt: validCreatedAt, sourceCommit: "abc123", retentionDays: 30 }],
+    ["uppercase source commit", { createdAt: validCreatedAt, sourceCommit: "A".repeat(40), retentionDays: 30 }],
+    ["mismatched source commit", { createdAt: validCreatedAt, sourceCommit: "b".repeat(40), retentionDays: 30 }],
+    ["short retention", { createdAt: validCreatedAt, sourceCommit: validSourceCommit, retentionDays: 29 }],
+    ["fractional retention", { createdAt: validCreatedAt, sourceCommit: validSourceCommit, retentionDays: 30.5 }],
+    ["invalid clock", { createdAt: validCreatedAt, sourceCommit: validSourceCommit, retentionDays: 30, now: "not-a-function" }],
+  ];
+
+  for (const [label, options] of invalidCases) {
+    await t.test(label, async () => {
+      await assert.rejects(
+        () => putProtectedJsonObject(client, config, key, baseArtifact, options),
+        (error) => error.code === "BACKUP_CONFIG_INVALID",
+      );
+    });
+  }
+  assert.equal(sends, 0);
+});
+
+test("protected backup upload fails closed without provider checksum or retention confirmation", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const createdAt = "2026-08-01T12:00:00.000Z";
+  const artifact = {
+    format: ENCRYPTED_LOGICAL_BACKUP_FORMAT_V2,
+    createdAt,
+    sourceCommit: "a".repeat(40),
+  };
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, `${config.prefix}/missing-version`, artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") return { VersionId: "v1" };
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, `${config.prefix}/missing-checksum`, artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_PROVIDER_CHECK_FAILED",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v-bad-checksum", ChecksumSHA256: "not-the-upload-checksum" };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, `${config.prefix}/mismatched-checksum`, artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_PROVIDER_CHECK_FAILED",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v2", ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        if (command.constructor.name === "GetObjectRetentionCommand") {
+          return { Retention: { Mode: "GOVERNANCE", RetainUntilDate: new Date("2026-09-01T12:05:00.000Z") } };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, `${config.prefix}/wrong-retention`, artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v-short", ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        if (command.constructor.name === "GetObjectRetentionCommand") {
+          return { Retention: { Mode: "COMPLIANCE", RetainUntilDate: new Date("2026-08-31T11:54:59.999Z") } };
+        }
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, `${config.prefix}/short-retention`, artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_DESTINATION_UNSAFE",
+  );
+  await assert.rejects(
+    () => putProtectedJsonObject({
+      async send(command) {
+        if (command.constructor.name === "PutObjectCommand") {
+          return { VersionId: "v-retention-read-error", ChecksumSHA256: command.input.ChecksumSHA256 };
+        }
+        if (command.constructor.name === "GetObjectRetentionCommand") throw new Error("denied");
+        throw new Error(`Unexpected command ${command.constructor.name}`);
+      },
+    }, config, `${config.prefix}/retention-read-error`, artifact, {
+      createdAt,
+      sourceCommit: artifact.sourceCommit,
+      retentionDays: 30,
+      now: () => new Date(createdAt),
+    }),
+    (error) => error.code === "BACKUP_PROVIDER_CHECK_FAILED",
+  );
 });
 
 function protectedArtifactFixture({
