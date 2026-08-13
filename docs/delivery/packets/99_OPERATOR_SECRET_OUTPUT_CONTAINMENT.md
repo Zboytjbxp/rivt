@@ -164,12 +164,14 @@ set plus an isolated complete-set restore under separate explicit approval.
   `GetBucketVersioning`, `GetBucketObjectLockConfiguration`, `PutObject`, and
   `GetObjectRetention`; static regressions reject list, content-read, delete,
   retention-administration, and bucket-mutation permissions.
-- No IAM runtime identity, key, backup object, lifecycle rule, scheduler,
-  monitor secret, restore target, deployment, payment, customer communication,
-  or launch action exists from this addendum. The no-deletion boundary keeps
-  recurrence disabled, and PostgreSQL-only source coverage keeps `R-052` and
-  `GA-OPS-004` open until object-byte backup and exact complete-set restore are
-  proved.
+- No IAM runtime identity or key, backup object, lifecycle rule, scheduler,
+  AWS monitor read credential/configuration, restore target, deployment,
+  payment, customer communication, or launch action exists from this addendum.
+  The pre-existing protected GitHub monitor environment holds the backup
+  encryption secret but cannot inspect AWS independently. The no-deletion
+  boundary keeps recurrence disabled, and PostgreSQL-only source coverage
+  keeps `R-052` and `GA-OPS-004` open until object-byte backup and exact
+  complete-set restore are proved.
 
 ## Independent-backup source storage-growth-containment addendum - 2026-08-13
 
@@ -226,6 +228,9 @@ set plus an isolated complete-set restore under separate explicit approval.
   645/645 unit/frontend tests, four database-independent integration checks,
   all four browser E2E journeys, diff integrity, and the production dependency
   audit pass. Twenty-three PostgreSQL suites skip locally because
-  `TEST_DATABASE_URL` is absent; fresh PR CI remains pending. The source is
-  unmerged, undeployed, and does not create an AWS identity, object, scheduler,
-  restore target, payment, customer communication, or added cost.
+  `TEST_DATABASE_URL` is absent. Gate A run `31699823161` passed against exact
+  source revision `0756fa455d1da3a665a484528c9178331838c65d`; later
+  documentation-only descendants do not reinterpret that run as exact-head
+  proof. The source is unmerged, undeployed, and does not create an AWS
+  identity, object, scheduler, restore target, payment, customer communication,
+  or added cost.

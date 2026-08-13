@@ -76,9 +76,11 @@ Stage 1 remain paused.
   backup prefix unless `If-None-Match` makes them create-only. The AWS console
   reported a successful save and displayed both deny statements; live
   negative-request behavior remains unproved.
-  No object, IAM runtime
-  identity, access key, lifecycle rule, scheduler, monitor secret, or restore
-  target was created.
+  No object, IAM runtime identity or access key, lifecycle rule, scheduler,
+  AWS monitor read credential/configuration, or restore target was created.
+  The pre-existing protected GitHub monitor environment does hold the backup
+  encryption secret; it cannot independently inspect AWS without that missing
+  AWS read credential and destination configuration.
 - A read-only sizing check measured approximately 44.1 MB of current
   application objects and a 1.31 MB encrypted database artifact. A
   hypothetical twice-daily 30-day database-plus-object-byte set is modeled at
@@ -143,9 +145,11 @@ Stage 1 remain paused.
   tests, four database-independent integration checks, all four browser E2E
   journeys, diff integrity, and the production dependency audit pass. Twenty-
   three PostgreSQL suites skip locally because `TEST_DATABASE_URL` is absent;
-  fresh PR CI remains pending. The source is unmerged, undeployed, and provider-
-  inactive; requirement maturity, the incident hold, and all recovery blockers
-  remain unchanged.
+  Gate A run `31699823161` passed against exact source revision
+  `0756fa455d1da3a665a484528c9178331838c65d`. Later documentation-only
+  descendants do not reinterpret that run as exact-head proof. The source is
+  unmerged, undeployed, and provider-inactive; requirement maturity, the
+  incident hold, and all recovery blockers remain unchanged.
 
 ## Packet 99 final-diff security remediation addendum - fully verified in the release candidate
 

@@ -26,8 +26,10 @@
   historical repository records are not retroactively erased. Runtime restore
   output now uses the strict receipt's `tableCount`, `rowCount`, and
   `verificationDurationMs` fields, with sanitizer-to-materializer coverage.
-  Focused verification passes 152/152 and local non-database gates pass; fresh
-  PR CI remains pending.
+  Focused verification passes 152/152 and local non-database gates pass. Gate A
+  run `31699823161` passed against exact source revision
+  `0756fa455d1da3a665a484528c9178331838c65d`; later documentation-only
+  descendants do not reinterpret that run as exact-head proof.
 - `GA-OPS-004` and `GA-SEC-004` gain undeployed, source-enforced storage-growth
   containment for a single proving month: a canonical UTC calendar-month
   write window is checked before AWS or PostgreSQL access and immediately
@@ -40,9 +42,12 @@
   cap, stolen-key containment, duplicate-request/compute limit,
   cumulative-storage limit, or activation approval.
 - `GA-OPS-004` remains **Blocker**. No runtime IAM identity or access key,
-  backup object, Railway scheduler, GitHub monitor secret, alert receipt, or
-  isolated restore proof exists. Current source protects PostgreSQL only; it
-  does not independently retain or restore project photos, documents, or
+  backup object, Railway scheduler, AWS monitor read credential/configuration,
+  alert receipt, or isolated restore proof exists. The pre-existing protected
+  GitHub monitor environment holds the backup encryption secret but cannot
+  independently inspect AWS without the missing read credential and
+  destination configuration. Current source protects PostgreSQL only; it does
+  not independently retain or restore project photos, documents, or
   attachments.
 - The approved no-deletion boundary remains controlling. No lifecycle rule is
   configured and the 12-hour schedule remains inactive because cost would grow
