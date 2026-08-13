@@ -521,7 +521,12 @@ async function runSnapshotBoundaryRegressions(browserInstance) {
     apiRequests.length = 0;
     recordApiRequests = true;
     await reopenInstalledAppOffline(page);
-    await waitForToolsWithDiagnostics(page, 10_000);
+    // This regression verifies snapshot age and purge boundaries, not the
+    // separate sub-10-second cold-start requirement asserted by the primary
+    // installed-app scenario below. Give a contended CI runner the same
+    // bounded 15-second recovery allowance used by the surrounding boundary
+    // regressions while still failing if the cached app never leaves boot.
+    await waitForToolsWithDiagnostics(page, 15_000);
     await page.getByRole("button", { name: "Work", exact: true }).click();
     await page.getByRole("navigation", { name: "Work stages" }).getByRole("button", { name: /^Active\b/ }).click();
     await page.getByRole("heading", { name: activeWork.job.title, exact: true }).waitFor({ timeout: 10_000 });
