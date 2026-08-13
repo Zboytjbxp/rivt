@@ -2,11 +2,11 @@
 
 Last updated: 2026-08-13 America/New_York
 Current gate: Gate B controlled engagement; public launch remains blocked
-Current phase: PR #28 merged least-privilege writer and one-month storage-growth containment into the undeployed release candidate, and PR #29 merged the fresh-page offline boundary correction without relaxing the primary performance contract. This forward-port adds prospective backup-receipt privacy and strict positive aggregate-count validation without changing the provider. The empty AWS provider foundation remains inactive: no runtime identity, object, recurrence, object-byte coverage, or isolated restore exists. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
+Current phase: PR #28 merged least-privilege writer and one-month storage-growth containment into the undeployed release candidate, PR #29 merged the fresh-page offline boundary correction without relaxing the primary performance contract, and PR #30 merged prospective backup-receipt privacy, strict positive aggregate-count validation, and the restore-evidence field seam. The empty AWS provider foundation remains inactive: no runtime identity, object, recurrence, object-byte coverage, or isolated restore exists. The active production credential-containment hold, feature release pause, Stage 1 pause, ACH-disabled posture, and public-launch block remain unchanged.
 Active packet: `docs/delivery/packets/99_OPERATOR_SECRET_OUTPUT_CONTAINMENT.md`
-Repository branch: `codex/packet99-forwardport-final` (based on release-candidate merge `1153d418cc9f82123bba64d285f855faa7dc9c23`; not deployed)
+Repository branch: `codex/final-release-candidate-20260804` at merge `3c3777682993dca735f46d1cbb1ec4cabf07df45` (not deployed)
 Current production and `origin/master` source: `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` (PR #22 source-only backup tooling; no scheduler, independent provider, or restore activation is inferred)
-Current release-candidate application source: `1153d418cc9f82123bba64d285f855faa7dc9c23`, including PR #28 backup hardening, PR #29's offline boundary test correction, security remediation `6b2f7d8a64b17899f87c8d409353689738fdf294`, and transitive Nano ID patch `e06a6218e6c9047569e3140d24a7f25a9c710de8`. The current receipt-privacy forward-port is not yet merged into that candidate.
+Current release-candidate application source: `3c3777682993dca735f46d1cbb1ec4cabf07df45`, including PR #28 backup hardening, PR #29's offline boundary test correction, PR #30's receipt-privacy and restore-evidence hardening, security remediation `6b2f7d8a64b17899f87c8d409353689738fdf294`, and transitive Nano ID patch `e06a6218e6c9047569e3140d24a7f25a9c710de8`.
 Earlier production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
 Earlier production incident hotfix commit:
 `f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
@@ -27,8 +27,13 @@ but failed one offline snapshot-boundary browser check while the service worker
 controlled the page and the complete shell was cached. PR #25 stays draft; no
 launch-ready result is inferred from that run. PR #29 Gate A run
 `31698593771` passed every engineering check, including the complete browser
-suite, and its tree is now merged as candidate `1153d418`; a fresh PR #25 run
-for the exact merge head is still required.
+suite, and its tree merged as candidate `1153d418`. PR #30 exact-head Gate A
+run `31701345846` then passed every check for source `f95126fd`; that source is
+now merged as candidate `3c377768`. PR #25 run `31701693358` on that exact
+merge passed build, application/security lint, all unit and disposable-
+PostgreSQL integration tests, the full browser suite, formatting, and the
+production dependency audit. Its final step then correctly refused promotion
+because launch readiness still reports the same 21 operational blockers.
 
 Operational status: a 2026-08-03 Railway configuration audit caused a new
 restricted-output exposure of current production credentials. No misuse
@@ -125,9 +130,9 @@ Stage 1 remain paused.
   payment, ACH, customer communication, backup upload, recurring scheduler,
   object-storage usage, or charged workload is claimed.
 
-## Packet 99 backup-receipt privacy forward-port - source only
+## Packet 99 backup-receipt privacy hardening - merged to candidate, undeployed
 
-- The current unmerged forward-port replaces exact backup object identifiers
+- PR #30 replaces exact backup object identifiers
   in typed repository receipts with a deterministic SHA-256 artifact identity.
   It also requires positive safe-integer table and row counts before backup or
   restore evidence can satisfy readiness.
@@ -146,10 +151,11 @@ Stage 1 remain paused.
   journeys, diff integrity, and the production dependency audit pass. Twenty-
   three PostgreSQL suites skip locally because `TEST_DATABASE_URL` is absent;
   Gate A run `31699823161` passed against exact source revision
-  `0756fa455d1da3a665a484528c9178331838c65d`. Later documentation-only
-  descendants do not reinterpret that run as exact-head proof. The source is
-  unmerged, undeployed, and provider-inactive; requirement maturity, the
-  incident hold, and all recovery blockers remain unchanged.
+  `0756fa455d1da3a665a484528c9178331838c65d`; exact-final-head run
+  `31701345846` passed every check for `f95126fd1db5dc13b0d382ce8147a8c1943b2359`.
+  PR #30 is merged only to the release candidate as `3c377768`; the source is
+  undeployed and provider-inactive, so requirement maturity, the incident hold,
+  and all recovery blockers remain unchanged.
 
 ## Packet 99 final-diff security remediation addendum - fully verified in the release candidate
 
