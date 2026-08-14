@@ -2,22 +2,19 @@
 
 ## Operational Incident Addendum - 2026-07-29 Credential Containment
 
-- `GA-OPS-004` gains unactivated scheduler hardening on
-  `codex/backup-scheduler-config-hotfix`: the private Railway config invokes a
-  bounded child-process wrapper with a 45-minute default and 60-minute ceiling,
-  forwards host shutdown signals and fails within a bounded fallback even when
-  a child refuses to exit,
-  rejects duplicate runs through a PostgreSQL advisory lock, and fails before
-  opening database or storage clients unless `SOURCE_COMMIT` matches Railway's
-  provider-set `RAILWAY_GIT_COMMIT_SHA`. The runbook requires an explicit
-  `/railway.backup.json` service binding, no public domain, and reviewed
-  CPU/RAM limits. This is source preparation only—not merge, deployment,
-  schedule, backup evidence, or complete disaster recovery. Application
-  object storage remains outside this PostgreSQL backup design and requires a
-  separate reviewed recovery packet. AWS account creation remains blocked, and
-  the current approval excludes backup-object deletion; because provider
-  verification requires a post-retention lifecycle rule, activation also needs
-  a separate explicit lifecycle-deletion approval.
+- `GA-OPS-004` gains unactivated backup-only source hardening on
+  `codex/backup-rotation-hotfix`: one approved UTC calendar-month write window,
+  deterministic 12-hour create-only slots, a fixed 16 MiB new-artifact limit,
+  exact destination/source binding, provider-confirmed checksum and default
+  COMPLIANCE retention, least-privilege IAM policy fixtures, and active-key-only
+  verification/restore receipts. Focused backup/IAM tests pass 98/98; build,
+  application/security lint, 248 unit/frontend tests, three non-database
+  integration checks, all three browser journeys, patch formatting, and the
+  production dependency audit also pass. Twenty PostgreSQL integration checks
+  require fresh disposable-database CI. This is source preparation only—not
+  merge, deployment, credential creation, backup evidence, scheduler
+  activation, or complete disaster recovery. PostgreSQL rotation proof and
+  independent application-object recovery remain pending.
 
 - `GA-OPS-007` gains local Web Push retirement instrumentation: migration
   `0042_push_vapid_generation` preserves legacy subscriptions as unknown,

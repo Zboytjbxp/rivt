@@ -117,6 +117,8 @@ export function sanitizedSuccess(result) {
     "encryptionKeyMode",
     "contentDigest",
     "contentDiffCount",
+    "tableCount",
+    "rowCount",
   ];
   const receipt = Object.fromEntries(
     allowed
