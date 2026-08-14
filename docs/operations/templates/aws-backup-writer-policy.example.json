@@ -11,13 +11,27 @@
       "Resource": "arn:aws:s3:::<BUCKET>"
     },
     {
-      "Sid": "WriteNewImmutableBackupObjects",
+      "Sid": "AllowOneConditionalBackupPut",
       "Effect": "Allow",
-      "Action": [
-        "s3:PutObject",
-        "s3:GetObjectRetention"
-      ],
-      "Resource": "arn:aws:s3:::<BUCKET>/<PREFIX>/*"
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::<BUCKET>/<OBJECT_KEY>",
+      "Condition": {
+        "DateGreaterThanEquals": {
+          "aws:CurrentTime": "<WINDOW_START_ISO8601>"
+        },
+        "DateLessThan": {
+          "aws:CurrentTime": "<WINDOW_END_ISO8601>"
+        },
+        "Null": {
+          "s3:if-none-match": "false"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOneBackupRetention",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectRetention",
+      "Resource": "arn:aws:s3:::<BUCKET>/<OBJECT_KEY>"
     }
   ]
 }

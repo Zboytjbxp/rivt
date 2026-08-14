@@ -11,13 +11,21 @@
       "Resource": "arn:aws:s3:::<BUCKET>"
     },
     {
-      "Sid": "ReadExactBackupPrefixVersions",
+      "Sid": "ReadOneBackupVersion",
       "Effect": "Allow",
-      "Action": [
-        "s3:GetObjectVersion",
-        "s3:GetObjectRetention"
-      ],
-      "Resource": "arn:aws:s3:::<BUCKET>/<PREFIX>/*"
+      "Action": "s3:GetObjectVersion",
+      "Resource": "arn:aws:s3:::<BUCKET>/<OBJECT_KEY>",
+      "Condition": {
+        "StringEquals": {
+          "s3:VersionId": "<VERSION_ID>"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOneBackupRetention",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectRetention",
+      "Resource": "arn:aws:s3:::<BUCKET>/<OBJECT_KEY>"
     }
   ]
 }

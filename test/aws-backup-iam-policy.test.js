@@ -38,12 +38,18 @@ const approvedActions = {
 
 const bucketResource = "arn:aws:s3:::<BUCKET>";
 const objectResource = "arn:aws:s3:::<BUCKET>/<PREFIX>/*";
+const oneShotObjectResource = "arn:aws:s3:::<BUCKET>/<OBJECT_KEY>";
+const oneShotWindowCondition = {
+  DateGreaterThanEquals: { "aws:CurrentTime": "<WINDOW_START_ISO8601>" },
+  DateLessThan: { "aws:CurrentTime": "<WINDOW_END_ISO8601>" },
+  Null: { "s3:if-none-match": "false" },
+};
 const expectedGrant = {
   writer: {
     "s3:GetBucketVersioning": { resource: bucketResource },
     "s3:GetBucketObjectLockConfiguration": { resource: bucketResource },
-    "s3:PutObject": { resource: objectResource },
-    "s3:GetObjectRetention": { resource: objectResource },
+    "s3:PutObject": { resource: oneShotObjectResource, condition: oneShotWindowCondition },
+    "s3:GetObjectRetention": { resource: oneShotObjectResource },
   },
   monitor: {
     "s3:GetBucketVersioning": { resource: bucketResource },
@@ -61,8 +67,11 @@ const expectedGrant = {
   restore: {
     "s3:GetBucketVersioning": { resource: bucketResource },
     "s3:GetBucketObjectLockConfiguration": { resource: bucketResource },
-    "s3:GetObjectVersion": { resource: objectResource },
-    "s3:GetObjectRetention": { resource: objectResource },
+    "s3:GetObjectVersion": {
+      resource: oneShotObjectResource,
+      condition: { StringEquals: { "s3:VersionId": "<VERSION_ID>" } },
+    },
+    "s3:GetObjectRetention": { resource: oneShotObjectResource },
   },
 };
 
@@ -132,13 +141,24 @@ test("backup IAM templates contain placeholders only", async () => {
   for (const [role, filePath] of Object.entries(policyPaths)) {
     const source = await readFile(filePath, "utf8");
     assert.match(source, /<BUCKET>/, `${role} must retain the bucket placeholder`);
-    assert.match(source, /<PREFIX>/, `${role} must retain the prefix placeholder`);
+    if (role === "writer" || role === "restore") {
+      assert.match(source, /<OBJECT_KEY>/, `${role} must bind one exact object key`);
+      assert.doesNotMatch(source, /<PREFIX>\/\*/, `${role} must not grant the whole prefix`);
+      if (role === "writer") {
+        assert.match(source, /<WINDOW_START_ISO8601>/, "writer must bind the approved window start");
+        assert.match(source, /<WINDOW_END_ISO8601>/, "writer must bind the approved window end");
+      } else {
+        assert.match(source, /<VERSION_ID>/, "restore must bind one exact object version");
+      }
+    } else {
+      assert.match(source, /<PREFIX>/, `${role} must retain the prefix placeholder`);
+    }
     assert.doesNotMatch(source, /arn:aws:iam::\d{12}/, `${role} must not name a real AWS account`);
     assert.doesNotMatch(source, /AKIA[0-9A-Z]{16}/, `${role} must not contain an access key`);
   }
 });
 
-test("writer can create and inspect retention but cannot read, list, delete, or administer retention", async () => {
+test("one-shot writer is bound to one object and UTC window without read, list, delete, or retention administration", async () => {
   const policy = await loadPolicy("writer");
   validateIdentityPolicy("writer", policy);
 
@@ -146,7 +166,11 @@ test("writer can create and inspect retention but cannot read, list, delete, or 
   assert.equal(bucketStatement.Resource, "arn:aws:s3:::<BUCKET>");
 
   const objectStatement = statementForAction(policy, "s3:PutObject");
-  assert.equal(objectStatement.Resource, "arn:aws:s3:::<BUCKET>/<PREFIX>/*");
+  assert.equal(objectStatement.Resource, oneShotObjectResource);
+  assert.deepEqual(objectStatement.Condition, oneShotWindowCondition);
+  const retentionStatement = statementForAction(policy, "s3:GetObjectRetention");
+  assert.equal(retentionStatement.Resource, oneShotObjectResource);
+  assert.equal("Condition" in retentionStatement, false);
 });
 
 test("monitor listing is prefix-bounded and object reads are version-specific", async () => {
@@ -168,7 +192,7 @@ test("monitor listing is prefix-bounded and object reads are version-specific", 
   assert.equal(readStatement.Resource, "arn:aws:s3:::<BUCKET>/<PREFIX>/*");
 });
 
-test("restore reads exact-prefix versions without bucket listing", async () => {
+test("restore reads one exact version without bucket listing or broad prefix access", async () => {
   const policy = await loadPolicy("restore");
   validateIdentityPolicy("restore", policy);
   assert.equal(
@@ -177,7 +201,13 @@ test("restore reads exact-prefix versions without bucket listing", async () => {
   );
 
   const readStatement = statementForAction(policy, "s3:GetObjectVersion");
-  assert.equal(readStatement.Resource, "arn:aws:s3:::<BUCKET>/<PREFIX>/*");
+  assert.equal(readStatement.Resource, oneShotObjectResource);
+  assert.deepEqual(readStatement.Condition, {
+    StringEquals: { "s3:VersionId": "<VERSION_ID>" },
+  });
+  const retentionStatement = statementForAction(policy, "s3:GetObjectRetention");
+  assert.equal(retentionStatement.Resource, oneShotObjectResource);
+  assert.equal("Condition" in retentionStatement, false);
 });
 
 test("identity-policy validation rejects forbidden grant classes", async (t) => {
@@ -213,10 +243,10 @@ test("identity-policy validation rejects duplicate broad grants of approved acti
   );
 });
 
-test("bucket guardrail policy denies insecure transport and missing create-only precondition", async () => {
+test("bucket guardrail policy denies insecure transport, unguarded creates, and multipart initiation or parts", async () => {
   const policy = await loadPolicy("bucket");
   assert.equal(policy.Version, "2012-10-17");
-  assert.equal(policy.Statement.length, 2);
+  assert.equal(policy.Statement.length, 3);
   assert.equal(policy.Statement.every((statement) => statement.Effect === "Deny"), true);
 
   const transport = policy.Statement.find((statement) => statement.Sid === "DenyInsecureTransport");
@@ -242,5 +272,15 @@ test("bucket guardrail policy denies insecure transport and missing create-only 
   assert.deepEqual(createOnly.Condition, {
     Null: { "s3:if-none-match": "true" },
     Bool: { "s3:ObjectCreationOperation": "true" },
+  });
+
+  const multipart = policy.Statement.find(
+    (statement) => statement.Sid === "DenyMultipartInitiationAndParts",
+  );
+  assert.equal(multipart.Principal, "*");
+  assert.equal(multipart.Action, "s3:PutObject");
+  assert.equal(multipart.Resource, "arn:aws:s3:::<BUCKET>/<PREFIX>/*");
+  assert.deepEqual(multipart.Condition, {
+    Bool: { "s3:ObjectCreationOperation": "false" },
   });
 });

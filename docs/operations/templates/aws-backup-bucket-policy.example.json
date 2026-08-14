@@ -31,6 +31,18 @@
           "s3:ObjectCreationOperation": "true"
         }
       }
+    },
+    {
+      "Sid": "DenyMultipartInitiationAndParts",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::<BUCKET>/<PREFIX>/*",
+      "Condition": {
+        "Bool": {
+          "s3:ObjectCreationOperation": "false"
+        }
+      }
     }
   ]
 }

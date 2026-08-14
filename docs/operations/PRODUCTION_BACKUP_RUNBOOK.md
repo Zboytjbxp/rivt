@@ -104,15 +104,20 @@ all four bucket-level Block Public Access settings are on.
 Object Ownership is bucket-owner-enforced, Versioning is enabled, default
 encryption is SSE-S3, and default Object Lock is 30-day COMPLIANCE. Exact
 provider identifiers are intentionally omitted from repository evidence and
-must be recorded in access-restricted operator evidence before activation. No IAM
-runtime identity, access key, bucket object, lifecycle rule, scheduler, monitor
-secret, or restore proof exists yet. A deny-only bucket policy was saved and is
-configured to deny non-TLS traffic and writes to the reserved backup prefix
-unless the caller supplies `If-None-Match` for create-only semantics. The AWS
-console reported a successful save and displayed both deny statements, but no
-live negative request has proved enforcement. The policy grants no identity any
-access. Automatic or manual deletion of retained backup objects remains outside
-the approval.
+must be recorded in access-restricted operator evidence before activation. No
+IAM runtime identity, access key, bucket object, lifecycle rule, scheduler AWS
+read credential/configuration, or restore proof exists yet. The protected
+GitHub monitor environment already contains the active backup-encryption
+secret, but it cannot inspect AWS until a separate read-only identity and exact
+destination configuration are supplied. A deny-only bucket policy was saved
+and is configured to deny non-TLS traffic and writes to the reserved backup
+prefix unless the caller supplies `If-None-Match` for create-only semantics.
+The reviewed source fixture adds a third deny intended to refuse multipart
+initiation and part uploads. The AWS console previously reported a successful save and
+displayed the original two deny statements; the revised three-statement policy
+has not been applied or live-tested. The policy grants no identity any access.
+Automatic or manual deletion of retained backup objects remains outside the
+approval.
 
 Completed provider foundation and remaining activation steps:
 
@@ -133,12 +138,20 @@ Completed provider foundation and remaining activation steps:
    12-hour slots, and a fixed 16 MiB per-write cap. That bounds RIVT's writer
    for one approved month but does not make indefinite recurrence safe: every
    renewed month would retain more data without expiry.
-4. Create three restricted application keys from the reviewed policy fixtures:
-   backup writer, monitor reader, and restore reader. The writer may inspect
-   only Versioning/default Object Lock, conditionally create a new object, and
-   read that exact version's retention; it cannot list or read object content,
-   delete, or administer retention. The monitor cannot write or delete. The
-   restore key has no list access and is not stored on the web service.
+4. Create restricted identities from the reviewed policy fixtures only when
+   their exact use is approved. For the one-time rotation proof, replace the
+   writer fixture placeholders with the one deterministic object key and the
+   exact half-open UTC approval window. Reject a rendered object key containing
+   IAM wildcard or policy-variable syntax (`*`, `?`, or `${...}`). Its `PutObject` grant requires
+   `If-None-Match`, and its separate retention read is limited to that same
+   object. Replace the restore fixture placeholders with that one object key
+   and returned immutable version ID; it has no list or prefix-wide content
+   access. The writer cannot read content, list, delete, initiate multipart
+   uploads or upload multipart parts after the bucket deny is applied, or
+   administer retention. The
+   monitor cannot write or delete. No runtime identity belongs on the web
+   service. A recurring writer policy is not designed or approved by this
+   one-shot fixture.
 5. Create a dedicated PostgreSQL login with CONNECT/USAGE/SELECT only. Verify
    it can see and select every public table and sequence and has no CREATE,
    INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, sequence UPDATE,
@@ -191,6 +204,38 @@ Completed provider foundation and remaining activation steps:
    data-path operation; they do not detect drift in those broader provider
    settings. Keep these audit permissions out of the writer identity.
 
+## One-time backup-key rotation acceptance
+
+This is the only currently approved data-path operation. Keep
+`/railway.backup.json` unbound and its recurring cron inactive.
+
+1. Start from the exact reviewed and deployed backup-only commit. Calculate the
+   deterministic current-slot object key without opening AWS or PostgreSQL and
+   keep that identifier only in access-restricted operator evidence.
+2. Instantiate the writer policy with that exact object key and the approved
+   half-open UTC start/end timestamps. Apply the reviewed bucket policy with
+   the TLS deny, create-only precondition deny, and multipart-initiation/part
+   deny. Confirm the effective writer policy has no prefix-wide object resource,
+   that its rendered exact key contains no IAM wildcard or policy-variable
+   syntax, and that no incomplete multipart upload already exists for that key.
+3. Before the real backup, prove with provider authorization simulation and
+   harmless denied requests that the identity cannot list, read content,
+   delete, write another key, write before/after the window, write without
+   `If-None-Match`, initiate multipart upload, or upload a multipart part. A
+   negative request that would
+   leave a retained object is not harmless and requires separate approval.
+4. Invoke the one-shot backup directly from the exact deployed backup-only
+   source; do not bind the recurring Railway config. Preserve only the
+   sanitized success receipt. Disable the writer credential immediately after
+   the accepted write and exact-version retention check.
+5. Instantiate the temporary restore policy for only the returned object key
+   and version ID. Restore to the manually confirmed isolated database using
+   only the active key, preserve only the sanitized receipt, then disable and
+   remove the restore credential and temporary database.
+6. Remove the predecessor encryption key only after the exact active-key-only
+   backup and isolated restore proofs pass. Any ambiguity or failed check keeps
+   the predecessor available and the launch hold active.
+
 The 2026-08-12 bounded sizing check found approximately 44.1 MB of application
 objects plus a 1.31 MB encrypted database artifact per hypothetical
 database-plus-object-byte set. This is a sizing model only; object-byte
@@ -204,7 +249,11 @@ authorization. With no lifecycle expiry, storage grows indefinitely, so the
 The new source caps make one proving month mathematically bounded; they do not
 approve that month or change the long-term activation block.
 
-## First-backup acceptance
+## Recurring scheduler acceptance (future approval required)
+
+This section is not authorized for the current key rotation. It remains a
+future acceptance contract after complete recovery coverage, lifecycle/cost
+decisions, and a separately reviewed recurring writer design.
 
 1. Confirm the cron is built from the exact reviewed/deployed full commit.
    Confirm its approved UTC write window is current, exact, and limited to one
@@ -289,7 +338,10 @@ must be recorded separately.
   A verification or restore receipt reporting `active-or-previous` is not
   evidence that qualifies the predecessor for removal.
 - Never store active and prior keys in source, documentation, artifacts, issue
-  bodies, workflow output, or the web-service environment.
+  bodies, or workflow output. The current legacy web service still holds the
+  active backup key; the target state moves backup authority to dedicated
+  scheduler/monitor/restore boundaries and removes it from the web service only
+  after that separately reviewed migration is complete.
 
 ## Stop conditions
 
@@ -298,6 +350,16 @@ Keep the launch hold active if any of these are true:
 - backup job or monitor source does not equal the reviewed commit;
 - database role can write or cannot read every required public table;
 - bucket Versioning/default COMPLIANCE retention cannot be queried and verified;
+- writer authority is not limited to one exact object and the approved UTC
+  window, its rendered object key contains IAM wildcard or policy-variable
+  syntax, or it does not require `If-None-Match`;
+- the bucket policy does not explicitly deny multipart initiation and part
+  uploads on the reserved backup prefix, that deny has not been live-tested,
+  or an incomplete multipart upload already exists for the exact one-shot key;
+- restore content-read authority is broader than the one selected object and
+  version;
+- `/railway.backup.json` is bound or recurring scheduling is active during the
+  one-time rotation;
 - recurring writes are enabled without approved lifecycle expiry or a tested
   cost-ceiling hard stop;
 - latest artifact is older than 14 hours or lacks an immutable version;

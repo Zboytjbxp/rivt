@@ -19,7 +19,15 @@ UTC calendar-month window, permits one deterministic create-only write per
 12-hour slot, caps new PostgreSQL artifacts at 16 MiB, binds the exact
 destination coordinates, verifies the provider checksum and default 30-day
 COMPLIANCE retention, and preserves active-key-only verification and restore
-receipts. The focused backup/IAM suite passes 98/98. Production build,
+receipts. A completed security diff scan found that the earlier prefix-wide
+writer fixture could bypass those source limits through raw or incomplete
+multipart uploads if its future credential were stolen. The remediated fixture
+now grants `PutObject` for one exact object only during the approved UTC window
+and only with `If-None-Match`; retention verification is a separate exact-key
+read. The bucket fixture explicitly denies multipart initiation and part uploads, and the
+temporary restore fixture is limited to one exact object version. None of these
+provider policies has been applied or live-tested. The focused backup/IAM suite
+passes 98/98. Production build,
 application lint, security lint, 248 unit/frontend tests, three non-database
 integration checks, all three browser journeys, patch formatting, and the
 production dependency audit pass. Twenty PostgreSQL integration checks skipped
