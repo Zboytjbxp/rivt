@@ -2,6 +2,23 @@
 
 ## Operational Incident Addendum - 2026-07-29 Credential Containment
 
+- `GA-OPS-004` gains unactivated backup-only source hardening on
+  `codex/backup-rotation-hotfix`: one approved UTC calendar-month write window,
+  deterministic 12-hour create-only slots, a fixed 16 MiB new-artifact limit,
+  exact destination/source binding, provider-confirmed checksum and default
+  COMPLIANCE retention, and active-key-only verification/restore receipts. The
+  one-shot writer fixture is limited to one exact object, approved UTC window,
+  and conditional create; the bucket fixture denies multipart initiation and
+  part uploads; and the restore fixture permits content read for one exact object
+  version. Focused backup/IAM tests pass 98/98; build,
+  application/security lint, 248 unit/frontend tests, three non-database
+  integration checks, all three browser journeys, patch formatting, and the
+  production dependency audit also pass. Twenty PostgreSQL integration checks
+  require fresh disposable-database CI. This is source preparation only—not
+  merge, deployment, credential creation, backup evidence, scheduler
+  activation, or complete disaster recovery. Current backup-encryption
+  recurrence proof and independent application-object recovery remain pending.
+
 - `GA-OPS-007` gains local Web Push retirement instrumentation: migration
   `0042_push_vapid_generation` preserves legacy subscriptions as unknown,
   constrains non-null values to nonsecret 64-character SHA-256 fingerprints,

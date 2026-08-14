@@ -1,0 +1,31 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ReadBucketProtectionConfiguration",
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetBucketVersioning",
+        "s3:GetBucketObjectLockConfiguration"
+      ],
+      "Resource": "arn:aws:s3:::<BUCKET>"
+    },
+    {
+      "Sid": "ReadOneBackupVersion",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectVersion",
+      "Resource": "arn:aws:s3:::<BUCKET>/<OBJECT_KEY>",
+      "Condition": {
+        "StringEquals": {
+          "s3:VersionId": "<VERSION_ID>"
+        }
+      }
+    },
+    {
+      "Sid": "ReadOneBackupRetention",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectRetention",
+      "Resource": "arn:aws:s3:::<BUCKET>/<OBJECT_KEY>"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm run build"
+  },
+  "deploy": {
+    "startCommand": "npm run backup:scheduled",
+    "numReplicas": 1,
+    "restartPolicyType": "NEVER",
+    "restartPolicyMaxRetries": null,
+    "cronSchedule": "7 */12 * * *",
+    "overlapSeconds": 0,
+    "drainingSeconds": 0
+  }
+}
