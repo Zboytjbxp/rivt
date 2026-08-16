@@ -8,6 +8,7 @@ import {
   assertDifferentDatabases,
   assertDifferentRuntimeDatabases,
   assertRestoreUsableSnapshot,
+  canonicalTableColumns,
   configureCanonicalTextSession,
   countTableRows,
   databaseTableDigests,
@@ -46,15 +47,19 @@ function tableMapFromSnapshot(snapshot) {
   return new Map(snapshot.tables.map((table) => [table.name, table]));
 }
 
-async function restoreTable(client, snapshotTable, batchSize) {
+export async function restoreTable(client, snapshotTable, batchSize) {
   const targetColumns = await tableColumns(client, snapshotTable.name);
-  assert.deepEqual(targetColumns, snapshotTable.columns, `${snapshotTable.name} columns differ from backup artifact.`);
+  assert.deepEqual(
+    canonicalTableColumns(targetColumns),
+    canonicalTableColumns(snapshotTable.columns),
+    `${snapshotTable.name} columns differ from backup artifact.`,
+  );
 
   for (let index = 0; index < snapshotTable.rows.length; index += batchSize) {
     await insertBatch(
       client,
       snapshotTable.name,
-      targetColumns,
+      snapshotTable.columns,
       snapshotTable.rows.slice(index, index + batchSize),
       { rowEncoding: POSTGRES_TEXT_ROW_ENCODING },
     );

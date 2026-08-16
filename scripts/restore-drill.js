@@ -6,6 +6,7 @@ import {
   assertBackupDatabaseRoleReadOnly,
   assertDifferentDatabases,
   beginReadOnlyBackupSnapshot,
+  canonicalTableColumns,
   countTableRows,
   databaseTableDigests,
   diffCounts,
@@ -33,7 +34,10 @@ export async function completeInventory(pool, { requireReadOnlyRole = false } = 
       const tableNames = await publicTables(client);
       const tables = [];
       for (const tableName of tableNames) {
-        tables.push({ name: tableName, columns: await tableColumns(client, tableName) });
+        tables.push({
+          name: tableName,
+          columns: canonicalTableColumns(await tableColumns(client, tableName)),
+        });
       }
       const inventory = {
         tableNames,

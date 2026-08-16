@@ -727,6 +727,10 @@ export async function tableColumns(client, tableName) {
         });
 }
 
+export function canonicalTableColumns(columns) {
+  return [...columns].sort((left, right) => left.name.localeCompare(right.name));
+}
+
 export async function foreignKeyDependencies(client, tables) {
   const result = await client.query(`
     SELECT
