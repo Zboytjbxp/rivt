@@ -1623,7 +1623,11 @@ export async function verifyProtectedBackupObject(client, config, identity, opti
     || head.ContentLength > MAX_ENCRYPTED_BACKUP_BYTES
     || !Number.isFinite(uploadedMs)
     || !Number.isFinite(retainUntilMs)
-    || retainUntilMs < uploadedMs + options.retentionDays * 86_400_000
+    || retainUntilMs < (
+      uploadedMs
+      + options.retentionDays * 86_400_000
+      - MAX_PROVIDER_CLOCK_SKEW_MS
+    )
     || retainUntilMs <= (options.now ?? Date.now())
   ) {
     throw new BackupConfigurationError("BACKUP_OBJECT_INVALID", "Backup object metadata or retention is invalid.");
