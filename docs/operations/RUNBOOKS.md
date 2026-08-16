@@ -74,7 +74,11 @@ The gate requires:
 - A passed incident rehearsal within the last 30 days.
 - Founder, support, and legal/safety approvals.
 
-Current state: primary owner is recorded as Michael at `support@rivt.pro`, and GitHub synthetic issue routing is configured. Backup owner, support hours, dedicated error monitoring, paging, rehearsal, and approvals remain missing; therefore Gate A remains blocked.
+Current state: primary and backup owners, support hours, synthetic monitoring,
+dedicated error monitoring, paging, a current passed rehearsal, and the required
+incident-routing approvals are recorded. The separate production-credential
+incident and its explicit `ACTIVE_LAUNCH_HOLD` remain open, so these routing
+prerequisites do not authorize launch.
 
 ## Launch Readiness Gate
 
@@ -98,8 +102,20 @@ The gate requires everything from incident readiness plus:
 - Restore-drill cadence, owner, and next due date.
 - A passed named backup-artifact restore from the last 30 days.
 - Founder and operations approvals for the recovery policy.
+- `operationalReadiness.postgresqlLogicalRecovery` is `passed`.
+- `operationalReadiness.recurringBackup` is active.
+- `operationalReadiness.backupFreshnessMonitor` is active.
+- `operationalReadiness.applicationObjectByteRecovery` is `passed`.
+- A current `operationalApproval` records who approved this complete recovery
+  posture and when.
 
-Current state: the latest named backup-artifact restore is recorded in `docs/operations/recovery-policy.json`, but RPO/RTO targets, retention, cadence, and recovery-policy approvals remain missing; therefore Gate A remains blocked.
+Current state: policy targets, retention, cadence, policy approvals, and a fresh
+PostgreSQL logical restore are recorded. Operational readiness is still
+`blocked`: recurring backup and independent backup-freshness monitoring are
+inactive, application-object-byte recovery is missing, and current operational
+approval is pending. The explicit launch hold is also active. The approved RPO
+and RTO are targets for PostgreSQL logical records, not a complete-service
+recovery guarantee.
 
 ## Operational Kill Switches
 
@@ -159,6 +175,12 @@ Gate A auth, write, and upload throttles use the PostgreSQL `rate_limit_windows`
 3. Measure recovery time and recovery point.
 4. Record missing records, configuration, and repair actions.
 5. A successful backup job without restore proof does not close the requirement.
+
+The 2026-08-16 drill completed the PostgreSQL logical portion only: one
+active-key-only artifact restored 109 tables and 8,862 rows with zero
+count/content diffs in 53.956 seconds. It did not restore application photos,
+documents, or other object bytes and therefore does not satisfy the complete
+drill described in steps 1-2.
 
 Follow `docs/operations/PRODUCTION_BACKUP_RUNBOOK.md`. Gate A requires proof
 that a named, immutable backup object can be restored; a direct database copy

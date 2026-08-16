@@ -10,7 +10,7 @@
   was not recorded)
 - Declared at: `2026-07-29T21:42:25-04:00` (first formal repository
   declaration; any earlier verbal declaration is unverified)
-- Last updated: 2026-07-31 America/New_York
+- Last updated: 2026-08-16 America/New_York
 - Approved interruption window: up to 30 minutes
 - Approved incremental cost: the initial $0.10 object-storage allowance was
   followed by authorization to continue the remaining incident work unless
@@ -61,7 +61,7 @@ moment.
 | Resend | Rotated; prior key deleted | Replacement sending-only key is restricted to `rivt.pro`; a proof email was delivered; the provider dashboard confirmed deletion of the prior key and shows one replacement key remaining |
 | Object storage | Rotated; prior copied pair invalidated | Railway bucket `rivt-private` (`83403a81-f912-431e-b0fc-40a238f347e8`) retained identical object count and bytes across the one-time reset; both managed references persisted; deployment `4010a6b9-891a-4d87-9a25-a8cb93c64ee2` and an existing-object read passed |
 | Web Push VAPID | Rotated; previous pair retired | An already opted-in owner-controlled physical device received a real alert through the transition bridge; both previous-key variables were then removed, Railway deployment `a29ff982-c10c-4ec3-b8e6-9fd323e65837` succeeded, and the running service reports the active pair present and previous pair absent |
-| Backup encryption | Rotated; previous key retired | Fresh active-key artifact `2026-07-30T03-58-45.931Z`, the 2026-07-29 legacy artifact, and the retained 2026-07-25 artifact all restored without count differences; deployment prefix `638e213e` is healthy on commit `854eef63b4d169746faf87157aaa9f3c1345329d`, and runtime checks report the restore URL and both previous-key aliases absent |
+| Backup encryption | Rotated; predecessor retired | On 2026-08-16, one fresh active-key-only PostgreSQL artifact restored with 109 tables, 8,862 rows, and zero count/content diffs. The predecessor configuration and both runtime aliases are absent. This new artifact is the sole known usable recovery point; older artifacts that require the retired predecessor remain stored but are intentionally unrecoverable through RIVT. Exact identifiers remain in restricted operational evidence. |
 | Authentication metadata pepper | Rotated | Replacement is deployed; the old value has no compatibility fallback and is no longer configured for active use |
 | Sentry DSN | Rotated; prior key disabled | Replacement key `RIVT production replacement 2026-07-31` is the only enabled production key used by Railway; deployments `599620ce-18fc-4e86-b638-88283dd18857` and `c6ddf9c8-91a3-4953-a47c-70c72deb154e` succeeded; exact-source event `52d1e8add9f7492eb440de033209da0e` was indexed as a high-priority production issue and triggered the existing alert; the prior `Default` key was disabled; post-retirement event `7ed1315e474448ce9807dbb4bd6bf420` was then accepted and indexed |
 
@@ -303,6 +303,38 @@ moment.
   `ACTIVE_LAUNCH_HOLD` remain open for unrelated remaining evidence.
 
 ## Backup-encryption rotation and restore evidence
+
+### 2026-08-16 active-key-only recurrence proof and retirement closeout
+
+- One fresh PostgreSQL logical artifact restored into an isolated temporary
+  database using only the active backup-encryption key.
+- The restored target contained 109 tables and 8,862 rows. Source and target
+  returned zero row-count differences and zero content differences. The target
+  had 42 applied migrations and zero pending migrations.
+- Restore work took 2.721 seconds and verification took 51.235 seconds, for
+  53.956 seconds total against the approved 240-minute RTO target.
+- Before removal, a secret-safe comparison proved that production's active key
+  matched the one-shot key and differed from the predecessor. Sensitive values
+  in the temporary Railway vault were then blanked.
+- Both temporary AWS writer and restore credentials are inactive. The isolated
+  restore database was dropped, the local PostgreSQL process and production
+  tunnel were stopped, and temporary helpers were removed.
+- The production predecessor configuration was blanked and a same-source
+  redeploy succeeded. A value-free runtime check found the active key present
+  and both supported previous-key aliases absent. Public health returned the
+  exact expected restore-hotfix source, the production monitor passed, and
+  bank payments remained disabled.
+- In this 2026-08-16 subsection, no credential value, source hash, deployment
+  identifier, or provider object coordinate is recorded; exact identifiers
+  remain in restricted operational evidence.
+- The fresh artifact is now the sole known usable recovery point. Older
+  artifacts that require the retired predecessor remain stored but are
+  intentionally unrecoverable through RIVT; that forfeiture was explicitly
+  accepted before predecessor retirement and is not represented as deletion.
+- This closeout does not clear the incident or the explicit launch hold.
+  Recurring backup scheduling remains inactive, and application photos,
+  documents, and other object bytes remain outside the PostgreSQL-only
+  recovery path.
 
 - Active/previous key-ring compatibility was deployed before rotating the
   backup-encryption key. New backup writes use only the active key; the previous
@@ -548,8 +580,10 @@ This incident remains open until:
   incident may be contained but not closed;
 - authentication, database, storage, email, payments/webhooks, OAuth, Web Push,
   monitoring, and backup restore access are verified without printing secrets;
-- the existing backup artifact is still recoverable through the approved
-  previous-key path;
+- the new active-key-only artifact is verified as the sole known usable
+  recovery point, and the accepted forfeiture of older artifacts that require
+  the retired predecessor is documented without claiming that those artifacts
+  remain recoverable;
 - provider, PostgreSQL, and object-access logs have been reviewed for
   unauthorized access or exfiltration;
 - the incident record contains only nonsecret evidence and timestamps;

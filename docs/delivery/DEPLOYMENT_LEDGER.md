@@ -1,5 +1,40 @@
 # Deployment Ledger
 
+## 2026-08-16 - Active-Key-Only Backup Restore Proof
+
+- Scope: one fresh encrypted PostgreSQL logical artifact was restored into an
+  isolated temporary database using only the active backup-encryption key.
+- Restore evidence: 109 tables and 8,862 rows restored; source and target had
+  zero row-count differences and zero content differences. The restored target
+  had 42 applied migrations and zero pending migrations.
+- Timing: restore work completed in 2.721 seconds and verification completed in
+  51.235 seconds, for 53.956 seconds total against the approved 240-minute RTO
+  target.
+- Source boundary: artifact creation preceded the two narrowly reviewed restore
+  fixes; the restore ran only after both fixes were deployed. Restricted
+  operational evidence retains the exact creator and restore-source
+  identifiers. This 2026-08-16 entry records neither the artifact digest nor a
+  provider deployment identifier.
+- Key retirement: a secret-safe comparison proved that production's active key
+  matched the one-shot key and differed from its predecessor. The production
+  predecessor configuration was then blanked, a same-source redeploy
+  succeeded, and a value-free runtime check found the active key present with
+  both supported previous-key aliases absent.
+- Credential and temporary-resource cleanup: both temporary AWS writer and
+  restore credentials are inactive; sensitive values in the temporary Railway
+  vault are blank; the isolated restore database was dropped; the local
+  PostgreSQL process and production tunnel were stopped; and temporary helpers
+  were removed. No credential value or provider object coordinate is stored in
+  this 2026-08-16 entry.
+- Post-closeout proof: public health returned the exact expected
+  restore-hotfix source, the production monitor passed, and bank payments
+  remained disabled.
+- Boundary: this is PostgreSQL-only recovery evidence. The explicit launch
+  hold remains active, recurring backup scheduling remains inactive, and a
+  coordinated recovery path for application photos, documents, and other
+  object bytes remains open. This entry does not claim complete disaster
+  recovery or launch approval.
+
 ## 2026-07-31 - Sentry DSN Rotation and Retirement
 
 - Production source commit:

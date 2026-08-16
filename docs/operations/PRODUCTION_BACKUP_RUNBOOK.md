@@ -1,6 +1,8 @@
 # RIVT production backup runbook
 
-Status: **provider foundation configured; identities, artifacts, recurrence, and restore proof still inactive**.
+Status: **one immutable PostgreSQL artifact and an active-key-only restore are
+proved; recurring backup and freshness monitoring are inactive, and
+application-object-byte recovery is missing**.
 
 This runbook separates four different jobs that must not share credentials:
 
@@ -97,19 +99,23 @@ The founder approved AWS S3 in `us-east-1` as the independent recovery
 provider, in a separately administered founder-controlled account, with a private bucket, Versioning,
 30-day Object Lock COMPLIANCE retention, least-privilege credentials, and the
 recorded one-time and monthly cost ceilings. Backblaze B2 was an earlier
-alternative and is not the active plan. The AWS account and an empty dedicated
-bucket now exist. Root passkey MFA is enabled, root has no access keys, a
-near-zero spend alert is configured at $0.01 (an alert, not a hard cap), and
-all four bucket-level Block Public Access settings are on.
+alternative and is not the active plan. The AWS account and dedicated bucket
+now hold one immutable PostgreSQL logical artifact whose active-key-only
+restore passed on 2026-08-16. The one-shot writer and restore credentials are
+inactive, temporary Railway vault secrets are blank, and the isolated restore
+target and local helpers were removed. These facts do not activate recurrence
+or the independent monitor. Root passkey MFA is enabled, root has no access
+keys, a near-zero spend alert is configured at $0.01 (an alert, not a hard
+cap), and all four bucket-level Block Public Access settings are on.
 Object Ownership is bucket-owner-enforced, Versioning is enabled, default
 encryption is SSE-S3, and default Object Lock is 30-day COMPLIANCE. Exact
-provider identifiers are intentionally omitted from repository evidence and
-must be recorded in access-restricted operator evidence before activation. No
-IAM runtime identity, access key, bucket object, lifecycle rule, scheduler AWS
-read credential/configuration, or restore proof exists yet. The protected
-GitHub monitor environment already contains the active backup-encryption
-secret, but it cannot inspect AWS until a separate read-only identity and exact
-destination configuration are supplied. A deny-only bucket policy was saved
+provider identifiers for the 2026-08-16 proof are intentionally omitted from
+this current-state update and remain in access-restricted operator evidence.
+No lifecycle rule, recurring
+scheduler identity, or active monitor read credential/configuration exists.
+The protected GitHub monitor environment already contains the active
+backup-encryption secret, but it cannot inspect AWS until a separate read-only
+identity and exact destination configuration are supplied. A deny-only bucket policy was saved
 and is configured to deny non-TLS traffic and writes to the reserved backup
 prefix unless the caller supplies `If-None-Match` for create-only semantics.
 The reviewed source fixture adds a third deny intended to refuse multipart

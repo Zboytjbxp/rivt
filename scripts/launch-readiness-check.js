@@ -19,12 +19,44 @@ function positiveNumber(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
+function positiveInteger(value) {
+  return Number.isInteger(value) && value > 0;
+}
+
+function nonNegativeInteger(value) {
+  return Number.isInteger(value) && value >= 0;
+}
+
+function dateTime(value, { endOfDate = false } = {}) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const normalized = endOfDate && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())
+    ? `${value.trim()}T23:59:59.999Z`
+    : value.trim();
+  const date = new Date(normalized);
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
 function withinDays(value, days, now = new Date()) {
-  if (!value) return false;
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return false;
+  const date = dateTime(value);
+  if (!date) return false;
   const ageMs = now.getTime() - date.getTime();
   return ageMs >= 0 && ageMs <= days * 24 * 60 * 60 * 1000;
+}
+
+function restrictedArtifactIdentityRecorded(identity) {
+  return identity?.status === "recorded_restricted" && hasValue(identity.reference);
+}
+
+function currentOperationalApproval(approval, latestRestore, operationalReadiness, now) {
+  if (approval?.status !== "approved" || !hasValue(approval.approvedBy)) return false;
+  const approvedAt = dateTime(approval.approvedAt);
+  const restoreEvidenceAt = dateTime(latestRestore?.completedAt);
+  const operationalEvidenceAt = dateTime(operationalReadiness?.evidenceUpdatedAt);
+  if (!approvedAt || !restoreEvidenceAt || !operationalEvidenceAt) return false;
+  const latestEvidenceAt = Math.max(restoreEvidenceAt.getTime(), operationalEvidenceAt.getTime());
+  return latestEvidenceAt <= now.getTime() &&
+    approvedAt.getTime() >= latestEvidenceAt &&
+    approvedAt.getTime() <= now.getTime();
 }
 
 function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
@@ -65,24 +97,248 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
     });
   }
 
-  if (!policy.restoreDrillCadence?.nextDueAt) {
+  const nextRestoreDrillDueAt = dateTime(policy.restoreDrillCadence?.nextDueAt, { endOfDate: true });
+  if (!nextRestoreDrillDueAt) {
     findings.push({
       code: "NEXT_RESTORE_DRILL_MISSING",
-      message: "Next restore-drill due date must be recorded.",
+      message: "Next restore-drill due date must be recorded as a valid date.",
+    });
+  } else if (nextRestoreDrillDueAt.getTime() < now.getTime()) {
+    findings.push({
+      code: "NEXT_RESTORE_DRILL_OVERDUE",
+      message: "The next restore-drill due date has passed.",
     });
   }
 
   const latestRestore = policy.latestNamedArtifactRestore;
-  if (
-    latestRestore?.status !== "passed" ||
-    !hasValue(latestRestore.artifactKey) ||
-    !positiveNumber(latestRestore.restoreDurationMs) ||
-    !positiveNumber(latestRestore.verificationDurationMs) ||
-    !withinDays(latestRestore.completedAt, maxEvidenceAgeDays, now)
-  ) {
+  const recentRestoreEvidence = latestRestore?.status === "passed" &&
+    withinDays(latestRestore.completedAt, maxEvidenceAgeDays, now);
+  if (!recentRestoreEvidence) {
     findings.push({
       code: "RECENT_BACKUP_ARTIFACT_RESTORE_MISSING",
       message: "A passed named backup-artifact restore from the last 30 days is required.",
+    });
+  }
+
+  if (!restrictedArtifactIdentityRecorded(latestRestore?.artifactIdentity)) {
+    findings.push({
+      code: "BACKUP_ARTIFACT_IDENTITY_MISSING",
+      message: "The restored artifact must have a non-secret identity reference recorded in restricted evidence.",
+    });
+  }
+
+  const restoreCountsValid = positiveInteger(latestRestore?.tableCount) &&
+    nonNegativeInteger(latestRestore?.rowCount);
+  if (!restoreCountsValid) {
+    findings.push({
+      code: "POSTGRESQL_RESTORE_COUNTS_INVALID",
+      message: "The latest restore must record a positive table count and a non-negative row count.",
+    });
+  }
+
+  const restoreMigrationsCurrent = latestRestore?.pendingMigrations === 0;
+  if (!restoreMigrationsCurrent) {
+    findings.push({
+      code: "POSTGRESQL_RESTORE_PENDING_MIGRATIONS",
+      message: "The latest restored database must have zero pending migrations.",
+    });
+  }
+
+  const restoreCountParityVerified = latestRestore?.countDiffs === 0;
+  if (!restoreCountParityVerified) {
+    findings.push({
+      code: "POSTGRESQL_RESTORE_COUNT_DIFFS_PRESENT",
+      message: "The latest restore must have zero source-to-target row-count differences.",
+    });
+  }
+
+  const restoreContentParityVerified = latestRestore?.contentDiffs === 0;
+  if (!restoreContentParityVerified) {
+    findings.push({
+      code: "POSTGRESQL_RESTORE_CONTENT_DIFFS_PRESENT",
+      message: "The latest restore must have zero source-to-target content differences.",
+    });
+  }
+
+  const restoreDurationsValid = positiveNumber(latestRestore?.restoreDurationMs) &&
+    positiveNumber(latestRestore?.verificationDurationMs) &&
+    positiveNumber(latestRestore?.totalDurationMs);
+  if (!restoreDurationsValid) {
+    findings.push({
+      code: "POSTGRESQL_RESTORE_DURATION_INVALID",
+      message: "Restore, verification, and total recovery durations must all be positive numbers.",
+    });
+  }
+
+  const restoreDurationMatches = restoreDurationsValid &&
+    latestRestore.totalDurationMs ===
+      latestRestore.restoreDurationMs + latestRestore.verificationDurationMs;
+  if (restoreDurationsValid && !restoreDurationMatches) {
+    findings.push({
+      code: "POSTGRESQL_RESTORE_DURATION_MISMATCH",
+      message: "Total recovery duration must equal restore duration plus verification duration.",
+    });
+  }
+
+  const restoreWithinRto = restoreDurationsValid &&
+    positiveNumber(policy.targets?.rtoMinutes) &&
+    latestRestore.totalDurationMs <= policy.targets.rtoMinutes * 60_000;
+  if (restoreDurationsValid && positiveNumber(policy.targets?.rtoMinutes) && !restoreWithinRto) {
+    findings.push({
+      code: "POSTGRESQL_RESTORE_RTO_EXCEEDED",
+      message: "The latest total recovery duration exceeds the approved recovery time objective.",
+    });
+  }
+
+  const activeKeyOnlyRestore = latestRestore?.activeKeyOnly === true;
+  if (!activeKeyOnlyRestore) {
+    findings.push({
+      code: "ACTIVE_KEY_ONLY_RESTORE_MISSING",
+      message: "The latest restore evidence must prove recovery with only the active backup-encryption key.",
+    });
+  }
+
+  const backupKeyPredecessorRetired = latestRestore?.predecessorPresentAfterCloseout === false;
+  if (!backupKeyPredecessorRetired) {
+    findings.push({
+      code: "BACKUP_KEY_PREDECESSOR_NOT_RETIRED",
+      message: "The latest restore closeout must record that the predecessor backup-encryption key is absent.",
+    });
+  }
+
+  const temporaryProviderCredentialsRetired =
+    latestRestore?.temporaryProviderCredentialsActiveAfterCloseout === false;
+  if (!temporaryProviderCredentialsRetired) {
+    findings.push({
+      code: "TEMPORARY_PROVIDER_CREDENTIALS_NOT_RETIRED",
+      message: "Temporary provider credentials must be inactive after restore closeout.",
+    });
+  }
+
+  const temporaryRailwayVaultCleared =
+    latestRestore?.temporaryRailwayVaultSensitiveValuesPresent === false;
+  if (!temporaryRailwayVaultCleared) {
+    findings.push({
+      code: "TEMPORARY_RAILWAY_VAULT_NOT_CLEARED",
+      message: "Temporary Railway vault values must be absent after restore closeout.",
+    });
+  }
+
+  const isolatedRestoreDatabaseDropped = latestRestore?.isolatedRestoreDatabaseDropped === true;
+  if (!isolatedRestoreDatabaseDropped) {
+    findings.push({
+      code: "ISOLATED_RESTORE_DATABASE_NOT_DROPPED",
+      message: "The isolated restore database must be dropped after verification.",
+    });
+  }
+
+  const localRestoreProcessesStopped = latestRestore?.localRestoreProcessesStopped === true;
+  if (!localRestoreProcessesStopped) {
+    findings.push({
+      code: "LOCAL_RESTORE_PROCESSES_NOT_STOPPED",
+      message: "Local restore processes and tunnels must be stopped after verification.",
+    });
+  }
+
+  const temporaryHelpersRemoved = latestRestore?.temporaryHelpersRemoved === true;
+  if (!temporaryHelpersRemoved) {
+    findings.push({
+      code: "TEMPORARY_RESTORE_HELPERS_NOT_REMOVED",
+      message: "Temporary restore helpers must be removed after verification.",
+    });
+  }
+
+  const productionHealthVerified = latestRestore?.productionHealthVerified === true;
+  if (!productionHealthVerified) {
+    findings.push({
+      code: "PRODUCTION_HEALTH_NOT_VERIFIED_AFTER_RESTORE",
+      message: "Production health must be verified after restore closeout.",
+    });
+  }
+
+  const productionMonitorPassed = latestRestore?.productionMonitorPassed === true;
+  if (!productionMonitorPassed) {
+    findings.push({
+      code: "PRODUCTION_MONITOR_NOT_PASSED_AFTER_RESTORE",
+      message: "The production synthetic monitor must pass after restore closeout.",
+    });
+  }
+
+  const postgresqlRestoreEvidenceReady = recentRestoreEvidence &&
+    restrictedArtifactIdentityRecorded(latestRestore?.artifactIdentity) &&
+    restoreCountsValid &&
+    restoreMigrationsCurrent &&
+    restoreCountParityVerified &&
+    restoreContentParityVerified &&
+    restoreDurationsValid &&
+    restoreDurationMatches &&
+    restoreWithinRto &&
+    activeKeyOnlyRestore &&
+    backupKeyPredecessorRetired &&
+    temporaryProviderCredentialsRetired &&
+    temporaryRailwayVaultCleared &&
+    isolatedRestoreDatabaseDropped &&
+    localRestoreProcessesStopped &&
+    temporaryHelpersRemoved &&
+    productionHealthVerified &&
+    productionMonitorPassed;
+
+  const operationalReadiness = policy.operationalReadiness;
+  const operationalEvidenceAt = dateTime(operationalReadiness?.evidenceUpdatedAt);
+  const operationalEvidenceTimestampValid = Boolean(
+    operationalEvidenceAt && operationalEvidenceAt.getTime() <= now.getTime()
+  );
+  if (!operationalEvidenceTimestampValid) {
+    findings.push({
+      code: "RECOVERY_OPERATIONAL_EVIDENCE_TIMESTAMP_MISSING_OR_INVALID",
+      message: "Recovery operational evidence must record a valid, non-future update timestamp.",
+    });
+  }
+
+  const postgresqlLogicalRecoveryDeclared =
+    operationalReadiness?.postgresqlLogicalRecovery === "passed";
+  const recoveryLeaves = {
+    postgresqlLogicalRecovery: postgresqlLogicalRecoveryDeclared && postgresqlRestoreEvidenceReady,
+    recurringBackup: operationalReadiness?.recurringBackup === "active",
+    backupFreshnessMonitor: operationalReadiness?.backupFreshnessMonitor === "active",
+    applicationObjectByteRecovery: operationalReadiness?.applicationObjectByteRecovery === "passed",
+  };
+
+  if (!postgresqlLogicalRecoveryDeclared) {
+    findings.push({
+      code: "POSTGRESQL_LOGICAL_RECOVERY_MISSING",
+      message: "A passed PostgreSQL logical backup restore is required before launch.",
+    });
+  }
+
+  if (!recoveryLeaves.recurringBackup) {
+    findings.push({
+      code: "RECURRING_BACKUP_INACTIVE",
+      message: "Recurring production backups must be active before launch.",
+    });
+  }
+
+  if (!recoveryLeaves.backupFreshnessMonitor) {
+    findings.push({
+      code: "BACKUP_FRESHNESS_MONITOR_INACTIVE",
+      message: "Independent backup-freshness monitoring must be active before launch.",
+    });
+  }
+
+  if (!recoveryLeaves.applicationObjectByteRecovery) {
+    findings.push({
+      code: "APPLICATION_OBJECT_RECOVERY_MISSING",
+      message: "Recovery of application photos, documents, and attachment bytes must be proven before launch.",
+    });
+  }
+
+  const operationalLeavesReady = Object.values(recoveryLeaves).every(Boolean) &&
+    operationalEvidenceTimestampValid;
+  const expectedOperationalStatus = operationalLeavesReady ? "ready" : "blocked";
+  if (operationalReadiness?.status !== expectedOperationalStatus) {
+    findings.push({
+      code: "RECOVERY_OPERATIONAL_STATUS_INCONSISTENT",
+      message: `Recovery operational status must be ${expectedOperationalStatus} based on its evidence leaves.`,
     });
   }
 
@@ -95,6 +351,19 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
     }
   }
 
+  const operationalApprovalCurrent = currentOperationalApproval(
+    policy.operationalApproval,
+    latestRestore,
+    operationalReadiness,
+    now,
+  );
+  if (!operationalApprovalCurrent) {
+    findings.push({
+      code: "RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE",
+      message: "Recovery operations require an explicit approval recorded at or after the latest recovery evidence/configuration.",
+    });
+  }
+
   return {
     ok: findings.length === 0,
     findings,
@@ -104,10 +373,35 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
       rtoMinutes: policy.targets?.rtoMinutes ?? null,
       retentionDays: policy.backupRetention?.days ?? null,
       restoreDrillCadenceDays: policy.restoreDrillCadence?.days ?? null,
+      nextRestoreDrillDueAt: policy.restoreDrillCadence?.nextDueAt ?? null,
       recentNamedArtifactRestore: Boolean(
-        latestRestore?.status === "passed" &&
-          withinDays(latestRestore.completedAt, maxEvidenceAgeDays, now),
+        recentRestoreEvidence,
       ),
+      artifactIdentityRecorded: restrictedArtifactIdentityRecorded(latestRestore?.artifactIdentity),
+      postgresqlRestoreEvidenceReady,
+      restoreCountsValid,
+      restoreMigrationsCurrent,
+      restoreCountParityVerified,
+      restoreContentParityVerified,
+      restoreDurationsValid,
+      restoreDurationMatches,
+      restoreWithinRto,
+      activeKeyOnlyRestore,
+      backupKeyPredecessorRetired,
+      temporaryProviderCredentialsRetired,
+      temporaryRailwayVaultCleared,
+      isolatedRestoreDatabaseDropped,
+      localRestoreProcessesStopped,
+      temporaryHelpersRemoved,
+      productionHealthVerified,
+      productionMonitorPassed,
+      operationalStatus: operationalReadiness?.status ?? null,
+      operationalEvidenceUpdatedAt: operationalReadiness?.evidenceUpdatedAt ?? null,
+      postgresqlLogicalRecovery: recoveryLeaves.postgresqlLogicalRecovery,
+      recurringBackupActive: recoveryLeaves.recurringBackup,
+      backupFreshnessMonitorActive: recoveryLeaves.backupFreshnessMonitor,
+      applicationObjectByteRecoveryPassed: recoveryLeaves.applicationObjectByteRecovery,
+      operationalApprovalCurrent,
     },
   };
 }
