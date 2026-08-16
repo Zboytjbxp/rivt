@@ -1,56 +1,54 @@
 # RIVT Build State
 
-Last updated: 2026-08-13 America/New_York
+Last updated: 2026-08-16 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Emergency production credential containment; feature activation paused.
-Active packet: `docs/delivery/packets/86_CUSTOMER_DOCUMENTS_AND_CONTACT_IMPORT.md`
-Repository branch: `master` (source: `codex/customer-documents-contact-import`)
-Production feature release commit: `1acccf49f8223d432b5cdcff8d5455a27d31d150`
-Production incident hotfix commit:
-`f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`
+Active product packet: none. Packet 86 is production verified; product feature
+work remains paused during incident containment.
+Active operational packet:
+`docs/operations/incidents/2026-07-29-production-credential-exposure.md`
+Repository branch: `master`
+Production product baseline: Packet 86 production verified; no feature release
+occurred during the 2026-08-16 backup closeout.
+Production operational source: backup-restore hotfix source
+`5071bdbfcff08de7d178ef088b2e3d5aefda0d88`, verified by public health and the
+production monitor. The provider deployment identifier remains restricted.
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
 
-Backup-key recurrence remediation is being prepared as a backup-only hotfix
-from exact production source `7ee9b30a77bbed2cb1ca4aeda330066884e3d59b` on
-`codex/backup-rotation-hotfix`. The source now fails closed outside one approved
-UTC calendar-month window, permits one deterministic create-only write per
-12-hour slot, caps new PostgreSQL artifacts at 16 MiB, binds the exact
-destination coordinates, verifies the provider checksum and default 30-day
-COMPLIANCE retention, and preserves active-key-only verification and restore
-receipts. A completed security diff scan found that the earlier prefix-wide
-writer fixture could bypass those source limits through raw or incomplete
-multipart uploads if its future credential were stolen. The remediated fixture
-now grants `PutObject` for one exact object only during the approved UTC window
-and only with `If-None-Match`; retention verification is a separate exact-key
-read. The bucket fixture explicitly denies multipart initiation and part uploads, and the
-temporary restore fixture is limited to one exact object version. None of these
-provider policies has been applied or live-tested. The focused backup/IAM suite
-passes 98/98. Production build,
-application lint, security lint, 248 unit/frontend tests, three non-database
-integration checks, all three browser journeys, patch formatting, and the
-production dependency audit pass. Twenty PostgreSQL integration checks skipped
-locally because this clean worktree has no test credential; fresh disposable-
-database CI remains required. Independent review, merge approval, and
-backup-only deployment approval remain pending. No production key, provider
-credential, database role, backup object, scheduler, or restore target has been
-created or changed by this preparation.
-Recurring scheduling remains inactive and outside the current approval.
-Application photos/documents are still outside this PostgreSQL-only recovery
-path, so complete disaster recovery and launch readiness remain blocked.
+## 2026-08-16 backup-key recurrence proof
 
-Current incident packet: Sentry replacement-key rotation is deployed from
-`codex/vapid-generation-tracking` through `master` at exact source
-`f505e5fcdd9874a172bb61b59ab083a2ff86e6d0`. Railway deployments
-`599620ce-18fc-4e86-b638-88283dd18857` and
-`c6ddf9c8-91a3-4953-a47c-70c72deb154e` succeeded with migration
-`0042_push_vapid_generation` ready. Public health returned `ok: true` with
-PostgreSQL and S3-compatible storage healthy and Sentry configured; the
-exact-source production monitor passed in 590 ms. The replacement key received
-an exact production event and triggered the existing high-priority alert before
-the prior key was disabled. A second unique event was accepted and indexed
-after retirement, proving production continuity on the replacement.
+- The backup-only restore hotfix is no longer in preparation. One fresh
+  PostgreSQL logical artifact restored into an isolated temporary database
+  using only the active backup-encryption key.
+- The proof restored 109 tables and 8,862 rows. Source and target returned zero
+  row-count differences and zero content differences. The target had 42
+  applied migrations and zero pending migrations.
+- Restore work took 2.721 seconds and verification took 51.235 seconds, for
+  53.956 seconds total against the approved 240-minute RTO target.
+- A secret-safe comparison proved that production's active key matched the
+  one-shot key and differed from the predecessor. After the successful proof,
+  the production predecessor configuration was blanked and a same-source
+  redeploy succeeded. A value-free runtime check then found the active key
+  present and both supported previous-key aliases absent.
+- Both temporary AWS writer and restore credentials are inactive. Sensitive
+  values in the temporary Railway vault are blank. The isolated restore
+  database was dropped, the local PostgreSQL process and production tunnel
+  were stopped, and the temporary helper directory was removed.
+- Public health returned the exact expected restore-hotfix source and the
+  production monitor passed. Bank payments remain disabled.
+- This closes the active-key-only PostgreSQL proof and predecessor-removal
+  boundary, not the broader incident. The explicit launch hold remains active,
+  recurring backup scheduling remains inactive, and application photos,
+  documents, and other object bytes remain outside this recovery path.
+  Complete disaster recovery and launch readiness are not claimed.
+
+Earlier Sentry rotation evidence remains closed: the replacement key received
+a production event and triggered the configured high-priority alert before the
+prior key was disabled, and a second event was accepted after retirement. The
+current operational evidence is the 2026-08-16 backup closeout above; the Sentry
+rotation is not the active packet.
 
 Local production build, application/security lint, 158 unit/frontend tests,
 all three sequential browser E2E journeys, diff integrity, and the production
@@ -73,9 +71,10 @@ outbox. This closes the Web Push key-retirement acceptance boundary without
 clearing the broader incident or `ACTIVE_LAUNCH_HOLD`. Sentry provider audit
 and usage views now also show only the expected rotation actions, 20 accepted
 errors in 14 days, zero filtered, rate-limited, or invalid events, and no
-significant spike. The remaining exit work is final evidence synthesis,
-explicit acceptance of the known historical database/object-storage forensic
-gaps, and a fresh Railway Stage 1 re-review and approval.
+significant spike. Current launch blockers include the still-open incident and
+launch hold, inactive recurring backups and independent freshness monitoring,
+missing application-object-byte recovery, pending operational recovery
+approval, and a fresh Railway Stage 1 re-review and approval.
 
 ## Active operational incident - Production credential exposure
 
@@ -83,7 +82,8 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   values into a restricted automation transcript on 2026-07-29. No secret is
   recorded in repository evidence, and no unauthorized use is currently known.
   All exposed credential classes are nevertheless treated as compromised.
-- Packet 86 remains the active product packet. The separately approved Railway
+- Packet 86 is production verified; there is no active product packet while
+  incident containment pauses feature work. The separately approved Railway
   Stage 1 activation is paused and its approval cannot be reused after this
   incident hotfix or any credential change.
 - A narrow compatibility hotfix was prepared from exact production source
@@ -436,9 +436,12 @@ gaps, and a fresh Railway Stage 1 re-review and approval.
   password screening, login enumeration resistance, browser-source/CSRF
   evidence, Trade News outbound-fetch SSRF controls, current-route automated
   accessibility, and operational-readiness proof.
-- Both committed readiness gates currently pass. Recovery evidence remains
-  fresh through 2026-08-24 and the latest named isolated restore and incident
-  rehearsal were completed on 2026-07-25.
+- The recovery policy's targets remain approved, but current operational
+  readiness is blocked. The 2026-08-16 PostgreSQL logical restore is fresh
+  through 2026-09-15; recurring backup and independent freshness monitoring
+  are inactive, application-object-byte recovery is missing, and current
+  operational approval is pending. The explicit launch hold also remains
+  active, so the strict launch gate must fail closed.
 - Physical iPhone Safari, Android Chrome, desktop keyboard-only, and real
   screen-reader acceptance remain a named human boundary. They will not be
   represented as complete by headless Chromium.

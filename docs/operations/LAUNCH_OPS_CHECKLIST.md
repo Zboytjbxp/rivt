@@ -30,13 +30,29 @@ Evidence:
 - Latest named backup-artifact restore passed in the last 30 days.
 - Next restore-drill due date recorded.
 - Founder and operations approvals recorded in `docs/operations/recovery-policy.json`.
+- `operationalReadiness.status` is `ready`.
+- `operationalReadiness.postgresqlLogicalRecovery` is `passed`.
+- `operationalReadiness.recurringBackup` is `active`.
+- `operationalReadiness.backupFreshnessMonitor` is `active`.
+- `operationalReadiness.applicationObjectByteRecovery` is `passed`.
+- `operationalApproval` is approved, names the approver and approval time, and
+  is at or after both the latest restore evidence and the latest operational-
+  readiness evidence/configuration update.
 
 Evidence:
 
 - `npm run launch:readiness -- --require-ready`
-- Named backup object key.
-- Restore target name and deletion proof.
+- Nonsecret `artifactIdentity.reference` pointing to restricted operational
+  evidence for the exact retained artifact.
+- Isolated-target cleanup proof without the target's provider identifier.
 - Restore duration and verification duration.
+- Exact provider object key/version and restore-target identifiers remain only
+  in restricted operator evidence; do not copy them into this checklist.
+
+Current state on 2026-08-16: **blocked**. PostgreSQL logical recovery is
+`passed`, but recurring backup and independent freshness monitoring are
+`inactive`, application-object-byte recovery is `missing`, operational
+readiness is `blocked`, and the current operational approval is `pending`.
 
 ## 3. Customer Support Readiness
 

@@ -3,9 +3,17 @@
   "status": "approved",
   "targets": {
     "rpoMinutes": 1440,
-    "rpoBasis": "Gate A pilot target: restore from the most recent daily logical backup artifact. RIVT does not process escrow, payroll, or platform-held job payments in Gate A.",
+    "rpoBasis": "PostgreSQL logical-record target only. Current evidence is one immutable artifact; recurring backup scheduling and independent freshness monitoring are inactive, so 1440 minutes is not an active recovery guarantee.",
     "rtoMinutes": 240,
-    "rtoBasis": "Gate A pilot target: restore application service and managed PostgreSQL/object-storage-backed records within 4 hours using the documented logical backup artifact restore path."
+    "rtoBasis": "PostgreSQL logical restore-and-verification target only. The 2026-08-16 active-key-only drill completed in 53.956 seconds; application object bytes and complete service recovery remain outside this evidence."
+  },
+  "operationalReadiness": {
+    "status": "blocked",
+    "evidenceUpdatedAt": "2026-08-16T21:37:01.200Z",
+    "postgresqlLogicalRecovery": "passed",
+    "recurringBackup": "inactive",
+    "backupFreshnessMonitor": "inactive",
+    "applicationObjectByteRecovery": "missing"
   },
   "backupRetention": {
     "days": 30,
@@ -16,18 +24,37 @@
   "restoreDrillCadence": {
     "days": 30,
     "owner": "Michael",
-    "nextDueAt": "2026-08-24T15:43:08.361Z"
+    "nextDueAt": "2026-09-15"
   },
   "latestNamedArtifactRestore": {
     "status": "passed",
-    "completedAt": "2026-07-25T15:43:08.361Z",
-    "artifactKey": "backups/postgres/2026-07-25T15-38-43.889Z-3b82744.json.gz.aes256gcm",
-    "tableCount": 82,
-    "rowCount": 7028,
-    "restoreDurationMs": 84798,
-    "verificationDurationMs": 10618,
-    "target": "isolated Railway PostgreSQL service Postgres-r_TW, deleted after verification",
-    "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-07-25---launch-readiness-restore-and-incident-rehearsal"
+    "completedAt": "2026-08-16",
+    "artifactIdentity": {
+      "status": "recorded_restricted",
+      "reference": "restricted-operational-evidence:2026-08-16-active-key-only"
+    },
+    "tableCount": 109,
+    "rowCount": 8862,
+    "migrationCount": 42,
+    "pendingMigrations": 0,
+    "countDiffs": 0,
+    "contentDiffs": 0,
+    "restoreDurationMs": 2721,
+    "verificationDurationMs": 51235,
+    "totalDurationMs": 53956,
+    "rtoMinutes": 240,
+    "activeKeyOnly": true,
+    "predecessorPresentAfterCloseout": false,
+    "temporaryProviderCredentialsActiveAfterCloseout": false,
+    "temporaryRailwayVaultSensitiveValuesPresent": false,
+    "target": "isolated temporary PostgreSQL restore database; dropped after verification",
+    "isolatedRestoreDatabaseDropped": true,
+    "localRestoreProcessesStopped": true,
+    "temporaryHelpersRemoved": true,
+    "productionHealthVerified": true,
+    "productionMonitorPassed": true,
+    "scope": "PostgreSQL logical backup only; application object bytes are not included",
+    "evidence": "docs/delivery/DEPLOYMENT_LEDGER.md#2026-08-16---active-key-only-backup-restore-proof"
   },
   "approvals": {
     "founder": {
@@ -40,5 +67,10 @@
       "approvedBy": "Michael",
       "approvedAt": "2026-06-22T03:02:39.0867156Z"
     }
+  },
+  "operationalApproval": {
+    "status": "pending",
+    "approvedBy": null,
+    "approvedAt": null
   }
 }

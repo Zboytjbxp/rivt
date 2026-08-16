@@ -2,9 +2,17 @@
 
 Prepared: 2026-06-22
 
+> **Historical / superseded signoff artifact:** This packet records the
+> 2026-06-22 evidence and approval posture. It is not current launch authority.
+> Current authority is `docs/operations/incident-routing.json`,
+> `docs/operations/recovery-policy.json`, and
+> `npm run launch:readiness -- --require-ready`. That gate currently remains
+> blocked by the active incident hold and incomplete operational-recovery
+> requirements.
+
 This packet is the final signoff aid for the first named Gate A customer cohort. It does not approve launch by itself. Approval is recorded only in `docs/operations/incident-routing.json` after the founder explicitly approves each required signoff.
 
-## Current Gate Status
+## Historical Gate Status — 2026-06-22
 
 - Incident ownership: ready for approval.
 - Support coverage: ready for approval for the named-cohort pilot only.
