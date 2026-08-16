@@ -19,6 +19,7 @@ import {
   logicalBackupObjectKey,
   MAX_BACKUP_WRITES_PER_UTC_MONTH,
   MAX_NEW_LOGICAL_BACKUP_BYTES,
+  MAX_PROVIDER_CLOCK_SKEW_MS,
   POSTGRES_TEXT_ROW_ENCODING,
   aggregateTableDigest,
   assertBackupCatalogComplete,
@@ -2012,6 +2013,60 @@ test("named restore object requires an exact version, digest, metadata, and unex
       retentionDays: 30,
       now: new Date("2026-08-01T13:00:00.000Z").getTime(),
     }),
+    (error) => error.code === "BACKUP_OBJECT_INVALID",
+  );
+});
+
+test("named restore tolerates bounded S3 retention timestamp precision but rejects a shorter lock", async () => {
+  const config = destinationS3Config(destinationEnv);
+  const fixture = protectedArtifactFixture();
+  const uploadedAt = new Date("2026-08-01T12:00:00.000Z");
+  const retentionMs = 30 * 86_400_000;
+  const clientWithRetention = (retainUntilMs) => ({
+    async send(command) {
+      if (command.constructor.name === "HeadObjectCommand") {
+        return {
+          Metadata: fixture.metadata,
+          LastModified: uploadedAt,
+          ObjectLockMode: "COMPLIANCE",
+          ObjectLockRetainUntilDate: new Date(retainUntilMs),
+          ContentLength: fixture.body.length,
+        };
+      }
+      if (command.constructor.name === "GetObjectCommand") {
+        return { Body: Readable.from([fixture.body]) };
+      }
+      throw new Error(`Unexpected command ${command.constructor.name}`);
+    },
+  });
+  const identity = {
+    key: "postgres/daily/artifact.json.gz.aes256gcm",
+    versionId: "4_zversion",
+  };
+  const options = {
+    expectedSha256: fixture.sha256,
+    expectedKeyId: fixture.value.keyId,
+    retentionDays: 30,
+    now: new Date("2026-08-01T13:00:00.000Z").getTime(),
+  };
+
+  const withinProviderPrecision = uploadedAt.getTime() + retentionMs - 371;
+  const verified = await verifyProtectedBackupObject(
+    clientWithRetention(withinProviderPrecision),
+    config,
+    identity,
+    options,
+  );
+  assert.equal(verified.sha256, fixture.sha256);
+
+  const beyondBoundedSkew = uploadedAt.getTime() + retentionMs - MAX_PROVIDER_CLOCK_SKEW_MS - 1;
+  await assert.rejects(
+    () => verifyProtectedBackupObject(
+      clientWithRetention(beyondBoundedSkew),
+      config,
+      identity,
+      options,
+    ),
     (error) => error.code === "BACKUP_OBJECT_INVALID",
   );
 });
