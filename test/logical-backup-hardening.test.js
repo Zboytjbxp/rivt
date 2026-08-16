@@ -30,6 +30,7 @@ import {
   beginReadOnlyBackupSnapshot,
   bodyToBuffer,
   canonicalTableDigest,
+  canonicalTableColumns,
   decryptSnapshot,
   destinationS3Config,
   diffCounts,
@@ -67,6 +68,7 @@ import { verifyLogicalBackup } from "../scripts/verify-logical-backup.js";
 import { createLogicalBackupArtifact } from "../scripts/create-logical-backup-artifact.js";
 import {
   applySnapshotToTarget,
+  restoreTable,
   restoreLogicalBackupArtifact,
 } from "../scripts/restore-logical-backup-artifact.js";
 import { completeInventory, verifyRestoreDrill } from "../scripts/restore-drill.js";
@@ -355,6 +357,82 @@ test("logical backup column metadata retains target data types for restore bindi
     { name: "id", typeName: "bigint", identityGeneration: "ALWAYS" },
     { name: "thread_messages", typeName: "jsonb", identityGeneration: null },
   ]);
+});
+
+test("restore matches columns semantically and keeps snapshot value order", async () => {
+  const calls = [];
+  const client = {
+    async query(sql, values) {
+      if (sql.includes("FROM pg_catalog.pg_attribute")) {
+        return {
+          rows: [
+            {
+              column_name: "second_value",
+              type_name: "text",
+              is_generated: "NEVER",
+              identity_generation: null,
+            },
+            {
+              column_name: "first_value",
+              type_name: "text",
+              is_generated: "NEVER",
+              identity_generation: null,
+            },
+          ],
+        };
+      }
+      calls.push({ sql, values });
+      return { rows: [] };
+    },
+  };
+  const snapshotTable = {
+    name: "column_order_fixture",
+    columns: [
+      { name: "first_value", typeName: "text", identityGeneration: null },
+      { name: "second_value", typeName: "text", identityGeneration: null },
+    ],
+    rows: [{ first_value: "first", second_value: "second" }],
+  };
+
+  await restoreTable(client, snapshotTable, 200);
+
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].sql, /\("first_value", "second_value"\)/);
+  assert.deepEqual(calls[0].values, ["first", "second"]);
+  assert.deepEqual(canonicalTableColumns(snapshotTable.columns), [
+    { name: "first_value", typeName: "text", identityGeneration: null },
+    { name: "second_value", typeName: "text", identityGeneration: null },
+  ]);
+});
+
+test("restore rejects a semantic column mismatch before inserting rows", async () => {
+  let insertAttempted = false;
+  const client = {
+    async query(sql) {
+      if (sql.includes("FROM pg_catalog.pg_attribute")) {
+        return {
+          rows: [{
+            column_name: "value",
+            type_name: "bigint",
+            is_generated: "NEVER",
+            identity_generation: null,
+          }],
+        };
+      }
+      insertAttempted = true;
+      return { rows: [] };
+    },
+  };
+
+  await assert.rejects(
+    () => restoreTable(client, {
+      name: "column_type_fixture",
+      columns: [{ name: "value", typeName: "text", identityGeneration: null }],
+      rows: [{ value: "measured" }],
+    }, 200),
+    /columns differ from backup artifact/,
+  );
+  assert.equal(insertAttempted, false);
 });
 
 test("logical restore binds JSON arrays and values as JSON without changing ordinary or identity values", async () => {
@@ -1249,6 +1327,49 @@ test("restore drill inventory discovers every current public table dynamically",
   assert.deepEqual(inventory.tableNames, tableNames);
   assert.deepEqual(Object.keys(inventory.tableDigests), tableNames);
   assert.deepEqual(inventory.counts, { billing_events: 1, future_launch_table: 1 });
+});
+
+test("restore inventory and digests ignore physical column order", async () => {
+  function poolForColumnOrder(columnNames) {
+    const client = {
+      async query(sql) {
+        if (sql.includes("pg_catalog.pg_inherits")) {
+          return {
+            rows: [{
+              row_security_enabled: false,
+              application_table_outside_public: false,
+              inheritance_or_partitioning_present: false,
+            }],
+          };
+        }
+        if (sql.includes("SELECT c.relname AS table_name")) {
+          return { rows: [{ table_name: "column_order_fixture" }] };
+        }
+        if (sql.includes("FROM pg_catalog.pg_attribute")) {
+          return {
+            rows: columnNames.map((column_name) => ({
+              column_name,
+              type_name: "text",
+              is_generated: "NEVER",
+              identity_generation: null,
+            })),
+          };
+        }
+        if (sql.startsWith("SELECT count(*)")) return { rows: [{ count: 1 }] };
+        if (sql.includes("::text AS")) return { rows: [{ first_value: "first", second_value: "second" }] };
+        if (sql.includes("information_schema.sequences")) return { rows: [] };
+        return { rows: [] };
+      },
+      release() {},
+    };
+    return { async connect() { return client; } };
+  }
+
+  const source = await completeInventory(poolForColumnOrder(["first_value", "second_value"]));
+  const target = await completeInventory(poolForColumnOrder(["second_value", "first_value"]));
+
+  assert.deepEqual(target.tables, source.tables);
+  assert.deepEqual(target.tableDigests, source.tableDigests);
 });
 
 test("canonical table digests are order-independent and detect equal-count content changes", () => {
