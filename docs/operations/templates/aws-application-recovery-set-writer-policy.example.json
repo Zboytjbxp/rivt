@@ -45,7 +45,15 @@
         "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_DATABASE_OBJECT_KEY>",
         "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_ARCHIVE_OBJECT_KEY>",
         "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_COMPLETION_OBJECT_KEY>"
-      ]
+      ],
+      "Condition": {
+        "DateGreaterThanEquals": {
+          "aws:CurrentTime": "<WINDOW_START_ISO8601>"
+        },
+        "DateLessThan": {
+          "aws:CurrentTime": "<WINDOW_END_ISO8601>"
+        }
+      }
     }
   ]
 }

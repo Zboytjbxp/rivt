@@ -83,7 +83,10 @@ test("renderer emits a deterministic exact-key create-only writer policy", () =>
   });
   const retention = statementFor(result, "Allow", "s3:GetObjectRetention");
   assert.deepEqual(retention.Resource, expectedResources);
-  assert.equal("Condition" in retention, false);
+  assert.deepEqual(retention.Condition, {
+    DateGreaterThanEquals: { "aws:CurrentTime": baseInput.writeWindow.startAt },
+    DateLessThan: { "aws:CurrentTime": baseInput.writeWindow.endAt },
+  });
 
   assert.equal(result.resourceArns.some((resource) => resource.includes("*")), false);
   assert.equal(result.policyJson.includes("?"), false);

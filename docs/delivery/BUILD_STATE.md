@@ -28,7 +28,9 @@ credential-exposure containment is in progress.
 - Source capture uses a shared/exclusive application-object mutation barrier,
   and the protected set is constrained to three deterministic immutable keys:
   database, one encrypted member archive, and completion. The normal command
-  now has a provider-neutral revocable authorization lease: the exact plan is
+  now has a provider-neutral revocable authorization lease. Its exact-key
+  create and retention-read grants share one inclusive-start, exclusive-end
+  UTC window, while `If-None-Match` remains create-only. The exact plan is
   durably recorded before the adapter factory opens, attempted authority is
   retired on every later in-process failure, and final evidence requires
   verified policy absence plus denied direct/multipart writes. It remains
@@ -64,12 +66,15 @@ credential-exposure containment is in progress.
   `applicationReadSmokeEvidenceLevel: handler-injected-store`; launch readiness
   requires the distinct exact value
   `live-cookie-session-http-provider-delivery` on a coordinated live restore.
-- Local verification passes: build, repository lint, 254/254 focused recovery
-  and readiness tests, 502/502 unit tests, three dependency-free integration
-  checks, all three browser E2E journeys, and a zero-vulnerability production
-  dependency audit. Twenty PostgreSQL integrations are explicitly skipped
-  because the clean worktree has no `TEST_DATABASE_URL`; no DB-backed aggregate
-  pass is claimed. The guarded harness reports `providerIo: false`,
+- The retention-window correction passes 10/10 focused writer-policy tests,
+  254/254 focused recovery and readiness tests, 502/502 unit tests, and
+  `npm run prelint:security`; it adds no top-level test. Build, repository lint,
+  three dependency-free integration checks, all three browser E2E journeys,
+  and a zero-vulnerability production dependency audit passed on the
+  immediately preceding source and were not rerun for this narrow correction.
+  Twenty PostgreSQL integrations were explicitly skipped because the clean
+  worktree had no `TEST_DATABASE_URL`; no DB-backed aggregate pass is claimed.
+  The guarded harness reported `providerIo: false`,
   `productionDataRead: false`, and `chargeBearingAction: false`.
 - The production-credential incident remains governing. Packet 100 does not
   clear the incident, the explicit launch hold, or any operational-readiness

@@ -21,10 +21,12 @@ version/retention verification, dormant provider adapters, complete isolated
 restore primitives, guarded local execution, and adversarial tests. The normal
 create now has a provider-neutral revocable authorization lease, but remains
 inert without a concrete exact-policy provider control adapter. Attempted
-authority must be retired and proved inert before final evidence. The exact
-plan is durable before the adapter factory opens, but provider-derived identity,
-the distinct control auditor, strict live-vs-simulation evidence, and crash-safe
-independent retirement are still unimplemented. Nonempty
+authority must be retired and proved inert before final evidence. Its exact-key
+create and retention-read grants share one inclusive-start, exclusive-end UTC
+window; `If-None-Match` applies only to creates. The exact plan is durable
+before the adapter factory opens, but provider-derived identity, the distinct
+control auditor, strict live-vs-simulation evidence, and crash-safe independent
+retirement are still unimplemented. Nonempty
 restore now uses a providerless adapter that invokes the production upload-URL
 handler against an identity-bound read-only target and verifies its exact
 handler-selected bytes from an injected store. This is not cookie/session

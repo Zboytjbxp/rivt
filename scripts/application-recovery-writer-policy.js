@@ -245,6 +245,10 @@ export function renderExactRecoveryWriterPolicy({
         Effect: "Allow",
         Action: "s3:GetObjectRetention",
         Resource: resourceCopies(),
+        Condition: {
+          DateGreaterThanEquals: { "aws:CurrentTime": windowStart.toISOString() },
+          DateLessThan: { "aws:CurrentTime": windowEnd.toISOString() },
+        },
       },
     ],
   };

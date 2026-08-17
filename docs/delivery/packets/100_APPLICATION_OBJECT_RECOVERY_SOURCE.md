@@ -118,7 +118,9 @@ No unmatched, missing, or unexplained object may be silently omitted.
 - Limit the protected writer to exactly three deterministic keys: database,
   application-object archive, and completion. The normal CLI must fail before
   writes unless a separately trusted adapter attests the rendered exact-key
-  policy, reviewed principal, and half-open UTC window.
+  policy and reviewed principal. Its exact creates and exact-key retention
+  reads must share the same half-open UTC window; `If-None-Match` applies only
+  to creates.
 - Durably record the exact policy/key-set plan before the adapter factory is
   opened. Require factory construction to perform no provider I/O, register the
   revoker before activation, treat activation errors as potentially mutating, retire and
@@ -169,9 +171,10 @@ least-privilege identities:
 
 - source reader: list the exact source inventory and read each exact bound
   source version/identity; no write or delete;
-- protected writer: create only the exact database, application-object
-  archive, and completion keys and read only their retention state; no list,
-  content read, overwrite, delete, or multipart upload;
+- protected writer: only within the same reviewed half-open UTC window, create
+  the exact database, application-object archive, and completion keys and read
+  only their retention state; no list, content read, overwrite, delete, or
+  multipart upload;
 - monitor/backup reader: list/read only the recovery prefix and exact retained
   versions; no write or delete; and
 - isolated restore writer: operate only inside one empty temporary restore
@@ -222,7 +225,8 @@ receipt records `applicationReadSmokeEvidenceLevel: handler-injected-store`.
 - [x] Adversarial tests cover missing objects, collisions, tampering, wrong
   keys, metadata changes, partial sets, identity collisions, and limits.
 - [x] IAM examples keep source, writer, monitor, and restore authority
-  distinct and least-privilege.
+  distinct and least-privilege; the exact writer create and retention-read
+  grants share one reviewed half-open UTC window.
 - [x] Local harness and automated tests prove source behavior without provider
   I/O, production reads, charges, or ambient credential use.
 - [x] Commands remain detached from `npm start`, Railway configs, cron, and
@@ -238,14 +242,16 @@ receipt records `applicationReadSmokeEvidenceLevel: handler-injected-store`.
 - [x] Build, lint, focused/unit tests, E2E where relevant, dependency audit,
   diff integrity, and sensitive-data checks pass.
 
-Current local evidence: build and repository lint pass; the focused Packet and
-readiness set passes 254/254; the full unit gate passes 502/502; three
-dependency-free integration checks pass while 20 PostgreSQL integrations are
-explicitly skipped because this clean worktree has no `TEST_DATABASE_URL`; all
-three browser E2E journeys pass; the production dependency audit reports zero
-vulnerabilities; the local harness reports no provider I/O, production-data
-read, or charge-bearing action; JSON, diff-integrity, and added-source
-sensitive-pattern checks pass.
+Current correction evidence: 10/10 focused writer-policy tests, 254/254 focused
+Packet and readiness tests, 502/502 unit tests, and
+`npm run prelint:security` pass, with no new top-level test. Build, repository
+lint, three dependency-free integration checks, all three browser E2E journeys,
+and a zero-vulnerability production dependency audit passed on the immediately
+preceding source and were not rerun for this narrow correction. Twenty
+PostgreSQL integrations were explicitly skipped because the clean worktree had
+no `TEST_DATABASE_URL`; no DB-backed aggregate pass is claimed. The guarded
+harness reported no provider I/O, production-data read, or charge-bearing
+action; JSON, diff-integrity, and added-source sensitive-pattern checks passed.
 
 The separately missing live provider control adapter keeps this packet
 `source-in-progress`. No provider or operational acceptance is inferred from

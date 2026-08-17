@@ -69,9 +69,11 @@ aggregate and secret-safe; exact object keys, provider coordinates, version
 IDs, and object-level metadata belong only in restricted operator evidence.
 The checked-in create CLI includes a provider-neutral authorization lease but
 intentionally refuses protected writes until a separately reviewed control
-adapter attests the rendered exact three-key writer policy, writer principal,
-and UTC window. The exact provider plan is durably recorded before the adapter
-factory opens; factory construction must perform no provider I/O;
+adapter attests the rendered exact three-key writer policy and writer
+principal. Every exact-key `PutObject` and `GetObjectRetention` allow shares
+the same inclusive-start, exclusive-end UTC window; `If-None-Match` applies
+only to creates. The exact provider plan is durably recorded before the
+adapter factory opens; factory construction must perform no provider I/O;
 the revoker exists before activation begins; ambiguous activation and every
 later failure trigger idempotent retirement; and final success evidence is
 forbidden until policy absence and denied direct/multipart writes are proved.

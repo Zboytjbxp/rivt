@@ -34,6 +34,13 @@ point-in-time history and are superseded where they conflict with this record.
   dependency-free integration checks, all three browser E2E journeys, a
   zero-vulnerability production dependency audit, and a guarded local harness
   that reports no provider I/O, production-data read, or charge-bearing action.
+  Its exact-key create and retention-read grants now share the same half-open
+  UTC window, with `If-None-Match` limited to creates; the correction passes
+  10/10 focused writer-policy tests, 254/254 focused recovery/readiness tests,
+  502/502 unit tests, and `npm run prelint:security` without adding a top-level
+  test. Broader build, lint, integration, E2E, and dependency-audit evidence is
+  retained from the immediately preceding source and was not rerun for this
+  narrow correction.
   Twenty PostgreSQL integrations are skipped because this clean worktree has no
   `TEST_DATABASE_URL`; no database-backed aggregate pass is claimed. A
   provider-neutral writer lease now durably records the exact provider plan

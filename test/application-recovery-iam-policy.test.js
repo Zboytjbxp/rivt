@@ -248,7 +248,10 @@ test("protected writer allows only the exact aggregate-set keys, is time bounded
 
   const retention = statementFor(policy, "Allow", "s3:GetObjectRetention");
   assert.deepEqual(retention.Resource, exactWriterObjects);
-  assert.equal("Condition" in retention, false);
+  assert.deepEqual(retention.Condition, {
+    DateGreaterThanEquals: { "aws:CurrentTime": "<WINDOW_START_ISO8601>" },
+    DateLessThan: { "aws:CurrentTime": "<WINDOW_END_ISO8601>" },
+  });
 
   for (const statement of policy.Statement) {
     const resources = Array.isArray(statement.Resource)
