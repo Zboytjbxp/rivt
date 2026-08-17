@@ -24,8 +24,9 @@
       "productionDataRead": false,
       "chargeBearingAction": false,
       "applicationReadSmokeEvidenceLevel": "handler-injected-store",
+      "writerAuthorizationLifecycle": "verified_local_only",
       "intentionalBlockers": [
-        "provider_exact_writer_authorization_adapter_missing",
+        "provider_exact_writer_control_adapter_missing",
         "live_cookie_session_http_route_read_evidence_missing"
       ]
     },

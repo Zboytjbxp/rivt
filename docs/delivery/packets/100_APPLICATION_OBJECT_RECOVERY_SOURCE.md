@@ -3,8 +3,11 @@
 Status: **source implementation only; not merged, deployed, scheduled, or
 proved against a provider**
 
-Current source state: **in progress**. The live command remains deliberately
-inert until a separately reviewed provider authorization adapter attests an
+Current source state: **in progress**. The source now includes a provider-neutral
+authorization lease that registers an idempotent revoker before activation,
+retires attempted authority on every later failure, and requires verified
+inertness before final evidence. The live command remains deliberately inert
+until a separately reviewed provider control adapter applies and verifies the
 exact three-key writer policy. Nonempty restore now includes a providerless
 isolated route-reader that invokes the same authenticated upload-URL handler as
 the production application against an identity-bound read-only target client,
@@ -112,6 +115,11 @@ No unmatched, missing, or unexplained object may be silently omitted.
   application-object archive, and completion. The normal CLI must fail before
   writes unless a separately trusted adapter attests the rendered exact-key
   policy, reviewed principal, and half-open UTC window.
+- Durably record the exact policy/key-set plan before activation. Register the
+  revoker first, treat activation errors as potentially mutating, retire and
+  verify authority on every post-attempt failure, and require policy absence
+  plus denied direct/multipart writes before final success evidence. An
+  ambiguous revocation is the controlling failure.
 - Write the authenticated encrypted completion record last. Its absence means
   the set is incomplete even if component objects exist.
 - Durably reserve restricted evidence at an absolute path outside the
@@ -167,10 +175,15 @@ least-privilege identities:
 Those four credentials and coordinate identities must be distinct. None is a
 web-runtime credential.
 
-The repository renders and validates the exact three-key policy but does not
-apply it. The default create command returns
+The repository renders and validates the exact three-key policy and supplies a
+provider-neutral authorization/revocation lease, but does not apply a provider
+policy. The lease performs no I/O on construction, preserves a revoker across
+ambiguous activation, is idempotent, retires authority before final evidence,
+and fails with `RECOVERY_WRITER_REVOCATION_UNVERIFIED` when inertness cannot be
+proved. The default create command still returns
 `RECOVERY_WRITER_AUTHORIZATION_REQUIRED`; only a later, separately reviewed
-provider adapter may attest policy activation and allow the first write.
+provider control adapter may install/read back the exact policy, prove initial
+inertness and multipart absence, and remove/read back the policy afterward.
 The default nonempty restore uses the providerless isolated RIVT route-reader.
 It rechecks target-database identity inside a read-only transaction, requires
 one exact authenticated-owner representative for every completed storage
@@ -203,11 +216,14 @@ receipt records `applicationReadSmokeEvidenceLevel: handler-injected-store`.
   I/O, production reads, charges, or ambient credential use.
 - [x] Commands remain detached from `npm start`, Railway configs, cron, and
   GitHub workflows.
+- [x] Provider-neutral writer lifecycle source registers revocation before
+  activation, revokes on ambiguous activation and every later failure, and
+  permits final restricted evidence only after exact inertness proof.
 - [x] Build, lint, focused/unit tests, E2E where relevant, dependency audit,
   diff integrity, and sensitive-data checks pass.
 
 Current local evidence: build and repository lint pass; the focused Packet and
-readiness set passes 232/232; the full unit gate passes 480/480; three
+readiness set passes 252/252; the full unit gate passes 500/500; three
 dependency-free integration checks pass while 20 PostgreSQL integrations are
 explicitly skipped because this clean worktree has no `TEST_DATABASE_URL`; all
 three browser E2E journeys pass; the production dependency audit reports zero
@@ -215,7 +231,7 @@ vulnerabilities; the local harness reports no provider I/O, production-data
 read, or charge-bearing action; JSON, diff-integrity, and added-source
 sensitive-pattern checks pass.
 
-The separately missing live writer-authorization adapter keeps this packet
+The separately missing live provider control adapter keeps this packet
 `source-in-progress`. No provider or operational acceptance is inferred from
 the checked local items, including the providerless handler-level route proof.
 

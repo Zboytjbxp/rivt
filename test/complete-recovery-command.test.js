@@ -36,6 +36,9 @@ import {
 import {
   encryptCompleteRecoveryDatabaseSnapshot,
 } from "../scripts/complete-recovery-database.js";
+import {
+  createRecoveryWriterAuthorizationLease,
+} from "../scripts/recovery-writer-authorization.js";
 
 const nowValue = new Date("2026-08-16T20:00:00.000Z");
 const retentionUntil = "2026-09-15T20:00:00.000Z";
@@ -243,6 +246,13 @@ function fakeEvidenceSinkFactory(lifecycle = [], receipts = []) {
       async markWritesStarted() {
         lifecycle.push("evidence:writes-started");
       },
+      async markWriterAuthorizationPlanned() {
+        lifecycle.push("evidence:writer-authorization-planned");
+      },
+      async markWriterRevoked(receipt) {
+        receipts.push({ revocation: receipt });
+        lifecycle.push("evidence:writer-revoked");
+      },
       async commit(receipt) {
         receipts.push(receipt);
         lifecycle.push("evidence:committed");
@@ -282,6 +292,48 @@ function protectedWritePlan(input) {
   };
 }
 
+function successfulCreateReceipt(input) {
+  return {
+    ok: true,
+    completionWritten: true,
+    sourceCommit,
+    snapshotId: input.snapshotId,
+    completionKey: `snapshots/${input.snapshotId}/complete.json`,
+    completionVersionId: "exact-version",
+    completionSha256: "e".repeat(64),
+    databaseArtifactVersionId: "database-version",
+    databaseArtifactSha256: "a".repeat(64),
+    archiveVersionId: "archive-version",
+    archiveSha256: "b".repeat(64),
+    ...protectedRetentionReceipt,
+    recoverySetIdentitySha256: "d".repeat(64),
+  };
+}
+
+function createLifecycleCommandOptions(lifecycle, overrides = {}) {
+  const clockValues = [1_000, 1_010];
+  return {
+    env: createEnv(),
+    now: () => new Date(nowValue),
+    clock: () => clockValues.shift(),
+    clientFactory: fakeClientFactory(lifecycle),
+    restrictedEvidenceSinkFactory: fakeEvidenceSinkFactory(lifecycle),
+    captureBarrierFactory: fakeCaptureBarrierFactory(lifecycle),
+    captureDatabaseSnapshot: async () => databaseSnapshot(),
+    sourceStoreFactory: ({ binding, sourceBindingIdentitySha256 }) => ({
+      identitySha256: binding.identitySha256,
+      bindingIdentitySha256: sourceBindingIdentitySha256,
+    }),
+    destinationStoreFactory: ({ binding }) => ({ identitySha256: binding.identitySha256 }),
+    openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory(),
+    backupSnapshot: async (input) => {
+      await input.beforeProtectedWrites(protectedWritePlan(input));
+      return successfulCreateReceipt(input);
+    },
+    ...overrides,
+  };
+}
+
 async function authorizeExactWriter({
   policyPlan,
   destinationStoreIdentitySha256,
@@ -302,6 +354,36 @@ async function authorizeExactWriter({
   };
 }
 
+function exactWriterRevocation({
+  policyPlan,
+  destinationStoreIdentitySha256,
+  writerPrincipalIdentitySha256,
+  authorizationReceipt,
+}) {
+  return {
+    revoked: true,
+    revocationMode: "provider-exact-key-policy-removed",
+    writerPolicyAbsent: true,
+    writerWriteDenied: true,
+    multipartWriteDenied: true,
+    policySha256: policyPlan.policySha256,
+    exactKeySetSha256: policyPlan.exactKeySetSha256,
+    destinationStoreIdentitySha256,
+    writerPrincipalIdentitySha256,
+    revokedAt: authorizationReceipt?.authorizedAt ?? nowValue.toISOString(),
+  };
+}
+
+function exactWriterAuthorizationLeaseFactory({
+  authorize = authorizeExactWriter,
+  revoke = exactWriterRevocation,
+} = {}) {
+  return async (context) => createRecoveryWriterAuthorizationLease({
+    activate: () => authorize(context),
+    revokeAndVerify: (leaseContext) => revoke({ ...context, ...leaseContext }),
+  });
+}
+
 function restrictedWriterAuthorization() {
   return {
     writerPolicySha256: "6".repeat(64),
@@ -311,6 +393,11 @@ function restrictedWriterAuthorization() {
     writerAuthorizationExpiresAt: createEnv().COMPLETE_RECOVERY_WRITE_WINDOW_END_AT,
     multipartInitiationDenied: true,
     noPreexistingMultipartUploadsVerified: true,
+    writerAuthorizationRevokedAt: nowValue.toISOString(),
+    writerAuthorizationRevocationVerified: true,
+    writerPolicyAbsentAfterRun: true,
+    writerWriteDeniedAfterRun: true,
+    writerMultipartWriteDeniedAfterRun: true,
   };
 }
 
@@ -328,7 +415,7 @@ test("create command binds one exact database snapshot and fixed limits before o
     clientFactory: fakeClientFactory(lifecycle),
     restrictedEvidenceSinkFactory: fakeEvidenceSinkFactory(lifecycle, restrictedReceipts),
     captureBarrierFactory: fakeCaptureBarrierFactory(lifecycle),
-    authorizeProtectedWrites: authorizeExactWriter,
+    openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory(),
     captureDatabaseSnapshot: async ({ env: suppliedEnv, expectedSourceRuntimeIdentitySha256 }) => {
       lifecycle.push("capture:database");
       assert.equal(suppliedEnv, env);
@@ -404,14 +491,19 @@ test("create command binds one exact database snapshot and fixed limits before o
   assert.equal(result.restrictedEvidenceRecorded, true);
   assert.equal(result.durationMs, 17);
   assert.equal(backupArguments.minimumRetentionUntil, retentionUntil);
-  assert.equal(restrictedReceipts.length, 2);
-  assert.equal(restrictedReceipts[1].completionVersionId, "restricted-version");
+  assert.equal(restrictedReceipts.length, 3);
+  assert.equal(restrictedReceipts[2].completionVersionId, "restricted-version");
   assert.ok(lifecycle.indexOf("evidence:opened") < lifecycle.indexOf("barrier:capture-acquired"));
   assert.ok(lifecycle.indexOf("barrier:capture-acquired") < lifecycle.indexOf("capture:database"));
   assert.ok(lifecycle.indexOf("capture:database") < lifecycle.indexOf("client:source-reader"));
   assert.ok(lifecycle.indexOf("evidence:planned") < lifecycle.indexOf("client:source-reader"));
+  assert.ok(lifecycle.indexOf("evidence:writer-authorization-planned")
+    < lifecycle.indexOf("evidence:writes-started"));
   assert.ok(lifecycle.indexOf("barrier:capture-released") < lifecycle.indexOf("evidence:writes-started"));
-  assert.ok(lifecycle.indexOf("evidence:writes-started") < lifecycle.indexOf("evidence:committed"));
+  assert.ok(lifecycle.indexOf("evidence:writes-started")
+    < lifecycle.indexOf("evidence:writer-revoked"));
+  assert.ok(lifecycle.indexOf("evidence:writer-revoked")
+    < lifecycle.indexOf("evidence:committed"));
   assert.deepEqual(lifecycle.slice(-2), [
     "destroy:source-reader",
     "destroy:protected-writer",
@@ -443,22 +535,11 @@ test("create samples its write boundary after advancing provider authorization",
       bindingIdentitySha256: sourceBindingIdentitySha256,
     }),
     destinationStoreFactory: ({ binding }) => ({ identitySha256: binding.identitySha256 }),
-    authorizeProtectedWrites: async ({
-      policyPlan,
-      destinationStoreIdentitySha256,
-      writerPrincipalIdentitySha256,
-    }) => ({
-      authorized: true,
-      authorizationMode: "provider-exact-key-policy",
-      writerInitiallyInert: true,
-      multipartInitiationDenied: true,
-      noPreexistingMultipartUploadsVerified: true,
-      policySha256: policyPlan.policySha256,
-      exactKeySetSha256: policyPlan.exactKeySetSha256,
-      destinationStoreIdentitySha256,
-      writerPrincipalIdentitySha256,
-      authorizedAt,
-      expiresAt: createEnv().COMPLETE_RECOVERY_WRITE_WINDOW_END_AT,
+    openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory({
+      authorize: async (input) => ({
+        ...await authorizeExactWriter(input),
+        authorizedAt,
+      }),
     }),
     backupSnapshot: async (input) => {
       await input.beforeProtectedWrites(protectedWritePlan(input));
@@ -498,7 +579,7 @@ test("create enforces the fixed aggregate RTO", async () => {
       clientFactory: () => ({ destroy() {} }),
       restrictedEvidenceSinkFactory: fakeEvidenceSinkFactory(lifecycle),
       captureBarrierFactory: fakeCaptureBarrierFactory(lifecycle),
-      authorizeProtectedWrites: authorizeExactWriter,
+      openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory(),
       captureDatabaseSnapshot: async () => databaseSnapshot(),
       sourceStoreFactory: ({ binding, sourceBindingIdentitySha256 }) => ({
         identitySha256: binding.identitySha256,
@@ -592,6 +673,321 @@ test("create refuses protected writes without a trusted exact-key authorization 
   assert.equal(lifecycle.includes("evidence:writes-started"), false);
 });
 
+test("create retires ambiguous authorization and preserves the activation failure", async () => {
+  const lifecycle = [];
+  const activationError = new Error("authorization readback was lost");
+  activationError.code = "TEST_AUTHORIZATION_AMBIGUOUS";
+  let revocations = 0;
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openProtectedWriterAuthorizationLease: async (context) =>
+        createRecoveryWriterAuthorizationLease({
+          async activate() {
+            lifecycle.push("writer:activation-ambiguous");
+            throw activationError;
+          },
+          async revokeAndVerify(leaseContext) {
+            revocations += 1;
+            lifecycle.push("writer:revoked");
+            return exactWriterRevocation({ ...context, ...leaseContext });
+          },
+        }),
+    })),
+    (error) => error === activationError,
+  );
+  assert.equal(revocations, 1);
+  assert.ok(lifecycle.indexOf("evidence:writer-authorization-planned")
+    < lifecycle.indexOf("writer:activation-ambiguous"));
+  assert.ok(lifecycle.indexOf("writer:activation-ambiguous")
+    < lifecycle.indexOf("writer:revoked"));
+  assert.ok(lifecycle.indexOf("writer:revoked")
+    < lifecycle.indexOf("evidence:writer-revoked"));
+  assert.equal(lifecycle.includes("evidence:writes-started"), false);
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
+test("create revokes after a protected-write failure and preserves the primary error", async () => {
+  const lifecycle = [];
+  const writeError = new Error("protected write failed");
+  writeError.code = "TEST_PROTECTED_WRITE_FAILED";
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openProtectedWriterAuthorizationLease: async (context) =>
+        createRecoveryWriterAuthorizationLease({
+          async activate() {
+            lifecycle.push("writer:active");
+            return authorizeExactWriter(context);
+          },
+          async revokeAndVerify(leaseContext) {
+            lifecycle.push("writer:revoked");
+            return exactWriterRevocation({ ...context, ...leaseContext });
+          },
+        }),
+      backupSnapshot: async (input) => {
+        await input.beforeProtectedWrites(protectedWritePlan(input));
+        lifecycle.push("provider:write-failed");
+        throw writeError;
+      },
+    })),
+    (error) => error === writeError,
+  );
+  assert.ok(lifecycle.indexOf("evidence:writes-started")
+    < lifecycle.indexOf("provider:write-failed"));
+  assert.ok(lifecycle.indexOf("provider:write-failed")
+    < lifecycle.indexOf("writer:revoked"));
+  assert.ok(lifecycle.indexOf("writer:revoked")
+    < lifecycle.indexOf("evidence:writer-revoked"));
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
+test("create revokes when the protected completion receipt is malformed", async () => {
+  const lifecycle = [];
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      backupSnapshot: async (input) => {
+        await input.beforeProtectedWrites(protectedWritePlan(input));
+        lifecycle.push("provider:invalid-receipt");
+        return { ok: true, completionWritten: true };
+      },
+    })),
+    (error) => error.code === "RECOVERY_CREATE_RECEIPT_INVALID",
+  );
+  assert.ok(lifecycle.indexOf("provider:invalid-receipt")
+    < lifecycle.indexOf("evidence:writer-revoked"));
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
+test("create revokes when durable writes-started evidence fails", async () => {
+  const lifecycle = [];
+  const evidenceError = new Error("writes-started evidence failed");
+  const baseFactory = fakeEvidenceSinkFactory(lifecycle);
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      restrictedEvidenceSinkFactory: async (env) => {
+        const sink = await baseFactory(env);
+        return {
+          ...sink,
+          async markWritesStarted() {
+            lifecycle.push("evidence:writes-started-failed");
+            throw evidenceError;
+          },
+        };
+      },
+    })),
+    (error) => error === evidenceError,
+  );
+  assert.ok(lifecycle.indexOf("evidence:writes-started-failed")
+    < lifecycle.indexOf("evidence:writer-revoked"));
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
+test("a swallowed writes-started evidence failure still fails and revokes", async () => {
+  const lifecycle = [];
+  const evidenceError = new Error("writes-started evidence failed");
+  const baseFactory = fakeEvidenceSinkFactory(lifecycle);
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      restrictedEvidenceSinkFactory: async (env) => {
+        const sink = await baseFactory(env);
+        return {
+          ...sink,
+          async markWritesStarted() {
+            lifecycle.push("evidence:writes-started-failed");
+            throw evidenceError;
+          },
+        };
+      },
+      backupSnapshot: async (input) => {
+        await assert.rejects(
+          () => input.beforeProtectedWrites(protectedWritePlan(input)),
+          (error) => error === evidenceError,
+        );
+        return successfulCreateReceipt(input);
+      },
+    })),
+    (error) => error.code === "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+  );
+  assert.ok(lifecycle.indexOf("evidence:writes-started-failed")
+    < lifecycle.indexOf("evidence:writer-revoked"));
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
+test("authorization receipt mismatch still retires the attempted writer", async () => {
+  const lifecycle = [];
+  let revocations = 0;
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openProtectedWriterAuthorizationLease: async (context) =>
+        createRecoveryWriterAuthorizationLease({
+          async activate() {
+            const receipt = await authorizeExactWriter(context);
+            return { ...receipt, policySha256: "0".repeat(64) };
+          },
+          async revokeAndVerify(leaseContext) {
+            revocations += 1;
+            return exactWriterRevocation({ ...context, ...leaseContext });
+          },
+        }),
+    })),
+    (error) => error.code === "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+  );
+  assert.equal(revocations, 1);
+  assert.ok(lifecycle.includes("evidence:writer-revoked"));
+  assert.equal(lifecycle.includes("evidence:writes-started"), false);
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
+test("duplicate protected-write boundaries retain and revoke the first lease", async () => {
+  const lifecycle = [];
+  let leasesOpened = 0;
+  let activations = 0;
+  let revocations = 0;
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openProtectedWriterAuthorizationLease: async (context) => {
+        leasesOpened += 1;
+        return createRecoveryWriterAuthorizationLease({
+          async activate() {
+            activations += 1;
+            return authorizeExactWriter(context);
+          },
+          async revokeAndVerify(leaseContext) {
+            revocations += 1;
+            return exactWriterRevocation({ ...context, ...leaseContext });
+          },
+        });
+      },
+      backupSnapshot: async (input) => {
+        const plan = protectedWritePlan(input);
+        await input.beforeProtectedWrites(plan);
+        await input.beforeProtectedWrites(plan);
+      },
+    })),
+    (error) => error.code === "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+  );
+  assert.equal(leasesOpened, 1);
+  assert.equal(activations, 1);
+  assert.equal(revocations, 1);
+  assert.ok(lifecycle.includes("evidence:writer-revoked"));
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
+test("a swallowed duplicate-boundary error still fails and revokes", async () => {
+  const lifecycle = [];
+  let revocations = 0;
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory({
+        revoke: (context) => {
+          revocations += 1;
+          return exactWriterRevocation(context);
+        },
+      }),
+      backupSnapshot: async (input) => {
+        const plan = protectedWritePlan(input);
+        await input.beforeProtectedWrites(plan);
+        await assert.rejects(
+          () => input.beforeProtectedWrites(plan),
+          (error) => error.code === "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+        );
+        return successfulCreateReceipt(input);
+      },
+    })),
+    (error) => error.code === "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+  );
+  assert.equal(revocations, 1);
+  assert.ok(lifecycle.includes("evidence:writer-revoked"));
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
+test("unverified writer revocation takes precedence and prevents final evidence", async () => {
+  const lifecycle = [];
+  let revocations = 0;
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openProtectedWriterAuthorizationLease: async (context) =>
+        createRecoveryWriterAuthorizationLease({
+          activate: () => authorizeExactWriter(context),
+          async revokeAndVerify() {
+            revocations += 1;
+            throw new Error("provider policy readback unavailable");
+          },
+        }),
+    })),
+    (error) => error.code === "RECOVERY_WRITER_REVOCATION_UNVERIFIED",
+  );
+  assert.equal(revocations, 1);
+  assert.equal(lifecycle.includes("evidence:writer-revoked"), false);
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+  assert.ok(lifecycle.includes("evidence:aborted"));
+});
+
+test("revocation failure remains controlling while every cleanup is attempted", async () => {
+  const lifecycle = [];
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      clientFactory: ({ role }) => ({
+        destroy() {
+          lifecycle.push(`destroy:${role}`);
+          if (role === "source-reader") throw new Error("source destroy failed");
+        },
+      }),
+      openProtectedWriterAuthorizationLease: async (context) =>
+        createRecoveryWriterAuthorizationLease({
+          activate: () => authorizeExactWriter(context),
+          async revokeAndVerify() {
+            throw new Error("revocation readback failed");
+          },
+        }),
+    })),
+    (error) => error.code === "RECOVERY_WRITER_REVOCATION_UNVERIFIED",
+  );
+  assert.ok(lifecycle.includes("destroy:source-reader"));
+  assert.ok(lifecycle.includes("destroy:protected-writer"));
+  assert.ok(lifecycle.includes("evidence:aborted"));
+});
+
+test("malformed revocation proof fails closed without committing evidence", async () => {
+  const lifecycle = [];
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory({
+        revoke: (context) => ({
+          ...exactWriterRevocation(context),
+          destinationStoreIdentitySha256: "0".repeat(64),
+        }),
+      }),
+    })),
+    (error) => error.code === "RECOVERY_WRITER_REVOCATION_UNVERIFIED",
+  );
+  assert.equal(lifecycle.includes("evidence:writer-revoked"), false);
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
+test("final evidence is attempted only after writer revocation is durable", async () => {
+  const lifecycle = [];
+  const evidenceError = new Error("final evidence write failed");
+  const baseFactory = fakeEvidenceSinkFactory(lifecycle);
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      restrictedEvidenceSinkFactory: async (env) => {
+        const sink = await baseFactory(env);
+        return {
+          ...sink,
+          async commit() {
+            lifecycle.push("evidence:commit-failed");
+            throw evidenceError;
+          },
+        };
+      },
+    })),
+    (error) => error === evidenceError,
+  );
+  assert.ok(lifecycle.indexOf("evidence:writer-revoked")
+    < lifecycle.indexOf("evidence:commit-failed"));
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+});
+
 test("create rejects incomplete multipart safety authorization before protected writes", async (t) => {
   for (const field of [
     "multipartInitiationDenied",
@@ -614,11 +1010,13 @@ test("create rejects incomplete multipart safety authorization before protected 
             bindingIdentitySha256: sourceBindingIdentitySha256,
           }),
           destinationStoreFactory: ({ binding }) => ({ identitySha256: binding.identitySha256 }),
-          authorizeProtectedWrites: async (input) => {
-            const receipt = await authorizeExactWriter(input);
-            delete receipt[field];
-            return receipt;
-          },
+          openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory({
+            authorize: async (input) => {
+              const receipt = await authorizeExactWriter(input);
+              delete receipt[field];
+              return receipt;
+            },
+          }),
           backupSnapshot: async (input) => {
             await input.beforeProtectedWrites(protectedWritePlan(input));
             protectedWrites += 1;
@@ -659,7 +1057,7 @@ test("create performs no protected write when the capture lease cannot release s
         bindingIdentitySha256: sourceBindingIdentitySha256,
       }),
       destinationStoreFactory: ({ binding }) => ({ identitySha256: binding.identitySha256 }),
-      authorizeProtectedWrites: authorizeExactWriter,
+      openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory(),
       backupSnapshot: async (input) => {
         await input.beforeProtectedWrites(protectedWritePlan(input));
         protectedWrites += 1;
@@ -671,6 +1069,31 @@ test("create performs no protected write when the capture lease cannot release s
   assert.ok(lifecycle.includes("barrier:capture-release-failed"));
   assert.ok(lifecycle.includes("evidence:aborted"));
   assert.equal(lifecycle.includes("evidence:writes-started"), false);
+});
+
+test("capture-barrier release failure controls an earlier snapshot failure", async () => {
+  const lifecycle = [];
+  const snapshotError = new Error("snapshot failed");
+  const releaseError = new Error("barrier release failed");
+  releaseError.code = "RECOVERY_OBJECT_MUTATION_BARRIER_UNAVAILABLE";
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      captureBarrierFactory: async () => ({
+        sourceRuntimeIdentitySha256,
+        applicationRuntimeIdentitySha256: sourceRuntimeIdentitySha256,
+        async release() {
+          lifecycle.push("barrier:capture-release-failed");
+          throw releaseError;
+        },
+      }),
+      captureDatabaseSnapshot: async () => {
+        throw snapshotError;
+      },
+    })),
+    (error) => error === releaseError,
+  );
+  assert.ok(lifecycle.includes("barrier:capture-release-failed"));
+  assert.ok(lifecycle.includes("evidence:aborted"));
 });
 
 test("create aborts before snapshot or provider access when an object mutation is active", async () => {
@@ -984,8 +1407,13 @@ test("restricted create evidence is exclusively opened and durably records exact
     };
     await sink.plan(planned);
     const writerAuthorization = restrictedWriterAuthorization();
+    await sink.markWriterAuthorizationPlanned(writerAuthorization);
     await sink.markWritesStarted({
       writesStartedAt: "2026-08-16T20:00:00.000Z",
+      ...writerAuthorization,
+    });
+    await sink.markWriterRevoked({
+      operationOutcome: "completed",
       ...writerAuthorization,
     });
     await sink.commit({
@@ -1013,6 +1441,10 @@ test("restricted create evidence is exclusively opened and durably records exact
     assert.equal(receipt.completionRetentionUntil, retentionUntil);
     assert.equal(receipt.databaseArtifactRetentionUntil, retentionUntil);
     assert.equal(receipt.archiveRetentionUntil, retentionUntil);
+    assert.equal(receipt.writerAuthorizationRevocationVerified, true);
+    assert.equal(receipt.writerPolicyAbsentAfterRun, true);
+    assert.equal(receipt.writerWriteDeniedAfterRun, true);
+    assert.equal(receipt.writerMultipartWriteDeniedAfterRun, true);
     await assert.rejects(
       () => createRestrictedRecoveryEvidenceSink({
         COMPLETE_RECOVERY_RESTRICTED_RECEIPT_PATH: path,
@@ -1118,6 +1550,7 @@ test("restricted evidence rejects missing multipart safety attestations", async 
           writeWindowEndAt: "2026-08-16T20:30:00.000Z",
         });
         const authorization = restrictedWriterAuthorization();
+        await sink.markWriterAuthorizationPlanned(authorization);
         delete authorization[field];
         await assert.rejects(
           () => sink.markWritesStarted({
@@ -1154,6 +1587,7 @@ test("restricted evidence preserves the deterministic plan after an ambiguous pr
       writeWindowStartAt: "2026-08-16T19:55:00.000Z",
       writeWindowEndAt: "2026-08-16T20:30:00.000Z",
     });
+    await sink.markWriterAuthorizationPlanned(restrictedWriterAuthorization());
     await sink.markWritesStarted({
       writesStartedAt: "2026-08-16T20:00:00.000Z",
       ...restrictedWriterAuthorization(),
@@ -1163,6 +1597,81 @@ test("restricted evidence preserves the deterministic plan after an ambiguous pr
     assert.equal(evidence.status, "write_failed_or_ambiguous");
     assert.equal(evidence.snapshotId, snapshotId);
     assert.equal(evidence.completionKey, `snapshots/${snapshotId}/complete.json`);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("restricted evidence preserves a provider plan after ambiguous authorization", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "rivt-recovery-authorization-ambiguous-"));
+  const path = join(directory, "restricted-create-receipt.json");
+  try {
+    const sink = await createRestrictedRecoveryEvidenceSink({
+      COMPLETE_RECOVERY_RESTRICTED_RECEIPT_PATH: path,
+    });
+    const snapshotId = `set-${"b".repeat(48)}`;
+    await sink.plan({
+      sourceCommit,
+      snapshotId,
+      completionKey: `snapshots/${snapshotId}/complete.json`,
+      sourceDatabaseRuntimeIdentitySha256: sourceRuntimeIdentitySha256,
+      sourceStoreIdentitySha256: "e".repeat(64),
+      destinationStoreIdentitySha256: "f".repeat(64),
+      restoreStoreIdentitySha256: "1".repeat(64),
+      recoveryPrincipalSetSha256: "2".repeat(64),
+      writeWindowStartAt: "2026-08-16T19:55:00.000Z",
+      writeWindowEndAt: "2026-08-16T20:30:00.000Z",
+    });
+    await sink.markWriterAuthorizationPlanned(restrictedWriterAuthorization());
+    await sink.abort();
+    const evidence = JSON.parse(await readFile(path, "utf8"));
+    assert.equal(evidence.status, "authorization_failed_or_ambiguous");
+    assert.equal(evidence.snapshotId, snapshotId);
+    assert.equal(evidence.writerPolicySha256, "6".repeat(64));
+    assert.equal(evidence.writerExactKeySetSha256, "7".repeat(64));
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("restricted evidence cannot complete after a failed operation outcome", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "rivt-recovery-failed-outcome-"));
+  const path = join(directory, "restricted-create-receipt.json");
+  try {
+    const sink = await createRestrictedRecoveryEvidenceSink({
+      COMPLETE_RECOVERY_RESTRICTED_RECEIPT_PATH: path,
+    });
+    const snapshotId = `set-${"b".repeat(48)}`;
+    await sink.plan({
+      sourceCommit,
+      snapshotId,
+      completionKey: `snapshots/${snapshotId}/complete.json`,
+      sourceDatabaseRuntimeIdentitySha256: sourceRuntimeIdentitySha256,
+      sourceStoreIdentitySha256: "e".repeat(64),
+      destinationStoreIdentitySha256: "f".repeat(64),
+      restoreStoreIdentitySha256: "1".repeat(64),
+      recoveryPrincipalSetSha256: "2".repeat(64),
+      writeWindowStartAt: "2026-08-16T19:55:00.000Z",
+      writeWindowEndAt: "2026-08-16T20:30:00.000Z",
+    });
+    const authorization = restrictedWriterAuthorization();
+    await sink.markWriterAuthorizationPlanned(authorization);
+    await sink.markWritesStarted({
+      writesStartedAt: "2026-08-16T20:00:00.000Z",
+      ...authorization,
+    });
+    await sink.markWriterRevoked({
+      operationOutcome: "failed",
+      ...authorization,
+    });
+    await assert.rejects(
+      () => sink.commit({}),
+      (error) => error.code === "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+    );
+    await sink.abort();
+    const evidence = JSON.parse(await readFile(path, "utf8"));
+    assert.equal(evidence.status, "operation_failed_writer_revoked");
+    assert.equal(evidence.operationOutcome, "failed");
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

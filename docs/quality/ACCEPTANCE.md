@@ -19,7 +19,9 @@ Packet 100 is **source-in-progress and live-unproven**. It prepares coordinated
 database-plus-application-object manifests, client-side encryption, immutable
 version/retention verification, dormant provider adapters, complete isolated
 restore primitives, guarded local execution, and adversarial tests. The normal
-create remains inert without exact provider-writer authorization. Nonempty
+create now has a provider-neutral revocable authorization lease, but remains
+inert without a concrete exact-policy provider control adapter. Attempted
+authority must be retired and proved inert before final evidence. Nonempty
 restore now uses a providerless adapter that invokes the production upload-URL
 handler against an identity-bound read-only target and verifies its exact
 handler-selected bytes from an injected store. This is not cookie/session

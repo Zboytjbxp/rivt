@@ -65,10 +65,14 @@ restore identities must be distinct and must not be the RIVT web-service
 identity. Use only reviewed IAM fixtures. Normal command output must remain
 aggregate and secret-safe; exact object keys, provider coordinates, version
 IDs, and object-level metadata belong only in restricted operator evidence.
-The checked-in create CLI intentionally refuses protected writes until a
-separately reviewed adapter attests the rendered exact three-key writer policy,
-writer principal, and UTC window. Local tests inject only a no-provider fake;
-they do not authorize a live write.
+The checked-in create CLI includes a provider-neutral authorization lease but
+intentionally refuses protected writes until a separately reviewed control
+adapter attests the rendered exact three-key writer policy, writer principal,
+and UTC window. The exact provider plan is durably recorded before activation;
+the revoker exists before activation begins; ambiguous activation and every
+later failure trigger idempotent retirement; and final success evidence is
+forbidden until policy absence and denied direct/multipart writes are proved.
+Local tests inject only a no-provider fake; they do not authorize a live write.
 
 The checked-in restore command now includes a providerless isolated RIVT
 route-reader. It repeats target identity inside a read-only transaction,
@@ -92,13 +96,16 @@ Immediately before writer activation, use a separately reviewed control
 auditor to prove no incomplete multipart upload exists for any of the three
 exact keys and that multipart initiation/parts are denied. Both attestations
 must be present in the durable restricted receipt before the first protected
-write. The source also proves every captured key is addressable below the exact
+write. The adapter must remove and read back the exact policy on success and on
+every error after activation is attempted. If retirement or its readback is
+ambiguous, stop and preserve the restricted receipt; do not treat component or
+completion writes as accepted evidence. The source also proves every captured key is addressable below the exact
 isolated-restore prefix before releasing the capture barrier.
 
 For a future approved live proof, preserve restricted exact references from the
 sanitized one-shot backup receipt. Restore that exact completion version into
 both a new isolated PostgreSQL database and an empty isolated object prefix.
-The restricted v3 receipt must bind the completion, database artifact, and
+The restricted v4 receipt must bind the completion, database artifact, and
 archive versions, hashes, and accepted COMPLIANCE-retention timestamps. Render
 the reader policy with three exact key-to-version content grants plus only the
 exact-key retention metadata authority required by the verifier. Archive
@@ -119,8 +126,9 @@ version, checksum, retention, isolation, application read, limits, cleanup,
 health, or monitor evidence is absent or ambiguous. Partial component writes
 without an authenticated completion record are not a recovery set.
 
-Current state: source-in-progress and live-unproven. The exact-key writer
-authorization adapter remains intentionally absent, so create fails closed
+Current state: source-in-progress and live-unproven. The provider-neutral
+authorization/revocation lifecycle is implemented, but the concrete exact-key
+provider control adapter remains intentionally absent, so create fails closed
 before protected writes. Restore has providerless handler-level route source,
 but no live cookie/session HTTP/provider proof. The existing PostgreSQL-only
 proof remains valid for that limited scope, but

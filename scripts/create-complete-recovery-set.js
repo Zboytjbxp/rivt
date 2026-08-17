@@ -22,6 +22,9 @@ import {
 } from "./complete-recovery-database.js";
 import { renderExactRecoveryWriterPolicy } from "./application-recovery-writer-policy.js";
 import {
+  assertRecoveryWriterAuthorizationLease,
+} from "./recovery-writer-authorization.js";
+import {
   assertDistinctCredentials,
   assertCompleteRecoveryWriteWindow,
   assertExactStoreIdentity,
@@ -97,11 +100,42 @@ function assertCreateReceipt(result, sourceCommit, snapshotId, minimumRetentionU
   }
 }
 
-async function unavailableProtectedWriterAuthorization() {
+async function unavailableProtectedWriterAuthorizationLease() {
   throw new RecoveryError(
     "RECOVERY_WRITER_AUTHORIZATION_REQUIRED",
     "A reviewed exact-key provider authorization adapter is required before protected writes.",
   );
+}
+
+function assertProtectedWriterRevocation(receipt, policyPlan, config, authorization) {
+  const revokedAt = new Date(receipt?.revokedAt ?? "");
+  const authorizedAt = new Date(authorization.writerAuthorizationAt);
+  if (
+    receipt?.revoked !== true
+    || receipt.revocationMode !== "provider-exact-key-policy-removed"
+    || receipt.writerPolicyAbsent !== true
+    || receipt.writerWriteDenied !== true
+    || receipt.multipartWriteDenied !== true
+    || receipt.policySha256 !== policyPlan.policySha256
+    || receipt.exactKeySetSha256 !== policyPlan.exactKeySetSha256
+    || receipt.destinationStoreIdentitySha256 !== config.destination.identitySha256
+    || receipt.writerPrincipalIdentitySha256 !== config.principalIdentities.destination
+    || !Number.isFinite(revokedAt.getTime())
+    || revokedAt.toISOString() !== receipt.revokedAt
+    || revokedAt < authorizedAt
+  ) {
+    throw new RecoveryError(
+      "RECOVERY_WRITER_REVOCATION_UNVERIFIED",
+      "The protected writer could not be proven inert after the exact-key operation.",
+    );
+  }
+  return Object.freeze({
+    writerAuthorizationRevokedAt: receipt.revokedAt,
+    writerAuthorizationRevocationVerified: true,
+    writerPolicyAbsentAfterRun: true,
+    writerWriteDeniedAfterRun: true,
+    writerMultipartWriteDeniedAfterRun: true,
+  });
 }
 
 function assertProtectedWriterAuthorization(receipt, policyPlan, config, writesStartedAt) {
@@ -153,7 +187,7 @@ export async function createCompleteRecoverySet({
   captureDatabaseSnapshot = captureCompleteRecoveryDatabaseSnapshot,
   encryptDatabaseSnapshot = encryptCompleteRecoveryDatabaseSnapshot,
   backupSnapshot = backupRecoverySnapshot,
-  authorizeProtectedWrites = unavailableProtectedWriterAuthorization,
+  openProtectedWriterAuthorizationLease = unavailableProtectedWriterAuthorizationLease,
   restrictedEvidenceSinkFactory = createRestrictedRecoveryEvidenceSink,
   runtimeSourceProbe,
   randomBytesFn,
@@ -177,12 +211,45 @@ export async function createCompleteRecoverySet({
   let sourceClient;
   let destinationClient;
   let writerAuthorization;
+  let writerAuthorizationContext;
+  let writerAuthorizationLease;
+  let writerActivationAttempted = false;
+  let writerRevocation;
+  let protectedWriteBoundaryEntered = false;
+  let protectedWriteBoundaryViolation = false;
+  let protectedWriteBoundaryCompleted = false;
+  let operationError;
+  let writerRevocationError;
 
   async function releaseCaptureBarrier() {
     if (!captureBarrier) return;
     const barrier = captureBarrier;
     captureBarrier = undefined;
     await barrier.release();
+  }
+
+  async function revokeWriterAuthorization(operationOutcome) {
+    if (!writerActivationAttempted || writerRevocation) return writerRevocation;
+    const receipt = await writerAuthorizationLease.revokeAndVerify(Object.freeze({
+      operationOutcome,
+      policyPlan: writerAuthorizationContext.policyPlan,
+      destinationStoreIdentitySha256: writerAuthorizationContext.destinationStoreIdentitySha256,
+      writerPrincipalIdentitySha256: writerAuthorizationContext.writerPrincipalIdentitySha256,
+    }));
+    const validated = assertProtectedWriterRevocation(
+      receipt,
+      writerAuthorizationContext.policyPlan,
+      config,
+      writerAuthorization ?? {
+        writerAuthorizationAt: config.writeWindow.startAt,
+      },
+    );
+    await evidenceSink.markWriterRevoked({
+      operationOutcome,
+      ...validated,
+    });
+    writerRevocation = validated;
+    return writerRevocation;
   }
 
   try {
@@ -308,6 +375,14 @@ export async function createCompleteRecoverySet({
         objectKeys,
         restoreObjectKeys,
       }) => {
+        if (protectedWriteBoundaryEntered) {
+          protectedWriteBoundaryViolation = true;
+          throw new RecoveryError(
+            "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+            "The protected-writer boundary can be entered exactly once per recovery set.",
+          );
+        }
+        protectedWriteBoundaryEntered = true;
         if (plannedSnapshotId !== snapshotId) {
           throw new RecoveryError(
             "RECOVERY_WRITER_AUTHORIZATION_INVALID",
@@ -330,27 +405,57 @@ export async function createCompleteRecoverySet({
           writeWindow: config.writeWindow,
         });
         assertCompleteRecoveryWriteWindow(config.writeWindow, now);
-        const authorizationReceipt = await authorizeProtectedWrites(Object.freeze({
+        writerAuthorizationContext = Object.freeze({
           policyPlan,
           destinationStoreIdentitySha256: config.destination.identitySha256,
           writerPrincipalIdentitySha256: config.principalIdentities.destination,
-        }));
+        });
+        writerAuthorizationLease = assertRecoveryWriterAuthorizationLease(
+          await openProtectedWriterAuthorizationLease(writerAuthorizationContext),
+        );
+        await evidenceSink.markWriterAuthorizationPlanned({
+          writerPolicySha256: policyPlan.policySha256,
+          writerExactKeySetSha256: policyPlan.exactKeySetSha256,
+          writerAuthorizationIdentitySha256: config.principalIdentities.destination,
+          writerAuthorizationExpiresAt: config.writeWindow.endAt,
+        });
+        writerActivationAttempted = true;
+        const authorizationReceipt = await writerAuthorizationLease.activate(
+          writerAuthorizationContext,
+        );
         // Provider-side authorization can take measurable time. Sample the
         // write boundary only after the receipt exists so a truthful
         // authorizedAt timestamp can precede it, and fail if the window closed
         // while authorization was being installed.
         const writesStartedAt = assertCompleteRecoveryWriteWindow(config.writeWindow, now);
-        writerAuthorization = assertProtectedWriterAuthorization(
+        const validatedAuthorization = assertProtectedWriterAuthorization(
           authorizationReceipt,
           policyPlan,
           config,
           writesStartedAt,
         );
-        await evidenceSink.markWritesStarted({ writesStartedAt, ...writerAuthorization });
+        await evidenceSink.markWritesStarted({
+          writesStartedAt,
+          ...validatedAuthorization,
+        });
+        writerAuthorization = validatedAuthorization;
+        protectedWriteBoundaryCompleted = true;
       },
     });
     await releaseCaptureBarrier();
+    if (
+      !writerActivationAttempted
+      || !writerAuthorization
+      || protectedWriteBoundaryViolation
+      || !protectedWriteBoundaryCompleted
+    ) {
+      throw new RecoveryError(
+        "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+        "The protected-writer boundary did not complete exactly once.",
+      );
+    }
     assertCreateReceipt(result, config.sourceCommit, snapshotId, config.minimumRetentionUntil);
+    await revokeWriterAuthorization("completed");
     const completedAt = completeRecoveryClockMilliseconds(clock);
     const restrictedResult = {
       ...result,
@@ -364,21 +469,44 @@ export async function createCompleteRecoverySet({
       writeWindowStartAt: config.writeWindow.startAt,
       writeWindowEndAt: config.writeWindow.endAt,
       ...writerAuthorization,
+      ...writerRevocation,
     };
     await evidenceSink.commit(restrictedResult);
     evidenceCommitted = true;
     const durationMs = enforceCompleteRecoveryRto(startedAt, completedAt);
     return { ...restrictedResult, durationMs, restrictedEvidenceRecorded: true };
+  } catch (error) {
+    operationError = error;
+    if (writerActivationAttempted && !writerRevocation) {
+      try {
+        await revokeWriterAuthorization("failed");
+      } catch (revocationError) {
+        writerRevocationError = revocationError;
+        operationError = revocationError;
+      }
+    }
+    throw operationError;
   } finally {
     let barrierReleaseError;
+    let cleanupError;
     try {
       await releaseCaptureBarrier();
     } catch (error) {
       barrierReleaseError = error;
     }
-    destroyRecoveryClients([sourceClient, destinationClient]);
-    if (!evidenceCommitted) await evidenceSink.abort();
+    try {
+      destroyRecoveryClients([sourceClient, destinationClient]);
+    } catch (error) {
+      cleanupError ??= error;
+    }
+    try {
+      if (!evidenceCommitted) await evidenceSink.abort();
+    } catch (error) {
+      cleanupError ??= error;
+    }
+    if (writerRevocationError) throw writerRevocationError;
     if (barrierReleaseError) throw barrierReleaseError;
+    if (!operationError && cleanupError) throw cleanupError;
   }
 }
 

@@ -574,7 +574,15 @@ export function assertExactStoreIdentity(store, binding, role) {
 }
 
 export function destroyRecoveryClients(clients) {
-  for (const client of clients.filter(Boolean)) client.destroy?.();
+  let firstError;
+  for (const client of clients.filter(Boolean)) {
+    try {
+      client.destroy?.();
+    } catch (error) {
+      firstError ??= error;
+    }
+  }
+  if (firstError) throw firstError;
 }
 
 export function completeRecoveryClockMilliseconds(clock) {
@@ -609,7 +617,7 @@ function exactRestrictedCreateReceipt(result) {
   const databaseVersionId = String(result?.databaseArtifactVersionId ?? "");
   const archiveVersionId = String(result?.archiveVersionId ?? "");
   const receipt = {
-    schemaVersion: "rivt-complete-recovery-create-receipt-v3",
+    schemaVersion: "rivt-complete-recovery-create-receipt-v4",
     sourceCommit: String(result?.sourceCommit ?? ""),
     snapshotId: String(result?.snapshotId ?? ""),
     completionKey: String(result?.completionKey ?? ""),
@@ -642,6 +650,12 @@ function exactRestrictedCreateReceipt(result) {
     writerAuthorizationExpiresAt: String(result?.writerAuthorizationExpiresAt ?? ""),
     multipartInitiationDenied: result?.multipartInitiationDenied,
     noPreexistingMultipartUploadsVerified: result?.noPreexistingMultipartUploadsVerified,
+    writerAuthorizationRevokedAt: String(result?.writerAuthorizationRevokedAt ?? ""),
+    writerAuthorizationRevocationVerified:
+      result?.writerAuthorizationRevocationVerified,
+    writerPolicyAbsentAfterRun: result?.writerPolicyAbsentAfterRun,
+    writerWriteDeniedAfterRun: result?.writerWriteDeniedAfterRun,
+    writerMultipartWriteDeniedAfterRun: result?.writerMultipartWriteDeniedAfterRun,
   };
   if (
     !/^[a-f0-9]{40}$/u.test(receipt.sourceCommit)
@@ -676,6 +690,10 @@ function exactRestrictedCreateReceipt(result) {
     || !/^[a-f0-9]{64}$/u.test(receipt.writerAuthorizationIdentitySha256)
     || receipt.multipartInitiationDenied !== true
     || receipt.noPreexistingMultipartUploadsVerified !== true
+    || receipt.writerAuthorizationRevocationVerified !== true
+    || receipt.writerPolicyAbsentAfterRun !== true
+    || receipt.writerWriteDeniedAfterRun !== true
+    || receipt.writerMultipartWriteDeniedAfterRun !== true
   ) {
     throw commandError(
       "RECOVERY_CREATE_RECEIPT_INVALID",
@@ -686,6 +704,16 @@ function exactRestrictedCreateReceipt(result) {
   canonicalTime(receipt.writeWindowEndAt, "writeWindowEndAt");
   canonicalTime(receipt.writerAuthorizationAt, "writerAuthorizationAt");
   canonicalTime(receipt.writerAuthorizationExpiresAt, "writerAuthorizationExpiresAt");
+  const revokedAt = canonicalTime(
+    receipt.writerAuthorizationRevokedAt,
+    "writerAuthorizationRevokedAt",
+  );
+  if (revokedAt < canonicalTime(receipt.writerAuthorizationAt, "writerAuthorizationAt")) {
+    throw commandError(
+      "RECOVERY_CREATE_RECEIPT_INVALID",
+      "The restricted recovery receipt predates writer authorization retirement.",
+    );
+  }
   canonicalTime(receipt.completionRetentionUntil, "completionRetentionUntil");
   canonicalTime(receipt.databaseArtifactRetentionUntil, "databaseArtifactRetentionUntil");
   canonicalTime(receipt.archiveRetentionUntil, "archiveRetentionUntil");
@@ -816,7 +844,10 @@ export async function createRestrictedRecoveryEvidenceSink(
   let state = "reserved";
   let plan;
   let writesStartedAt;
+  let writerAuthorizationPlan;
   let writerAuthorization;
+  let writerRevocation;
+  let writerRevocationOperationOutcome;
   return Object.freeze({
     async plan(value) {
       if (!handle || state !== "reserved") {
@@ -837,7 +868,7 @@ export async function createRestrictedRecoveryEvidenceSink(
       }
     },
     async markWritesStarted(value) {
-      if (!handle || state !== "planned") {
+      if (!handle || state !== "writer_authorization_planned") {
         throw commandError(
           "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
           "Restricted recovery evidence has no durable write plan.",
@@ -874,6 +905,34 @@ export async function createRestrictedRecoveryEvidenceSink(
         multipartInitiationDenied: true,
         noPreexistingMultipartUploadsVerified: true,
       };
+      const authorizationAt = new Date(writerAuthorization.writerAuthorizationAt);
+      const writeStarted = new Date(writesStartedAt);
+      const windowStart = new Date(plan.writeWindowStartAt);
+      const windowEnd = new Date(plan.writeWindowEndAt);
+      if (
+        writerAuthorization.writerAuthorizationExpiresAt !== plan.writeWindowEndAt
+        || authorizationAt < windowStart
+        || authorizationAt > writeStarted
+        || writeStarted >= windowEnd
+      ) {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Restricted recovery authorization falls outside its durable write window.",
+        );
+      }
+      for (const name of [
+        "writerPolicySha256",
+        "writerExactKeySetSha256",
+        "writerAuthorizationIdentitySha256",
+        "writerAuthorizationExpiresAt",
+      ]) {
+        if (writerAuthorization[name] !== writerAuthorizationPlan[name]) {
+          throw commandError(
+            "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+            "Restricted recovery authorization differs from its durable provider plan.",
+          );
+        }
+      }
       try {
         await writeRestrictedEvidenceRecord(handle, {
           ...plan,
@@ -889,8 +948,106 @@ export async function createRestrictedRecoveryEvidenceSink(
         );
       }
     },
+    async markWriterAuthorizationPlanned(value) {
+      if (!handle || state !== "planned") {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Restricted recovery evidence cannot plan writer authorization.",
+        );
+      }
+      writerAuthorizationPlan = {
+        writerPolicySha256: exactSha256(value, "writerPolicySha256"),
+        writerExactKeySetSha256: exactSha256(value, "writerExactKeySetSha256"),
+        writerAuthorizationIdentitySha256: exactSha256(
+          value,
+          "writerAuthorizationIdentitySha256",
+        ),
+        writerAuthorizationExpiresAt: canonicalTime(
+          value?.writerAuthorizationExpiresAt,
+          "writerAuthorizationExpiresAt",
+        ).toISOString(),
+      };
+      try {
+        await writeRestrictedEvidenceRecord(handle, {
+          ...plan,
+          ...writerAuthorizationPlan,
+          status: "writer_authorization_planned",
+        });
+        state = "writer_authorization_planned";
+      } catch {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Restricted writer-authorization evidence could not be committed durably.",
+        );
+      }
+    },
+    async markWriterRevoked(value) {
+      if (
+        !handle
+        || !["writer_authorization_planned", "writes_started"].includes(state)
+      ) {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Restricted recovery evidence cannot record writer retirement.",
+        );
+      }
+      const operationOutcome = value?.operationOutcome;
+      writerRevocation = {
+        writerAuthorizationRevokedAt: canonicalTime(
+          value?.writerAuthorizationRevokedAt,
+          "writerAuthorizationRevokedAt",
+        ).toISOString(),
+        writerAuthorizationRevocationVerified:
+          value?.writerAuthorizationRevocationVerified,
+        writerPolicyAbsentAfterRun: value?.writerPolicyAbsentAfterRun,
+        writerWriteDeniedAfterRun: value?.writerWriteDeniedAfterRun,
+        writerMultipartWriteDeniedAfterRun: value?.writerMultipartWriteDeniedAfterRun,
+      };
+      if (
+        !["completed", "failed"].includes(operationOutcome)
+        || (operationOutcome === "completed"
+          && (state !== "writes_started" || !writerAuthorization))
+        || writerRevocation.writerAuthorizationRevocationVerified !== true
+        || writerRevocation.writerPolicyAbsentAfterRun !== true
+        || writerRevocation.writerWriteDeniedAfterRun !== true
+        || writerRevocation.writerMultipartWriteDeniedAfterRun !== true
+        || new Date(writerRevocation.writerAuthorizationRevokedAt)
+          < new Date(plan.writeWindowStartAt)
+        || (writerAuthorization
+          && new Date(writerRevocation.writerAuthorizationRevokedAt)
+            < new Date(writerAuthorization.writerAuthorizationAt))
+      ) {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Restricted recovery evidence requires an exact writer-retirement proof.",
+        );
+      }
+      writerRevocationOperationOutcome = operationOutcome;
+      try {
+        await writeRestrictedEvidenceRecord(handle, {
+          ...plan,
+          ...writerAuthorizationPlan,
+          ...(writerAuthorization ?? {}),
+          ...writerRevocation,
+          operationOutcome,
+          status: "writer_revoked",
+          ...(writesStartedAt ? { writesStartedAt } : {}),
+        });
+        state = "writer_revoked";
+      } catch {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Restricted writer-retirement evidence could not be committed durably.",
+        );
+      }
+    },
     async commit(result) {
-      if (!handle || committed || state !== "writes_started") {
+      if (
+        !handle
+        || committed
+        || state !== "writer_revoked"
+        || writerRevocationOperationOutcome !== "completed"
+      ) {
         throw commandError(
           "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
           "Restricted recovery evidence sink is not writable.",
@@ -924,6 +1081,14 @@ export async function createRestrictedRecoveryEvidenceSink(
           );
         }
       }
+      for (const name of Object.keys(writerRevocation)) {
+        if (receipt[name] !== writerRevocation[name]) {
+          throw commandError(
+            "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+            "Restricted recovery receipt differs from its writer-retirement proof.",
+          );
+        }
+      }
       try {
         await writeRestrictedEvidenceRecord(handle, {
           ...receipt,
@@ -943,18 +1108,30 @@ export async function createRestrictedRecoveryEvidenceSink(
     },
     async abort() {
       if (handle) {
-        if (state === "writes_started") {
+        if (["writer_authorization_planned", "writes_started", "writer_revoked"].includes(state)) {
           await writeRestrictedEvidenceRecord(handle, {
-          ...plan,
-          ...writerAuthorization,
-            status: "write_failed_or_ambiguous",
-            writesStartedAt,
+            ...plan,
+            ...(writerAuthorizationPlan ?? {}),
+            ...(writerAuthorization ?? {}),
+            ...(writerRevocation ?? {}),
+            ...(writerRevocationOperationOutcome
+              ? { operationOutcome: writerRevocationOperationOutcome }
+              : {}),
+            status: state === "writer_revoked"
+              ? "operation_failed_writer_revoked"
+              : state === "writes_started"
+                ? "write_failed_or_ambiguous"
+                : "authorization_failed_or_ambiguous",
+            ...(writesStartedAt ? { writesStartedAt } : {}),
           }).catch(() => undefined);
         }
         await handle.close().catch(() => undefined);
         handle = undefined;
       }
-      if (!committed && state !== "writes_started") {
+      if (
+        !committed
+        && !["writer_authorization_planned", "writes_started", "writer_revoked"].includes(state)
+      ) {
         await removeFile(configuredPath, { force: true }).catch(() => undefined);
       }
     },
