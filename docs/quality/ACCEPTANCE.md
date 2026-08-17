@@ -2,7 +2,7 @@
 
 Gate A is approved only with automated and manual evidence against production-like infrastructure. Screenshots alone are insufficient.
 
-## Current Recovery Acceptance Snapshot - 2026-08-16
+## Current Recovery Acceptance Snapshot - 2026-08-17
 
 Launch acceptance is **blocked**. A fresh active-key-only PostgreSQL logical
 artifact restored 109 tables and 8,862 rows with zero count/content differences
@@ -30,11 +30,15 @@ be durable. The v2 reservation and final v5 restricted receipt bind distinct
 control/auditor identity digests, only the digest of the controller-private
 retirement descriptor, registration, and retirement finalization. CAS
 revisions, fencing, bounded attempt leases, deadline sweeps, quarantine, and
-retry reconcile ambiguous registration and simulated controller-process loss
-locally. Providerless source evidence is fixed to
-`providerless-injected-fake`. Provider-derived identities, provider persistence,
-independent deployment, forced-termination proof, effective-policy/multipart
-audit, and live control/data-plane evidence remain missing. Nonempty
+retry reconcile ambiguous registration and controller-process loss. Packet
+100A is accepted at its source-only restart-proof boundary: real killed Node
+subprocesses reopen and reconcile durable state through disposable PostgreSQL
+in exact-head CI. The store requires the exact application, backup, and restore
+database identities as prohibited identities. Providerless writer-control
+evidence is fixed to `providerless-injected-fake`. Provider-derived identities,
+provider persistence, independent deployment, live forced-termination proof,
+effective-policy/multipart audit, and live control/data-plane evidence remain
+missing. Nonempty
 restore now uses a providerless adapter that invokes the production upload-URL
 handler against an identity-bound read-only target and verifies its exact
 handler-selected bytes from an injected store. This is not cookie/session
@@ -48,6 +52,22 @@ can satisfy the application-read portion of launch readiness. The writer-
 authority portion separately requires `live-aws-control-and-data-plane` plus a
 restricted `retired_verified` finalization owned by an
 `independent-controller`; providerless or simulation evidence cannot pass.
+
+Exact candidate `14f0a6df7e445378d90bd62af7ef6812c0455694`
+passes 296/296 focused Packet/recovery/readiness tests and 544/544 unit tests.
+GitHub Actions push run `32077077458` and PR run `32077080310` both passed
+build, repository lint, and the aggregate test step, including 30/30
+integrations and six nested durable-controller cases in the disposable-
+PostgreSQL restart-proof suite. Readiness then failed
+closed only on `ACTIVE_LAUNCH_HOLD`, `RECURRING_BACKUP_INACTIVE`,
+`BACKUP_FRESHNESS_MONITOR_INACTIVE`,
+`APPLICATION_OBJECT_RECOVERY_MISSING`, and
+`RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE`; CI therefore skipped E2E and
+dependency audit. Final local source verification separately passed all three
+browser journeys and `npm audit --omit=dev` with zero vulnerabilities. The
+candidate is not merged, deployed, configured, scheduled, provider-proved, or
+operationally approved, so GA-OPS-004 remains `Partial` and GA-OPS-008 remains
+unchanged.
 
 Packet 100 can advance only after its remaining source gates pass and a separate bounded
 live authorization results in one exact reviewed/deployed recovery set and one

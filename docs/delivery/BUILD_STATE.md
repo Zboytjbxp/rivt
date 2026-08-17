@@ -5,10 +5,12 @@ Current gate: Gate B controlled engagement
 Current phase: Emergency production credential containment; feature activation paused.
 Active product packet: none. Packet 86 is production verified; product feature
 work remains paused during incident containment.
-Active source-only operational work: Packet 100A durable retirement-controller
-restart proof within Packet 100 application-object recovery tooling. It is not
-merged, deployed, configured, scheduled, or live-proved and does not activate a
-product packet.
+Active source-only operational work: Packet 100 application-object recovery
+tooling. Packet 100A's durable retirement-controller restart proof is accepted
+at its source-only boundary on candidate
+`14f0a6df7e445378d90bd62af7ef6812c0455694`. It is not merged, deployed,
+configured, scheduled, provider-proved, or operationally approved and does not
+activate a product packet.
 Active operational packet:
 `docs/operations/incidents/2026-07-29-production-credential-exposure.md`
 Repository branch: `master`
@@ -23,12 +25,13 @@ credential-exposure containment is in progress.
 
 ## Packet 100 source-only boundary
 
-- Packet 100A is the active bounded subpacket. Its implementation candidate adds
-  an injected PostgreSQL durable-store adapter, explicit nested controller-only
-  forward/rollback SQL, a bounded inert sweep helper, and a disposable
-  PostgreSQL/direct-subprocess proof harness. Local unit verification passes;
-  exact-head database-backed process-kill/restart evidence is pending CI. This
-  is not provider-backed persistence or an independently deployed controller.
+- Packet 100A is accepted at its source-only restart-proof boundary. Its
+  candidate adds an injected PostgreSQL durable-store adapter, explicit nested
+  controller-only forward/rollback SQL, a bounded inert sweep helper, and a
+  disposable PostgreSQL/direct-subprocess proof harness. The exact candidate
+  passed database-backed process-kill/restart evidence in GitHub Actions. This
+  is isolated providerless persistence, not provider-backed persistence or an
+  independently deployed controller.
 
 - Packet 100 prepares provider-neutral database-plus-application-object
   recovery source, adversarial tests, dormant provider adapters, least-
@@ -47,8 +50,10 @@ credential-exposure containment is in progress.
   descriptor. The ordered retirement, proof, and still-valid-session deadlines
   and compare-and-swap revisions, fencing tokens, attempt leases, deadline
   sweeps, quarantine, and retry rules prevent stale or conflicting controllers
-  from finalizing evidence. Ambiguous registration and simulated controller-
-  process loss remain retirement work, not successful writer evidence. The
+  from finalizing evidence. Packet 100A now proves real Node subprocess loss and
+  restart against disposable PostgreSQL in exact-head CI; ambiguous
+  registration and abandoned runs remain retirement work, not successful writer
+  evidence. The
   configured retirement-control and auditor identities must be distinct from
   each other and every data/application principal. Local controller evidence is
   fixed to `providerless-injected-fake`; it cannot mint either AWS evidence
@@ -87,16 +92,22 @@ credential-exposure containment is in progress.
   `applicationReadSmokeEvidenceLevel: handler-injected-store`; launch readiness
   requires the distinct exact value
   `live-cookie-session-http-provider-delivery` on a coordinated live restore.
-- The frozen Option 2 source passes 19/19 retirement-controller tests, 281/281
-  focused recovery and readiness tests, 529/529 unit tests, and
-  `npm run prelint:security`; repository JSON and diff integrity also pass. The
-  retained retention-window correction remains covered by 10/10 focused writer-
-  policy tests. The preceding source passed build, repository lint, the
-  aggregate test command, production dependency audit, three dependency-free
-  integrations, and all browser journeys; those broader closeout gates are not
-  represented as a new frozen-source run here. The guarded local harness
-  remains providerless and reported `providerIo: false`,
-  `productionDataRead: false`, and `chargeBearingAction: false`.
+- Candidate `14f0a6df7e445378d90bd62af7ef6812c0455694` passes 296/296
+  focused Packet/recovery/readiness tests and 544/544 unit tests. GitHub Actions
+  push run `32077077458` and PR run `32077080310` both passed build, repository
+  lint, and the aggregate test step, including 30/30 integrations and all six
+  nested durable-controller cases in the disposable-PostgreSQL restart-proof
+  suite. Readiness then failed
+  closed only on `ACTIVE_LAUNCH_HOLD`, `RECURRING_BACKUP_INACTIVE`,
+  `BACKUP_FRESHNESS_MONITOR_INACTIVE`,
+  `APPLICATION_OBJECT_RECOVERY_MISSING`, and
+  `RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE`; CI therefore skipped E2E
+  and dependency audit. Final local source verification separately passed all
+  three browser journeys, `npm audit --omit=dev` with zero vulnerabilities,
+  repository JSON, diff integrity, security lint, and sensitive-pattern checks.
+  The guarded local harness remains providerless and reported
+  `providerIo: false`, `productionDataRead: false`, and
+  `chargeBearingAction: false`.
 - The production-credential incident remains governing. Packet 100 does not
   clear the incident, the explicit launch hold, or any operational-readiness
   blocker.

@@ -1,7 +1,8 @@
 # Packet 100A - Durable retirement-controller restart proof
 
-Status: **source-only implementation candidate; local unit verification passes;
-database-backed subprocess proof awaits exact-head CI**
+Status: **accepted at the source-only restart-proof boundary on exact candidate
+`14f0a6df7e445378d90bd62af7ef6812c0455694`; not merged, deployed,
+configured, scheduled, provider-proved, or operationally approved**
 
 ## Purpose
 
@@ -44,26 +45,51 @@ This packet does not deploy that controller or grant it provider authority.
 - [x] The one-shot helper bounds each retirement operation and emits only
   aggregate state counts and allowlisted failure codes. Nonce, private descriptor,
   run identifier, database URL, and provider details are absent.
-- [ ] Exact-head PostgreSQL integration proves a killed process after durable
+- [x] Exact-head PostgreSQL integration proves a killed process after durable
   registration is reconciled by a fresh process as
   `abandoned-or-unknown`/completion-ineligible.
-- [ ] Exact-head PostgreSQL integration proves an expired `retiring` lease is
+- [x] Exact-head PostgreSQL integration proves an expired `retiring` lease is
   reclaimed with a higher fence and a stale process cannot finalize.
-- [ ] Exact-head PostgreSQL integration proves effect-before-response retry and
+- [x] Exact-head PostgreSQL integration proves effect-before-response retry and
   concurrent sweeps are idempotent and exercise the test authority marker once.
-- [ ] Build, repository lint, aggregate tests, browser journeys, production
+- [x] Build, repository lint, aggregate tests, browser journeys, production
   dependency audit, diff integrity, JSON validation, and sensitive-pattern checks
   pass on the final source.
+
+## Accepted evidence
+
+- GitHub Actions push run `32077077458` and PR run `32077080310` exercised the
+  exact candidate `14f0a6df7e445378d90bd62af7ef6812c0455694`. Both passed
+  build, repository lint, and the aggregate test step before launch readiness
+  stopped the workflow on the intentional blockers.
+- Exact-head tests passed 544/544 unit tests and 30/30 integrations. The
+  PostgreSQL integration contains six nested durable-controller cases covering
+  migration lifecycle, killed-process reopen/reconciliation, expired-lease
+  recovery with a higher fence and stale-finalizer rejection, atomic
+  effect-before-response retry, concurrent-sweeper exclusion, and database
+  constraints plus guarded rollback.
+- Focused Packet/recovery/readiness tests passed 296/296. Final local source
+  verification also passed all three browser E2E journeys and
+  `npm audit --omit=dev` with zero vulnerabilities. Those two gates were
+  skipped in each CI run after readiness failed closed; they are local evidence,
+  not CI evidence.
+- Both exact-head readiness runs reported only
+  `ACTIVE_LAUNCH_HOLD`, `RECURRING_BACKUP_INACTIVE`,
+  `BACKUP_FRESHNESS_MONITOR_INACTIVE`,
+  `APPLICATION_OBJECT_RECOVERY_MISSING`, and
+  `RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE`.
 
 ## Explicit non-claims
 
 This packet does not create or use an AWS identity, policy, bucket, object,
 credential, controller service, provider datastore, schedule, monitor, Railway
 service, GitHub workflow, or production database. It does not prove an
-independent deployment/failure domain, live forced termination, real policy
-retirement, application-object recovery, or launch readiness. Local evidence
-remains `providerless-injected-fake`; the existing five launch blockers must
-remain unchanged.
+independent deployment/failure domain, provider persistence, live forced
+termination, real policy retirement, application-object recovery, or launch
+readiness. The real subprocess termination occurred only against disposable,
+providerless PostgreSQL in exact-head CI. Writer-control evidence
+remains `providerless-injected-fake`; the existing five launch blockers remain
+unchanged.
 
 ## Rollback
 

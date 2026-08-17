@@ -128,16 +128,35 @@ requires durable independent-controller registration before writer
 construction and locally reconciles ambiguous/expired runs through CAS
 revisions, fencing tokens, bounded attempt leases, deadline sweeps, and
 quarantine. Its v2 reservation and v5 receipt carry only
-`providerless-injected-fake` controller evidence. This is a crash-reconciliation
-source contract, not a deployed controller or AWS proof; create remains inert
-without both the reviewed exact-three-key AWS control adapter and independent
-controller implementation. Nonempty restore now includes a providerless reader that runs the
-production upload-URL handler over an identity-bound read-only target and
+`providerless-injected-fake` controller evidence. Packet 100A is accepted at its
+source-only restart-proof boundary: a real killed Node subprocess is reconciled
+by a fresh process through disposable PostgreSQL, and expired-lease fencing,
+stale-finalizer rejection, response-loss idempotence, and concurrent-sweeper
+exclusion pass in exact-head CI. The store prohibits the exact
+application, backup, and restore database identities. This is an isolated
+providerless crash-reconciliation proof, not a deployed controller or AWS
+proof; create remains inert without both the reviewed exact-three-key AWS
+control adapter and independent controller implementation. Nonempty restore now
+includes a providerless reader that runs the production upload-URL handler over
+an identity-bound read-only target and
 verifies handler-selected bytes through an injected store. That source proof
 does not exercise cookie/session middleware, live HTTP, provider delivery, or
 the operational application-route requirement. Treat `handler-injected-store`
 as local-only; only `live-cookie-session-http-provider-delivery` may satisfy
 the coordinated live-read requirement.
+
+The accepted Packet 100A candidate is
+`14f0a6df7e445378d90bd62af7ef6812c0455694`. GitHub Actions push run
+`32077077458` and PR run `32077080310` passed build, repository lint, 544/544
+unit tests, and 30/30 integrations. Focused Packet/recovery/readiness tests pass
+296/296. CI then stopped at the exact five intentional blockers and skipped
+E2E/dependency audit; final local source verification separately passed all three browser
+journeys and `npm audit --omit=dev` with zero vulnerabilities. The five blockers
+remain `ACTIVE_LAUNCH_HOLD`, `RECURRING_BACKUP_INACTIVE`,
+`BACKUP_FRESHNESS_MONITOR_INACTIVE`,
+`APPLICATION_OBJECT_RECOVERY_MISSING`, and
+`RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE`. The candidate is not merged,
+deployed, configured, scheduled, provider-proved, or operationally approved.
 
 ## Operational Kill Switches
 

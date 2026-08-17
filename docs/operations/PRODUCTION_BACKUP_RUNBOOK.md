@@ -91,11 +91,17 @@ retirement descriptor while restricted evidence carries only its SHA-256
 identity. The provider-neutral reconciler uses compare-and-swap revisions,
 fencing tokens, bounded attempt leases, due-record sweeps, and conflict
 quarantine. It can retry an ambiguous registration, an expired claim, or
-simulated controller-process loss without letting a stale claim become final
-evidence. The v2 restricted reservation and final v5 receipt bind registration
-and independently finalized retirement. This is a crash-reconciliation source
-contract only: no controller is deployed, no provider store is configured, and
-local evidence is fixed to `providerless-injected-fake`.
+controller-process loss without letting a stale claim become final evidence.
+Packet 100A's store requires the exact application, backup, and restore database
+identities as prohibited identities and rechecks its injected runtime identity
+on every operation. Direct Node subprocess tests now prove durable reopen after
+SIGKILL, expired-lease recovery with a higher fence, stale-finalizer rejection,
+response-loss idempotence, and concurrent-sweeper exclusion through disposable
+PostgreSQL in exact-head CI. The v2 restricted reservation and final
+v5 receipt bind registration and independently finalized retirement. This is an
+isolated providerless crash-reconciliation proof only: no controller is
+deployed, no provider store is configured, and writer-control evidence remains
+fixed to `providerless-injected-fake`.
 
 The checked-in restore command now includes a providerless isolated RIVT
 route-reader. It repeats target identity inside a read-only transaction,
@@ -150,19 +156,28 @@ version, checksum, retention, isolation, application read, limits, cleanup,
 health, or monitor evidence is absent or ambiguous. Partial component writes
 without an authenticated completion record are not a recovery set.
 
-Current state: source-in-progress and live-unproven. The provider-neutral
-authorization/revocation lifecycle and Option 2 crash-reconciliation source
-contract are implemented locally. Durable controller registration precedes
-writer construction; CAS/fencing, deadline-sweep, ambiguous-registration, and
-simulated process-loss paths fail closed. The concrete exact-key AWS provider
-control adapter and independently deployed controller remain intentionally
-absent, so create fails closed before protected writes. Provider-derived writer,
-account, bucket-owner, control, and auditor identity proof, provider persistence,
-forced-termination evidence, IAM propagation, and live control/data-plane
-transcripts are still missing. Restore has providerless handler-level route source,
-but no live cookie/session HTTP/provider proof. The existing PostgreSQL-only
-proof remains valid for that limited scope, but
-`operationalReadiness.applicationObjectByteRecovery` remains `missing`.
+Current state: Packet 100 is source-in-progress and live-unproven; Packet 100A
+is accepted at its source-only restart-proof boundary. Exact candidate
+`14f0a6df7e445378d90bd62af7ef6812c0455694` passed build, repository lint,
+544/544 unit tests, and 30/30 integrations in both GitHub Actions push run
+`32077077458` and PR run `32077080310`; focused Packet/recovery/readiness tests
+pass 296/296. CI stopped on the unchanged five launch blockers before E2E and
+dependency audit, while final local source verification separately passed all
+three browser journeys and a zero-vulnerability production dependency audit.
+Durable controller registration precedes writer construction. Local controller
+tests keep ambiguous registration fail-closed. Exact-head disposable-PostgreSQL
+integrations prove real killed-process restart, expired-lease CAS/fencing and
+deadline sweep, response-loss idempotence, and concurrent-sweeper exclusion.
+The concrete exact-key AWS provider control adapter and independently deployed
+controller remain intentionally absent, so create fails closed before protected
+writes. Provider-derived writer, account, bucket-owner, control, and auditor
+identity proof, provider persistence, live forced-termination evidence, IAM
+propagation, and live control/data-plane transcripts are still missing. Restore
+has providerless handler-level route source, but no live cookie/session
+HTTP/provider proof. The existing PostgreSQL-only proof remains valid for that
+limited scope, but `operationalReadiness.applicationObjectByteRecovery` remains
+`missing`. Nothing in Packet 100A is merged, deployed, configured, scheduled,
+provider-proved, or operationally approved.
 
 ## Targets
 

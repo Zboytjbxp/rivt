@@ -10,7 +10,9 @@ the exact run and authority binding with an independently owned retirement-
 controller interface, then durably record that registration. The provider-
 neutral reconciler uses compare-and-swap revisions, fencing tokens, bounded
 attempt leases, deadline sweeps, conflict quarantine, and idempotent retry to
-handle ambiguous registration and simulated controller-process loss. Its v2
+handle ambiguous registration and controller-process loss. Packet 100A now
+proves the restart path with real killed Node subprocesses and disposable
+PostgreSQL in exact-head CI. Its v2
 reservation and final v5 restricted receipt bind registration and retirement
 finalization, but expose only the identity digest of the bounded controller-
 private retirement descriptor. Local controller evidence is fixed to
@@ -144,6 +146,10 @@ No unmatched, missing, or unexplained object may be silently omitted.
   runs with compare-and-swap revisions and fencing; quarantine conflicting
   bindings; never let a stale claim or non-retired run become completion-
   eligible.
+- Keep the controller database distinct from the exact application, backup,
+  and restore database identities. Construction is injected and I/O-free;
+  every operation must recheck the exact runtime database identity before
+  reading or mutating controller state.
 - Write the authenticated encrypted completion record last. Its absence means
   the set is incomplete even if component objects exist.
 - Durably reserve v2 restricted evidence at an absolute path outside the
@@ -211,10 +217,13 @@ controller client and deterministic reconciler. It does not apply a provider
 policy or deploy a controller. Construction performs no I/O. The exact plan and
 controller registration must both be durable before the writer factory opens;
 ambiguous registration requests exact retirement without opening writer
-authority. A due sweep can reclaim an expired fenced attempt after simulated
-controller-process loss, while stale revisions/fences and conflicting bindings
-fail closed. Only a verified independently finalized retirement can precede
-final v5 evidence. The default create path still rejects the missing controller
+authority. Packet 100A's isolated PostgreSQL store requires the exact
+application, backup, and restore database identities as prohibited identities
+and rechecks its injected runtime identity. A fresh process can reopen durable
+registration, and a due sweep can reclaim an expired fenced attempt after a
+killed controller process, while stale revisions/fences and conflicting
+bindings fail closed. Only a verified independently finalized retirement can
+precede final v5 evidence. The default create path still rejects the missing controller
 or protected-writer adapter. Only later, separately reviewed implementations may
 install/read back the exact AWS policy, prove initial inertness and multipart
 absence, remove/read back the policy, and produce real denial evidence. This is
@@ -261,30 +270,38 @@ receipt records `applicationReadSmokeEvidenceLevel: handler-injected-store`.
 - [x] Option 2 provider-neutral source durably registers independent retirement
   before writer construction; CAS/fencing, attempt-lease recovery, deadline
   sweep, ambiguous registration, quarantine, and completion-ineligibility paths
-  have adversarial local coverage. Source-only evidence is fixed to
-  `providerless-injected-fake`.
+  have adversarial local coverage. Packet 100A also proves killed-process
+  reopen, higher-fence expired-lease recovery, stale-finalizer rejection,
+  response-loss idempotence, and concurrent exclusion through disposable
+  PostgreSQL subprocesses in exact-head CI. Source-only writer-
+  control evidence is fixed to `providerless-injected-fake`.
 - [ ] The concrete AWS writer/control adapter, provider-derived writer/account/
   bucket/control/auditor bindings, independently deployed controller, provider
-  persistence, forced-termination proof, effective-policy and multipart audit,
-  and live control/data-plane evidence are implemented and adversarially proved.
+  persistence, live forced-termination proof, effective-policy and multipart
+  audit, and live control/data-plane evidence are implemented and adversarially
+  proved.
 - [x] Build, lint, focused/unit tests, E2E where relevant, dependency audit,
   diff integrity, and sensitive-data checks pass.
 
-Current Option 2 evidence: 19/19 retirement-controller tests, 281/281 focused
-Packet and readiness tests, 529/529 unit tests, and
-`npm run prelint:security` pass. The retained writer-policy correction remains
-covered by 10/10 focused tests. Repository JSON, diff integrity, and added-
-source sensitive-pattern checks pass. The preceding source passed build,
-repository lint, the aggregate test command, the zero-vulnerability production
-dependency audit, three dependency-free integrations, and all browser journeys;
-those broader closeout gates are not represented as a new frozen-source run
-here. The guarded harness remains providerless and reported no provider I/O,
-production-data read, or charge-bearing action.
+Current Option 2/Packet 100A evidence: exact candidate
+`14f0a6df7e445378d90bd62af7ef6812c0455694` passes 296/296 focused
+Packet/recovery/readiness tests and 544/544 unit tests. GitHub Actions push run
+`32077077458` and PR run `32077080310` both passed build, repository lint, and
+the aggregate test step, including 30/30 integrations and six nested durable-
+controller cases in the disposable-PostgreSQL restart-proof suite. Readiness then failed
+closed only on the exact five intentional launch blockers, so CI skipped E2E
+and dependency audit. Final local source verification separately passed all
+three browser journeys and `npm audit --omit=dev` with zero vulnerabilities;
+security lint, repository JSON, diff integrity, and added-source sensitive-
+pattern checks also pass. The guarded harness remains providerless and reported
+no provider I/O, production-data read, or charge-bearing action.
 
-The separately missing AWS provider control adapter and independently deployed
-controller keep this packet `source-in-progress`. No provider or operational
-acceptance is inferred from the checked local items, including the providerless
-controller and handler-level route proofs.
+Packet 100A is accepted only at its source restart-proof boundary. The
+separately missing AWS provider control adapter, independently deployed
+controller, provider persistence, and live forced-termination proof keep Packet
+100 `source-in-progress`. No provider or operational acceptance is inferred
+from the checked source and CI items, including the providerless controller and
+handler-level route proofs.
 
 ## Live evidence required later
 
