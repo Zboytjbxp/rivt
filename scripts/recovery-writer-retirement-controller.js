@@ -10,6 +10,7 @@ const RETIREMENT_OPERATION_SCHEMA = "rivt-recovery-writer-retirement-operation-v
 const RETIREMENT_STATUS_SCHEMA = "rivt-recovery-writer-retirement-status-v1";
 const RECONCILIATION_SWEEP_SCHEMA = "rivt-recovery-writer-retirement-sweep-v1";
 const DEFAULT_ATTEMPT_TIMEOUT_MS = 30_000;
+const MAXIMUM_SWEEP_RECORDS = 1_000;
 const MAX_RETIREMENT_DESCRIPTOR_REFERENCE_BYTES = 2_048;
 
 export const RECOVERY_WRITER_CONTROL_EVIDENCE_LEVELS = Object.freeze({
@@ -572,6 +573,10 @@ function normalizeRecord(value) {
   return Object.freeze(record);
 }
 
+export function normalizeRecoveryWriterRetirementRecord(value) {
+  return normalizeRecord(value);
+}
+
 function assertRecordState(record) {
   const hasRequest = (
     record.retirementRequestedAt !== null
@@ -815,7 +820,8 @@ function normalizeProof(value, operation) {
  * - load(runId): return a record or null
  * - compareExchange({runId, expectedRevision, expectedFencingToken, next}):
  *   atomically return next on success or null on a stale revision/fence
- * - listDue({at, states}): return candidate records for reconciliation
+ * - listDue({at, states, limit}): return at most limit candidate records
+ *   for reconciliation
  */
 export function createRecoveryWriterRetirementController({
   store,
@@ -1148,6 +1154,7 @@ export function createRecoveryWriterRetirementController({
       candidates = await listDueOperation(Object.freeze({
         at: checkedAt,
         states: DUE_STATES,
+        limit: MAXIMUM_SWEEP_RECORDS,
       }));
     } catch (error) {
       throw controllerError(
@@ -1156,10 +1163,10 @@ export function createRecoveryWriterRetirementController({
         error,
       );
     }
-    if (!Array.isArray(candidates)) {
+    if (!Array.isArray(candidates) || candidates.length > MAXIMUM_SWEEP_RECORDS) {
       throw controllerError(
         "RECOVERY_WRITER_RETIREMENT_CONTROLLER_INVALID",
-        "Writer-retirement store listDue operation must return an array.",
+        "Writer-retirement store returned an invalid or unbounded due-record set.",
       );
     }
     const identifiers = [...new Set(candidates.map((candidate) => normalizeRecord(candidate).runId))];

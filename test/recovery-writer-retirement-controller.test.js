@@ -87,8 +87,8 @@ function createMemoryStore({ createError } = {}) {
       records.set(runId, clone(next));
       return clone(next);
     },
-    async listDue({ at, states }) {
-      calls.push(["listDue", at, [...states]]);
+    async listDue({ at, states, limit }) {
+      calls.push(["listDue", at, [...states], limit]);
       return [...records.values()]
         .filter((record) => {
           if (!states.includes(record.state)) return false;
@@ -742,4 +742,49 @@ test("private descriptor and temporal contracts reject unsafe registrations befo
     );
   }
   assert.deepEqual(store.calls, []);
+});
+
+test("reconciliation rejects a store that exceeds the fixed sweep bound", async () => {
+  const record = {
+    schema: "rivt-recovery-writer-retirement-record-v1",
+    ...registration(),
+    state: "registered",
+    revision: 1,
+    fencingToken: 1,
+    registeredAt: "2026-08-17T15:00:00.000Z",
+    retirementRequestedAt: null,
+    retirementTrigger: null,
+    writerOutcome: null,
+    retiringAt: null,
+    attemptLeaseExpiresAt: null,
+    retirementAttempts: 0,
+    retiredAt: null,
+    retirementVerificationSha256: null,
+    completionEligible: false,
+    lastFailureCode: null,
+    quarantinedAt: null,
+    quarantineReason: null,
+  };
+  let observedLimit;
+  const controller = createRecoveryWriterRetirementController({
+    store: {
+      async create() { return record; },
+      async load() { return record; },
+      async compareExchange() { return null; },
+      async listDue({ limit }) {
+        observedLimit = limit;
+        return Array.from({ length: limit + 1 }, () => record);
+      },
+    },
+    async retireAndVerify(operation) {
+      return proofFor(operation);
+    },
+    now: () => "2026-08-17T15:06:00.000Z",
+  });
+
+  await assert.rejects(
+    () => controller.reconcileDue(),
+    (error) => error.code === "RECOVERY_WRITER_RETIREMENT_CONTROLLER_INVALID",
+  );
+  assert.equal(observedLimit, 1_000);
 });

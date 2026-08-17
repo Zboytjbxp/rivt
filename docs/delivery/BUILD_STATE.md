@@ -5,9 +5,10 @@ Current gate: Gate B controlled engagement
 Current phase: Emergency production credential containment; feature activation paused.
 Active product packet: none. Packet 86 is production verified; product feature
 work remains paused during incident containment.
-Active source-only operational work: Packet 100 application-object recovery
-tooling. It is not merged, deployed, configured, scheduled, or live-proved and
-does not activate a product packet.
+Active source-only operational work: Packet 100A durable retirement-controller
+restart proof within Packet 100 application-object recovery tooling. It is not
+merged, deployed, configured, scheduled, or live-proved and does not activate a
+product packet.
 Active operational packet:
 `docs/operations/incidents/2026-07-29-production-credential-exposure.md`
 Repository branch: `master`
@@ -21,6 +22,13 @@ Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
 
 ## Packet 100 source-only boundary
+
+- Packet 100A is the active bounded subpacket. Its implementation candidate adds
+  an injected PostgreSQL durable-store adapter, explicit nested controller-only
+  forward/rollback SQL, a bounded inert sweep helper, and a disposable
+  PostgreSQL/direct-subprocess proof harness. Local unit verification passes;
+  exact-head database-backed process-kill/restart evidence is pending CI. This
+  is not provider-backed persistence or an independently deployed controller.
 
 - Packet 100 prepares provider-neutral database-plus-application-object
   recovery source, adversarial tests, dormant provider adapters, least-
