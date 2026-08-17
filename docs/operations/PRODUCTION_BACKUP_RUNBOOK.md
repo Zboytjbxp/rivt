@@ -61,14 +61,17 @@ The coordinated source path is:
 7. write the authenticated encrypted completion record last.
 
 The source-reader, protected-writer, monitor/backup-reader, and isolated-
-restore identities must be distinct and must not be the RIVT web-service
-identity. Use only reviewed IAM fixtures. Normal command output must remain
+restore data identities must be distinct and must not be the RIVT web-service
+identity. A live AWS adapter additionally requires a fifth, distinct control-
+auditor identity with no backup decryption or source-data authority. Use only
+reviewed IAM fixtures. Normal command output must remain
 aggregate and secret-safe; exact object keys, provider coordinates, version
 IDs, and object-level metadata belong only in restricted operator evidence.
 The checked-in create CLI includes a provider-neutral authorization lease but
 intentionally refuses protected writes until a separately reviewed control
 adapter attests the rendered exact three-key writer policy, writer principal,
-and UTC window. The exact provider plan is durably recorded before activation;
+and UTC window. The exact provider plan is durably recorded before the adapter
+factory opens; factory construction must perform no provider I/O;
 the revoker exists before activation begins; ambiguous activation and every
 later failure trigger idempotent retirement; and final success evidence is
 forbidden until policy absence and denied direct/multipart writes are proved.
@@ -129,7 +132,10 @@ without an authenticated completion record are not a recovery set.
 Current state: source-in-progress and live-unproven. The provider-neutral
 authorization/revocation lifecycle is implemented, but the concrete exact-key
 provider control adapter remains intentionally absent, so create fails closed
-before protected writes. Restore has providerless handler-level route source,
+before protected writes. Provider-derived role/account/bucket-owner binding,
+strict live-vs-simulation evidence levels, the distinct control auditor, and an
+independently owned crash-retirement path are also unimplemented. Restore has
+providerless handler-level route source,
 but no live cookie/session HTTP/provider proof. The existing PostgreSQL-only
 proof remains valid for that limited scope, but
 `operationalReadiness.applicationObjectByteRecovery` remains `missing`.

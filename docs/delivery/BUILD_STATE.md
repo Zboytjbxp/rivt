@@ -29,10 +29,14 @@ credential-exposure containment is in progress.
   and the protected set is constrained to three deterministic immutable keys:
   database, one encrypted member archive, and completion. The normal command
   now has a provider-neutral revocable authorization lease: the exact plan is
-  durably recorded before activation, attempted authority is retired on every
-  later failure, and final evidence requires verified policy absence plus
-  denied direct/multipart writes. It remains fail-closed until an exact-key
-  provider control adapter is separately reviewed and supplied. Nonempty restore now defaults to a
+  durably recorded before the adapter factory opens, attempted authority is
+  retired on every later in-process failure, and final evidence requires
+  verified policy absence plus denied direct/multipart writes. It remains
+  fail-closed until an exact-key provider control adapter is separately
+  reviewed and supplied. A live adapter also still needs provider-derived
+  writer/account/bucket-owner bindings, a distinct control auditor, strict
+  provider-evidence levels, and crash-safe retirement outside the writer
+  process. Nonempty restore now defaults to a
   providerless isolated RIVT route-reader that rechecks the target database in
   a read-only transaction, invokes the exact production upload-URL handler for
   one authenticated-owner representative per completed scope, and verifies the
@@ -60,8 +64,8 @@ credential-exposure containment is in progress.
   `applicationReadSmokeEvidenceLevel: handler-injected-store`; launch readiness
   requires the distinct exact value
   `live-cookie-session-http-provider-delivery` on a coordinated live restore.
-- Local verification passes: build, repository lint, 252/252 focused recovery
-  and readiness tests, 500/500 unit tests, three dependency-free integration
+- Local verification passes: build, repository lint, 254/254 focused recovery
+  and readiness tests, 502/502 unit tests, three dependency-free integration
   checks, all three browser E2E journeys, and a zero-vulnerability production
   dependency audit. Twenty PostgreSQL integrations are explicitly skipped
   because the clean worktree has no `TEST_DATABASE_URL`; no DB-backed aggregate

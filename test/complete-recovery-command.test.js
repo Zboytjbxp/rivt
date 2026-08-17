@@ -510,6 +510,49 @@ test("create command binds one exact database snapshot and fixed limits before o
   ]);
 });
 
+test("create durably records the exact writer plan before opening the adapter factory", async () => {
+  const lifecycle = [];
+  const baseFactory = exactWriterAuthorizationLeaseFactory();
+  await createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+    openProtectedWriterAuthorizationLease: async (context) => {
+      lifecycle.push("authorization:factory-opened");
+      return baseFactory(context);
+    },
+  }));
+  assert.ok(lifecycle.indexOf("evidence:writer-authorization-planned") >= 0);
+  assert.ok(lifecycle.indexOf("evidence:writer-authorization-planned")
+    < lifecycle.indexOf("authorization:factory-opened"));
+});
+
+test("create opens no adapter factory when the durable writer plan fails", async () => {
+  const lifecycle = [];
+  const evidenceError = new Error("writer plan evidence failed");
+  const baseSinkFactory = fakeEvidenceSinkFactory(lifecycle);
+  let adapterFactoriesOpened = 0;
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      restrictedEvidenceSinkFactory: async (env) => {
+        const sink = await baseSinkFactory(env);
+        return {
+          ...sink,
+          async markWriterAuthorizationPlanned() {
+            lifecycle.push("evidence:writer-authorization-plan-failed");
+            throw evidenceError;
+          },
+        };
+      },
+      openProtectedWriterAuthorizationLease: async () => {
+        adapterFactoriesOpened += 1;
+        throw new Error("adapter factory must not open");
+      },
+    })),
+    (error) => error === evidenceError,
+  );
+  assert.equal(adapterFactoriesOpened, 0);
+  assert.ok(lifecycle.includes("evidence:writer-authorization-plan-failed"));
+  assert.ok(lifecycle.includes("evidence:aborted"));
+});
+
 test("create samples its write boundary after advancing provider authorization", async () => {
   const lifecycle = [];
   const authorizedAt = "2026-08-16T20:00:01.000Z";

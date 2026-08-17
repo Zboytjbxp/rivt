@@ -30,16 +30,19 @@ point-in-time history and are superseded where they conflict with this record.
   evidence does not recover application photos, documents, or other object
   bytes. Complete disaster recovery and launch readiness remain unclaimed.
 - Packet 100 local source evidence now includes passing build and repository
-  lint, 252/252 focused recovery/readiness tests, 500/500 unit tests, three
+  lint, 254/254 focused recovery/readiness tests, 502/502 unit tests, three
   dependency-free integration checks, all three browser E2E journeys, a
   zero-vulnerability production dependency audit, and a guarded local harness
   that reports no provider I/O, production-data read, or charge-bearing action.
   Twenty PostgreSQL integrations are skipped because this clean worktree has no
   `TEST_DATABASE_URL`; no database-backed aggregate pass is claimed. A
-  provider-neutral writer lease now registers revocation before activation,
-  retires attempted authority on every later failure, and requires verified
-  inertness before final evidence; the concrete provider control adapter that
-  would install/read back/remove the exact policy remains open. A providerless isolated route
+  provider-neutral writer lease now durably records the exact provider plan
+  before opening the adapter factory, registers revocation before activation,
+  retires attempted authority on every later in-process failure, and requires
+  verified inertness before final evidence. The concrete provider control
+  adapter, provider-derived role/account/bucket-owner bindings, distinct control
+  auditor, strict evidence levels, and crash-safe independent retirement remain
+  open. A providerless isolated route
   reader now proves the production upload-URL handler with injected stores,
   but cookie/session middleware, live HTTP/provider delivery, and a coordinated
   restore remain unproved. Its receipt is explicitly `handler-injected-store`,

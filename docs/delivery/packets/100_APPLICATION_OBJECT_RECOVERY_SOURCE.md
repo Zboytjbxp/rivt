@@ -8,7 +8,11 @@ authorization lease that registers an idempotent revoker before activation,
 retires attempted authority on every later failure, and requires verified
 inertness before final evidence. The live command remains deliberately inert
 until a separately reviewed provider control adapter applies and verifies the
-exact three-key writer policy. Nonempty restore now includes a providerless
+exact three-key writer policy. That live adapter must also bind provider-derived
+writer, account, and bucket-owner identity; use a distinct control auditor;
+separate providerless, simulation, and live evidence; and survive writer-process
+termination through an independently owned retirement path. Nonempty restore
+now includes a providerless
 isolated route-reader that invokes the same authenticated upload-URL handler as
 the production application against an identity-bound read-only target client,
 then follows an opaque injected delivery capability and verifies exact bytes.
@@ -115,8 +119,9 @@ No unmatched, missing, or unexplained object may be silently omitted.
   application-object archive, and completion. The normal CLI must fail before
   writes unless a separately trusted adapter attests the rendered exact-key
   policy, reviewed principal, and half-open UTC window.
-- Durably record the exact policy/key-set plan before activation. Register the
-  revoker first, treat activation errors as potentially mutating, retire and
+- Durably record the exact policy/key-set plan before the adapter factory is
+  opened. Require factory construction to perform no provider I/O, register the
+  revoker before activation, treat activation errors as potentially mutating, retire and
   verify authority on every post-attempt failure, and require policy absence
   plus denied direct/multipart writes before final success evidence. An
   ambiguous revocation is the controlling failure.
@@ -172,8 +177,11 @@ least-privilege identities:
 - isolated restore writer: operate only inside one empty temporary restore
   prefix, with cleanup limited to objects it created.
 
-Those four credentials and coordinate identities must be distinct. None is a
-web-runtime credential.
+Those four data-plane credentials and coordinate identities must be distinct.
+None is a web-runtime credential. A live AWS control adapter additionally needs
+a fifth, separately reviewed control-auditor identity that cannot read source
+data, decrypt the set, or write arbitrary protected objects. The current command
+does not yet model or prove that live control identity.
 
 The repository renders and validates the exact three-key policy and supplies a
 provider-neutral authorization/revocation lease, but does not apply a provider
@@ -183,7 +191,10 @@ and fails with `RECOVERY_WRITER_REVOCATION_UNVERIFIED` when inertness cannot be
 proved. The default create command still returns
 `RECOVERY_WRITER_AUTHORIZATION_REQUIRED`; only a later, separately reviewed
 provider control adapter may install/read back the exact policy, prove initial
-inertness and multipart absence, and remove/read back the policy afterward.
+inertness and multipart absence, and remove/read back the policy afterward. The
+exact provider plan is now durable before the factory is opened, and focused
+tests prove a failed durable plan causes zero factory calls. This is a tactical
+ordering guard, not a live adapter or crash-safe retirement proof.
 The default nonempty restore uses the providerless isolated RIVT route-reader.
 It rechecks target-database identity inside a read-only transaction, requires
 one exact authenticated-owner representative for every completed storage
@@ -219,11 +230,16 @@ receipt records `applicationReadSmokeEvidenceLevel: handler-injected-store`.
 - [x] Provider-neutral writer lifecycle source registers revocation before
   activation, revokes on ambiguous activation and every later failure, and
   permits final restricted evidence only after exact inertness proof.
+- [x] The exact writer plan is durable before the adapter factory opens; a
+  failed evidence write opens no factory.
+- [ ] Live AWS writer/control identities, provider evidence levels, effective-
+  policy and bucket-owner binding, and crash-safe independent retirement are
+  selected, implemented, and adversarially proved.
 - [x] Build, lint, focused/unit tests, E2E where relevant, dependency audit,
   diff integrity, and sensitive-data checks pass.
 
 Current local evidence: build and repository lint pass; the focused Packet and
-readiness set passes 252/252; the full unit gate passes 500/500; three
+readiness set passes 254/254; the full unit gate passes 502/502; three
 dependency-free integration checks pass while 20 PostgreSQL integrations are
 explicitly skipped because this clean worktree has no `TEST_DATABASE_URL`; all
 three browser E2E journeys pass; the production dependency audit reports zero

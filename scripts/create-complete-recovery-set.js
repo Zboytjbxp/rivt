@@ -410,15 +410,19 @@ export async function createCompleteRecoverySet({
           destinationStoreIdentitySha256: config.destination.identitySha256,
           writerPrincipalIdentitySha256: config.principalIdentities.destination,
         });
-        writerAuthorizationLease = assertRecoveryWriterAuthorizationLease(
-          await openProtectedWriterAuthorizationLease(writerAuthorizationContext),
-        );
         await evidenceSink.markWriterAuthorizationPlanned({
           writerPolicySha256: policyPlan.policySha256,
           writerExactKeySetSha256: policyPlan.exactKeySetSha256,
           writerAuthorizationIdentitySha256: config.principalIdentities.destination,
           writerAuthorizationExpiresAt: config.writeWindow.endAt,
         });
+        // The adapter factory is a pure construction boundary. Persist the
+        // exact provider plan first so even opening a reviewed factory cannot
+        // precede durable operator evidence. All provider I/O belongs inside
+        // the lease's activate/revoke operations.
+        writerAuthorizationLease = assertRecoveryWriterAuthorizationLease(
+          await openProtectedWriterAuthorizationLease(writerAuthorizationContext),
+        );
         writerActivationAttempted = true;
         const authorizationReceipt = await writerAuthorizationLease.activate(
           writerAuthorizationContext,

@@ -27,6 +27,7 @@
       "writerAuthorizationLifecycle": "verified_local_only",
       "intentionalBlockers": [
         "provider_exact_writer_control_adapter_missing",
+        "live_aws_writer_identity_evidence_and_crash_retirement_unimplemented",
         "live_cookie_session_http_route_read_evidence_missing"
       ]
     },
