@@ -38,9 +38,10 @@ point-in-time history and are superseded where they conflict with this record.
   UTC window, with `If-None-Match` limited to creates; the correction passes
   10/10 focused writer-policy tests, 254/254 focused recovery/readiness tests,
   502/502 unit tests, and `npm run prelint:security` without adding a top-level
-  test. Broader build, lint, integration, E2E, and dependency-audit evidence is
-  retained from the immediately preceding source and was not rerun for this
-  narrow correction.
+  test. Build, repository lint, aggregate tests, and the zero-vulnerability
+  dependency audit also pass on the corrected source. Auth and jobs/discovery
+  E2E pass in-suite; offline recovery passes on one isolated retry after its
+  first run timed out waiting for the Tools control.
   Twenty PostgreSQL integrations are skipped because this clean worktree has no
   `TEST_DATABASE_URL`; no database-backed aggregate pass is claimed. A
   provider-neutral writer lease now durably records the exact provider plan

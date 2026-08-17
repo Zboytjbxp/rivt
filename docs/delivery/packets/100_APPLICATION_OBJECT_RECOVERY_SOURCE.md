@@ -245,13 +245,15 @@ receipt records `applicationReadSmokeEvidenceLevel: handler-injected-store`.
 Current correction evidence: 10/10 focused writer-policy tests, 254/254 focused
 Packet and readiness tests, 502/502 unit tests, and
 `npm run prelint:security` pass, with no new top-level test. Build, repository
-lint, three dependency-free integration checks, all three browser E2E journeys,
-and a zero-vulnerability production dependency audit passed on the immediately
-preceding source and were not rerun for this narrow correction. Twenty
-PostgreSQL integrations were explicitly skipped because the clean worktree had
-no `TEST_DATABASE_URL`; no DB-backed aggregate pass is claimed. The guarded
-harness reported no provider I/O, production-data read, or charge-bearing
-action; JSON, diff-integrity, and added-source sensitive-pattern checks passed.
+lint, the aggregate test command, and a zero-vulnerability production
+dependency audit also pass on the corrected source. Three dependency-free
+integrations pass while 20 PostgreSQL integrations are explicitly skipped
+because the clean worktree has no `TEST_DATABASE_URL`; no DB-backed aggregate
+pass is claimed. The auth and jobs/discovery browser journeys passed in the
+suite; the offline journey passed on one isolated retry after its first run
+timed out waiting for the Tools control. The guarded harness reported no
+provider I/O, production-data read, or charge-bearing action; JSON,
+diff-integrity, and added-source sensitive-pattern checks passed.
 
 The separately missing live provider control adapter keeps this packet
 `source-in-progress`. No provider or operational acceptance is inferred from
