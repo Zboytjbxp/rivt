@@ -8,6 +8,8 @@ const defaultRecoveryPath = "docs/operations/recovery-policy.json";
 const maxEvidenceAgeDays = 30;
 const liveApplicationReadSmokeEvidenceLevel =
   "live-cookie-session-http-provider-delivery";
+const liveWriterAuthorityEvidenceLevel =
+  "live-aws-control-and-data-plane";
 const applicationObjectRecoveryScopes = [
   "album",
   "contact-note",
@@ -73,6 +75,31 @@ function exactRecoveryScopesRecorded(scopes) {
     [...scopes].sort().every((scope, index) => scope === applicationObjectRecoveryScopes[index]);
 }
 
+function independentWriterRetirementFinalizationRecorded(finalization, recoveryCompletedAt) {
+  const registeredAt = dateTime(finalization?.registeredAt);
+  const deadlineAt = dateTime(finalization?.deadlineAt);
+  const finalizedAt = dateTime(finalization?.finalizedAt);
+  const proofDeadlineAt = dateTime(finalization?.proofDeadlineAt);
+  const writerSessionExpiresAt = dateTime(finalization?.writerSessionExpiresAt);
+  const completedAt = dateTime(recoveryCompletedAt);
+  return finalization?.status === "retired_verified" &&
+    finalization?.authority === "independent-controller" &&
+    finalization?.trigger === "writer-requested" &&
+    finalization?.operationOutcome === "completed" &&
+    sha256Recorded(finalization?.controllerIdentitySha256) &&
+    sha256Recorded(finalization?.auditorIdentitySha256) &&
+    finalization.auditorIdentitySha256 !== finalization.controllerIdentitySha256 &&
+    registeredAt && deadlineAt && finalizedAt && proofDeadlineAt &&
+    writerSessionExpiresAt && completedAt &&
+    registeredAt <= finalizedAt &&
+    registeredAt < deadlineAt &&
+    deadlineAt < proofDeadlineAt &&
+    finalizedAt <= proofDeadlineAt &&
+    finalizedAt <= completedAt &&
+    proofDeadlineAt < writerSessionExpiresAt &&
+    restrictedArtifactIdentityRecorded(finalization?.identity);
+}
+
 function coordinatedApplicationObjectRestoreReady(
   applicationObjectRecovery,
   backupRetention,
@@ -130,6 +157,11 @@ function coordinatedApplicationObjectRestoreReady(
     receipt?.applicationReadSmokePassed === true &&
     receipt?.applicationReadSmokeEvidenceLevel
       === liveApplicationReadSmokeEvidenceLevel &&
+    receipt?.writerAuthorityEvidenceLevel === liveWriterAuthorityEvidenceLevel &&
+    independentWriterRetirementFinalizationRecorded(
+      receipt?.writerRetirementFinalization,
+      receipt?.completedAt,
+    ) &&
     positiveNumber(receipt?.totalDurationMs) &&
     positiveNumber(targets?.rtoMinutes) &&
     receipt?.rtoMinutes === targets.rtoMinutes &&

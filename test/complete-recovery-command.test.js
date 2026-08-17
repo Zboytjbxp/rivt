@@ -39,6 +39,9 @@ import {
 import {
   createRecoveryWriterAuthorizationLease,
 } from "../scripts/recovery-writer-authorization.js";
+import {
+  createRecoveryWriterRetirementControllerClient,
+} from "../scripts/recovery-writer-retirement-controller.js";
 
 const nowValue = new Date("2026-08-16T20:00:00.000Z");
 const retentionUntil = "2026-09-15T20:00:00.000Z";
@@ -127,6 +130,8 @@ function commonEnv() {
     COMPLETE_RECOVERY_READER_PRINCIPAL_IDENTITY_SHA256: "3".repeat(64),
     COMPLETE_RECOVERY_RESTORE_PRINCIPAL_IDENTITY_SHA256: "4".repeat(64),
     COMPLETE_RECOVERY_APPLICATION_STORAGE_PRINCIPAL_IDENTITY_SHA256: "5".repeat(64),
+    COMPLETE_RECOVERY_CONTROL_PRINCIPAL_IDENTITY_SHA256: "6".repeat(64),
+    COMPLETE_RECOVERY_AUDITOR_PRINCIPAL_IDENTITY_SHA256: "7".repeat(64),
   };
 }
 
@@ -138,6 +143,8 @@ function createEnv() {
     CONFIRM_COMPLETE_RECOVERY_IMMUTABLE_WRITES: "true",
     COMPLETE_RECOVERY_WRITE_WINDOW_START_AT: "2026-08-16T19:55:00.000Z",
     COMPLETE_RECOVERY_WRITE_WINDOW_END_AT: "2026-08-16T20:30:00.000Z",
+    COMPLETE_RECOVERY_RETIREMENT_PROOF_DEADLINE_AT: "2026-08-16T20:45:00.000Z",
+    COMPLETE_RECOVERY_WRITER_SESSION_EXPIRES_AT: "2026-08-16T21:00:00.000Z",
     BACKUP_DATABASE_URL: "postgresql://reader:secret@source-db.example.test/rivt",
     DATABASE_URL: "postgresql://application:secret@source-db.example.test/rivt",
     COMPLETE_RECOVERY_SOURCE_S3_SECRET_ACCESS_KEY: "source-reader-secret",
@@ -146,7 +153,7 @@ function createEnv() {
 }
 
 function restoreEnv() {
-  return {
+  const env = {
     ...commonEnv(),
     CONFIRM_COMPLETE_RECOVERY_RESTORE: "true",
     CONFIRM_COMPLETE_RECOVERY_TARGETS_ISOLATED: "true",
@@ -163,6 +170,9 @@ function restoreEnv() {
     COMPLETE_RECOVERY_READER_S3_SECRET_ACCESS_KEY: "exact-reader-secret",
     COMPLETE_RECOVERY_RESTORE_S3_SECRET_ACCESS_KEY: "isolated-writer-secret",
   };
+  delete env.COMPLETE_RECOVERY_CONTROL_PRINCIPAL_IDENTITY_SHA256;
+  delete env.COMPLETE_RECOVERY_AUDITOR_PRINCIPAL_IDENTITY_SHA256;
+  return env;
 }
 
 function databaseSnapshot() {
@@ -249,9 +259,17 @@ function fakeEvidenceSinkFactory(lifecycle = [], receipts = []) {
       async markWriterAuthorizationPlanned() {
         lifecycle.push("evidence:writer-authorization-planned");
       },
+      async markWriterRetirementRegistered(receipt) {
+        receipts.push({ retirementRegistration: receipt });
+        lifecycle.push("evidence:writer-retirement-registered");
+      },
       async markWriterRevoked(receipt) {
         receipts.push({ revocation: receipt });
         lifecycle.push("evidence:writer-revoked");
+      },
+      async markWriterRetirementFinalized(receipt) {
+        receipts.push({ retirementFinalization: receipt });
+        lifecycle.push("evidence:writer-retirement-finalized");
       },
       async commit(receipt) {
         receipts.push(receipt);
@@ -326,12 +344,49 @@ function createLifecycleCommandOptions(lifecycle, overrides = {}) {
     }),
     destinationStoreFactory: ({ binding }) => ({ identitySha256: binding.identitySha256 }),
     openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory(),
+    openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle),
+    retirementRunIdFactory: () => `run-${"8".repeat(48)}`,
+    retirementRunNonceFactory: () => "9".repeat(64),
     backupSnapshot: async (input) => {
       await input.beforeProtectedWrites(protectedWritePlan(input));
       return successfulCreateReceipt(input);
     },
     ...overrides,
   };
+}
+
+function exactWriterRetirementControllerFactory(lifecycle = [], {
+  register,
+  retire,
+} = {}) {
+  return async () => createRecoveryWriterRetirementControllerClient({
+    async register(context) {
+      lifecycle.push("controller:registered");
+      if (register) return register(context);
+      return {
+        schema: "rivt-recovery-writer-retirement-registration-receipt-v1",
+        ...context,
+        state: "registered",
+        revision: 1,
+        fencingToken: 1,
+        registeredAt: nowValue.toISOString(),
+      };
+    },
+    async requestRetirementAndWait(context) {
+      lifecycle.push("controller:retired");
+      if (retire) return retire(context);
+      return {
+        schema: "rivt-recovery-writer-retirement-receipt-v1",
+        ...context,
+        state: "retired",
+        completionEligible: context.writerOutcome === "completed",
+        revision: 4,
+        fencingToken: 4,
+        retiredAt: new Date(nowValue.getTime() + 1_000).toISOString(),
+        retirementVerificationSha256: "a".repeat(64),
+      };
+    },
+  });
 }
 
 async function authorizeExactWriter({
@@ -401,6 +456,41 @@ function restrictedWriterAuthorization() {
   };
 }
 
+function restrictedWriterRetirementRegistration() {
+  return {
+    writerAuthorityEvidenceLevel: "providerless-injected-fake",
+    writerRetirementRunId: `run-${"8".repeat(48)}`,
+    writerRetirementOwnership: "independent-controller",
+    writerRetirementControllerIdentitySha256: "6".repeat(64),
+    writerRetirementAuditorIdentitySha256: "7".repeat(64),
+    writerRetirementRegistrationIdentitySha256: "8".repeat(64),
+    writerRetirementRegistrationRecordSha256: "9".repeat(64),
+    writerRetirementDescriptorIdentitySha256: "a".repeat(64),
+    writerRetirementRegisteredAt: nowValue.toISOString(),
+    writerRetirementDeadlineAt: createEnv().COMPLETE_RECOVERY_WRITE_WINDOW_END_AT,
+    writerRetirementProofDeadlineAt:
+      createEnv().COMPLETE_RECOVERY_RETIREMENT_PROOF_DEADLINE_AT,
+    writerSessionExpiresAt: createEnv().COMPLETE_RECOVERY_WRITER_SESSION_EXPIRES_AT,
+    writerRetirementFencingGeneration: 1,
+  };
+}
+
+function restrictedWriterRetirementFinalization(operationOutcome = "completed") {
+  return {
+    writerRetirementTrigger: "writer-requested",
+    writerRetirementOperationOutcome: operationOutcome,
+    writerRetirementFinalizationIdentitySha256: "a".repeat(64),
+    writerRetirementFinalizationRecordSha256: "b".repeat(64),
+    writerRetirementControlPlaneTranscriptSha256: "c".repeat(64),
+    writerRetirementDataPlaneTranscriptSha256: "d".repeat(64),
+    writerRetirementFinalizedAt: nowValue.toISOString(),
+    writerRetirementFinalFencingGeneration: 4,
+    writerRetirementDirectDenialProbeCount: 0,
+    writerRetirementMultipartDenialProbeCount: 0,
+    writerRetirementMatchingMultipartUploadCount: 0,
+  };
+}
+
 test("create command binds one exact database snapshot and fixed limits before one provider-neutral write", async () => {
   const env = createEnv();
   const snapshot = databaseSnapshot();
@@ -416,6 +506,7 @@ test("create command binds one exact database snapshot and fixed limits before o
     restrictedEvidenceSinkFactory: fakeEvidenceSinkFactory(lifecycle, restrictedReceipts),
     captureBarrierFactory: fakeCaptureBarrierFactory(lifecycle),
     openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory(),
+    openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle),
     captureDatabaseSnapshot: async ({ env: suppliedEnv, expectedSourceRuntimeIdentitySha256 }) => {
       lifecycle.push("capture:database");
       assert.equal(suppliedEnv, env);
@@ -491,18 +582,26 @@ test("create command binds one exact database snapshot and fixed limits before o
   assert.equal(result.restrictedEvidenceRecorded, true);
   assert.equal(result.durationMs, 17);
   assert.equal(backupArguments.minimumRetentionUntil, retentionUntil);
-  assert.equal(restrictedReceipts.length, 3);
-  assert.equal(restrictedReceipts[2].completionVersionId, "restricted-version");
+  assert.equal(restrictedReceipts.length, 5);
+  assert.equal(restrictedReceipts[4].completionVersionId, "restricted-version");
   assert.ok(lifecycle.indexOf("evidence:opened") < lifecycle.indexOf("barrier:capture-acquired"));
   assert.ok(lifecycle.indexOf("barrier:capture-acquired") < lifecycle.indexOf("capture:database"));
   assert.ok(lifecycle.indexOf("capture:database") < lifecycle.indexOf("client:source-reader"));
   assert.ok(lifecycle.indexOf("evidence:planned") < lifecycle.indexOf("client:source-reader"));
   assert.ok(lifecycle.indexOf("evidence:writer-authorization-planned")
+    < lifecycle.indexOf("controller:registered"));
+  assert.ok(lifecycle.indexOf("controller:registered")
+    < lifecycle.indexOf("evidence:writer-retirement-registered"));
+  assert.ok(lifecycle.indexOf("evidence:writer-retirement-registered")
     < lifecycle.indexOf("evidence:writes-started"));
   assert.ok(lifecycle.indexOf("barrier:capture-released") < lifecycle.indexOf("evidence:writes-started"));
   assert.ok(lifecycle.indexOf("evidence:writes-started")
     < lifecycle.indexOf("evidence:writer-revoked"));
   assert.ok(lifecycle.indexOf("evidence:writer-revoked")
+    < lifecycle.indexOf("controller:retired"));
+  assert.ok(lifecycle.indexOf("controller:retired")
+    < lifecycle.indexOf("evidence:writer-retirement-finalized"));
+  assert.ok(lifecycle.indexOf("evidence:writer-retirement-finalized")
     < lifecycle.indexOf("evidence:committed"));
   assert.deepEqual(lifecycle.slice(-2), [
     "destroy:source-reader",
@@ -510,10 +609,15 @@ test("create command binds one exact database snapshot and fixed limits before o
   ]);
 });
 
-test("create durably records the exact writer plan before opening the adapter factory", async () => {
+test("create registers independent retirement before opening the writer adapter factory", async () => {
   const lifecycle = [];
   const baseFactory = exactWriterAuthorizationLeaseFactory();
+  const baseControllerFactory = exactWriterRetirementControllerFactory(lifecycle);
   await createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+    openWriterRetirementControllerClient: async (context) => {
+      lifecycle.push("controller:factory-opened");
+      return baseControllerFactory(context);
+    },
     openProtectedWriterAuthorizationLease: async (context) => {
       lifecycle.push("authorization:factory-opened");
       return baseFactory(context);
@@ -521,7 +625,65 @@ test("create durably records the exact writer plan before opening the adapter fa
   }));
   assert.ok(lifecycle.indexOf("evidence:writer-authorization-planned") >= 0);
   assert.ok(lifecycle.indexOf("evidence:writer-authorization-planned")
+    < lifecycle.indexOf("controller:factory-opened"));
+  assert.ok(lifecycle.indexOf("controller:registered")
     < lifecycle.indexOf("authorization:factory-opened"));
+});
+
+test("create rejects a controller registration backdated before the write window", async () => {
+  const lifecycle = [];
+  let writerFactoriesOpened = 0;
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle, {
+        register: async (context) => ({
+          schema: "rivt-recovery-writer-retirement-registration-receipt-v1",
+          ...context,
+          state: "registered",
+          revision: 1,
+          fencingToken: 1,
+          registeredAt: "2026-08-16T19:54:59.999Z",
+        }),
+      }),
+      openProtectedWriterAuthorizationLease: async () => {
+        writerFactoriesOpened += 1;
+        throw new Error("writer adapter must not open");
+      },
+    })),
+    (error) => error.code === "RECOVERY_WRITER_RETIREMENT_REGISTRATION_INVALID",
+  );
+  assert.equal(writerFactoriesOpened, 0);
+  assert.ok(lifecycle.includes("controller:retired"));
+});
+
+test("create rejects controller retirement backdated before local writer revocation", async () => {
+  const lifecycle = [];
+  const revokedAt = new Date(nowValue.getTime() + 2_000).toISOString();
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory({
+        revoke: (context) => ({
+          ...exactWriterRevocation(context),
+          revokedAt,
+        }),
+      }),
+      openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle, {
+        retire: async (context) => ({
+          schema: "rivt-recovery-writer-retirement-receipt-v1",
+          ...context,
+          state: "retired",
+          completionEligible: context.writerOutcome === "completed",
+          revision: 4,
+          fencingToken: 4,
+          retiredAt: new Date(nowValue.getTime() + 1_000).toISOString(),
+          retirementVerificationSha256: "a".repeat(64),
+        }),
+      }),
+    })),
+    (error) => error.code === "RECOVERY_WRITER_RETIREMENT_UNVERIFIED",
+  );
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+  assert.ok(lifecycle.includes("evidence:aborted"));
 });
 
 test("create opens no adapter factory when the durable writer plan fails", async () => {
@@ -550,6 +712,70 @@ test("create opens no adapter factory when the durable writer plan fails", async
   );
   assert.equal(adapterFactoriesOpened, 0);
   assert.ok(lifecycle.includes("evidence:writer-authorization-plan-failed"));
+  assert.ok(lifecycle.includes("evidence:aborted"));
+});
+
+test("ambiguous controller registration retires without opening writer authority", async () => {
+  const lifecycle = [];
+  const registrationError = new Error("controller registration response lost");
+  let writerFactoriesOpened = 0;
+  let protectedWrites = 0;
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle, {
+        register: async () => {
+          lifecycle.push("controller:registration-ambiguous");
+          throw registrationError;
+        },
+      }),
+      openProtectedWriterAuthorizationLease: async () => {
+        writerFactoriesOpened += 1;
+        throw new Error("writer adapter must not open");
+      },
+      backupSnapshot: async (input) => {
+        await input.beforeProtectedWrites(protectedWritePlan(input));
+        protectedWrites += 1;
+      },
+    })),
+    (error) => error.code === "RECOVERY_WRITER_RETIREMENT_REGISTRATION_FAILED"
+      && error.cause === registrationError,
+  );
+  assert.equal(writerFactoriesOpened, 0);
+  assert.equal(protectedWrites, 0);
+  assert.ok(lifecycle.includes("controller:registration-ambiguous"));
+  assert.ok(lifecycle.includes("controller:retired"));
+  assert.ok(lifecycle.includes("evidence:aborted"));
+});
+
+test("failed durable controller evidence retires before writer factory construction", async () => {
+  const lifecycle = [];
+  const evidenceError = new Error("controller registration evidence failed");
+  const baseSinkFactory = fakeEvidenceSinkFactory(lifecycle);
+  let writerFactoriesOpened = 0;
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      restrictedEvidenceSinkFactory: async (env) => {
+        const sink = await baseSinkFactory(env);
+        return {
+          ...sink,
+          async markWriterRetirementRegistered() {
+            lifecycle.push("evidence:writer-retirement-registration-failed");
+            throw evidenceError;
+          },
+        };
+      },
+      openProtectedWriterAuthorizationLease: async () => {
+        writerFactoriesOpened += 1;
+        throw new Error("writer adapter must not open");
+      },
+    })),
+    (error) => error === evidenceError,
+  );
+  assert.equal(writerFactoriesOpened, 0);
+  assert.ok(lifecycle.indexOf("controller:registered")
+    < lifecycle.indexOf("evidence:writer-retirement-registration-failed"));
+  assert.ok(lifecycle.indexOf("evidence:writer-retirement-registration-failed")
+    < lifecycle.indexOf("controller:retired"));
   assert.ok(lifecycle.includes("evidence:aborted"));
 });
 
@@ -584,6 +810,7 @@ test("create samples its write boundary after advancing provider authorization",
         authorizedAt,
       }),
     }),
+    openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle),
     backupSnapshot: async (input) => {
       await input.beforeProtectedWrites(protectedWritePlan(input));
       protectedWrites += 1;
@@ -623,6 +850,7 @@ test("create enforces the fixed aggregate RTO", async () => {
       restrictedEvidenceSinkFactory: fakeEvidenceSinkFactory(lifecycle),
       captureBarrierFactory: fakeCaptureBarrierFactory(lifecycle),
       openProtectedWriterAuthorizationLease: exactWriterAuthorizationLeaseFactory(),
+      openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle),
       captureDatabaseSnapshot: async () => databaseSnapshot(),
       sourceStoreFactory: ({ binding, sourceBindingIdentitySha256 }) => ({
         identitySha256: binding.identitySha256,
@@ -676,6 +904,7 @@ test("create rechecks the one-hour window immediately before protected writes", 
         bindingIdentitySha256: sourceBindingIdentitySha256,
       }),
       destinationStoreFactory: ({ binding }) => ({ identitySha256: binding.identitySha256 }),
+      openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle),
       backupSnapshot: async (input) => {
         await input.beforeProtectedWrites(protectedWritePlan(input));
         throw new Error("must not pass the closed window");
@@ -704,6 +933,7 @@ test("create refuses protected writes without a trusted exact-key authorization 
         bindingIdentitySha256: sourceBindingIdentitySha256,
       }),
       destinationStoreFactory: ({ binding }) => ({ identitySha256: binding.identitySha256 }),
+      openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle),
       backupSnapshot: async (input) => {
         await input.beforeProtectedWrites(protectedWritePlan(input));
         protectedWrites += 1;
@@ -965,6 +1195,24 @@ test("unverified writer revocation takes precedence and prevents final evidence"
   assert.ok(lifecycle.includes("evidence:aborted"));
 });
 
+test("unverified independent retirement controls and prevents final evidence", async () => {
+  const lifecycle = [];
+  await assert.rejects(
+    () => createCompleteRecoverySet(createLifecycleCommandOptions(lifecycle, {
+      openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle, {
+        retire: async () => {
+          throw new Error("controller finalization unavailable");
+        },
+      }),
+    })),
+    (error) => error.code === "RECOVERY_WRITER_RETIREMENT_UNVERIFIED",
+  );
+  assert.ok(lifecycle.includes("evidence:writer-revoked"));
+  assert.equal(lifecycle.includes("evidence:writer-retirement-finalized"), false);
+  assert.equal(lifecycle.includes("evidence:committed"), false);
+  assert.ok(lifecycle.includes("evidence:aborted"));
+});
+
 test("revocation failure remains controlling while every cleanup is attempted", async () => {
   const lifecycle = [];
   await assert.rejects(
@@ -1060,6 +1308,7 @@ test("create rejects incomplete multipart safety authorization before protected 
               return receipt;
             },
           }),
+          openWriterRetirementControllerClient: exactWriterRetirementControllerFactory(lifecycle),
           backupSnapshot: async (input) => {
             await input.beforeProtectedWrites(protectedWritePlan(input));
             protectedWrites += 1;
@@ -1256,6 +1505,16 @@ test("create preflight rejects authority ambiguity before database or provider a
     ["application principal reuse", {
       COMPLETE_RECOVERY_APPLICATION_STORAGE_PRINCIPAL_IDENTITY_SHA256: "4".repeat(64),
     }, "RECOVERY_PRINCIPAL_COLLISION"],
+    ["controller principal reuse", {
+      COMPLETE_RECOVERY_CONTROL_PRINCIPAL_IDENTITY_SHA256: "1".repeat(64),
+    }, "RECOVERY_PRINCIPAL_COLLISION"],
+    ["auditor principal reuse", {
+      COMPLETE_RECOVERY_AUDITOR_PRINCIPAL_IDENTITY_SHA256: "6".repeat(64),
+    }, "RECOVERY_PRINCIPAL_COLLISION"],
+    ["retirement proof deadline lacks a valid-session margin", {
+      COMPLETE_RECOVERY_RETIREMENT_PROOF_DEADLINE_AT:
+        createEnv().COMPLETE_RECOVERY_WRITE_WINDOW_END_AT,
+    }, "RECOVERY_RETIREMENT_WINDOW_INVALID"],
     ["source prefix would omit provider-only objects", coordinateEnv("source", {
       ...coordinates.source,
       basePrefix: "application",
@@ -1451,6 +1710,7 @@ test("restricted create evidence is exclusively opened and durably records exact
     await sink.plan(planned);
     const writerAuthorization = restrictedWriterAuthorization();
     await sink.markWriterAuthorizationPlanned(writerAuthorization);
+    await sink.markWriterRetirementRegistered(restrictedWriterRetirementRegistration());
     await sink.markWritesStarted({
       writesStartedAt: "2026-08-16T20:00:00.000Z",
       ...writerAuthorization,
@@ -1459,9 +1719,12 @@ test("restricted create evidence is exclusively opened and durably records exact
       operationOutcome: "completed",
       ...writerAuthorization,
     });
+    await sink.markWriterRetirementFinalized(restrictedWriterRetirementFinalization());
     await sink.commit({
       ...planned,
       ...writerAuthorization,
+      ...restrictedWriterRetirementRegistration(),
+      ...restrictedWriterRetirementFinalization(),
       completionVersionId: "exact-completion-version",
       completionSha256: "c".repeat(64),
       databaseArtifactVersionId: "exact-database-version",
@@ -1475,6 +1738,7 @@ test("restricted create evidence is exclusively opened and durably records exact
     assert.equal(Buffer.byteLength(rawReceipt), 16 * 1024);
     const receipt = JSON.parse(rawReceipt);
     assert.equal(receipt.status, "complete");
+    assert.equal(receipt.schemaVersion, "rivt-complete-recovery-create-receipt-v5");
     assert.equal(receipt.completionVersionId, "exact-completion-version");
     assert.equal(receipt.databaseArtifactVersionId, "exact-database-version");
     assert.equal(receipt.databaseArtifactSha256, "a".repeat(64));
@@ -1488,6 +1752,9 @@ test("restricted create evidence is exclusively opened and durably records exact
     assert.equal(receipt.writerPolicyAbsentAfterRun, true);
     assert.equal(receipt.writerWriteDeniedAfterRun, true);
     assert.equal(receipt.writerMultipartWriteDeniedAfterRun, true);
+    assert.equal(receipt.writerAuthorityEvidenceLevel, "providerless-injected-fake");
+    assert.equal(receipt.writerRetirementOwnership, "independent-controller");
+    assert.equal(receipt.writerRetirementOperationOutcome, "completed");
     await assert.rejects(
       () => createRestrictedRecoveryEvidenceSink({
         COMPLETE_RECOVERY_RESTRICTED_RECEIPT_PATH: path,
@@ -1594,6 +1861,7 @@ test("restricted evidence rejects missing multipart safety attestations", async 
         });
         const authorization = restrictedWriterAuthorization();
         await sink.markWriterAuthorizationPlanned(authorization);
+        await sink.markWriterRetirementRegistered(restrictedWriterRetirementRegistration());
         delete authorization[field];
         await assert.rejects(
           () => sink.markWritesStarted({
@@ -1631,6 +1899,7 @@ test("restricted evidence preserves the deterministic plan after an ambiguous pr
       writeWindowEndAt: "2026-08-16T20:30:00.000Z",
     });
     await sink.markWriterAuthorizationPlanned(restrictedWriterAuthorization());
+    await sink.markWriterRetirementRegistered(restrictedWriterRetirementRegistration());
     await sink.markWritesStarted({
       writesStartedAt: "2026-08-16T20:00:00.000Z",
       ...restrictedWriterAuthorization(),
@@ -1699,6 +1968,7 @@ test("restricted evidence cannot complete after a failed operation outcome", asy
     });
     const authorization = restrictedWriterAuthorization();
     await sink.markWriterAuthorizationPlanned(authorization);
+    await sink.markWriterRetirementRegistered(restrictedWriterRetirementRegistration());
     await sink.markWritesStarted({
       writesStartedAt: "2026-08-16T20:00:00.000Z",
       ...authorization,
@@ -1707,13 +1977,16 @@ test("restricted evidence cannot complete after a failed operation outcome", asy
       operationOutcome: "failed",
       ...authorization,
     });
+    await sink.markWriterRetirementFinalized(
+      restrictedWriterRetirementFinalization("failed"),
+    );
     await assert.rejects(
       () => sink.commit({}),
       (error) => error.code === "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
     );
     await sink.abort();
     const evidence = JSON.parse(await readFile(path, "utf8"));
-    assert.equal(evidence.status, "operation_failed_writer_revoked");
+    assert.equal(evidence.status, "operation_failed_writer_retirement_finalized");
     assert.equal(evidence.operationOutcome, "failed");
   } finally {
     await rm(directory, { recursive: true, force: true });

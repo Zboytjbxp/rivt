@@ -4,15 +4,23 @@ Status: **source implementation only; not merged, deployed, scheduled, or
 proved against a provider**
 
 Current source state: **in progress**. The source now includes a provider-neutral
-authorization lease that registers an idempotent revoker before activation,
-retires attempted authority on every later failure, and requires verified
-inertness before final evidence. The live command remains deliberately inert
-until a separately reviewed provider control adapter applies and verifies the
-exact three-key writer policy. That live adapter must also bind provider-derived
-writer, account, and bucket-owner identity; use a distinct control auditor;
-separate providerless, simulation, and live evidence; and survive writer-process
-termination through an independently owned retirement path. Nonempty restore
-now includes a providerless
+authorization lease and the selected Option 2 crash-reconciliation source
+contract. Before any writer adapter can open, the command must durably register
+the exact run and authority binding with an independently owned retirement-
+controller interface, then durably record that registration. The provider-
+neutral reconciler uses compare-and-swap revisions, fencing tokens, bounded
+attempt leases, deadline sweeps, conflict quarantine, and idempotent retry to
+handle ambiguous registration and simulated controller-process loss. Its v2
+reservation and final v5 restricted receipt bind registration and retirement
+finalization, but expose only the identity digest of the bounded controller-
+private retirement descriptor. Local controller evidence is fixed to
+`providerless-injected-fake`; source tests cannot mint AWS simulation or live
+evidence. The live command remains deliberately inert until both a separately
+reviewed AWS exact-key control adapter and an independently deployed retirement
+controller are supplied. Live use must also bind provider-derived writer,
+account, bucket-owner, control, and auditor identity and prove forced-
+termination reconciliation through real provider control and data planes.
+Nonempty restore now includes a providerless
 isolated route-reader that invokes the same authenticated upload-URL handler as
 the production application against an identity-bound read-only target client,
 then follows an opaque injected delivery capability and verifies exact bytes.
@@ -123,18 +131,27 @@ No unmatched, missing, or unexplained object may be silently omitted.
   to creates.
 - Durably record the exact policy/key-set plan before the adapter factory is
   opened. Require factory construction to perform no provider I/O, register the
-  revoker before activation, treat activation errors as potentially mutating, retire and
-  verify authority on every post-attempt failure, and require policy absence
-  plus denied direct/multipart writes before final success evidence. An
+  revoker before activation, treat activation errors as potentially mutating,
+  retire and verify authority on every post-attempt failure, and require policy
+  absence plus denied direct/multipart writes before final success evidence. An
   ambiguous revocation is the controlling failure.
+- Before the writer adapter is constructed, durably register an independently
+  owned retirement controller against the exact plan, random run binding,
+  retirement deadline, later proof deadline, and still-valid writer-session
+  expiry. Bind distinct control and auditor identity digests and a bounded
+  controller-private retirement descriptor; expose only the descriptor identity
+  digest in restricted evidence. Reconcile expired, ambiguous, or abandoned
+  runs with compare-and-swap revisions and fencing; quarantine conflicting
+  bindings; never let a stale claim or non-retired run become completion-
+  eligible.
 - Write the authenticated encrypted completion record last. Its absence means
   the set is incomplete even if component objects exist.
-- Durably reserve restricted evidence at an absolute path outside the
+- Durably reserve v2 restricted evidence at an absolute path outside the
   repository before provider work, sync the file and its parent entry with the
-  platform-supported durability primitive, then bind the
-  exact completion, database, and archive versions, hashes, and accepted
-  COMPLIANCE-retention timestamps. An `EEXIST` retry must preserve the prior
-  receipt.
+  platform-supported durability primitive, then bind the exact controller
+  registration/finalization plus completion, database, and archive versions,
+  hashes, and accepted COMPLIANCE-retention timestamps in the final v5 receipt.
+  An `EEXIST` retry must preserve the prior evidence.
 - Fail before provider writes on an invalid database artifact, manifest,
   source commit, uploads digest, recovery key, coordinate binding, or limit.
 - Enforce bounded object count, per-object bytes, total bytes, concurrency,
@@ -181,23 +198,28 @@ least-privilege identities:
   prefix, with cleanup limited to objects it created.
 
 Those four data-plane credentials and coordinate identities must be distinct.
-None is a web-runtime credential. A live AWS control adapter additionally needs
-a fifth, separately reviewed control-auditor identity that cannot read source
-data, decrypt the set, or write arbitrary protected objects. The current command
-does not yet model or prove that live control identity.
+None is a web-runtime credential. Create configuration now also requires
+distinct retirement-control and auditor identity digests, each different from
+every data-plane and application principal. They are source-contract bindings,
+not credentials or provider proof. Future AWS implementations must derive and
+verify both identities from the provider. Neither may read source data, decrypt
+the set, or write arbitrary protected objects.
 
 The repository renders and validates the exact three-key policy and supplies a
-provider-neutral authorization/revocation lease, but does not apply a provider
-policy. The lease performs no I/O on construction, preserves a revoker across
-ambiguous activation, is idempotent, retires authority before final evidence,
-and fails with `RECOVERY_WRITER_REVOCATION_UNVERIFIED` when inertness cannot be
-proved. The default create command still returns
-`RECOVERY_WRITER_AUTHORIZATION_REQUIRED`; only a later, separately reviewed
-provider control adapter may install/read back the exact policy, prove initial
-inertness and multipart absence, and remove/read back the policy afterward. The
-exact provider plan is now durable before the factory is opened, and focused
-tests prove a failed durable plan causes zero factory calls. This is a tactical
-ordering guard, not a live adapter or crash-safe retirement proof.
+provider-neutral authorization/revocation lease plus the Option 2 retirement-
+controller client and deterministic reconciler. It does not apply a provider
+policy or deploy a controller. Construction performs no I/O. The exact plan and
+controller registration must both be durable before the writer factory opens;
+ambiguous registration requests exact retirement without opening writer
+authority. A due sweep can reclaim an expired fenced attempt after simulated
+controller-process loss, while stale revisions/fences and conflicting bindings
+fail closed. Only a verified independently finalized retirement can precede
+final v5 evidence. The default create path still rejects the missing controller
+or protected-writer adapter. Only later, separately reviewed implementations may
+install/read back the exact AWS policy, prove initial inertness and multipart
+absence, remove/read back the policy, and produce real denial evidence. This is
+a crash-reconciliation source contract, not an operational controller or live
+AWS proof.
 The default nonempty restore uses the providerless isolated RIVT route-reader.
 It rechecks target-database identity inside a read-only transaction, requires
 one exact authenticated-owner representative for every completed storage
@@ -236,28 +258,33 @@ receipt records `applicationReadSmokeEvidenceLevel: handler-injected-store`.
   permits final restricted evidence only after exact inertness proof.
 - [x] The exact writer plan is durable before the adapter factory opens; a
   failed evidence write opens no factory.
-- [ ] Live AWS writer/control identities, provider evidence levels, effective-
-  policy and bucket-owner binding, and crash-safe independent retirement are
-  selected, implemented, and adversarially proved.
+- [x] Option 2 provider-neutral source durably registers independent retirement
+  before writer construction; CAS/fencing, attempt-lease recovery, deadline
+  sweep, ambiguous registration, quarantine, and completion-ineligibility paths
+  have adversarial local coverage. Source-only evidence is fixed to
+  `providerless-injected-fake`.
+- [ ] The concrete AWS writer/control adapter, provider-derived writer/account/
+  bucket/control/auditor bindings, independently deployed controller, provider
+  persistence, forced-termination proof, effective-policy and multipart audit,
+  and live control/data-plane evidence are implemented and adversarially proved.
 - [x] Build, lint, focused/unit tests, E2E where relevant, dependency audit,
   diff integrity, and sensitive-data checks pass.
 
-Current correction evidence: 10/10 focused writer-policy tests, 254/254 focused
-Packet and readiness tests, 502/502 unit tests, and
-`npm run prelint:security` pass, with no new top-level test. Build, repository
-lint, the aggregate test command, and a zero-vulnerability production
-dependency audit also pass on the corrected source. Three dependency-free
-integrations pass while 20 PostgreSQL integrations are explicitly skipped
-because the clean worktree has no `TEST_DATABASE_URL`; no DB-backed aggregate
-pass is claimed. The auth and jobs/discovery browser journeys passed in the
-suite; the offline journey passed on one isolated retry after its first run
-timed out waiting for the Tools control. The guarded harness reported no
-provider I/O, production-data read, or charge-bearing action; JSON,
-diff-integrity, and added-source sensitive-pattern checks passed.
+Current Option 2 evidence: 19/19 retirement-controller tests, 281/281 focused
+Packet and readiness tests, 529/529 unit tests, and
+`npm run prelint:security` pass. The retained writer-policy correction remains
+covered by 10/10 focused tests. Repository JSON, diff integrity, and added-
+source sensitive-pattern checks pass. The preceding source passed build,
+repository lint, the aggregate test command, the zero-vulnerability production
+dependency audit, three dependency-free integrations, and all browser journeys;
+those broader closeout gates are not represented as a new frozen-source run
+here. The guarded harness remains providerless and reported no provider I/O,
+production-data read, or charge-bearing action.
 
-The separately missing live provider control adapter keeps this packet
-`source-in-progress`. No provider or operational acceptance is inferred from
-the checked local items, including the providerless handler-level route proof.
+The separately missing AWS provider control adapter and independently deployed
+controller keep this packet `source-in-progress`. No provider or operational
+acceptance is inferred from the checked local items, including the providerless
+controller and handler-level route proofs.
 
 ## Live evidence required later
 
@@ -276,7 +303,10 @@ cookie/session middleware and a live HTTP/provider delivery path; the local
 in-process handler adapter cannot substitute for it. Launch readiness accepts
 only the evidence-level value
 `live-cookie-session-http-provider-delivery` on that coordinated restore;
-missing or `handler-injected-store` evidence fails closed.
+missing or `handler-injected-store` evidence fails closed. It separately
+requires `writerAuthorityEvidenceLevel: live-aws-control-and-data-plane` and
+restricted `retired_verified` finalization by an `independent-controller`;
+missing, providerless, or control-plane simulation evidence cannot pass.
 
 Until all live evidence exists, recurring backup, freshness monitoring,
 complete-service recovery, launch readiness, and cost safety are not claimed.

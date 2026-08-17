@@ -123,8 +123,15 @@ been merged, deployed, connected to a provider, run against production data,
 scheduled, or used to create or restore a live recovery set. It incurs no
 provider cost and does not change the blocked readiness conclusion. The normal
 create now has a provider-neutral revocable authorization lease that retires
-attempted authority before final evidence, but remains inert without a reviewed
-exact-three-key provider control adapter. Nonempty restore now includes a providerless reader that runs the
+attempted authority before final evidence. The selected Option 2 source also
+requires durable independent-controller registration before writer
+construction and locally reconciles ambiguous/expired runs through CAS
+revisions, fencing tokens, bounded attempt leases, deadline sweeps, and
+quarantine. Its v2 reservation and v5 receipt carry only
+`providerless-injected-fake` controller evidence. This is a crash-reconciliation
+source contract, not a deployed controller or AWS proof; create remains inert
+without both the reviewed exact-three-key AWS control adapter and independent
+controller implementation. Nonempty restore now includes a providerless reader that runs the
 production upload-URL handler over an identity-bound read-only target and
 verifies handler-selected bytes through an injected store. That source proof
 does not exercise cookie/session middleware, live HTTP, provider delivery, or

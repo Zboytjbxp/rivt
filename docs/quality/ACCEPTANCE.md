@@ -19,14 +19,22 @@ Packet 100 is **source-in-progress and live-unproven**. It prepares coordinated
 database-plus-application-object manifests, client-side encryption, immutable
 version/retention verification, dormant provider adapters, complete isolated
 restore primitives, guarded local execution, and adversarial tests. The normal
-create now has a provider-neutral revocable authorization lease, but remains
-inert without a concrete exact-policy provider control adapter. Attempted
-authority must be retired and proved inert before final evidence. Its exact-key
-create and retention-read grants share one inclusive-start, exclusive-end UTC
-window; `If-None-Match` applies only to creates. The exact plan is durable
-before the adapter factory opens, but provider-derived identity, the distinct
-control auditor, strict live-vs-simulation evidence, and crash-safe independent
-retirement are still unimplemented. Nonempty
+create now has a provider-neutral revocable authorization lease and the selected
+Option 2 crash-reconciliation source contract, but remains inert without a
+concrete exact-policy AWS control adapter and independently deployed controller.
+Attempted authority must be retired and proved inert before final evidence. Its
+exact-key create and retention-read grants share one inclusive-start, exclusive-
+end UTC window; `If-None-Match` applies only to creates. Before writer
+construction, the exact plan and independent-controller registration must both
+be durable. The v2 reservation and final v5 restricted receipt bind distinct
+control/auditor identity digests, only the digest of the controller-private
+retirement descriptor, registration, and retirement finalization. CAS
+revisions, fencing, bounded attempt leases, deadline sweeps, quarantine, and
+retry reconcile ambiguous registration and simulated controller-process loss
+locally. Providerless source evidence is fixed to
+`providerless-injected-fake`. Provider-derived identities, provider persistence,
+independent deployment, forced-termination proof, effective-policy/multipart
+audit, and live control/data-plane evidence remain missing. Nonempty
 restore now uses a providerless adapter that invokes the production upload-URL
 handler against an identity-bound read-only target and verifies its exact
 handler-selected bytes from an injected store. This is not cookie/session
@@ -36,7 +44,10 @@ merged, deployed, scheduled, or activated. Therefore GA-OPS-004 remains
 `Partial`, GA-OPS-008 is unchanged, and application-object-byte recovery
 remains `missing`. Local success is labeled `handler-injected-store`; only an
 exact `live-cookie-session-http-provider-delivery` coordinated-restore receipt
-can satisfy launch readiness.
+can satisfy the application-read portion of launch readiness. The writer-
+authority portion separately requires `live-aws-control-and-data-plane` plus a
+restricted `retired_verified` finalization owned by an
+`independent-controller`; providerless or simulation evidence cannot pass.
 
 Packet 100 can advance only after its remaining source gates pass and a separate bounded
 live authorization results in one exact reviewed/deployed recovery set and one
@@ -44,8 +55,9 @@ complete isolated restore. Required live evidence includes active-key-only
 decryption, all eight application-object scopes, exact database/object binding,
 exact immutable versions and retention, count/byte equality, zero missing,
 mismatched, unresolved, or unexpected entries, representative application
-route reads, measured RTO, cleanup, health, and monitor state. A source-only result,
-partial set, provider screenshot, or PostgreSQL-only restore is insufficient.
+ route reads, measured RTO, cleanup, health, and monitor state. A source-only result,
+ partial set, provider screenshot, control-plane simulation, providerless
+ controller result, or PostgreSQL-only restore is insufficient.
 
 ## Historical Evidence Snapshot - 2026-06-30 (superseded)
 

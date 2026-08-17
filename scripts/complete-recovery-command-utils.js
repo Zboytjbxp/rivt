@@ -22,6 +22,8 @@ const DAY_MS = 86_400_000;
 const MINIMUM_RETENTION_DAYS = 30;
 const MAXIMUM_CREATE_RETENTION_DAYS = 31;
 const MAXIMUM_WRITE_WINDOW_MS = 60 * 60 * 1000;
+const MINIMUM_RETIREMENT_PROOF_MARGIN_MS = 5 * 60 * 1000;
+const MAXIMUM_RETIREMENT_PROOF_EXTENSION_MS = 2 * 60 * 60 * 1000;
 const RESTRICTED_RECEIPT_BYTES = 16 * 1024;
 const RECOVERY_ROLES = Object.freeze(["source", "destination", "reader", "restore"]);
 const RAILWAY_RUNTIME_MARKERS = Object.freeze([
@@ -400,7 +402,7 @@ function reviewedRoleAccessKeyIds(env) {
   return Object.freeze(ids);
 }
 
-function reviewedPrincipalIdentities(env) {
+function reviewedPrincipalIdentities(env, { includeControl = false } = {}) {
   const identities = Object.fromEntries(RECOVERY_ROLES.map((role) => [
     role,
     exactSha256(env, `COMPLETE_RECOVERY_${role.toUpperCase()}_PRINCIPAL_IDENTITY_SHA256`),
@@ -409,16 +411,21 @@ function reviewedPrincipalIdentities(env) {
     env,
     "COMPLETE_RECOVERY_APPLICATION_STORAGE_PRINCIPAL_IDENTITY_SHA256",
   );
-  if (new Set([...Object.values(identities), application]).size !== RECOVERY_ROLES.length + 1) {
+  const controls = includeControl ? {
+    control: exactSha256(env, "COMPLETE_RECOVERY_CONTROL_PRINCIPAL_IDENTITY_SHA256"),
+    auditor: exactSha256(env, "COMPLETE_RECOVERY_AUDITOR_PRINCIPAL_IDENTITY_SHA256"),
+  } : {};
+  const allIdentities = [...Object.values(identities), application, ...Object.values(controls)];
+  if (new Set(allIdentities).size !== allIdentities.length) {
     throw commandError(
       "RECOVERY_PRINCIPAL_COLLISION",
-      "Recovery principals must be distinct from each other and the application runtime.",
+      "Recovery, application, retirement-controller, and auditor principals must all be distinct.",
     );
   }
   const setSha256 = crypto.createHash("sha256")
-    .update(JSON.stringify({ application, ...identities }), "utf8")
+    .update(JSON.stringify({ application, ...controls, ...identities }), "utf8")
     .digest("hex");
-  return Object.freeze({ ...identities, application, setSha256 });
+  return Object.freeze({ ...identities, application, ...controls, setSha256 });
 }
 
 export function completeRecoveryCredentials(env, role) {
@@ -479,6 +486,35 @@ function exactWriteWindow(env, now) {
   return Object.freeze({ startAt: start.toISOString(), endAt: end.toISOString() });
 }
 
+function exactRetirementProofWindow(env, writeWindow) {
+  const writeWindowEnd = canonicalTime(writeWindow.endAt, "writeWindow.endAt");
+  const proofDeadline = canonicalTime(
+    exactConfigured(env, "COMPLETE_RECOVERY_RETIREMENT_PROOF_DEADLINE_AT"),
+    "COMPLETE_RECOVERY_RETIREMENT_PROOF_DEADLINE_AT",
+  );
+  const writerSessionExpiresAt = canonicalTime(
+    exactConfigured(env, "COMPLETE_RECOVERY_WRITER_SESSION_EXPIRES_AT"),
+    "COMPLETE_RECOVERY_WRITER_SESSION_EXPIRES_AT",
+  );
+  if (
+    proofDeadline.getTime() - writeWindowEnd.getTime() < MINIMUM_RETIREMENT_PROOF_MARGIN_MS
+    || writerSessionExpiresAt.getTime() - proofDeadline.getTime()
+      < MINIMUM_RETIREMENT_PROOF_MARGIN_MS
+    || writerSessionExpiresAt.getTime() - writeWindowEnd.getTime()
+      > MAXIMUM_RETIREMENT_PROOF_EXTENSION_MS
+  ) {
+    throw commandError(
+      "RECOVERY_RETIREMENT_WINDOW_INVALID",
+      "The retirement proof must finish after the write window and before the still-valid writer session expires.",
+    );
+  }
+  return Object.freeze({
+    retirementDeadlineAt: writeWindow.endAt,
+    retirementProofDeadlineAt: proofDeadline.toISOString(),
+    writerSessionExpiresAt: writerSessionExpiresAt.toISOString(),
+  });
+}
+
 export function completeRecoveryCommandConfig({
   env = process.env,
   operation,
@@ -514,13 +550,23 @@ export function completeRecoveryCommandConfig({
   const restore = completeRecoveryCoordinates(env, "restore");
   distinctCoordinateBindings([source, destination, restore]);
   const accessKeyIds = reviewedRoleAccessKeyIds(env);
-  const principalIdentities = reviewedPrincipalIdentities(env);
+  const principalIdentities = reviewedPrincipalIdentities(env, {
+    includeControl: operation === "create",
+  });
+  const writeWindow = operation === "create" ? exactWriteWindow(env, current) : undefined;
   return Object.freeze({
     operation,
     sourceCommit: exactSourceRevision(env, runtimeSourceProbe),
+    runtimeSourceIdentitySha256: exactSha256(
+      env,
+      "COMPLETE_RECOVERY_REVIEWED_RUNTIME_SHA256",
+    ),
     activeKey: strictActiveKey(env),
     minimumRetentionUntil: retentionFloor(env, operation, current),
-    ...(operation === "create" ? { writeWindow: exactWriteWindow(env, current) } : {}),
+    ...(operation === "create" ? {
+      writeWindow,
+      retirement: exactRetirementProofWindow(env, writeWindow),
+    } : {}),
     source,
     destination,
     restore,
@@ -612,12 +658,183 @@ export function enforceCompleteRecoveryRto(startedAt, completedAt) {
   return completedAt - startedAt;
 }
 
+const WRITER_AUTHORITY_EVIDENCE_LEVELS = Object.freeze(new Set([
+  "providerless-injected-fake",
+  "aws-control-plane-readback-and-simulation",
+  "live-aws-control-and-data-plane",
+]));
+
+function exactNonNegativeInteger(value, name) {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw commandError(
+      "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+      `${name} must be a non-negative integer.`,
+    );
+  }
+  return value;
+}
+
+function exactWriterRetirementRegistration(value, writeWindowStartAt) {
+  const registration = {
+    writerAuthorityEvidenceLevel: String(value?.writerAuthorityEvidenceLevel ?? ""),
+    writerRetirementRunId: String(value?.writerRetirementRunId ?? ""),
+    writerRetirementOwnership: value?.writerRetirementOwnership,
+    writerRetirementControllerIdentitySha256: String(
+      value?.writerRetirementControllerIdentitySha256 ?? "",
+    ),
+    writerRetirementAuditorIdentitySha256: String(
+      value?.writerRetirementAuditorIdentitySha256 ?? "",
+    ),
+    writerRetirementRegistrationIdentitySha256: String(
+      value?.writerRetirementRegistrationIdentitySha256 ?? "",
+    ),
+    writerRetirementRegistrationRecordSha256: String(
+      value?.writerRetirementRegistrationRecordSha256 ?? "",
+    ),
+    writerRetirementDescriptorIdentitySha256: String(
+      value?.writerRetirementDescriptorIdentitySha256 ?? "",
+    ),
+    writerRetirementRegisteredAt: canonicalTime(
+      value?.writerRetirementRegisteredAt,
+      "writerRetirementRegisteredAt",
+    ).toISOString(),
+    writerRetirementDeadlineAt: canonicalTime(
+      value?.writerRetirementDeadlineAt,
+      "writerRetirementDeadlineAt",
+    ).toISOString(),
+    writerRetirementProofDeadlineAt: canonicalTime(
+      value?.writerRetirementProofDeadlineAt,
+      "writerRetirementProofDeadlineAt",
+    ).toISOString(),
+    writerSessionExpiresAt: canonicalTime(
+      value?.writerSessionExpiresAt,
+      "writerSessionExpiresAt",
+    ).toISOString(),
+    writerRetirementFencingGeneration: exactNonNegativeInteger(
+      value?.writerRetirementFencingGeneration,
+      "writerRetirementFencingGeneration",
+    ),
+  };
+  if (
+    !WRITER_AUTHORITY_EVIDENCE_LEVELS.has(registration.writerAuthorityEvidenceLevel)
+    || !/^run-[a-f0-9]{48}$/u.test(registration.writerRetirementRunId)
+    || registration.writerRetirementOwnership !== "independent-controller"
+    || registration.writerRetirementFencingGeneration < 1
+    || [
+      registration.writerRetirementControllerIdentitySha256,
+      registration.writerRetirementAuditorIdentitySha256,
+      registration.writerRetirementRegistrationIdentitySha256,
+      registration.writerRetirementRegistrationRecordSha256,
+      registration.writerRetirementDescriptorIdentitySha256,
+    ].some((digest) => !/^[a-f0-9]{64}$/u.test(digest))
+    || registration.writerRetirementControllerIdentitySha256
+      === registration.writerRetirementAuditorIdentitySha256
+    || new Date(registration.writerRetirementRegisteredAt)
+      < canonicalTime(writeWindowStartAt, "writeWindowStartAt")
+    || new Date(registration.writerRetirementRegisteredAt)
+      > new Date(registration.writerRetirementDeadlineAt)
+    || new Date(registration.writerRetirementDeadlineAt)
+      >= new Date(registration.writerRetirementProofDeadlineAt)
+    || new Date(registration.writerRetirementProofDeadlineAt)
+      >= new Date(registration.writerSessionExpiresAt)
+  ) {
+    throw commandError(
+      "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+      "The independent writer-retirement registration is incomplete or malformed.",
+    );
+  }
+  return Object.freeze(registration);
+}
+
+function exactWriterRetirementFinalization(value, registration, writerAuthorizationRevokedAt) {
+  const finalization = {
+    writerRetirementTrigger: value?.writerRetirementTrigger,
+    writerRetirementOperationOutcome: value?.writerRetirementOperationOutcome,
+    writerRetirementFinalizationIdentitySha256: String(
+      value?.writerRetirementFinalizationIdentitySha256 ?? "",
+    ),
+    writerRetirementFinalizationRecordSha256: String(
+      value?.writerRetirementFinalizationRecordSha256 ?? "",
+    ),
+    writerRetirementControlPlaneTranscriptSha256: String(
+      value?.writerRetirementControlPlaneTranscriptSha256 ?? "",
+    ),
+    writerRetirementDataPlaneTranscriptSha256: String(
+      value?.writerRetirementDataPlaneTranscriptSha256 ?? "",
+    ),
+    writerRetirementFinalizedAt: canonicalTime(
+      value?.writerRetirementFinalizedAt,
+      "writerRetirementFinalizedAt",
+    ).toISOString(),
+    writerRetirementFinalFencingGeneration: exactNonNegativeInteger(
+      value?.writerRetirementFinalFencingGeneration,
+      "writerRetirementFinalFencingGeneration",
+    ),
+    writerRetirementDirectDenialProbeCount: exactNonNegativeInteger(
+      value?.writerRetirementDirectDenialProbeCount,
+      "writerRetirementDirectDenialProbeCount",
+    ),
+    writerRetirementMultipartDenialProbeCount: exactNonNegativeInteger(
+      value?.writerRetirementMultipartDenialProbeCount,
+      "writerRetirementMultipartDenialProbeCount",
+    ),
+    writerRetirementMatchingMultipartUploadCount: exactNonNegativeInteger(
+      value?.writerRetirementMatchingMultipartUploadCount,
+      "writerRetirementMatchingMultipartUploadCount",
+    ),
+  };
+  const finalizedAt = new Date(finalization.writerRetirementFinalizedAt);
+  if (
+    !["writer-requested", "write-window-expired"].includes(
+      finalization.writerRetirementTrigger,
+    )
+    || !["completed", "failed", "abandoned-or-unknown"].includes(
+      finalization.writerRetirementOperationOutcome,
+    )
+    || [
+      finalization.writerRetirementFinalizationIdentitySha256,
+      finalization.writerRetirementFinalizationRecordSha256,
+      finalization.writerRetirementControlPlaneTranscriptSha256,
+      finalization.writerRetirementDataPlaneTranscriptSha256,
+    ].some((digest) => !/^[a-f0-9]{64}$/u.test(digest))
+    || finalizedAt < new Date(registration.writerRetirementRegisteredAt)
+    || finalizedAt < canonicalTime(
+      writerAuthorizationRevokedAt,
+      "writerAuthorizationRevokedAt",
+    )
+    || finalizedAt > new Date(registration.writerRetirementProofDeadlineAt)
+    || finalization.writerRetirementFinalFencingGeneration
+      <= registration.writerRetirementFencingGeneration
+    || (finalization.writerRetirementTrigger === "write-window-expired"
+      && finalizedAt < new Date(registration.writerRetirementDeadlineAt))
+    || finalization.writerRetirementMatchingMultipartUploadCount !== 0
+    || (registration.writerAuthorityEvidenceLevel === "live-aws-control-and-data-plane"
+      && (finalization.writerRetirementDirectDenialProbeCount !== 3
+        || finalization.writerRetirementMultipartDenialProbeCount !== 3))
+  ) {
+    throw commandError(
+      "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+      "The independent writer-retirement finalization is incomplete or malformed.",
+    );
+  }
+  return Object.freeze(finalization);
+}
+
 function exactRestrictedCreateReceipt(result) {
   const versionId = String(result?.completionVersionId ?? "");
   const databaseVersionId = String(result?.databaseArtifactVersionId ?? "");
   const archiveVersionId = String(result?.archiveVersionId ?? "");
+  const writerRetirementRegistration = exactWriterRetirementRegistration(
+    result,
+    result?.writeWindowStartAt,
+  );
+  const writerRetirementFinalization = exactWriterRetirementFinalization(
+    result,
+    writerRetirementRegistration,
+    result?.writerAuthorizationRevokedAt,
+  );
   const receipt = {
-    schemaVersion: "rivt-complete-recovery-create-receipt-v4",
+    schemaVersion: "rivt-complete-recovery-create-receipt-v5",
     sourceCommit: String(result?.sourceCommit ?? ""),
     snapshotId: String(result?.snapshotId ?? ""),
     completionKey: String(result?.completionKey ?? ""),
@@ -656,6 +873,8 @@ function exactRestrictedCreateReceipt(result) {
     writerPolicyAbsentAfterRun: result?.writerPolicyAbsentAfterRun,
     writerWriteDeniedAfterRun: result?.writerWriteDeniedAfterRun,
     writerMultipartWriteDeniedAfterRun: result?.writerMultipartWriteDeniedAfterRun,
+    ...writerRetirementRegistration,
+    ...writerRetirementFinalization,
   };
   if (
     !/^[a-f0-9]{40}$/u.test(receipt.sourceCommit)
@@ -694,6 +913,7 @@ function exactRestrictedCreateReceipt(result) {
     || receipt.writerPolicyAbsentAfterRun !== true
     || receipt.writerWriteDeniedAfterRun !== true
     || receipt.writerMultipartWriteDeniedAfterRun !== true
+    || receipt.writerRetirementOperationOutcome !== "completed"
   ) {
     throw commandError(
       "RECOVERY_CREATE_RECEIPT_INVALID",
@@ -824,7 +1044,7 @@ export async function createRestrictedRecoveryEvidenceSink(
     handle = await openFile(configuredPath, "wx", 0o600);
     await handle.chmod?.(0o600);
     await writeRestrictedEvidenceRecord(handle, {
-      schemaVersion: "rivt-complete-recovery-evidence-v1",
+      schemaVersion: "rivt-complete-recovery-evidence-v2",
       status: "reserved",
     });
     await syncParentDirectory(dirname(configuredPath));
@@ -848,6 +1068,8 @@ export async function createRestrictedRecoveryEvidenceSink(
   let writerAuthorization;
   let writerRevocation;
   let writerRevocationOperationOutcome;
+  let writerRetirementRegistration;
+  let writerRetirementFinalization;
   return Object.freeze({
     async plan(value) {
       if (!handle || state !== "reserved") {
@@ -868,7 +1090,7 @@ export async function createRestrictedRecoveryEvidenceSink(
       }
     },
     async markWritesStarted(value) {
-      if (!handle || state !== "writer_authorization_planned") {
+      if (!handle || state !== "writer_retirement_registered") {
         throw commandError(
           "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
           "Restricted recovery evidence has no durable write plan.",
@@ -936,6 +1158,8 @@ export async function createRestrictedRecoveryEvidenceSink(
       try {
         await writeRestrictedEvidenceRecord(handle, {
           ...plan,
+          ...writerAuthorizationPlan,
+          ...writerRetirementRegistration,
           ...writerAuthorization,
           status: "writes_started",
           writesStartedAt,
@@ -981,10 +1205,44 @@ export async function createRestrictedRecoveryEvidenceSink(
         );
       }
     },
+    async markWriterRetirementRegistered(value) {
+      if (!handle || state !== "writer_authorization_planned") {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Restricted recovery evidence cannot register independent writer retirement.",
+        );
+      }
+      writerRetirementRegistration = exactWriterRetirementRegistration(
+        value,
+        plan.writeWindowStartAt,
+      );
+      if (
+        writerRetirementRegistration.writerRetirementDeadlineAt !== plan.writeWindowEndAt
+      ) {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Independent writer retirement differs from the durable write window.",
+        );
+      }
+      try {
+        await writeRestrictedEvidenceRecord(handle, {
+          ...plan,
+          ...writerAuthorizationPlan,
+          ...writerRetirementRegistration,
+          status: "writer_retirement_registered",
+        });
+        state = "writer_retirement_registered";
+      } catch {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Independent writer-retirement registration could not be committed durably.",
+        );
+      }
+    },
     async markWriterRevoked(value) {
       if (
         !handle
-        || !["writer_authorization_planned", "writes_started"].includes(state)
+        || !["writer_retirement_registered", "writes_started"].includes(state)
       ) {
         throw commandError(
           "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
@@ -1027,6 +1285,7 @@ export async function createRestrictedRecoveryEvidenceSink(
         await writeRestrictedEvidenceRecord(handle, {
           ...plan,
           ...writerAuthorizationPlan,
+          ...writerRetirementRegistration,
           ...(writerAuthorization ?? {}),
           ...writerRevocation,
           operationOutcome,
@@ -1041,12 +1300,60 @@ export async function createRestrictedRecoveryEvidenceSink(
         );
       }
     },
+    async markWriterRetirementFinalized(value) {
+      if (
+        !handle
+        || !writerRetirementRegistration
+        || !["writer_retirement_registered", "writes_started", "writer_revoked"].includes(state)
+      ) {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Restricted recovery evidence cannot finalize independent writer retirement.",
+        );
+      }
+      writerRetirementFinalization = exactWriterRetirementFinalization(
+        value,
+        writerRetirementRegistration,
+        writerRevocation?.writerAuthorizationRevokedAt ?? plan.writeWindowStartAt,
+      );
+      if (
+        writerRetirementFinalization.writerRetirementOperationOutcome === "completed"
+        && (state !== "writer_revoked" || writerRevocationOperationOutcome !== "completed")
+      ) {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Completed recovery evidence requires both local and independent retirement proof.",
+        );
+      }
+      try {
+        await writeRestrictedEvidenceRecord(handle, {
+          ...plan,
+          ...writerAuthorizationPlan,
+          ...writerRetirementRegistration,
+          ...(writerAuthorization ?? {}),
+          ...(writerRevocation ?? {}),
+          ...(writerRevocationOperationOutcome
+            ? { operationOutcome: writerRevocationOperationOutcome }
+            : {}),
+          ...writerRetirementFinalization,
+          status: "writer_retirement_finalized",
+          ...(writesStartedAt ? { writesStartedAt } : {}),
+        });
+        state = "writer_retirement_finalized";
+      } catch {
+        throw commandError(
+          "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+          "Independent writer-retirement finalization could not be committed durably.",
+        );
+      }
+    },
     async commit(result) {
       if (
         !handle
         || committed
-        || state !== "writer_revoked"
+        || state !== "writer_retirement_finalized"
         || writerRevocationOperationOutcome !== "completed"
+        || writerRetirementFinalization?.writerRetirementOperationOutcome !== "completed"
       ) {
         throw commandError(
           "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
@@ -1089,6 +1396,22 @@ export async function createRestrictedRecoveryEvidenceSink(
           );
         }
       }
+      for (const name of Object.keys(writerRetirementRegistration)) {
+        if (receipt[name] !== writerRetirementRegistration[name]) {
+          throw commandError(
+            "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+            "Restricted recovery receipt differs from its controller registration.",
+          );
+        }
+      }
+      for (const name of Object.keys(writerRetirementFinalization)) {
+        if (receipt[name] !== writerRetirementFinalization[name]) {
+          throw commandError(
+            "RECOVERY_RESTRICTED_EVIDENCE_INVALID",
+            "Restricted recovery receipt differs from its controller finalization.",
+          );
+        }
+      }
       try {
         await writeRestrictedEvidenceRecord(handle, {
           ...receipt,
@@ -1108,16 +1431,26 @@ export async function createRestrictedRecoveryEvidenceSink(
     },
     async abort() {
       if (handle) {
-        if (["writer_authorization_planned", "writes_started", "writer_revoked"].includes(state)) {
+        if ([
+          "writer_authorization_planned",
+          "writer_retirement_registered",
+          "writes_started",
+          "writer_revoked",
+          "writer_retirement_finalized",
+        ].includes(state)) {
           await writeRestrictedEvidenceRecord(handle, {
             ...plan,
             ...(writerAuthorizationPlan ?? {}),
+            ...(writerRetirementRegistration ?? {}),
             ...(writerAuthorization ?? {}),
             ...(writerRevocation ?? {}),
+            ...(writerRetirementFinalization ?? {}),
             ...(writerRevocationOperationOutcome
               ? { operationOutcome: writerRevocationOperationOutcome }
               : {}),
-            status: state === "writer_revoked"
+            status: state === "writer_retirement_finalized"
+              ? "operation_failed_writer_retirement_finalized"
+              : state === "writer_revoked"
               ? "operation_failed_writer_revoked"
               : state === "writes_started"
                 ? "write_failed_or_ambiguous"
@@ -1130,7 +1463,13 @@ export async function createRestrictedRecoveryEvidenceSink(
       }
       if (
         !committed
-        && !["writer_authorization_planned", "writes_started", "writer_revoked"].includes(state)
+        && ![
+          "writer_authorization_planned",
+          "writer_retirement_registered",
+          "writes_started",
+          "writer_revoked",
+          "writer_retirement_finalized",
+        ].includes(state)
       ) {
         await removeFile(configuredPath, { force: true }).catch(() => undefined);
       }

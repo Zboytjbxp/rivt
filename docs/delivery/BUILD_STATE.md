@@ -31,14 +31,27 @@ credential-exposure containment is in progress.
   now has a provider-neutral revocable authorization lease. Its exact-key
   create and retention-read grants share one inclusive-start, exclusive-end
   UTC window, while `If-None-Match` remains create-only. The exact plan is
-  durably recorded before the adapter factory opens, attempted authority is
-  retired on every later in-process failure, and final evidence requires
-  verified policy absence plus denied direct/multipart writes. It remains
-  fail-closed until an exact-key provider control adapter is separately
-  reviewed and supplied. A live adapter also still needs provider-derived
-  writer/account/bucket-owner bindings, a distinct control auditor, strict
-  provider-evidence levels, and crash-safe retirement outside the writer
-  process. Nonempty restore now defaults to a
+  durably recorded before any adapter factory opens. Option 2 adds a
+  provider-neutral crash-reconciliation source contract: an independent
+  controller registration is durable before writer authorization can begin,
+  the v2 reservation and final v5 restricted receipt bind that registration,
+  including only the SHA-256 identity of the controller-private retirement
+  descriptor. The ordered retirement, proof, and still-valid-session deadlines
+  and compare-and-swap revisions, fencing tokens, attempt leases, deadline
+  sweeps, quarantine, and retry rules prevent stale or conflicting controllers
+  from finalizing evidence. Ambiguous registration and simulated controller-
+  process loss remain retirement work, not successful writer evidence. The
+  configured retirement-control and auditor identities must be distinct from
+  each other and every data/application principal. Local controller evidence is
+  fixed to `providerless-injected-fake`; it cannot mint either AWS evidence
+  level. Attempted authority is retired on every later in-process failure, and
+  final evidence requires verified policy absence plus denied direct/multipart
+  writes. The command remains fail-closed because both the exact-key AWS
+  provider control adapter and an independently deployed retirement controller
+  are absent. Live use also still needs provider-derived writer/account/bucket-
+  owner identity, real control/auditor identity proof, independent forced-
+  termination evidence, and provider control/data-plane transcripts. Nonempty
+  restore now defaults to a
   providerless isolated RIVT route-reader that rechecks the target database in
   a read-only transaction, invokes the exact production upload-URL handler for
   one authenticated-owner representative per completed scope, and verifies the
@@ -66,16 +79,15 @@ credential-exposure containment is in progress.
   `applicationReadSmokeEvidenceLevel: handler-injected-store`; launch readiness
   requires the distinct exact value
   `live-cookie-session-http-provider-delivery` on a coordinated live restore.
-- The retention-window correction passes 10/10 focused writer-policy tests,
-  254/254 focused recovery and readiness tests, 502/502 unit tests, and
-  `npm run prelint:security`; it adds no top-level test. Build, repository lint,
-  the aggregate test command, and the production dependency audit also pass on
-  the corrected source. Three dependency-free integrations pass while 20
-  PostgreSQL integrations are explicitly skipped because the clean worktree
-  has no `TEST_DATABASE_URL`; no DB-backed aggregate pass is claimed. The auth
-  and jobs/discovery browser journeys passed in the suite; the offline journey
-  passed on one isolated retry after its first run timed out waiting for the
-  Tools control. The guarded harness reported `providerIo: false`,
+- The frozen Option 2 source passes 19/19 retirement-controller tests, 281/281
+  focused recovery and readiness tests, 529/529 unit tests, and
+  `npm run prelint:security`; repository JSON and diff integrity also pass. The
+  retained retention-window correction remains covered by 10/10 focused writer-
+  policy tests. The preceding source passed build, repository lint, the
+  aggregate test command, production dependency audit, three dependency-free
+  integrations, and all browser journeys; those broader closeout gates are not
+  represented as a new frozen-source run here. The guarded local harness
+  remains providerless and reported `providerIo: false`,
   `productionDataRead: false`, and `chargeBearingAction: false`.
 - The production-credential incident remains governing. Packet 100 does not
   clear the incident, the explicit launch hold, or any operational-readiness

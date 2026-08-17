@@ -62,9 +62,12 @@ The coordinated source path is:
 
 The source-reader, protected-writer, monitor/backup-reader, and isolated-
 restore data identities must be distinct and must not be the RIVT web-service
-identity. A live AWS adapter additionally requires a fifth, distinct control-
-auditor identity with no backup decryption or source-data authority. Use only
-reviewed IAM fixtures. Normal command output must remain
+identity. Create configuration additionally binds distinct retirement-control
+and auditor identity digests, each different from every data/application
+principal. Those local digests are neither credentials nor provider proof. A
+future live AWS implementation must derive and verify both identities with no
+backup decryption or source-data authority. Use only reviewed IAM fixtures.
+Normal command output must remain
 aggregate and secret-safe; exact object keys, provider coordinates, version
 IDs, and object-level metadata belong only in restricted operator evidence.
 The checked-in create CLI includes a provider-neutral authorization lease but
@@ -78,6 +81,21 @@ the revoker exists before activation begins; ambiguous activation and every
 later failure trigger idempotent retirement; and final success evidence is
 forbidden until policy absence and denied direct/multipart writes are proved.
 Local tests inject only a no-provider fake; they do not authorize a live write.
+
+The selected Option 2 source contract also requires an independent retirement
+registration to become durable before the protected-writer factory opens. The
+registration binds the exact authority plan, random run identity, retirement
+deadline, later proof deadline, still-valid writer-session expiry, and distinct
+control/auditor identities. The controller store retains a bounded private
+retirement descriptor while restricted evidence carries only its SHA-256
+identity. The provider-neutral reconciler uses compare-and-swap revisions,
+fencing tokens, bounded attempt leases, due-record sweeps, and conflict
+quarantine. It can retry an ambiguous registration, an expired claim, or
+simulated controller-process loss without letting a stale claim become final
+evidence. The v2 restricted reservation and final v5 receipt bind registration
+and independently finalized retirement. This is a crash-reconciliation source
+contract only: no controller is deployed, no provider store is configured, and
+local evidence is fixed to `providerless-injected-fake`.
 
 The checked-in restore command now includes a providerless isolated RIVT
 route-reader. It repeats target identity inside a read-only transaction,
@@ -110,10 +128,11 @@ isolated-restore prefix before releasing the capture barrier.
 For a future approved live proof, preserve restricted exact references from the
 sanitized one-shot backup receipt. Restore that exact completion version into
 both a new isolated PostgreSQL database and an empty isolated object prefix.
-The restricted v4 receipt must bind the completion, database artifact, and
-archive versions, hashes, and accepted COMPLIANCE-retention timestamps. Render
-the reader policy with three exact key-to-version content grants plus only the
-exact-key retention metadata authority required by the verifier. Archive
+The restricted v5 receipt must bind the v2 reservation, controller registration
+and retirement finalization, and the completion, database artifact, and archive
+versions, hashes, and accepted COMPLIANCE-retention timestamps. Render the
+reader policy with three exact key-to-version content grants plus only the exact-
+key retention metadata authority required by the verifier. Archive
 metadata may be inspected before database work, but open the exact archive
 body only after the database restore settles so an idle provider stream cannot
 expire during migrations.
@@ -132,12 +151,15 @@ health, or monitor evidence is absent or ambiguous. Partial component writes
 without an authenticated completion record are not a recovery set.
 
 Current state: source-in-progress and live-unproven. The provider-neutral
-authorization/revocation lifecycle is implemented, but the concrete exact-key
-provider control adapter remains intentionally absent, so create fails closed
-before protected writes. Provider-derived role/account/bucket-owner binding,
-strict live-vs-simulation evidence levels, the distinct control auditor, and an
-independently owned crash-retirement path are also unimplemented. Restore has
-providerless handler-level route source,
+authorization/revocation lifecycle and Option 2 crash-reconciliation source
+contract are implemented locally. Durable controller registration precedes
+writer construction; CAS/fencing, deadline-sweep, ambiguous-registration, and
+simulated process-loss paths fail closed. The concrete exact-key AWS provider
+control adapter and independently deployed controller remain intentionally
+absent, so create fails closed before protected writes. Provider-derived writer,
+account, bucket-owner, control, and auditor identity proof, provider persistence,
+forced-termination evidence, IAM propagation, and live control/data-plane
+transcripts are still missing. Restore has providerless handler-level route source,
 but no live cookie/session HTTP/provider proof. The existing PostgreSQL-only
 proof remains valid for that limited scope, but
 `operationalReadiness.applicationObjectByteRecovery` remains `missing`.

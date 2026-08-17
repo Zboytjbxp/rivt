@@ -90,6 +90,24 @@ const readyApplicationObjectRecovery = {
     applicationReadSmokePassed: true,
     applicationReadSmokeEvidenceLevel:
       "live-cookie-session-http-provider-delivery",
+    writerAuthorityEvidenceLevel: "live-aws-control-and-data-plane",
+    writerRetirementFinalization: {
+      status: "retired_verified",
+      authority: "independent-controller",
+      controllerIdentitySha256: "7".repeat(64),
+      auditorIdentitySha256: "8".repeat(64),
+      trigger: "writer-requested",
+      operationOutcome: "completed",
+      registeredAt: "2026-06-21T10:00:00.000Z",
+      deadlineAt: "2026-06-21T10:20:00.000Z",
+      finalizedAt: "2026-06-21T10:15:00.000Z",
+      proofDeadlineAt: "2026-06-21T10:25:00.000Z",
+      writerSessionExpiresAt: "2026-06-21T10:40:00.000Z",
+      identity: {
+        status: "recorded_restricted",
+        reference: "restricted-operational-evidence:test-writer-retirement-finalization",
+      },
+    },
     totalDurationMs: 45_000,
     rtoMinutes: 240,
     isolatedRestoreDatabaseDropped: true,
@@ -257,6 +275,66 @@ test("application-object recovery evidence fails closed on incomplete or contrad
     ["handler-only application read evidence", (recovery) => {
       recovery.latestCoordinatedRestore.applicationReadSmokeEvidenceLevel =
         "handler-injected-store";
+    }],
+    ["missing writer-authority evidence level", (recovery) => {
+      delete recovery.latestCoordinatedRestore.writerAuthorityEvidenceLevel;
+    }],
+    ["providerless writer-authority evidence", (recovery) => {
+      recovery.latestCoordinatedRestore.writerAuthorityEvidenceLevel =
+        "providerless-injected-fake";
+    }],
+    ["simulated AWS writer-authority evidence", (recovery) => {
+      recovery.latestCoordinatedRestore.writerAuthorityEvidenceLevel =
+        "aws-control-plane-readback-and-simulation";
+    }],
+    ["missing independent-controller finalization", (recovery) => {
+      delete recovery.latestCoordinatedRestore.writerRetirementFinalization;
+    }],
+    ["unverified independent-controller finalization", (recovery) => {
+      recovery.latestCoordinatedRestore.writerRetirementFinalization.status =
+        "retirement_unverified";
+    }],
+    ["process-owned retirement finalization", (recovery) => {
+      recovery.latestCoordinatedRestore.writerRetirementFinalization.authority =
+        "recovery-command-process";
+    }],
+    ["missing controller identity", (recovery) => {
+      delete recovery.latestCoordinatedRestore.writerRetirementFinalization
+        .controllerIdentitySha256;
+    }],
+    ["missing independent auditor identity", (recovery) => {
+      delete recovery.latestCoordinatedRestore.writerRetirementFinalization
+        .auditorIdentitySha256;
+    }],
+    ["controller and auditor identity collision", (recovery) => {
+      recovery.latestCoordinatedRestore.writerRetirementFinalization.auditorIdentitySha256 =
+        recovery.latestCoordinatedRestore.writerRetirementFinalization.controllerIdentitySha256;
+    }],
+    ["writer retirement finalized after its proof deadline", (recovery) => {
+      recovery.latestCoordinatedRestore.writerRetirementFinalization.finalizedAt =
+        "2026-06-21T10:26:00.000Z";
+    }],
+    ["writer session expires before retirement proof deadline", (recovery) => {
+      recovery.latestCoordinatedRestore.writerRetirementFinalization.writerSessionExpiresAt =
+        "2026-06-21T10:24:00.000Z";
+    }],
+    ["window-expiry retirement cannot complete a live recovery set", (recovery) => {
+      recovery.latestCoordinatedRestore.writerRetirementFinalization.trigger =
+        "write-window-expired";
+    }],
+    ["failed writer operation cannot complete a live recovery set", (recovery) => {
+      recovery.latestCoordinatedRestore.writerRetirementFinalization.operationOutcome =
+        "failed";
+    }],
+    ["missing writer operation outcome cannot complete a live recovery set", (recovery) => {
+      delete recovery.latestCoordinatedRestore.writerRetirementFinalization.operationOutcome;
+    }],
+    ["recovery cannot complete before writer retirement finalizes", (recovery) => {
+      recovery.latestCoordinatedRestore.completedAt = "2026-06-21T10:14:59.999Z";
+    }],
+    ["unrestricted controller finalization reference", (recovery) => {
+      recovery.latestCoordinatedRestore.writerRetirementFinalization.identity.status =
+        "public";
     }],
     ["receipt RTO differs from policy", (recovery) => {
       recovery.latestCoordinatedRestore.rtoMinutes = 480;

@@ -25,9 +25,11 @@
       "chargeBearingAction": false,
       "applicationReadSmokeEvidenceLevel": "handler-injected-store",
       "writerAuthorizationLifecycle": "verified_local_only",
+      "writerControlEvidenceLevel": "providerless-injected-fake",
+      "independentRetirementControllerLifecycle": "verified_local_only",
       "intentionalBlockers": [
-        "provider_exact_writer_control_adapter_missing",
-        "live_aws_writer_identity_evidence_and_crash_retirement_unimplemented",
+        "live_aws_writer_control_adapter_and_provider_identity_evidence_missing",
+        "independent_retirement_controller_deployment_and_forced_termination_evidence_missing",
         "live_cookie_session_http_route_read_evidence_missing"
       ]
     },
