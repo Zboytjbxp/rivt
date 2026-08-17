@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import {
+  APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
   RecoveryError,
   buildDatabaseRecoveryBinding,
   recoveryDatabaseEncryptionSecret,
@@ -33,6 +34,7 @@ import {
   decryptSnapshot,
   isDirectExecution,
 } from "./logical-backup-utils.js";
+import { verifyIsolatedApplicationRouteReads } from "./isolated-application-route-reader.js";
 
 function createBackupStore({ client, binding }) {
   return new S3ExactVersionBackupReader({
@@ -97,12 +99,24 @@ function authenticatedDatabaseSnapshot(bytes, activeKey, expectedBinding, source
 }
 
 function assertRestoreReceipt(result, databaseReceipt, sourceCommit, targetRuntimeIdentitySha256) {
+  const storageScopes = result?.storageScopes;
+  const hasApplicationRouteScopes = Array.isArray(storageScopes) && storageScopes.length > 0;
   if (
     result?.ok !== true
     || result.databaseArtifactVerified !== true
     || result.contentVerified !== true
     || result.targetReferenceByteSmokePassed !== true
     || result.applicationReadSmokePassed !== true
+    || !Array.isArray(storageScopes)
+    || (
+      hasApplicationRouteScopes
+      && result.applicationReadSmokeEvidenceLevel
+        !== APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE
+    )
+    || (
+      !hasApplicationRouteScopes
+      && result.applicationReadSmokeEvidenceLevel !== undefined
+    )
     || result.restoreTargetCleaned !== true
     || result.sourceCommit !== sourceCommit
     || databaseReceipt?.ok !== true
@@ -137,13 +151,6 @@ async function hashBoundedStream(stream, maximumBytes) {
   return { bytes, sha256: hash.digest("hex") };
 }
 
-async function unavailableApplicationRouteReadSmoke() {
-  throw new RecoveryError(
-    "APPLICATION_READ_SMOKE_REQUIRED",
-    "A separately reviewed isolated RIVT application-route read adapter is required.",
-  );
-}
-
 async function verifyRepresentativeApplicationReads({
   databaseReferences,
   entries,
@@ -156,11 +163,15 @@ async function verifyRepresentativeApplicationReads({
   if (!Array.isArray(entries)) {
     throw new RecoveryError("APPLICATION_READ_SMOKE_FAILED", "Completed application objects are unavailable.");
   }
+  const expectedScopes = new Set();
+  for (const entry of entries) {
+    if (!Array.isArray(entry?.storageScopes)) {
+      throw new RecoveryError("APPLICATION_READ_SMOKE_FAILED", "Completed application scopes are invalid.");
+    }
+    for (const scope of entry.storageScopes) expectedScopes.add(scope);
+  }
   if (databaseReferences.length === 0) {
-    const hasScopedEntry = entries.some((entry) => (
-      !Array.isArray(entry?.storageScopes) || entry.storageScopes.length > 0
-    ));
-    if (hasScopedEntry) {
+    if (expectedScopes.size > 0) {
       throw new RecoveryError(
         "APPLICATION_READ_SMOKE_FAILED",
         "Restored upload references cannot be empty while completed application scopes remain.",
@@ -171,15 +182,28 @@ async function verifyRepresentativeApplicationReads({
       mode: "not-applicable-no-stored-references",
       representativeObjectCount: 0,
       notApplicableNoStoredReferences: true,
+      storageScopes: [],
     };
   }
   const representatives = new Map();
   for (const reference of databaseReferences) {
     const sourceKey = String(reference?.sourceKey ?? "");
     const scope = String(reference?.storageScope ?? "");
-    if (sourceKey && scope && !representatives.has(scope)) representatives.set(scope, sourceKey);
+    if (!sourceKey || !scope || representatives.has(scope)) {
+      throw new RecoveryError(
+        "APPLICATION_READ_SMOKE_FAILED",
+        "Restored application-route representatives are invalid or duplicated.",
+      );
+    }
+    representatives.set(scope, sourceKey);
   }
-  if (!representatives.size) {
+  const representativeScopes = [...representatives.keys()].sort();
+  const completedScopes = [...expectedScopes].sort();
+  if (
+    !representatives.size
+    || representativeScopes.length !== completedScopes.length
+    || representativeScopes.some((scope, index) => scope !== completedScopes[index])
+  ) {
     throw new RecoveryError("APPLICATION_READ_SMOKE_FAILED", "No stored application object can be read-smoked.");
   }
   let representativeObjectCount = 0;
@@ -210,6 +234,7 @@ async function verifyRepresentativeApplicationReads({
     mode: "target-database-reference-bytes",
     representativeObjectCount,
     targetReferenceByteSmokePassed: true,
+    storageScopes: representativeScopes,
   };
 }
 
@@ -225,7 +250,7 @@ export async function restoreCompleteRecoverySet({
   restoreDatabaseSnapshot = restoreCompleteRecoveryDatabaseSnapshot,
   resolveDatabaseObjectReferences = resolveCompleteRecoveryDatabaseObjectReferences,
   cleanupDatabaseTarget = cleanupCompleteRecoveryDatabaseTarget,
-  applicationRouteReadSmoke = unavailableApplicationRouteReadSmoke,
+  applicationRouteReadSmoke = verifyIsolatedApplicationRouteReads,
   runtimeSourceProbe,
   logger = () => undefined,
 } = {}) {
@@ -363,8 +388,13 @@ export async function restoreCompleteRecoverySet({
           );
         }
         const routeReceipt = await applicationRouteReadSmoke(Object.freeze({
+          targetUrl: databaseTargetUrl,
+          protectedDatabaseUrls: Object.freeze([databaseSourceUrl, productionDatabaseUrl]),
+          confirmTargetIsolated: true,
           expectedTargetRuntimeIdentitySha256: targetRuntimeIdentitySha256,
           databaseReferences: Object.freeze(databaseReferences.map((reference) => Object.freeze({
+            uploadId: reference.uploadId,
+            ownerAccountId: reference.ownerAccountId,
             sourceKey: reference.sourceKey,
             storageScope: reference.storageScope,
           }))),
@@ -374,12 +404,19 @@ export async function restoreCompleteRecoverySet({
             plaintextSha256: entry.plaintextSha256,
             storageScopes: Object.freeze([...entry.storageScopes]),
           }))),
+          openRestoredObject,
+          maximumObjectBytes: config.limits.maxObjectBytes,
           targetReferenceByteSmoke: Object.freeze({ ...referenceReceipt }),
         }));
         if (
           routeReceipt?.ok !== true
           || routeReceipt?.mode !== "isolated-application-route"
+          || routeReceipt?.applicationReadSmokeEvidenceLevel
+            !== APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE
           || routeReceipt?.representativeObjectCount !== referenceReceipt.representativeObjectCount
+          || !Array.isArray(routeReceipt?.storageScopes)
+          || routeReceipt.storageScopes.length !== referenceReceipt.storageScopes.length
+          || routeReceipt.storageScopes.some((scope, index) => scope !== referenceReceipt.storageScopes[index])
         ) {
           throw new RecoveryError(
             "APPLICATION_READ_SMOKE_FAILED",
@@ -389,6 +426,8 @@ export async function restoreCompleteRecoverySet({
         return {
           ok: true,
           mode: "isolated-application-route",
+          applicationReadSmokeEvidenceLevel:
+            APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
           representativeObjectCount: routeReceipt.representativeObjectCount,
           targetReferenceByteSmokePassed: true,
         };

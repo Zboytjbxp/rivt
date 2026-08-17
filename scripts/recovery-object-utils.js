@@ -24,6 +24,8 @@ const COMPLETION_MAX_BYTES = 8 * 1024 * 1024;
 const COMPLETION_INNER_MAX_BYTES = 5 * 1024 * 1024;
 const MAX_PROVIDER_VERSION_ID_BYTES = 1024;
 
+export const APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE = "handler-injected-store";
+
 export class RecoveryError extends Error {
   constructor(code, message) {
     super(message);
@@ -954,6 +956,13 @@ export function sanitizedRecoverySuccess(result) {
   const sanitized = Object.fromEntries(
     allowed.filter((field) => result?.[field] !== undefined).map((field) => [field, result[field]]),
   );
+  if (
+    result?.applicationReadSmokeEvidenceLevel
+    === APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE
+  ) {
+    sanitized.applicationReadSmokeEvidenceLevel =
+      APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE;
+  }
   if (result?.reconciliation) {
     sanitized.reconciliation = Object.fromEntries([
       "storedReferencesMissing",
@@ -2227,6 +2236,7 @@ export async function verifyRecoverySnapshot({
   const seenSourceKeys = new Set();
   let restoredBytes = 0;
   let applicationRouteReadVerified = false;
+  let applicationReadSmokeEvidenceLevel;
   let emptyReferenceReadNotApplicable = false;
   let archiveReader;
   try {
@@ -2389,11 +2399,18 @@ export async function verifyRecoverySnapshot({
       const hasStoredApplicationReference = inner.entries.some(
         (entry) => Array.isArray(entry.storageScopes) && entry.storageScopes.length > 0,
       );
-      applicationRouteReadVerified = smokeReceipt?.mode === "isolated-application-route";
+      const handlerRouteReadClaimed = smokeReceipt?.mode === "isolated-application-route";
+      const reportedEvidenceLevel = smokeReceipt?.applicationReadSmokeEvidenceLevel;
+      applicationRouteReadVerified = handlerRouteReadClaimed
+        && reportedEvidenceLevel === APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE;
       const localReferenceReadVerified = smokeReceipt?.mode === "provider-neutral-local-reference";
       emptyReferenceReadNotApplicable =
         smokeReceipt?.mode === "not-applicable-no-stored-references";
+      const evidenceLevelValid = handlerRouteReadClaimed
+        ? applicationRouteReadVerified
+        : reportedEvidenceLevel === undefined;
       const smokePassed = smokeReceipt?.ok === true
+        && evidenceLevelValid
         && Number.isSafeInteger(representativeObjectCount)
         && (
           (
@@ -2412,6 +2429,10 @@ export async function verifyRecoverySnapshot({
           "APPLICATION_READ_SMOKE_FAILED",
           "Representative application-object reads did not pass.",
         );
+      }
+      if (applicationRouteReadVerified) {
+        applicationReadSmokeEvidenceLevel =
+          APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE;
       }
       if (cleanupRestoreStoreAfterVerification) {
         await cleanupRestoredKeys(restoreStore, restoredKeys);
@@ -2443,6 +2464,9 @@ export async function verifyRecoverySnapshot({
           || emptyReferenceReadNotApplicable
         )
       ),
+      ...(applicationReadSmokeEvidenceLevel
+        ? { applicationReadSmokeEvidenceLevel }
+        : {}),
       restoreTargetCleaned: Boolean(restoreStore && cleanupRestoreStoreAfterVerification),
       reconciliation,
       storageScopes: [...new Set(inner.entries.flatMap((entry) => entry.storageScopes ?? []))].sort(),

@@ -84,13 +84,21 @@ const CLEANUP_OPERATIONS = Object.freeze({
 
 async function storedUploadReferences(client) {
   const result = await client.query(`
-    SELECT DISTINCT ON (storage_scope)
-      object_key AS source_key,
-      storage_scope
-    FROM public.uploads
-    WHERE upload_status = 'stored'
-      AND object_key IS NOT NULL
-    ORDER BY storage_scope, id
+    SELECT DISTINCT ON (upload.storage_scope)
+      upload.id AS upload_id,
+      COALESCE(upload.account_id::text, upload.session_id) AS owner_account_id,
+      upload.object_key AS source_key,
+      upload.storage_scope
+    FROM public.uploads upload
+    INNER JOIN public.auth_users auth_user
+      ON auth_user.id::text = COALESCE(upload.account_id::text, upload.session_id)
+    INNER JOIN public.accounts account
+      ON account.id = auth_user.id
+    INNER JOIN public.profiles profile
+      ON profile.account_id = auth_user.id
+    WHERE upload.upload_status = 'stored'
+      AND upload.object_key IS NOT NULL
+    ORDER BY upload.storage_scope, upload.id
     LIMIT 65
   `);
   return result.rows;
@@ -455,12 +463,16 @@ function normalizedStoredReferences(rows) {
       "Restored upload references exceed the read-smoke safety limit.",
     );
   }
+  const seenScopes = new Set();
   return rows.map((row) => {
+    const uploadId = String(row?.uploadId ?? row?.upload_id ?? "");
+    const ownerAccountId = String(row?.ownerAccountId ?? row?.owner_account_id ?? "");
     const sourceKey = String(row?.sourceKey ?? row?.source_key ?? "");
     const storageScope = String(row?.storageScope ?? row?.storage_scope ?? "");
     if (
-      !sourceKey
-      || sourceKey !== sourceKey.trim()
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(uploadId)
+      || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(ownerAccountId)
+      || !sourceKey
       || Buffer.byteLength(sourceKey, "utf8") > 1_024
       || /[\u0000-\u001f\u007f]/u.test(sourceKey)
       || !storageScope
@@ -473,7 +485,14 @@ function normalizedStoredReferences(rows) {
         "A restored upload reference is invalid.",
       );
     }
-    return Object.freeze({ sourceKey, storageScope });
+    if (seenScopes.has(storageScope)) {
+      throw new BackupConfigurationError(
+        "BACKUP_CONFIG_INVALID",
+        "Restored upload references contain more than one representative for a storage scope.",
+      );
+    }
+    seenScopes.add(storageScope);
+    return Object.freeze({ uploadId, ownerAccountId, sourceKey, storageScope });
   });
 }
 

@@ -88,6 +88,8 @@ const readyApplicationObjectRecovery = {
     isolatedDatabaseRestoreVerified: true,
     isolatedObjectRestoreVerified: true,
     applicationReadSmokePassed: true,
+    applicationReadSmokeEvidenceLevel:
+      "live-cookie-session-http-provider-delivery",
     totalDurationMs: 45_000,
     rtoMinutes: 240,
     isolatedRestoreDatabaseDropped: true,
@@ -248,6 +250,13 @@ test("application-object recovery evidence fails closed on incomplete or contrad
     }],
     ["missing application read smoke", (recovery) => {
       recovery.latestCoordinatedRestore.applicationReadSmokePassed = false;
+    }],
+    ["missing live application read evidence level", (recovery) => {
+      delete recovery.latestCoordinatedRestore.applicationReadSmokeEvidenceLevel;
+    }],
+    ["handler-only application read evidence", (recovery) => {
+      recovery.latestCoordinatedRestore.applicationReadSmokeEvidenceLevel =
+        "handler-injected-store";
     }],
     ["receipt RTO differs from policy", (recovery) => {
       recovery.latestCoordinatedRestore.rtoMinutes = 480;

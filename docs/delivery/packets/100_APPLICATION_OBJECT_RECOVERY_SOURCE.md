@@ -5,10 +5,15 @@ proved against a provider**
 
 Current source state: **in progress**. The live command remains deliberately
 inert until a separately reviewed provider authorization adapter attests an
-exact three-key writer policy. A nonempty restore also remains deliberately
-inert until a separately reviewed isolated RIVT route-read adapter is supplied;
-the local target-database-reference byte check is not mislabeled as an
-application-route read. Local source tests never satisfy either live boundary.
+exact three-key writer policy. Nonempty restore now includes a providerless
+isolated route-reader that invokes the same authenticated upload-URL handler as
+the production application against an identity-bound read-only target client,
+then follows an opaque injected delivery capability and verifies exact bytes.
+Local tests prove that handler-level boundary with injected database and object
+stores. They do not prove cookie/session middleware, a live HTTP request,
+provider URL signing or delivery, or either live recovery boundary. The local
+receipt is fixed to `handler-injected-store`; it cannot mint the live-only
+`live-cookie-session-http-provider-delivery` evidence level.
 
 ## Purpose
 
@@ -166,9 +171,14 @@ The repository renders and validates the exact three-key policy but does not
 apply it. The default create command returns
 `RECOVERY_WRITER_AUTHORIZATION_REQUIRED`; only a later, separately reviewed
 provider adapter may attest policy activation and allow the first write.
-The default nonempty restore returns `APPLICATION_READ_SMOKE_REQUIRED` unless
-a separately reviewed isolated RIVT route-read adapter is injected. Raw
-isolated-store readback remains a distinct lower-level integrity check.
+The default nonempty restore uses the providerless isolated RIVT route-reader.
+It rechecks target-database identity inside a read-only transaction, requires
+one exact authenticated-owner representative for every completed storage
+scope, invokes the production upload-URL handler, and follows only the opaque
+delivery capability produced by that handler. Raw isolated-store readback
+remains a distinct lower-level integrity check. This source path is not live
+cookie/session HTTP or provider-delivery evidence. Its sanitized success
+receipt records `applicationReadSmokeEvidenceLevel: handler-injected-store`.
 
 ## Source acceptance
 
@@ -180,10 +190,11 @@ isolated-store readback remains a distinct lower-level integrity check.
 - [x] Source inventory drift is detected before any immutable write.
 - [x] Database artifact, every object component, and the completion record are
   encrypted, authenticated, immutable, version-specific, and retention-bound.
-- [ ] Full isolated database-plus-object restore verification is implemented.
-  The integrity/cleanup path is implemented, but the real isolated RIVT
-  route-read adapter remains intentionally absent; raw store readback cannot
-  close this item.
+- [x] Full isolated database-plus-object restore verification source is
+  implemented, including exact target identity, read-only representative
+  resolution, handler-level production route selection, exact scope equality,
+  byte verification, and cleanup. Local injected-store proof is not live
+  cookie/session HTTP or provider evidence.
 - [x] Adversarial tests cover missing objects, collisions, tampering, wrong
   keys, metadata changes, partial sets, identity collisions, and limits.
 - [x] IAM examples keep source, writer, monitor, and restore authority
@@ -196,7 +207,7 @@ isolated-store readback remains a distinct lower-level integrity check.
   diff integrity, and sensitive-data checks pass.
 
 Current local evidence: build and repository lint pass; the focused Packet and
-readiness set passes 220/220; the full unit gate passes 468/468; three
+readiness set passes 232/232; the full unit gate passes 480/480; three
 dependency-free integration checks pass while 20 PostgreSQL integrations are
 explicitly skipped because this clean worktree has no `TEST_DATABASE_URL`; all
 three browser E2E journeys pass; the production dependency audit reports zero
@@ -204,9 +215,9 @@ vulnerabilities; the local harness reports no provider I/O, production-data
 read, or charge-bearing action; JSON, diff-integrity, and added-source
 sensitive-pattern checks pass.
 
-The unchecked restore item and the separately missing live writer-
-authorization adapter keep this packet `source-in-progress`. No provider or
-operational acceptance is inferred from the checked local items.
+The separately missing live writer-authorization adapter keeps this packet
+`source-in-progress`. No provider or operational acceptance is inferred from
+the checked local items, including the providerless handler-level route proof.
 
 ## Live evidence required later
 
@@ -220,7 +231,12 @@ targets, actual application-route read smoke, durations/RTO, cleanup, health,
 and monitor state. The restricted receipt must supply the completion,
 database-artifact, and archive key/version/hash/retention bindings used to
 render the three exact-version reader grants. Current operational approval
-must postdate that proof.
+must postdate that proof. The application-route evidence must include real
+cookie/session middleware and a live HTTP/provider delivery path; the local
+in-process handler adapter cannot substitute for it. Launch readiness accepts
+only the evidence-level value
+`live-cookie-session-http-provider-delivery` on that coordinated restore;
+missing or `handler-injected-store` evidence fails closed.
 
 Until all live evidence exists, recurring backup, freshness monitoring,
 complete-service recovery, launch readiness, and cost safety are not claimed.

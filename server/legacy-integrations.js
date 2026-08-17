@@ -10,6 +10,53 @@ function sendLegacyBridgeRetired(request, response, code, message) {
   });
 }
 
+export function createAuthenticatedUploadUrlHandler({
+  database,
+  runWithDatabase,
+  signedObjectUrl,
+  signedUrlSeconds,
+}) {
+  if (
+    typeof runWithDatabase !== "function"
+    || typeof signedObjectUrl !== "function"
+  ) {
+    throw new TypeError("Authenticated upload URL route dependencies are invalid.");
+  }
+  return async (request, response, next) => {
+    await runWithDatabase(response, next, async () => {
+      const scopeId = request.authUser?.id;
+      const result = await database.query(
+        `SELECT object_key
+         FROM uploads
+         WHERE id = $1
+           AND (
+             account_id = $2::uuid
+             OR (account_id IS NULL AND session_id = $3)
+           )
+           AND upload_status = 'stored'
+           AND object_key IS NOT NULL`,
+        [request.params.id, scopeId, scopeId],
+      );
+
+      if (!result.rowCount || !result.rows[0].object_key) {
+        response.status(404).json({ ok: false, error: "Upload not found." });
+        return;
+      }
+
+      const signedUrl = await signedObjectUrl(result.rows[0].object_key);
+      if (typeof signedUrl !== "string" || !signedUrl) {
+        response.status(503).json({ ok: false, error: "Object delivery is unavailable." });
+        return;
+      }
+      response.json({
+        ok: true,
+        signedUrl,
+        expiresIn: signedUrlSeconds,
+      });
+    });
+  };
+}
+
 export function registerLegacyIntegrationRoutes({
   app,
   appSlug,
@@ -92,26 +139,16 @@ export function registerLegacyIntegrationRoutes({
     });
   });
 
-  app.get("/api/uploads/:id/url", requireAuthenticatedUser, async (request, response, next) => {
-    await runWithDatabase(response, next, async () => {
-      const scopeId = request.authUser.id;
-      const result = await database.query(
-        "SELECT object_key FROM uploads WHERE id = $1 AND session_id = $2",
-        [request.params.id, scopeId],
-      );
-
-      if (!result.rowCount || !result.rows[0].object_key) {
-        response.status(404).json({ ok: false, error: "Upload not found." });
-        return;
-      }
-
-      response.json({
-        ok: true,
-        signedUrl: await signedObjectUrl(result.rows[0].object_key),
-        expiresIn: signedUrlSeconds,
-      });
-    });
-  });
+  app.get(
+    "/api/uploads/:id/url",
+    requireAuthenticatedUser,
+    createAuthenticatedUploadUrlHandler({
+      database,
+      runWithDatabase,
+      signedObjectUrl,
+      signedUrlSeconds,
+    }),
+  );
 
   app.post("/api/uploads", requireAuthenticatedUser, requireV1Actor, uploadRateLimit, upload.single("file"), applicationObjectMutationBarrier(async (request, response, next) => {
     if (!requireObjectStorage(response)) {

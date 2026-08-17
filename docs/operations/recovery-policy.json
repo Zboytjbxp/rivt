@@ -23,13 +23,15 @@
       "providerIo": false,
       "productionDataRead": false,
       "chargeBearingAction": false,
+      "applicationReadSmokeEvidenceLevel": "handler-injected-store",
       "intentionalBlockers": [
         "provider_exact_writer_authorization_adapter_missing",
-        "isolated_application_route_reader_adapter_missing"
+        "live_cookie_session_http_route_read_evidence_missing"
       ]
     },
     "latestCoordinatedRestore": {
-      "status": "missing"
+      "status": "missing",
+      "applicationReadSmokeEvidenceLevel": "missing"
     }
   },
   "backupRetention": {

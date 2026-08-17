@@ -1,6 +1,6 @@
 # RIVT Build State
 
-Last updated: 2026-08-16 America/New_York
+Last updated: 2026-08-17 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Emergency production credential containment; feature activation paused.
 Active product packet: none. Packet 86 is production verified; product feature
@@ -29,9 +29,11 @@ credential-exposure containment is in progress.
   and the protected set is constrained to three deterministic immutable keys:
   database, one encrypted member archive, and completion. The normal command
   remains fail-closed until an exact-key provider authorization adapter is
-  separately reviewed and supplied. Nonempty restore also remains fail-closed
-  until a separately reviewed isolated RIVT route-read adapter is supplied;
-  local reference-to-byte verification is not application-route evidence.
+  separately reviewed and supplied. Nonempty restore now defaults to a
+  providerless isolated RIVT route-reader that rechecks the target database in
+  a read-only transaction, invokes the exact production upload-URL handler for
+  one authenticated-owner representative per completed scope, and verifies the
+  handler-selected restored bytes through an opaque injected capability.
 - Capture requires the application `DATABASE_URL` and read-only
   `BACKUP_DATABASE_URL` to report one runtime PostgreSQL identity as
   supplemental evidence, then proves live lock-manager contention with a fresh
@@ -48,8 +50,15 @@ credential-exposure containment is in progress.
 - No live recovery-set artifact or provider evidence is claimed.
   Application-object-byte recovery remains `missing` until a separately
   approved bounded live set and complete isolated restore pass.
-- Local verification passes: build, repository lint, 220/220 focused recovery
-  and readiness tests, 468/468 unit tests, three dependency-free integration
+- Local route-reader evidence is handler-level only. It does not exercise
+  cookie/session middleware, a live HTTP request, provider signing/delivery, or
+  production data and therefore cannot satisfy the live application-route
+  requirement. Local receipts record only
+  `applicationReadSmokeEvidenceLevel: handler-injected-store`; launch readiness
+  requires the distinct exact value
+  `live-cookie-session-http-provider-delivery` on a coordinated live restore.
+- Local verification passes: build, repository lint, 232/232 focused recovery
+  and readiness tests, 480/480 unit tests, three dependency-free integration
   checks, all three browser E2E journeys, and a zero-vulnerability production
   dependency audit. Twenty PostgreSQL integrations are explicitly skipped
   because the clean worktree has no `TEST_DATABASE_URL`; no DB-backed aggregate

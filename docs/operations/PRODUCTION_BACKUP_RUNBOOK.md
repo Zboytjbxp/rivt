@@ -70,11 +70,15 @@ separately reviewed adapter attests the rendered exact three-key writer policy,
 writer principal, and UTC window. Local tests inject only a no-provider fake;
 they do not authorize a live write.
 
-The checked-in restore command is independently inert for a nonempty set until
-a reviewed isolated RIVT route-read adapter is supplied. Its lower-level
-target-database-reference plus exact-byte readback is necessary integrity
-evidence, but it is not an application-route smoke and cannot close the live
-acceptance requirement.
+The checked-in restore command now includes a providerless isolated RIVT
+route-reader. It repeats target identity inside a read-only transaction,
+invokes the production upload-URL handler for one exact owner/reference per
+completed scope, and follows only the opaque injected delivery capability
+returned by that handler. Local tests prove this handler-level path without
+provider I/O. They do not exercise cookie/session middleware, live HTTP or
+provider delivery and cannot close the live acceptance requirement. Local
+receipts are fixed to `handler-injected-store`; operational acceptance requires
+`live-cookie-session-http-provider-delivery` from the coordinated live path.
 
 During a future bounded capture, prohibit deployments, schema/data migrations,
 direct SQL changes, provider-console object changes, and all out-of-repository
@@ -116,8 +120,9 @@ health, or monitor evidence is absent or ambiguous. Partial component writes
 without an authenticated completion record are not a recovery set.
 
 Current state: source-in-progress and live-unproven. The exact-key writer
-authorization adapter and isolated RIVT route-read adapter are intentionally
-absent, so the normal commands fail closed before either live boundary. The existing PostgreSQL-only
+authorization adapter remains intentionally absent, so create fails closed
+before protected writes. Restore has providerless handler-level route source,
+but no live cookie/session HTTP/provider proof. The existing PostgreSQL-only
 proof remains valid for that limited scope, but
 `operationalReadiness.applicationObjectByteRecovery` remains `missing`.
 

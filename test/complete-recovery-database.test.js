@@ -714,20 +714,84 @@ test("restored object references are read from the identity-bound target transac
       async storedUploadReferences() {
         referenceReads += 1;
         return [
-          { source_key: "project/photo.bin", storage_scope: "project" },
-          { source_key: "album/cover.bin", storage_scope: "album" },
+          {
+            upload_id: "00000000-0000-4000-8000-000000000001",
+            owner_account_id: "10000000-0000-4000-8000-000000000001",
+            source_key: " project/cafe\u0301 photo.bin ",
+            storage_scope: "project",
+          },
+          {
+            upload_id: "00000000-0000-4000-8000-000000000002",
+            owner_account_id: "10000000-0000-4000-8000-000000000001",
+            source_key: "album/cover.bin",
+            storage_scope: "album",
+          },
         ];
       },
     },
   });
   assert.deepEqual(references, [
-    { sourceKey: "project/photo.bin", storageScope: "project" },
-    { sourceKey: "album/cover.bin", storageScope: "album" },
+    {
+      uploadId: "00000000-0000-4000-8000-000000000001",
+      ownerAccountId: "10000000-0000-4000-8000-000000000001",
+      sourceKey: " project/cafe\u0301 photo.bin ",
+      storageScope: "project",
+    },
+    {
+      uploadId: "00000000-0000-4000-8000-000000000002",
+      ownerAccountId: "10000000-0000-4000-8000-000000000001",
+      sourceKey: "album/cover.bin",
+      storageScope: "album",
+    },
   ]);
   assert.equal(referenceReads, 1);
   assert.ok(lifecycle.includes("target:query:BEGIN READ ONLY"));
   assert.ok(lifecycle.includes("target:query:COMMIT"));
   assert.equal(lifecycle.includes("target:query:ROLLBACK"), false);
+});
+
+test("restored reference reads reject invalid route identities and duplicate scopes", async () => {
+  const identity = { systemIdentifier: "200", databaseOid: "20", databaseName: "rivt_restore" };
+  const common = {
+    targetUrl: "postgresql://restore:secret@restore.example.test/rivt_restore",
+    expectedTargetRuntimeIdentitySha256: completeRecoveryDatabaseIdentitySha256(identity),
+    confirmTargetIsolated: true,
+    poolFactory: () => fakePool("target"),
+  };
+  await assert.rejects(
+    () => resolveCompleteRecoveryDatabaseObjectReferences({
+      ...common,
+      operations: {
+        async runtimeDatabaseIdentity() { return identity; },
+        async storedUploadReferences() {
+          return [{
+            upload_id: "not-a-uuid",
+            owner_account_id: "10000000-0000-4000-8000-000000000001",
+            source_key: "project/photo.bin",
+            storage_scope: "project",
+          }];
+        },
+      },
+    }),
+    /reference is invalid/u,
+  );
+  await assert.rejects(
+    () => resolveCompleteRecoveryDatabaseObjectReferences({
+      ...common,
+      operations: {
+        async runtimeDatabaseIdentity() { return identity; },
+        async storedUploadReferences() {
+          return [1, 2].map((suffix) => ({
+            upload_id: `00000000-0000-4000-8000-${String(suffix).padStart(12, "0")}`,
+            owner_account_id: "10000000-0000-4000-8000-000000000001",
+            source_key: `project/photo-${suffix}.bin`,
+            storage_scope: "project",
+          }));
+        },
+      },
+    }),
+    /more than one representative/u,
+  );
 });
 
 test("restored reference reads reject a changed runtime target before querying uploads", async () => {

@@ -14,8 +14,12 @@ Prepared: 2026-06-22
 > recovery implementation is source-in-progress and live-unproven: no provider I/O,
 > production-data read, cost, merge, deployment, scheduler activation, or live
 > recovery-set/restore evidence is claimed. Application-object-byte recovery
-> remains missing. The checked-in commands intentionally lack the live writer-
-> authorization and isolated RIVT route-read adapters. A new complete-recovery operational approval must follow,
+> remains missing. The checked-in create command intentionally lacks live
+> writer authorization. The providerless restore reader proves only the shared
+> production handler with injected stores, not cookie/session middleware, live
+> HTTP/provider delivery, or a coordinated restore. Its evidence level is
+> `handler-injected-store`; launch requires the separate live-only
+> `live-cookie-session-http-provider-delivery` level. A new complete-recovery operational approval must follow,
 > not precede, a separately authorized bounded live set and isolated restore.
 
 This packet is the final signoff aid for the first named Gate A customer cohort. It does not approve launch by itself. Approval is recorded only in `docs/operations/incident-routing.json` after the founder explicitly approves each required signoff.

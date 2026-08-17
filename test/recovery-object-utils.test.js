@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { Readable } from "node:stream";
 import test from "node:test";
 import {
+  APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
   InMemoryObjectStore,
   RecoveryError,
   assertRelationalManifestReady,
@@ -166,6 +167,8 @@ function verificationArguments(result, backupStore, masterKey, restoreStore) {
         return {
           ok: bytes === entries[0].plaintextBytes,
           mode: "isolated-application-route",
+          applicationReadSmokeEvidenceLevel:
+            APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
           representativeObjectCount: 1,
         };
       },
@@ -470,6 +473,10 @@ test("local encrypted object backup writes completion last and restores exact by
   assert.equal(verification.contentVerified, true);
   assert.equal(verification.databaseArtifactVerified, false);
   assert.equal(verification.applicationReadSmokePassed, true);
+  assert.equal(
+    verification.applicationReadSmokeEvidenceLevel,
+    APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
+  );
   assert.deepEqual(restore.value("albums/photo.jpg"), photo);
   assert.deepEqual(restore.value("messages/document.pdf"), document);
   assert.deepEqual(
@@ -480,6 +487,41 @@ test("local encrypted object backup writes completion last and restores exact by
     },
   );
   assert.ok(backup.maximumObservedChunkBytes <= 64 * 1024);
+});
+
+test("nonempty handler read smoke rejects missing or nonlocal evidence levels", async () => {
+  const value = Buffer.from("handler evidence bytes");
+  const masterKey = crypto.randomBytes(32);
+  const backupStore = new InMemoryObjectStore({}, { name: "evidence-level-backup" });
+  const result = await backupFixture({
+    sourceStore: sourceMemory({ "project/evidence.bin": value }),
+    destinationStore: backupStore,
+    relationalManifest: manifestFor([
+      uploadRow("project/evidence.bin", value, { storageScope: "project" }),
+    ]),
+    masterKey,
+    limits: limits(),
+  });
+
+  for (const evidenceLevel of [undefined, "live-cookie-session-http-provider-delivery"]) {
+    const restoreStore = new InMemoryObjectStore({}, {
+      name: `evidence-level-restore-${evidenceLevel ?? "missing"}`,
+    });
+    await assert.rejects(
+      verifyRecoverySnapshot({
+        ...verificationArguments(result, backupStore, masterKey, restoreStore),
+        applicationReadSmoke: async () => ({
+          ok: true,
+          mode: "isolated-application-route",
+          ...(evidenceLevel
+            ? { applicationReadSmokeEvidenceLevel: evidenceLevel }
+            : {}),
+          representativeObjectCount: 1,
+        }),
+      }),
+      (error) => error.code === "APPLICATION_READ_SMOKE_FAILED",
+    );
+  }
 });
 
 test("an 88-object corpus still grants and writes exactly database, archive, then completion", async () => {
@@ -676,6 +718,7 @@ test("a genuinely empty source produces and verifies a bound empty archive", asy
   assert.equal(verification.objectCount, 0);
   assert.equal(verification.totalPlaintextBytes, 0);
   assert.equal(verification.applicationReadSmokePassed, true);
+  assert.equal(verification.applicationReadSmokeEvidenceLevel, undefined);
   assert.equal(verification.restoreTargetCleaned, true);
   assert.deepEqual(restore.keys(), []);
 });
@@ -1814,6 +1857,8 @@ test("sanitized recovery receipts and failures exclude private coordinates", () 
     objectCount: 2,
     totalPlaintextBytes: 10,
     completionWritten: true,
+    applicationReadSmokeEvidenceLevel:
+      APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
     durationMs: 12,
     completionKey: "private/file-name.jpg",
     completionVersionId: "private-version",
@@ -1822,6 +1867,16 @@ test("sanitized recovery receipts and failures exclude private coordinates", () 
   const serialized = JSON.stringify(sanitized);
   assert.equal(serialized.includes("file-name.jpg"), false);
   assert.equal(serialized.includes("private-version"), false);
+  assert.equal(
+    sanitized.applicationReadSmokeEvidenceLevel,
+    APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
+  );
+  assert.equal(
+    sanitizedRecoverySuccess({
+      applicationReadSmokeEvidenceLevel: "live-cookie-session-http-provider-delivery",
+    }).applicationReadSmokeEvidenceLevel,
+    undefined,
+  );
   const failure = sanitizedRecoveryFailure(new Error("secret provider response"));
   assert.equal(JSON.stringify(failure).includes("secret provider response"), false);
 });
@@ -1857,4 +1912,8 @@ test("local harness requires both guards and remains provider-free with ambient 
   assert.equal(result.productionDataRead, false);
   assert.equal(result.chargeBearingAction, false);
   assert.equal(result.completionWrittenLast, true);
+  assert.equal(
+    result.applicationReadSmokeEvidenceLevel,
+    APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
+  );
 });

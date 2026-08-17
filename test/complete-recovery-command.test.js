@@ -22,6 +22,7 @@ import {
   runRestoreCompleteRecoverySetCli,
 } from "../scripts/restore-complete-recovery-set.js";
 import {
+  APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
   buildDatabaseRecoveryBinding,
   recoveryDatabaseEncryptionSecret,
 } from "../scripts/recovery-object-utils.js";
@@ -164,17 +165,23 @@ function restoreEnv() {
 function databaseSnapshot() {
   const columns = [
     { name: "id", typeName: "text", identityGeneration: null },
+    { name: "session_id", typeName: "text", identityGeneration: null },
+    { name: "account_id", typeName: "text", identityGeneration: null },
     { name: "object_key", typeName: "text", identityGeneration: null },
     { name: "mime_type", typeName: "text", identityGeneration: null },
     { name: "size_bytes", typeName: "integer", identityGeneration: null },
+    { name: "upload_status", typeName: "text", identityGeneration: null },
     { name: "content_sha256", typeName: "text", identityGeneration: null },
     { name: "storage_scope", typeName: "text", identityGeneration: null },
   ];
   const rows = [{
-    id: "upload-1",
+    id: "00000000-0000-4000-8000-000000000001",
+    session_id: "10000000-0000-4000-8000-000000000001",
+    account_id: "10000000-0000-4000-8000-000000000001",
     object_key: "project/photo.bin",
     mime_type: "application/octet-stream",
     size_bytes: "3",
+    upload_status: "stored",
     content_sha256: crypto.createHash("sha256").update("abc").digest("hex"),
     storage_scope: "project",
   }];
@@ -1216,19 +1223,37 @@ test("restore consumes exact completion references, active-authenticates the dat
       assert.equal(input.confirmTargetIsolated, true);
       // Deliberately differs from the authenticated input row: the smoke must
       // consume the restored target query, not reuse snapshot memory.
-      return [{ sourceKey: "project/restored-db.bin", storageScope: "project" }];
+      return [{
+        uploadId: "00000000-0000-4000-8000-000000000001",
+        ownerAccountId: "10000000-0000-4000-8000-000000000001",
+        sourceKey: "project/restored-db.bin",
+        storageScope: "project",
+      }];
     },
     applicationRouteReadSmoke: async (input) => {
       lifecycle.push("smoke:application-route");
+      assert.equal(input.targetUrl, env.RESTORE_DATABASE_URL);
+      assert.deepEqual(input.protectedDatabaseUrls, [env.BACKUP_DATABASE_URL, env.DATABASE_URL]);
+      assert.equal(input.confirmTargetIsolated, true);
       assert.equal(input.expectedTargetRuntimeIdentitySha256, targetRuntimeIdentitySha256);
       assert.equal(input.targetReferenceByteSmoke.targetReferenceByteSmokePassed, true);
+      assert.equal(typeof input.openRestoredObject, "function");
+      assert.equal(input.maximumObjectBytes, COMPLETE_RECOVERY_LIMITS.maxObjectBytes);
       assert.deepEqual(input.databaseReferences, [
-        { sourceKey: "project/restored-db.bin", storageScope: "project" },
+        {
+          uploadId: "00000000-0000-4000-8000-000000000001",
+          ownerAccountId: "10000000-0000-4000-8000-000000000001",
+          sourceKey: "project/restored-db.bin",
+          storageScope: "project",
+        },
       ]);
       return {
         ok: true,
         mode: "isolated-application-route",
+        applicationReadSmokeEvidenceLevel:
+          APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
         representativeObjectCount: 1,
+        storageScopes: ["project"],
       };
     },
     cleanupDatabaseTarget: async (input) => {
@@ -1260,6 +1285,10 @@ test("restore consumes exact completion references, active-authenticates the dat
         openRestoredObject: async () => Readable.from([Buffer.from("abc")]),
       });
       assert.equal(smoke.ok, true);
+      assert.equal(
+        smoke.applicationReadSmokeEvidenceLevel,
+        APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
+      );
       return {
         ok: true,
         recoverySetIdentitySha256: "d".repeat(64),
@@ -1270,6 +1299,8 @@ test("restore consumes exact completion references, active-authenticates the dat
         contentVerified: true,
         targetReferenceByteSmokePassed: true,
         applicationReadSmokePassed: true,
+        applicationReadSmokeEvidenceLevel:
+          APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
         restoreTargetCleaned: true,
         storageScopes: ["project"],
         reconciliation: {
@@ -1290,6 +1321,10 @@ test("restore consumes exact completion references, active-authenticates the dat
   assert.equal(result.mode, "restore-complete-recovery-set");
   assert.equal(result.restoreTargetCleaned, true);
   assert.equal(result.databaseTargetCleaned, true);
+  assert.equal(
+    result.applicationReadSmokeEvidenceLevel,
+    APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
+  );
   assert.equal(result.durationMs, 150);
   assert.deepEqual(lifecycle.slice(-2), [
     "destroy:exact-version-reader",
@@ -1297,7 +1332,7 @@ test("restore consumes exact completion references, active-authenticates the dat
   ]);
 });
 
-test("nonempty restore remains inert without a reviewed isolated application-route adapter", async () => {
+test("nonempty restore fails closed when its application-route adapter is explicitly unavailable", async () => {
   const env = restoreEnv();
   const snapshot = databaseSnapshot();
   const databaseBinding = buildDatabaseRecoveryBinding(snapshot);
@@ -1329,8 +1364,14 @@ test("nonempty restore remains inert without a reviewed isolated application-rou
         };
       },
       resolveDatabaseObjectReferences: async () => [
-        { sourceKey: "project/restored-db.bin", storageScope: "project" },
+        {
+          uploadId: "00000000-0000-4000-8000-000000000001",
+          ownerAccountId: "10000000-0000-4000-8000-000000000001",
+          sourceKey: "project/restored-db.bin",
+          storageScope: "project",
+        },
       ],
+      applicationRouteReadSmoke: null,
       cleanupDatabaseTarget: async () => ({
         ok: true,
         targetDatabaseCleaned: true,
@@ -1412,6 +1453,7 @@ test("restore accepts an empty stored-object set and still cleans both isolated 
         mode: "not-applicable-no-stored-references",
         representativeObjectCount: 0,
         notApplicableNoStoredReferences: true,
+        storageScopes: [],
       });
       lifecycle.push("cleanup:objects");
       return {
@@ -1440,6 +1482,7 @@ test("restore accepts an empty stored-object set and still cleans both isolated 
 
   assert.equal(objectReads, 0);
   assert.equal(result.objectCount, 0);
+  assert.equal(result.applicationReadSmokeEvidenceLevel, undefined);
   assert.equal(result.restoreTargetCleaned, true);
   assert.equal(result.databaseTargetCleaned, true);
   assert.ok(lifecycle.indexOf("cleanup:objects") < lifecycle.indexOf("cleanup:database"));
@@ -1449,7 +1492,7 @@ test("restore accepts an empty stored-object set and still cleans both isolated 
   ]);
 });
 
-test("an empty restored-reference query cannot waive a completed scoped object", async () => {
+test("a partial restored-reference query cannot waive any completed application scope", async () => {
   const env = restoreEnv();
   const snapshot = databaseSnapshot();
   const binding = buildDatabaseRecoveryBinding(snapshot);
@@ -1481,7 +1524,12 @@ test("an empty restored-reference query cannot waive a completed scoped object",
           targetRuntimeIdentitySha256,
         };
       },
-      resolveDatabaseObjectReferences: async () => [],
+      resolveDatabaseObjectReferences: async () => [{
+        uploadId: "00000000-0000-4000-8000-000000000001",
+        ownerAccountId: "10000000-0000-4000-8000-000000000001",
+        sourceKey: "project/restored-db.bin",
+        storageScope: "project",
+      }],
       cleanupDatabaseTarget: async () => {
         lifecycle.push("cleanup:database");
         return {
@@ -1499,8 +1547,15 @@ test("an empty restored-reference query cannot waive a completed scoped object",
               plaintextBytes: 3,
               plaintextSha256: crypto.createHash("sha256").update("abc").digest("hex"),
               storageScopes: ["project"],
+            }, {
+              sourceKey: "album/restored-db.bin",
+              plaintextBytes: 3,
+              plaintextSha256: crypto.createHash("sha256").update("def").digest("hex"),
+              storageScopes: ["album"],
             }],
-            openRestoredObject: async () => Readable.from([Buffer.from("abc")]),
+            openRestoredObject: async (sourceKey) => Readable.from([
+              Buffer.from(sourceKey.startsWith("project/") ? "abc" : "def"),
+            ]),
           });
         } finally {
           lifecycle.push("cleanup:objects");
@@ -1644,7 +1699,10 @@ test("restore enforces the fixed aggregate RTO", async () => {
           contentVerified: true,
           targetReferenceByteSmokePassed: true,
           applicationReadSmokePassed: true,
+          applicationReadSmokeEvidenceLevel:
+            APPLICATION_READ_SMOKE_HANDLER_INJECTED_STORE,
           restoreTargetCleaned: true,
+          storageScopes: ["project"],
         };
       },
     }),

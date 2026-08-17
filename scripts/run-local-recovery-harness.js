@@ -15,6 +15,8 @@ import {
   canonicalTableDigest,
   encryptSnapshot,
 } from "./logical-backup-utils.js";
+import { completeRecoveryDatabaseIdentitySha256 } from "./complete-recovery-database.js";
+import { verifyIsolatedApplicationRouteReads } from "./isolated-application-route-reader.js";
 
 const unexpectedArguments = process.argv.slice(2);
 if (unexpectedArguments.length) {
@@ -40,8 +42,10 @@ const fixtures = {
   "fixture/document.bin": Buffer.from("local fixture document bytes"),
   "fixture/evidence.bin": Buffer.from("local fixture evidence bytes"),
 };
+const ownerAccountId = "10000000-0000-4000-8000-000000000001";
 const uploadRows = Object.entries(fixtures).map(([objectKey, value], index) => ({
   uploadId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+  ownerAccountId,
   kind: ["photo", "document", "evidence"][index],
   objectKey,
   mimeType: "application/octet-stream",
@@ -60,6 +64,8 @@ const sourceBinding = {
 };
 const uploadColumns = [
   "id",
+  "session_id",
+  "account_id",
   "kind",
   "object_key",
   "mime_type",
@@ -72,6 +78,8 @@ const createdAt = "2026-07-29T00:00:00.000Z";
 const sourceCommit = "1".repeat(40);
 const uploadSnapshotRows = uploadRows.map((row) => ({
   id: row.uploadId,
+  session_id: row.ownerAccountId,
+  account_id: row.ownerAccountId,
   kind: row.kind,
   object_key: row.objectKey,
   mime_type: row.mimeType,
@@ -120,6 +128,40 @@ const limits = {
   maxTotalBytes: 3 * 1024 * 1024,
   concurrency: 1,
 };
+const targetRuntimeIdentity = Object.freeze({
+  systemIdentifier: "7000000000000000001",
+  databaseOid: "17001",
+  databaseName: "rivt_local_restore",
+});
+const targetRuntimeIdentitySha256 = completeRecoveryDatabaseIdentitySha256(targetRuntimeIdentity);
+const databaseReferences = uploadRows.map((row) => Object.freeze({
+  uploadId: row.uploadId,
+  ownerAccountId: row.ownerAccountId,
+  sourceKey: row.objectKey,
+  storageScope: row.storageScope,
+}));
+
+function localRoutePool() {
+  const client = {
+    async query(sql, parameters = []) {
+      if (/SELECT object_key/u.test(sql)) {
+        const reference = databaseReferences.find((candidate) => (
+          candidate.uploadId === parameters[0]
+          && candidate.ownerAccountId === parameters[1]
+        ));
+        return reference
+          ? { rowCount: 1, rows: [{ object_key: reference.sourceKey }] }
+          : { rowCount: 0, rows: [] };
+      }
+      return { rowCount: 0, rows: [] };
+    },
+    release() {},
+  };
+  return {
+    async connect() { return client; },
+    async end() {},
+  };
+}
 
 const backup = await backupRecoverySnapshot({
   sourceStore,
@@ -150,15 +192,19 @@ const restore = await verifyRecoverySnapshot({
   expectedSourceStoreIdentitySha256: sourceBinding.coordinateIdentitySha256,
   limits,
   applicationReadSmoke: async ({ entries, openRestoredObject }) => {
-    let bytes = 0;
-    for await (const chunk of await openRestoredObject(entries[0].sourceKey)) {
-      bytes += Buffer.from(chunk).length;
-    }
-    return {
-      ok: bytes === entries[0].plaintextBytes,
-      mode: "provider-neutral-local-reference",
-      representativeObjectCount: 1,
-    };
+    return verifyIsolatedApplicationRouteReads({
+      targetUrl: "postgresql://local@isolated.invalid/rivt_local_restore",
+      protectedDatabaseUrls: ["postgresql://local@source.invalid/rivt"],
+      confirmTargetIsolated: true,
+      expectedTargetRuntimeIdentitySha256: targetRuntimeIdentitySha256,
+      databaseReferences,
+      entries,
+      openRestoredObject,
+      maximumObjectBytes: limits.maxObjectBytes,
+      targetReferenceByteSmoke: { targetReferenceByteSmokePassed: true },
+      poolFactory: localRoutePool,
+      readRuntimeDatabaseIdentity: async () => targetRuntimeIdentity,
+    });
   },
 });
 
@@ -179,6 +225,8 @@ console.log(JSON.stringify({
   totalPlaintextBytes: restore.totalPlaintextBytes,
   completionWrittenLast,
   contentVerified: restore.contentVerified,
+  applicationReadSmokePassed: restore.applicationReadSmokePassed,
+  applicationReadSmokeEvidenceLevel: restore.applicationReadSmokeEvidenceLevel,
   maximumObservedChunkBytes: Math.max(
     sourceStore.maximumObservedChunkBytes,
     backupStore.maximumObservedChunkBytes,

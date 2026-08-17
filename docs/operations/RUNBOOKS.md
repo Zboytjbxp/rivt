@@ -123,9 +123,13 @@ been merged, deployed, connected to a provider, run against production data,
 scheduled, or used to create or restore a live recovery set. It incurs no
 provider cost and does not change the blocked readiness conclusion. The normal
 create remains inert without a reviewed exact-three-key writer authorization
-adapter, and nonempty restore remains inert without a reviewed isolated RIVT
-route-read adapter. A raw target-reference byte check does not satisfy that
-application-route requirement.
+adapter. Nonempty restore now includes a providerless reader that runs the
+production upload-URL handler over an identity-bound read-only target and
+verifies handler-selected bytes through an injected store. That source proof
+does not exercise cookie/session middleware, live HTTP, provider delivery, or
+the operational application-route requirement. Treat `handler-injected-store`
+as local-only; only `live-cookie-session-http-provider-delivery` may satisfy
+the coordinated live-read requirement.
 
 ## Operational Kill Switches
 

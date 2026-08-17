@@ -19,13 +19,17 @@ Packet 100 is **source-in-progress and live-unproven**. It prepares coordinated
 database-plus-application-object manifests, client-side encryption, immutable
 version/retention verification, dormant provider adapters, complete isolated
 restore primitives, guarded local execution, and adversarial tests. The normal
-create remains inert without exact provider-writer authorization, and a
-nonempty restore remains inert without an isolated RIVT route-read adapter;
-raw restored-store readback is not application-route evidence. It
-performs no provider I/O or production-data read, incurs no charge, and is not
+create remains inert without exact provider-writer authorization. Nonempty
+restore now uses a providerless adapter that invokes the production upload-URL
+handler against an identity-bound read-only target and verifies its exact
+handler-selected bytes from an injected store. This is not cookie/session
+middleware, live HTTP, provider delivery, or operational evidence. It performs
+no provider I/O or production-data read, incurs no charge, and is not
 merged, deployed, scheduled, or activated. Therefore GA-OPS-004 remains
 `Partial`, GA-OPS-008 is unchanged, and application-object-byte recovery
-remains `missing`.
+remains `missing`. Local success is labeled `handler-injected-store`; only an
+exact `live-cookie-session-http-provider-delivery` coordinated-restore receipt
+can satisfy launch readiness.
 
 Packet 100 can advance only after its remaining source gates pass and a separate bounded
 live authorization results in one exact reviewed/deployed recovery set and one

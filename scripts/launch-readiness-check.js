@@ -6,6 +6,8 @@ import { evaluateIncidentReadiness, loadIncidentRoutingConfig } from "./incident
 const defaultIncidentPath = "docs/operations/incident-routing.json";
 const defaultRecoveryPath = "docs/operations/recovery-policy.json";
 const maxEvidenceAgeDays = 30;
+const liveApplicationReadSmokeEvidenceLevel =
+  "live-cookie-session-http-provider-delivery";
 const applicationObjectRecoveryScopes = [
   "album",
   "contact-note",
@@ -126,6 +128,8 @@ function coordinatedApplicationObjectRestoreReady(
     receipt?.isolatedDatabaseRestoreVerified === true &&
     receipt?.isolatedObjectRestoreVerified === true &&
     receipt?.applicationReadSmokePassed === true &&
+    receipt?.applicationReadSmokeEvidenceLevel
+      === liveApplicationReadSmokeEvidenceLevel &&
     positiveNumber(receipt?.totalDurationMs) &&
     positiveNumber(targets?.rtoMinutes) &&
     receipt?.rtoMinutes === targets.rtoMinutes &&
