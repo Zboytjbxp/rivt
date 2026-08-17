@@ -15,6 +15,33 @@
     "backupFreshnessMonitor": "inactive",
     "applicationObjectByteRecovery": "missing"
   },
+  "applicationObjectRecovery": {
+    "expectedProductionSourceRevision": "1ee6f324e55a85ffda0538ab65cac25a859b7007",
+    "sourceCapability": {
+      "status": "in_progress_local_only",
+      "evidence": "docs/delivery/packets/100_APPLICATION_OBJECT_RECOVERY_SOURCE.md",
+      "providerIo": false,
+      "productionDataRead": false,
+      "chargeBearingAction": false,
+      "applicationReadSmokeEvidenceLevel": "handler-injected-store",
+      "writerAuthorizationLifecycle": "verified_local_only",
+      "writerControlEvidenceLevel": "providerless-injected-fake",
+      "independentRetirementControllerLifecycle": "verified_local_only",
+      "durableRetirementControllerStore": "verified_isolated_postgresql_only",
+      "retirementControllerRestartProof": "verified_exact_head_ci_subprocess_only",
+      "retirementControllerRestartProofEvidence": "docs/delivery/packets/100A_DURABLE_RETIREMENT_CONTROLLER_RESTART_PROOF.md",
+      "independentRetirementControllerDeployment": "missing",
+      "intentionalBlockers": [
+        "live_aws_writer_control_adapter_and_provider_identity_evidence_missing",
+        "independent_retirement_controller_deployment_provider_persistence_and_live_forced_termination_evidence_missing",
+        "live_cookie_session_http_route_read_evidence_missing"
+      ]
+    },
+    "latestCoordinatedRestore": {
+      "status": "missing",
+      "applicationReadSmokeEvidenceLevel": "missing"
+    }
+  },
   "backupRetention": {
     "days": 30,
     "storage": "private S3-compatible managed object storage",

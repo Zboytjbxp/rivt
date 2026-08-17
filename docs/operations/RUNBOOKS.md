@@ -117,6 +117,47 @@ approval is pending. The explicit launch hold is also active. The approved RPO
 and RTO are targets for PostgreSQL logical records, not a complete-service
 recovery guarantee.
 
+Packet 100 adds provider-neutral coordinated database-plus-object recovery
+source and local adversarial verification. It is source-in-progress: it has not
+been merged, deployed, connected to a provider, run against production data,
+scheduled, or used to create or restore a live recovery set. It incurs no
+provider cost and does not change the blocked readiness conclusion. The normal
+create now has a provider-neutral revocable authorization lease that retires
+attempted authority before final evidence. The selected Option 2 source also
+requires durable independent-controller registration before writer
+construction and locally reconciles ambiguous/expired runs through CAS
+revisions, fencing tokens, bounded attempt leases, deadline sweeps, and
+quarantine. Its v2 reservation and v5 receipt carry only
+`providerless-injected-fake` controller evidence. Packet 100A is accepted at its
+source-only restart-proof boundary: a real killed Node subprocess is reconciled
+by a fresh process through disposable PostgreSQL, and expired-lease fencing,
+stale-finalizer rejection, response-loss idempotence, and concurrent-sweeper
+exclusion pass in exact-head CI. The store prohibits the exact
+application, backup, and restore database identities. This is an isolated
+providerless crash-reconciliation proof, not a deployed controller or AWS
+proof; create remains inert without both the reviewed exact-three-key AWS
+control adapter and independent controller implementation. Nonempty restore now
+includes a providerless reader that runs the production upload-URL handler over
+an identity-bound read-only target and
+verifies handler-selected bytes through an injected store. That source proof
+does not exercise cookie/session middleware, live HTTP, provider delivery, or
+the operational application-route requirement. Treat `handler-injected-store`
+as local-only; only `live-cookie-session-http-provider-delivery` may satisfy
+the coordinated live-read requirement.
+
+The accepted Packet 100A candidate is
+`14f0a6df7e445378d90bd62af7ef6812c0455694`. GitHub Actions push run
+`32077077458` and PR run `32077080310` passed build, repository lint, 544/544
+unit tests, and 30/30 integrations. Focused Packet/recovery/readiness tests pass
+296/296. CI then stopped at the exact five intentional blockers and skipped
+E2E/dependency audit; final local source verification separately passed all three browser
+journeys and `npm audit --omit=dev` with zero vulnerabilities. The five blockers
+remain `ACTIVE_LAUNCH_HOLD`, `RECURRING_BACKUP_INACTIVE`,
+`BACKUP_FRESHNESS_MONITOR_INACTIVE`,
+`APPLICATION_OBJECT_RECOVERY_MISSING`, and
+`RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE`. The candidate is not merged,
+deployed, configured, scheduled, provider-proved, or operationally approved.
+
 ## Operational Kill Switches
 
 Use these only during a real incident, launch pause, or controlled maintenance window:
@@ -181,6 +222,17 @@ active-key-only artifact restored 109 tables and 8,862 rows with zero
 count/content diffs in 53.956 seconds. It did not restore application photos,
 documents, or other object bytes and therefore does not satisfy the complete
 drill described in steps 1-2.
+
+The Packet 100 source path defines the missing complete drill. A future,
+separately approved run must bind one logical-v2 database artifact to a fully
+reconciled object-store inventory, create an authenticated immutable recovery
+set, and restore that exact set to an isolated database and empty isolated
+object prefix. It must verify all eight storage scopes, exact count/bytes and
+readback hashes, zero missing/mismatched/unresolved/unexpected objects,
+representative application reads, RTO, and cleanup. Do not run the dormant
+commands or create provider identities until that explicit bounded approval is
+recorded. See `docs/delivery/packets/100_APPLICATION_OBJECT_RECOVERY_SOURCE.md`
+and `docs/operations/PRODUCTION_BACKUP_RUNBOOK.md`.
 
 Follow `docs/operations/PRODUCTION_BACKUP_RUNBOOK.md`. Gate A requires proof
 that a named, immutable backup object can be restored; a direct database copy

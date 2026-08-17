@@ -19,6 +19,8 @@ Run packets in order. A packet is one AI session or a small number of tightly co
 | 12 | Gate B daily use |
 | 13 | Workflow coherence and subtraction |
 | 14 | Field camera |
+| 100 | Source-only coordinated PostgreSQL and application-object recovery tooling (operational packet; not activation or live proof) |
+| 100A | Source-only durable retirement-controller PostgreSQL and real process-restart proof (not deployment or provider proof) |
 
 Before each packet read:
 

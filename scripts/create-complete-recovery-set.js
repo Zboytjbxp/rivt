@@ -1,0 +1,767 @@
+import crypto from "node:crypto";
+import {
+  RecoveryError,
+  backupRecoverySnapshot,
+  buildDatabaseRecoveryBinding,
+  buildRelationalObjectManifestFromSnapshot,
+  recoverySetIdForDatabaseBinding,
+  recoverySourceBindingForConfig,
+  recoverySourceBindingIdentitySha256,
+  sanitizedRecoveryFailure,
+  sanitizedRecoverySuccess,
+} from "./recovery-object-utils.js";
+import {
+  S3ProtectedDestinationWriter,
+  S3SourceObjectStore,
+  assertRecoveryS3LogicalKeysAddressable,
+  assertRecoveryS3StoreSeparation,
+} from "./recovery-s3-store.js";
+import {
+  acquireCompleteRecoveryCaptureBarrier,
+  captureCompleteRecoveryDatabaseSnapshot,
+  encryptCompleteRecoveryDatabaseSnapshot,
+} from "./complete-recovery-database.js";
+import { renderExactRecoveryWriterPolicy } from "./application-recovery-writer-policy.js";
+import {
+  assertRecoveryWriterAuthorizationLease,
+} from "./recovery-writer-authorization.js";
+import {
+  assertRecoveryWriterRetirementControllerClient,
+} from "./recovery-writer-retirement-controller.js";
+import {
+  assertDistinctCredentials,
+  assertCompleteRecoveryWriteWindow,
+  assertExactStoreIdentity,
+  completeRecoveryClockMilliseconds,
+  completeRecoveryCommandConfig,
+  completeRecoveryCredentials,
+  destroyRecoveryClients,
+  enforceCompleteRecoveryRto,
+  explicitS3ClientFactory,
+  createRestrictedRecoveryEvidenceSink,
+} from "./complete-recovery-command-utils.js";
+import { isDirectExecution } from "./logical-backup-utils.js";
+
+function createSourceStore({ client, binding, sourceBindingIdentitySha256, limits }) {
+  return new S3SourceObjectStore({
+    client,
+    ...binding.coordinates,
+    maximumInventoryItems: limits.maxObjects,
+    maximumPages: limits.maximumInventoryPages,
+    bindingIdentitySha256: sourceBindingIdentitySha256,
+  });
+}
+
+function createDestinationStore({ client, binding, minimumRetentionUntil }) {
+  return new S3ProtectedDestinationWriter({
+    client,
+    ...binding.coordinates,
+    minimumRetentionUntil,
+  });
+}
+
+function exactVersionId(value) {
+  return typeof value === "string"
+    && value
+    && !/[\u0000-\u001f\u007f]/u.test(value)
+    && value.toLowerCase() !== "null"
+    && Buffer.byteLength(value, "utf8") <= 1_024;
+}
+
+function canonicalRetention(value) {
+  const parsed = new Date(value);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value;
+}
+
+function assertCreateReceipt(result, sourceCommit, snapshotId, minimumRetentionUntil) {
+  if (
+    result?.ok !== true
+    || result.completionWritten !== true
+    || result.sourceCommit !== sourceCommit
+    || result.snapshotId !== snapshotId
+    || result.completionKey !== `snapshots/${snapshotId}/complete.json`
+    || !exactVersionId(result.completionVersionId)
+    || !exactVersionId(result.databaseArtifactVersionId)
+    || !exactVersionId(result.archiveVersionId)
+    || !/^[a-f0-9]{64}$/u.test(result.completionSha256 ?? "")
+    || !/^[a-f0-9]{64}$/u.test(result.databaseArtifactSha256 ?? "")
+    || !/^[a-f0-9]{64}$/u.test(result.archiveSha256 ?? "")
+    || !/^[a-f0-9]{64}$/u.test(result.recoverySetIdentitySha256 ?? "")
+    || result.completionRetentionMode !== "COMPLIANCE"
+    || result.databaseArtifactRetentionMode !== "COMPLIANCE"
+    || result.archiveRetentionMode !== "COMPLIANCE"
+    || !canonicalRetention(result.completionRetentionUntil)
+    || !canonicalRetention(result.databaseArtifactRetentionUntil)
+    || !canonicalRetention(result.archiveRetentionUntil)
+    || new Date(result.completionRetentionUntil) < new Date(minimumRetentionUntil)
+    || new Date(result.databaseArtifactRetentionUntil) < new Date(minimumRetentionUntil)
+    || new Date(result.archiveRetentionUntil) < new Date(minimumRetentionUntil)
+  ) {
+    throw new RecoveryError(
+      "RECOVERY_CREATE_RECEIPT_INVALID",
+      "Complete-recovery creation returned no exact completion receipt.",
+    );
+  }
+}
+
+async function unavailableProtectedWriterAuthorizationLease() {
+  throw new RecoveryError(
+    "RECOVERY_WRITER_AUTHORIZATION_REQUIRED",
+    "A reviewed exact-key provider authorization adapter is required before protected writes.",
+  );
+}
+
+async function unavailableWriterRetirementControllerClient() {
+  throw new RecoveryError(
+    "RECOVERY_WRITER_RETIREMENT_CONTROLLER_REQUIRED",
+    "An independently owned writer-retirement controller is required before authorization can be activated.",
+  );
+}
+
+function sha256Json(value) {
+  return crypto.createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
+}
+
+function canonicalControllerTime(value) {
+  const parsed = new Date(value ?? "");
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString() === value
+    ? parsed
+    : undefined;
+}
+
+function writerRetirementBinding({ config, snapshotId, policyPlan, runId, runNonce }) {
+  if (!/^run-[a-f0-9]{48}$/u.test(runId) || !/^[a-f0-9]{64}$/u.test(runNonce)) {
+    throw new RecoveryError(
+      "RECOVERY_WRITER_RETIREMENT_REGISTRATION_INVALID",
+      "The writer-retirement run identity is malformed.",
+    );
+  }
+  const binding = Object.freeze({
+    schemaVersion: "rivt-recovery-writer-retirement-binding-v1",
+    runId,
+    runNonce,
+    sourceCommit: config.sourceCommit,
+    runtimeSourceIdentitySha256: config.runtimeSourceIdentitySha256,
+    snapshotId,
+    writerPolicySha256: policyPlan.policySha256,
+    writerExactKeySetSha256: policyPlan.exactKeySetSha256,
+    destinationStoreIdentitySha256: config.destination.identitySha256,
+    writerPrincipalIdentitySha256: config.principalIdentities.destination,
+    controlPrincipalIdentitySha256: config.principalIdentities.control,
+    auditorPrincipalIdentitySha256: config.principalIdentities.auditor,
+    writeWindowStartAt: config.writeWindow.startAt,
+    writeWindowEndAt: config.writeWindow.endAt,
+    retirementDeadlineAt: config.retirement.retirementDeadlineAt,
+    retirementProofDeadlineAt: config.retirement.retirementProofDeadlineAt,
+    writerSessionExpiresAt: config.retirement.writerSessionExpiresAt,
+    writerControlEvidenceLevel: "providerless-injected-fake",
+  });
+  const bindingDigestSha256 = sha256Json(binding);
+  return Object.freeze({
+    runId,
+    runNonce,
+    bindingDigestSha256,
+    retirementDeadlineAt: binding.retirementDeadlineAt,
+    retirementProofDeadlineAt: binding.retirementProofDeadlineAt,
+    writerSessionExpiresAt: binding.writerSessionExpiresAt,
+    retirementDescriptorReference: `providerless-injected-fake:${runId}`,
+    retirementDescriptorIdentitySha256: bindingDigestSha256,
+    writerControlEvidenceLevel: binding.writerControlEvidenceLevel,
+  });
+}
+
+function assertWriterRetirementRegistration(receipt, context, config) {
+  const registeredAt = canonicalControllerTime(receipt?.registeredAt);
+  if (
+    receipt?.schema !== "rivt-recovery-writer-retirement-registration-receipt-v1"
+    || receipt.state !== "registered"
+    || receipt.runId !== context.runId
+    || receipt.runNonce !== context.runNonce
+    || receipt.bindingDigestSha256 !== context.bindingDigestSha256
+    || receipt.writerControlEvidenceLevel !== context.writerControlEvidenceLevel
+    || receipt.retirementDeadlineAt !== context.retirementDeadlineAt
+    || receipt.retirementProofDeadlineAt !== context.retirementProofDeadlineAt
+    || receipt.writerSessionExpiresAt !== context.writerSessionExpiresAt
+    || receipt.retirementDescriptorIdentitySha256
+      !== context.retirementDescriptorIdentitySha256
+    || Object.prototype.hasOwnProperty.call(receipt, "retirementDescriptorReference")
+    || !Number.isSafeInteger(receipt.revision)
+    || receipt.revision < 1
+    || !Number.isSafeInteger(receipt.fencingToken)
+    || receipt.fencingToken < 1
+    || !registeredAt
+    || registeredAt < new Date(config.writeWindow.startAt)
+    || registeredAt > new Date(context.retirementDeadlineAt)
+  ) {
+    throw new RecoveryError(
+      "RECOVERY_WRITER_RETIREMENT_REGISTRATION_INVALID",
+      "The independent writer-retirement registration is missing or does not match the exact write plan.",
+    );
+  }
+  return Object.freeze({
+    writerAuthorityEvidenceLevel: context.writerControlEvidenceLevel,
+    writerRetirementRunId: context.runId,
+    writerRetirementOwnership: "independent-controller",
+    writerRetirementControllerIdentitySha256: config.principalIdentities.control,
+    writerRetirementAuditorIdentitySha256: config.principalIdentities.auditor,
+    writerRetirementRegistrationIdentitySha256: context.bindingDigestSha256,
+    writerRetirementRegistrationRecordSha256: sha256Json(receipt),
+    writerRetirementDescriptorIdentitySha256:
+      context.retirementDescriptorIdentitySha256,
+    writerRetirementRegisteredAt: receipt.registeredAt,
+    writerRetirementDeadlineAt: config.retirement.retirementDeadlineAt,
+    writerRetirementProofDeadlineAt: config.retirement.retirementProofDeadlineAt,
+    writerSessionExpiresAt: config.retirement.writerSessionExpiresAt,
+    writerRetirementFencingGeneration: receipt.fencingToken,
+  });
+}
+
+function assertWriterRetirementFinalization(
+  receipt,
+  context,
+  registration,
+  writerOutcome,
+  minimumRetiredAt,
+) {
+  const retiredAt = canonicalControllerTime(receipt?.retiredAt);
+  if (
+    receipt?.schema !== "rivt-recovery-writer-retirement-receipt-v1"
+    || receipt.state !== "retired"
+    || receipt.runId !== context.runId
+    || receipt.runNonce !== context.runNonce
+    || receipt.bindingDigestSha256 !== context.bindingDigestSha256
+    || receipt.writerControlEvidenceLevel !== context.writerControlEvidenceLevel
+    || receipt.retirementTrigger !== "writer-requested"
+    || receipt.writerOutcome !== writerOutcome
+    || receipt.completionEligible !== (writerOutcome === "completed")
+    || !Number.isSafeInteger(receipt.revision)
+    || receipt.revision <= 1
+    || !Number.isSafeInteger(receipt.fencingToken)
+    || receipt.fencingToken <= registration.writerRetirementFencingGeneration
+    || !retiredAt
+    || retiredAt < new Date(registration.writerRetirementRegisteredAt)
+    || retiredAt < new Date(minimumRetiredAt)
+    || retiredAt > new Date(registration.writerRetirementProofDeadlineAt)
+    || !/^[a-f0-9]{64}$/u.test(receipt.retirementVerificationSha256 ?? "")
+  ) {
+    throw new RecoveryError(
+      "RECOVERY_WRITER_RETIREMENT_UNVERIFIED",
+      "Independent writer retirement could not be verified against the durable registration.",
+    );
+  }
+  return Object.freeze({
+    writerRetirementTrigger: receipt.retirementTrigger,
+    writerRetirementOperationOutcome: receipt.writerOutcome,
+    writerRetirementFinalizationIdentitySha256: receipt.retirementVerificationSha256,
+    writerRetirementFinalizationRecordSha256: sha256Json(receipt),
+    writerRetirementControlPlaneTranscriptSha256: receipt.retirementVerificationSha256,
+    writerRetirementDataPlaneTranscriptSha256: receipt.retirementVerificationSha256,
+    writerRetirementFinalizedAt: receipt.retiredAt,
+    writerRetirementFinalFencingGeneration: receipt.fencingToken,
+    writerRetirementDirectDenialProbeCount: 0,
+    writerRetirementMultipartDenialProbeCount: 0,
+    writerRetirementMatchingMultipartUploadCount: 0,
+  });
+}
+
+function assertProtectedWriterRevocation(receipt, policyPlan, config, authorization) {
+  const revokedAt = new Date(receipt?.revokedAt ?? "");
+  const authorizedAt = new Date(authorization.writerAuthorizationAt);
+  if (
+    receipt?.revoked !== true
+    || receipt.revocationMode !== "provider-exact-key-policy-removed"
+    || receipt.writerPolicyAbsent !== true
+    || receipt.writerWriteDenied !== true
+    || receipt.multipartWriteDenied !== true
+    || receipt.policySha256 !== policyPlan.policySha256
+    || receipt.exactKeySetSha256 !== policyPlan.exactKeySetSha256
+    || receipt.destinationStoreIdentitySha256 !== config.destination.identitySha256
+    || receipt.writerPrincipalIdentitySha256 !== config.principalIdentities.destination
+    || !Number.isFinite(revokedAt.getTime())
+    || revokedAt.toISOString() !== receipt.revokedAt
+    || revokedAt < authorizedAt
+  ) {
+    throw new RecoveryError(
+      "RECOVERY_WRITER_REVOCATION_UNVERIFIED",
+      "The protected writer could not be proven inert after the exact-key operation.",
+    );
+  }
+  return Object.freeze({
+    writerAuthorizationRevokedAt: receipt.revokedAt,
+    writerAuthorizationRevocationVerified: true,
+    writerPolicyAbsentAfterRun: true,
+    writerWriteDeniedAfterRun: true,
+    writerMultipartWriteDeniedAfterRun: true,
+  });
+}
+
+function assertProtectedWriterAuthorization(receipt, policyPlan, config, writesStartedAt) {
+  const authorizedAt = new Date(receipt?.authorizedAt ?? "");
+  const startedAt = new Date(writesStartedAt);
+  const windowStart = new Date(config.writeWindow.startAt);
+  const windowEnd = new Date(config.writeWindow.endAt);
+  if (
+    receipt?.authorized !== true
+    || receipt.authorizationMode !== "provider-exact-key-policy"
+    || receipt.writerInitiallyInert !== true
+    || receipt.multipartInitiationDenied !== true
+    || receipt.noPreexistingMultipartUploadsVerified !== true
+    || receipt.policySha256 !== policyPlan.policySha256
+    || receipt.exactKeySetSha256 !== policyPlan.exactKeySetSha256
+    || receipt.destinationStoreIdentitySha256 !== config.destination.identitySha256
+    || receipt.writerPrincipalIdentitySha256 !== config.principalIdentities.destination
+    || receipt.expiresAt !== config.writeWindow.endAt
+    || !Number.isFinite(authorizedAt.getTime())
+    || authorizedAt.toISOString() !== receipt.authorizedAt
+    || authorizedAt < windowStart
+    || authorizedAt > startedAt
+    || startedAt >= windowEnd
+  ) {
+    throw new RecoveryError(
+      "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+      "The protected writer is not bound to the exact staged key set and reviewed window.",
+    );
+  }
+  return Object.freeze({
+    writerPolicySha256: policyPlan.policySha256,
+    writerExactKeySetSha256: policyPlan.exactKeySetSha256,
+    writerAuthorizationIdentitySha256: config.principalIdentities.destination,
+    writerAuthorizationAt: receipt.authorizedAt,
+    writerAuthorizationExpiresAt: receipt.expiresAt,
+    multipartInitiationDenied: true,
+    noPreexistingMultipartUploadsVerified: true,
+  });
+}
+
+export async function createCompleteRecoverySet({
+  env = process.env,
+  now = () => new Date(),
+  clock = () => Date.now(),
+  clientFactory = explicitS3ClientFactory,
+  sourceStoreFactory = createSourceStore,
+  destinationStoreFactory = createDestinationStore,
+  captureBarrierFactory = acquireCompleteRecoveryCaptureBarrier,
+  captureDatabaseSnapshot = captureCompleteRecoveryDatabaseSnapshot,
+  encryptDatabaseSnapshot = encryptCompleteRecoveryDatabaseSnapshot,
+  backupSnapshot = backupRecoverySnapshot,
+  openProtectedWriterAuthorizationLease = unavailableProtectedWriterAuthorizationLease,
+  openWriterRetirementControllerClient = unavailableWriterRetirementControllerClient,
+  restrictedEvidenceSinkFactory = createRestrictedRecoveryEvidenceSink,
+  retirementRunIdFactory = () => `run-${crypto.randomBytes(24).toString("hex")}`,
+  retirementRunNonceFactory = () => crypto.randomBytes(32).toString("hex"),
+  runtimeSourceProbe,
+  randomBytesFn,
+  sleep,
+  logger = () => undefined,
+} = {}) {
+  const config = completeRecoveryCommandConfig({
+    env,
+    operation: "create",
+    now,
+    runtimeSourceProbe,
+  });
+  const sourceCredentials = completeRecoveryCredentials(env, "source");
+  const destinationCredentials = completeRecoveryCredentials(env, "destination");
+  assertDistinctCredentials([sourceCredentials, destinationCredentials]);
+  const startedAt = completeRecoveryClockMilliseconds(clock);
+  const evidenceSink = await restrictedEvidenceSinkFactory(env);
+  let evidenceCommitted = false;
+  let captureBarrier;
+  let sourceDatabaseRuntimeIdentitySha256;
+  let sourceClient;
+  let destinationClient;
+  let writerAuthorization;
+  let writerAuthorizationContext;
+  let writerAuthorizationLease;
+  let writerActivationAttempted = false;
+  let writerRevocation;
+  let writerRetirementControllerClient;
+  let writerRetirementContext;
+  let writerRetirementRegistration;
+  let writerRetirementRegistrationAttempted = false;
+  let writerRetirementRegistrationRecorded = false;
+  let writerRetirementFinalization;
+  let protectedWriteBoundaryEntered = false;
+  let protectedWriteBoundaryViolation = false;
+  let protectedWriteBoundaryCompleted = false;
+  let operationError;
+  let writerRevocationError;
+  let writerRetirementError;
+
+  async function releaseCaptureBarrier() {
+    if (!captureBarrier) return;
+    const barrier = captureBarrier;
+    captureBarrier = undefined;
+    await barrier.release();
+  }
+
+  async function revokeWriterAuthorization(operationOutcome) {
+    if (!writerActivationAttempted || writerRevocation) return writerRevocation;
+    const receipt = await writerAuthorizationLease.revokeAndVerify(Object.freeze({
+      operationOutcome,
+      policyPlan: writerAuthorizationContext.policyPlan,
+      destinationStoreIdentitySha256: writerAuthorizationContext.destinationStoreIdentitySha256,
+      writerPrincipalIdentitySha256: writerAuthorizationContext.writerPrincipalIdentitySha256,
+    }));
+    const validated = assertProtectedWriterRevocation(
+      receipt,
+      writerAuthorizationContext.policyPlan,
+      config,
+      writerAuthorization ?? {
+        writerAuthorizationAt: config.writeWindow.startAt,
+      },
+    );
+    await evidenceSink.markWriterRevoked({
+      operationOutcome,
+      ...validated,
+    });
+    writerRevocation = validated;
+    return writerRevocation;
+  }
+
+  async function finalizeIndependentWriterRetirement(writerOutcome) {
+    if (!writerRetirementRegistrationAttempted || writerRetirementFinalization) {
+      return writerRetirementFinalization;
+    }
+    let receipt;
+    try {
+      receipt = await writerRetirementControllerClient.requestRetirementAndWait(
+        Object.freeze({
+          ...writerRetirementContext,
+          retirementTrigger: "writer-requested",
+          writerOutcome,
+        }),
+      );
+    } catch {
+      throw new RecoveryError(
+        "RECOVERY_WRITER_RETIREMENT_UNVERIFIED",
+        "The independent controller could not verify writer retirement.",
+      );
+    }
+    if (!writerRetirementRegistration || !writerRetirementRegistrationRecorded) return undefined;
+    const validated = assertWriterRetirementFinalization(
+      receipt,
+      writerRetirementContext,
+      writerRetirementRegistration,
+      writerOutcome,
+      writerRevocation?.writerAuthorizationRevokedAt
+        ?? writerAuthorization?.writerAuthorizationAt
+        ?? config.writeWindow.startAt,
+    );
+    await evidenceSink.markWriterRetirementFinalized(validated);
+    writerRetirementFinalization = validated;
+    return writerRetirementFinalization;
+  }
+
+  try {
+    try {
+      captureBarrier = await captureBarrierFactory({ env });
+      sourceDatabaseRuntimeIdentitySha256 = captureBarrier.sourceRuntimeIdentitySha256;
+      const applicationRuntimeIdentitySha256 = captureBarrier.applicationRuntimeIdentitySha256;
+      if (
+        !/^[a-f0-9]{64}$/u.test(sourceDatabaseRuntimeIdentitySha256 ?? "")
+        || !/^[a-f0-9]{64}$/u.test(applicationRuntimeIdentitySha256 ?? "")
+        || applicationRuntimeIdentitySha256 !== sourceDatabaseRuntimeIdentitySha256
+      ) {
+        throw new RecoveryError(
+          "RECOVERY_SOURCE_DATABASE_IDENTITY_MISMATCH",
+          "The application mutation barrier and recovery capture must share one PostgreSQL runtime identity.",
+        );
+      }
+    } catch (error) {
+      if (
+        error?.code === "RECOVERY_OBJECT_MUTATION_ACTIVE"
+        || error?.code === "RECOVERY_OBJECT_MUTATION_BARRIER_UNAVAILABLE"
+        || error?.code === "RECOVERY_SOURCE_DATABASE_IDENTITY_MISMATCH"
+      ) {
+        throw new RecoveryError(error.code, error.message);
+      }
+      throw error;
+    }
+    // Capture and fully bind the read-only relational snapshot before any
+    // provider client or store is constructed. The exclusive application-
+    // object barrier remains held through both inventories and staging.
+    let snapshot;
+    try {
+      snapshot = await captureDatabaseSnapshot({
+        env,
+        now,
+        expectedSourceRuntimeIdentitySha256: sourceDatabaseRuntimeIdentitySha256,
+      });
+    } catch (error) {
+      if (error?.code === "RECOVERY_SOURCE_DATABASE_IDENTITY_MISMATCH") {
+        throw new RecoveryError(error.code, error.message);
+      }
+      throw error;
+    }
+    if (snapshot?.sourceCommit !== config.sourceCommit) {
+      throw new RecoveryError(
+        "RECOVERY_SOURCE_REVISION_MISMATCH",
+        "Database snapshot source revision differs from the reviewed runtime.",
+      );
+    }
+    const sourceBinding = recoverySourceBindingForConfig({
+      ...config.source.coordinates,
+      coordinateIdentitySha256: config.source.identitySha256,
+    });
+    const relationalManifest = buildRelationalObjectManifestFromSnapshot(snapshot, { sourceBinding });
+    const databaseBinding = buildDatabaseRecoveryBinding(snapshot);
+    const databaseArtifact = encryptDatabaseSnapshot(snapshot, config.activeKey);
+    const snapshotId = recoverySetIdForDatabaseBinding(config.activeKey, databaseBinding);
+    const restrictedPlan = {
+      sourceCommit: config.sourceCommit,
+      snapshotId,
+      completionKey: `snapshots/${snapshotId}/complete.json`,
+      sourceDatabaseRuntimeIdentitySha256,
+      sourceStoreIdentitySha256: config.source.identitySha256,
+      destinationStoreIdentitySha256: config.destination.identitySha256,
+      restoreStoreIdentitySha256: config.restore.identitySha256,
+      recoveryPrincipalSetSha256: config.principalIdentities.setSha256,
+      writeWindowStartAt: config.writeWindow.startAt,
+      writeWindowEndAt: config.writeWindow.endAt,
+    };
+    await evidenceSink.plan(restrictedPlan);
+
+    sourceClient = clientFactory({
+      role: "source-reader",
+      coordinates: config.source.coordinates,
+      credentials: sourceCredentials,
+    });
+    destinationClient = clientFactory({
+      role: "protected-writer",
+      coordinates: config.destination.coordinates,
+      credentials: destinationCredentials,
+    });
+    const sourceStore = sourceStoreFactory({
+      client: sourceClient,
+      binding: config.source,
+      sourceBindingIdentitySha256: recoverySourceBindingIdentitySha256(sourceBinding),
+      limits: config.limits,
+    });
+    const destinationStore = destinationStoreFactory({
+      client: destinationClient,
+      binding: config.destination,
+      minimumRetentionUntil: config.minimumRetentionUntil,
+      limits: config.limits,
+    });
+    assertExactStoreIdentity(sourceStore, config.source, "source");
+    assertExactStoreIdentity(destinationStore, config.destination, "destination");
+    assertRecoveryS3StoreSeparation({
+      sourceStore: config.source,
+      destinationStore: config.destination,
+      restoreStore: config.restore,
+    });
+
+    const result = await backupSnapshot({
+      sourceStore,
+      destinationStore,
+      relationalManifest,
+      databaseBinding,
+      databaseArtifact: databaseArtifact.bytes,
+      masterKey: config.activeKey,
+      snapshotId,
+      minimumRetentionUntil: config.minimumRetentionUntil,
+      limits: {
+        maxObjects: config.limits.maxObjects,
+        maxObjectBytes: config.limits.maxObjectBytes,
+        maxTotalBytes: config.limits.maxTotalBytes,
+        concurrency: config.limits.concurrency,
+      },
+      maxReadAttempts: config.limits.maxReadAttempts,
+      ...(randomBytesFn ? { randomBytesFn } : {}),
+      ...(sleep ? { sleep } : {}),
+      logger,
+      beforeProtectedWrites: async ({
+        snapshotId: plannedSnapshotId,
+        objectKeys,
+        restoreObjectKeys,
+      }) => {
+        if (protectedWriteBoundaryEntered) {
+          protectedWriteBoundaryViolation = true;
+          throw new RecoveryError(
+            "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+            "The protected-writer boundary can be entered exactly once per recovery set.",
+          );
+        }
+        protectedWriteBoundaryEntered = true;
+        if (plannedSnapshotId !== snapshotId) {
+          throw new RecoveryError(
+            "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+            "The protected writer plan differs from the authenticated recovery set.",
+          );
+        }
+        assertRecoveryS3LogicalKeysAddressable(
+          config.restore.coordinates,
+          restoreObjectKeys,
+        );
+        // The second full inventory and all source staging have completed.
+        // Release the exclusive capture lease before any protected write so
+        // normal uploads/removals are paused only for the coordinated read.
+        await releaseCaptureBarrier();
+        const policyPlan = renderExactRecoveryWriterPolicy({
+          bucket: config.destination.coordinates.bucket,
+          basePrefix: config.destination.coordinates.basePrefix,
+          snapshotId,
+          objectKeys,
+          writeWindow: config.writeWindow,
+        });
+        assertCompleteRecoveryWriteWindow(config.writeWindow, now);
+        writerAuthorizationContext = Object.freeze({
+          policyPlan,
+          destinationStoreIdentitySha256: config.destination.identitySha256,
+          writerPrincipalIdentitySha256: config.principalIdentities.destination,
+        });
+        await evidenceSink.markWriterAuthorizationPlanned({
+          writerPolicySha256: policyPlan.policySha256,
+          writerExactKeySetSha256: policyPlan.exactKeySetSha256,
+          writerAuthorizationIdentitySha256: config.principalIdentities.destination,
+          writerAuthorizationExpiresAt: config.writeWindow.endAt,
+        });
+        writerRetirementContext = writerRetirementBinding({
+          config,
+          snapshotId,
+          policyPlan,
+          runId: retirementRunIdFactory(),
+          runNonce: retirementRunNonceFactory(),
+        });
+        writerRetirementControllerClient = assertRecoveryWriterRetirementControllerClient(
+          await openWriterRetirementControllerClient(writerRetirementContext),
+        );
+        writerRetirementRegistrationAttempted = true;
+        const registrationReceipt = await writerRetirementControllerClient.register(
+          writerRetirementContext,
+        );
+        writerRetirementRegistration = assertWriterRetirementRegistration(
+          registrationReceipt,
+          writerRetirementContext,
+          config,
+        );
+        await evidenceSink.markWriterRetirementRegistered(writerRetirementRegistration);
+        writerRetirementRegistrationRecorded = true;
+        // The adapter factory is a pure construction boundary. Persist the
+        // exact provider plan and independent retirement registration first,
+        // so writer authority cannot precede crash-reconciliation ownership.
+        // All provider I/O belongs inside the lease's activate/revoke operations.
+        writerAuthorizationLease = assertRecoveryWriterAuthorizationLease(
+          await openProtectedWriterAuthorizationLease(writerAuthorizationContext),
+        );
+        writerActivationAttempted = true;
+        const authorizationReceipt = await writerAuthorizationLease.activate(
+          writerAuthorizationContext,
+        );
+        // Provider-side authorization can take measurable time. Sample the
+        // write boundary only after the receipt exists so a truthful
+        // authorizedAt timestamp can precede it, and fail if the window closed
+        // while authorization was being installed.
+        const writesStartedAt = assertCompleteRecoveryWriteWindow(config.writeWindow, now);
+        const validatedAuthorization = assertProtectedWriterAuthorization(
+          authorizationReceipt,
+          policyPlan,
+          config,
+          writesStartedAt,
+        );
+        await evidenceSink.markWritesStarted({
+          writesStartedAt,
+          ...validatedAuthorization,
+        });
+        writerAuthorization = validatedAuthorization;
+        protectedWriteBoundaryCompleted = true;
+      },
+    });
+    await releaseCaptureBarrier();
+    if (
+      !writerActivationAttempted
+      || !writerAuthorization
+      || protectedWriteBoundaryViolation
+      || !protectedWriteBoundaryCompleted
+    ) {
+      throw new RecoveryError(
+        "RECOVERY_WRITER_AUTHORIZATION_INVALID",
+        "The protected-writer boundary did not complete exactly once.",
+      );
+    }
+    assertCreateReceipt(result, config.sourceCommit, snapshotId, config.minimumRetentionUntil);
+    await revokeWriterAuthorization("completed");
+    await finalizeIndependentWriterRetirement("completed");
+    const completedAt = completeRecoveryClockMilliseconds(clock);
+    const restrictedResult = {
+      ...result,
+      mode: "create-complete-recovery-set",
+      durationMs: completedAt >= startedAt ? completedAt - startedAt : 0,
+      sourceDatabaseRuntimeIdentitySha256,
+      sourceStoreIdentitySha256: config.source.identitySha256,
+      destinationStoreIdentitySha256: config.destination.identitySha256,
+      restoreStoreIdentitySha256: config.restore.identitySha256,
+      recoveryPrincipalSetSha256: config.principalIdentities.setSha256,
+      writeWindowStartAt: config.writeWindow.startAt,
+      writeWindowEndAt: config.writeWindow.endAt,
+      ...writerAuthorization,
+      ...writerRevocation,
+      ...writerRetirementRegistration,
+      ...writerRetirementFinalization,
+    };
+    await evidenceSink.commit(restrictedResult);
+    evidenceCommitted = true;
+    const durationMs = enforceCompleteRecoveryRto(startedAt, completedAt);
+    return { ...restrictedResult, durationMs, restrictedEvidenceRecorded: true };
+  } catch (error) {
+    operationError = error;
+    if (writerActivationAttempted && !writerRevocation) {
+      try {
+        await revokeWriterAuthorization("failed");
+      } catch (revocationError) {
+        writerRevocationError = revocationError;
+        operationError = revocationError;
+      }
+    }
+    if (writerRetirementRegistrationAttempted && !writerRetirementFinalization) {
+      try {
+        await finalizeIndependentWriterRetirement("failed");
+      } catch (retirementError) {
+        writerRetirementError = retirementError;
+        operationError = retirementError;
+      }
+    }
+    throw operationError;
+  } finally {
+    let barrierReleaseError;
+    let cleanupError;
+    try {
+      await releaseCaptureBarrier();
+    } catch (error) {
+      barrierReleaseError = error;
+    }
+    try {
+      destroyRecoveryClients([sourceClient, destinationClient]);
+    } catch (error) {
+      cleanupError ??= error;
+    }
+    try {
+      if (!evidenceCommitted) await evidenceSink.abort();
+    } catch (error) {
+      cleanupError ??= error;
+    }
+    if (writerRetirementError) throw writerRetirementError;
+    if (writerRevocationError) throw writerRevocationError;
+    if (barrierReleaseError) throw barrierReleaseError;
+    if (!operationError && cleanupError) throw cleanupError;
+  }
+}
+
+export async function runCreateCompleteRecoverySetCli({
+  execute = () => createCompleteRecoverySet(),
+  stdout = (value) => console.log(value),
+  stderr = (value) => console.error(value),
+} = {}) {
+  try {
+    stdout(JSON.stringify(sanitizedRecoverySuccess(await execute()), null, 2));
+    return 0;
+  } catch (error) {
+    stderr(JSON.stringify(sanitizedRecoveryFailure(error, "create-complete-recovery-set"), null, 2));
+    return 1;
+  }
+}
+
+if (isDirectExecution(import.meta.url)) {
+  process.exitCode = await runCreateCompleteRecoverySetCli();
+}

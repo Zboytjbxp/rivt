@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import { DeleteObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import pg from "pg";
+import { acquireApplicationObjectMutationLease } from "../server/application-object-mutation-barrier.js";
 
 const baseUrl = process.env.RIVT_SMOKE_BASE_URL ?? "https://rivt.pro";
 const databaseUrl = process.env.DATABASE_URL?.trim();
@@ -250,14 +251,19 @@ async function closeSmokeArtifacts(accounts) {
   await pool.query("UPDATE jobs SET status = 'closed', closed_at = COALESCE(closed_at, now()), updated_at = now() WHERE title LIKE $1", [`%${smokeRun}%`]);
 
   if (s3Client && process.env.S3_BUCKET) {
-    const objects = await pool.query(
-      "SELECT object_key FROM uploads WHERE original_name LIKE $1 AND object_key IS NOT NULL",
-      [`%${smokeRun}%`],
-    );
-    await Promise.all(objects.rows.map((row) => s3Client.send(new DeleteObjectCommand({
-      Bucket: process.env.S3_BUCKET,
-      Key: row.object_key,
-    })).catch(() => undefined)));
+    const mutationLease = await acquireApplicationObjectMutationLease(pool);
+    try {
+      const objects = await pool.query(
+        "SELECT object_key FROM uploads WHERE original_name LIKE $1 AND object_key IS NOT NULL",
+        [`%${smokeRun}%`],
+      );
+      await Promise.all(objects.rows.map((row) => s3Client.send(new DeleteObjectCommand({
+        Bucket: process.env.S3_BUCKET,
+        Key: row.object_key,
+      })).catch(() => undefined)));
+    } finally {
+      await mutationLease.release();
+    }
   }
 }
 

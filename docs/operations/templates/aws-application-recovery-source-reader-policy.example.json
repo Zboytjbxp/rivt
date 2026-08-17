@@ -1,0 +1,22 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListCompleteApplicationSourceBucket",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::<APPLICATION_SOURCE_BUCKET>",
+      "Condition": {
+        "NumericLessThanEquals": {
+          "s3:max-keys": "1000"
+        }
+      }
+    },
+    {
+      "Sid": "ReadApplicationSourceObjects",
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::<APPLICATION_SOURCE_BUCKET>/*"
+    }
+  ]
+}

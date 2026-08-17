@@ -556,6 +556,7 @@ export function registerShopTalkRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   s3Client,
   s3Bucket,
   safeObjectName,
@@ -858,7 +859,7 @@ export function registerShopTalkRoutes({
     requireV1Actor,
     uploadRateLimit,
     upload.single("file"),
-    asyncRoute(async (request, response) => {
+    asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
       const { postId } = validate(shopTalkPostParamsSchema, request.params);
       if (!request.file) throw new ApiError(400, "UPLOAD_REQUIRED", "A file field named `file` is required.");
       if (!String(request.file.mimetype ?? "").startsWith("image/")) {
@@ -982,10 +983,10 @@ export function registerShopTalkRoutes({
       );
 
       sendIdempotentResult(response, result);
-    }),
+    })),
   );
 
-  app.delete("/api/v1/shop-talk/posts/:postId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  app.delete("/api/v1/shop-talk/posts/:postId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
     const { postId } = validate(shopTalkPostParamsSchema, request.params);
     const result = await runIdempotentMutation(
       request,
@@ -1056,7 +1057,7 @@ export function registerShopTalkRoutes({
       },
     );
     sendIdempotentResult(response, result);
-  }));
+  })));
 
   app.get("/api/v1/shop-talk/posts/:postId/answers", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const { postId } = validate(shopTalkPostParamsSchema, request.params);

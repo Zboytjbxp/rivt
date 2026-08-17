@@ -65,6 +65,7 @@ export function registerAlbumRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   sha256Buffer,
   detectUploadContent,
   signedObjectUrl,
@@ -166,7 +167,7 @@ export function registerAlbumRoutes({
     requireV1Actor,
     uploadRateLimit,
     upload.single("file"),
-    asyncRoute(async (request, response) => {
+    asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
       const albumId = validate(z.uuid(), request.params.id);
       if (!request.file) throw new ApiError(400, "UPLOAD_REQUIRED", "A file field named `file` is required.");
 
@@ -242,6 +243,6 @@ export function registerAlbumRoutes({
         },
         meta: { requestId: request.requestId },
       });
-    }),
+    })),
   );
 }

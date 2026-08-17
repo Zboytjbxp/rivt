@@ -48,11 +48,27 @@ Evidence:
 - Restore duration and verification duration.
 - Exact provider object key/version and restore-target identifiers remain only
   in restricted operator evidence; do not copy them into this checklist.
+- One coordinated database-plus-application-object recovery receipt binds the
+  exact reviewed/deployed source, database manifest/artifact, source inventory,
+  protected immutable versions, and all eight application-object scopes.
+- The complete isolated restore proves exact database content plus object
+  counts/bytes/readback, zero missing/mismatched/unresolved/unexpected entries,
+  representative application reads, RTO, and cleanup.
 
-Current state on 2026-08-16: **blocked**. PostgreSQL logical recovery is
+Current state on 2026-08-17: **blocked**. PostgreSQL logical recovery is
 `passed`, but recurring backup and independent freshness monitoring are
 `inactive`, application-object-byte recovery is `missing`, operational
 readiness is `blocked`, and the current operational approval is `pending`.
+Packet 100 provides source and local tests only. It has no provider I/O,
+production-data read, cost, merge, deployment, schedule, or live recovery-set
+  evidence, so it does not satisfy either application-object recovery checkbox.
+  Default create remains blocked until reviewed exact-key writer authorization
+  exists. The providerless restore reader proves only the production upload-URL
+  handler against injected database/object stores; it does not prove live
+  cookie/session HTTP or provider delivery and is not the required operational
+  application read. A coordinated receipt must contain the exact evidence level
+  `live-cookie-session-http-provider-delivery`; local
+  `handler-injected-store`, missing, and empty/N/A evidence cannot pass.
 
 ## 3. Customer Support Readiness
 

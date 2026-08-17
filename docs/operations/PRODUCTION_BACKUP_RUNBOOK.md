@@ -19,6 +19,166 @@ No successful command in this document clears launch readiness by itself.
 Provider evidence, a received alert, a named-version restore, and new approvals
 must all agree with the final deployed source.
 
+## Packet 100 coordinated recovery-set boundary
+
+Packet 100 prepares source for a database-plus-application-object recovery set.
+It is not merged, deployed, configured, scheduled, or approved for live use.
+Its guarded local harness and tests make no provider request, read no production
+data, incur no charge, and do not inspect ambient provider credentials.
+
+The source commands are intentionally dormant and detached from `npm start`,
+Railway service configuration, cron, and GitHub workflows. They may be invoked
+against a live environment only after a separately reviewed bounded approval
+names the exact source commit, source and destination coordinates, identities,
+write window, byte/object limits, interruption allowance, and cost ceiling.
+Configuration must use the active backup-encryption key only; an evidentiary
+complete-set restore must reject previous-key aliases.
+
+The coordinated source path is:
+
+1. acquire an exclusive application-object advisory barrier through the
+   read-only `BACKUP_DATABASE_URL`; require the application `DATABASE_URL` to
+   report the same PostgreSQL system identifier, database OID, and database
+   name as supplemental evidence; then hold a fresh random exclusive advisory
+   challenge through the backup URL and require a shared try through the app
+   URL to fail. Only that live contention proves one active lock manager and
+   rejects a same-identity physical replica. Capture one logical-v2 snapshot
+   while all runtime object and uploads-table mutations are paused;
+2. bind its encrypted artifact, logical manifest, uploads-table digest, and
+   exact reviewed source commit;
+3. enumerate the entire source object store twice, stream-hash every referenced
+   object, compute missing legacy hashes, and classify provider-only and
+   removed-but-still-present objects;
+4. fail before immutable writes if either inventory differs, any stored
+   reference is missing or mismatched, any item is unresolved, or a configured
+   count/byte/time limit is exceeded;
+5. preserve independent AES-GCM authentication for each object member and
+   concatenate those bounded ciphertext members into one encrypted archive
+   with contiguous authenticated offsets and no gaps or trailing bytes;
+6. conditionally create exactly three protected keys—database, archive, then
+   completion—and verify each exact immutable version, checksum, COMPLIANCE
+   retention, and retention floor; and
+7. write the authenticated encrypted completion record last.
+
+The source-reader, protected-writer, monitor/backup-reader, and isolated-
+restore data identities must be distinct and must not be the RIVT web-service
+identity. Create configuration additionally binds distinct retirement-control
+and auditor identity digests, each different from every data/application
+principal. Those local digests are neither credentials nor provider proof. A
+future live AWS implementation must derive and verify both identities with no
+backup decryption or source-data authority. Use only reviewed IAM fixtures.
+Normal command output must remain
+aggregate and secret-safe; exact object keys, provider coordinates, version
+IDs, and object-level metadata belong only in restricted operator evidence.
+The checked-in create CLI includes a provider-neutral authorization lease but
+intentionally refuses protected writes until a separately reviewed control
+adapter attests the rendered exact three-key writer policy and writer
+principal. Every exact-key `PutObject` and `GetObjectRetention` allow shares
+the same inclusive-start, exclusive-end UTC window; `If-None-Match` applies
+only to creates. The exact provider plan is durably recorded before the
+adapter factory opens; factory construction must perform no provider I/O;
+the revoker exists before activation begins; ambiguous activation and every
+later failure trigger idempotent retirement; and final success evidence is
+forbidden until policy absence and denied direct/multipart writes are proved.
+Local tests inject only a no-provider fake; they do not authorize a live write.
+
+The selected Option 2 source contract also requires an independent retirement
+registration to become durable before the protected-writer factory opens. The
+registration binds the exact authority plan, random run identity, retirement
+deadline, later proof deadline, still-valid writer-session expiry, and distinct
+control/auditor identities. The controller store retains a bounded private
+retirement descriptor while restricted evidence carries only its SHA-256
+identity. The provider-neutral reconciler uses compare-and-swap revisions,
+fencing tokens, bounded attempt leases, due-record sweeps, and conflict
+quarantine. It can retry an ambiguous registration, an expired claim, or
+controller-process loss without letting a stale claim become final evidence.
+Packet 100A's store requires the exact application, backup, and restore database
+identities as prohibited identities and rechecks its injected runtime identity
+on every operation. Direct Node subprocess tests now prove durable reopen after
+SIGKILL, expired-lease recovery with a higher fence, stale-finalizer rejection,
+response-loss idempotence, and concurrent-sweeper exclusion through disposable
+PostgreSQL in exact-head CI. The v2 restricted reservation and final
+v5 receipt bind registration and independently finalized retirement. This is an
+isolated providerless crash-reconciliation proof only: no controller is
+deployed, no provider store is configured, and writer-control evidence remains
+fixed to `providerless-injected-fake`.
+
+The checked-in restore command now includes a providerless isolated RIVT
+route-reader. It repeats target identity inside a read-only transaction,
+invokes the production upload-URL handler for one exact owner/reference per
+completed scope, and follows only the opaque injected delivery capability
+returned by that handler. Local tests prove this handler-level path without
+provider I/O. They do not exercise cookie/session middleware, live HTTP or
+provider delivery and cannot close the live acceptance requirement. Local
+receipts are fixed to `handler-injected-store`; operational acceptance requires
+`live-cookie-session-http-provider-delivery` from the coordinated live path.
+
+During a future bounded capture, prohibit deployments, schema/data migrations,
+direct SQL changes, provider-console object changes, and all out-of-repository
+storage mutations. The application barrier covers RIVT runtime and reviewed
+smoke-cleanup paths; it cannot coordinate an external administrator bypass.
+Do not waive either the supplemental runtime-identity comparison or the fresh
+cross-URL contention challenge. Never substitute a read replica whose
+advisory-lock namespace differs.
+
+Immediately before writer activation, use a separately reviewed control
+auditor to prove no incomplete multipart upload exists for any of the three
+exact keys and that multipart initiation/parts are denied. Both attestations
+must be present in the durable restricted receipt before the first protected
+write. The adapter must remove and read back the exact policy on success and on
+every error after activation is attempted. If retirement or its readback is
+ambiguous, stop and preserve the restricted receipt; do not treat component or
+completion writes as accepted evidence. The source also proves every captured key is addressable below the exact
+isolated-restore prefix before releasing the capture barrier.
+
+For a future approved live proof, preserve restricted exact references from the
+sanitized one-shot backup receipt. Restore that exact completion version into
+both a new isolated PostgreSQL database and an empty isolated object prefix.
+The restricted v5 receipt must bind the v2 reservation, controller registration
+and retirement finalization, and the completion, database artifact, and archive
+versions, hashes, and accepted COMPLIANCE-retention timestamps. Render the
+reader policy with three exact key-to-version content grants plus only the exact-
+key retention metadata authority required by the verifier. Archive
+metadata may be inspected before database work, but open the exact archive
+body only after the database restore settles so an idle provider stream cannot
+expire during migrations.
+Acceptance requires all eight application scopes, active-key-only decryption,
+exact object count and bytes, zero missing/mismatched/unresolved/unexpected
+entries, exact readback hashes, representative isolated RIVT route reads,
+database manifest/content parity, measured recovery time, target cleanup,
+post-proof health, and monitor state. Cleanup is limited to the temporary
+restore database and objects created under the isolated restore prefix; never
+delete a protected backup version or production object.
+
+Stop immediately and preserve the launch hold if the database/object binding,
+source commit, coordinate identity, active key, source inventory, immutable
+version, checksum, retention, isolation, application read, limits, cleanup,
+health, or monitor evidence is absent or ambiguous. Partial component writes
+without an authenticated completion record are not a recovery set.
+
+Current state: Packet 100 is source-in-progress and live-unproven; Packet 100A
+is accepted at its source-only restart-proof boundary. Exact candidate
+`14f0a6df7e445378d90bd62af7ef6812c0455694` passed build, repository lint,
+544/544 unit tests, and 30/30 integrations in both GitHub Actions push run
+`32077077458` and PR run `32077080310`; focused Packet/recovery/readiness tests
+pass 296/296. CI stopped on the unchanged five launch blockers before E2E and
+dependency audit, while final local source verification separately passed all
+three browser journeys and a zero-vulnerability production dependency audit.
+Durable controller registration precedes writer construction. Local controller
+tests keep ambiguous registration fail-closed. Exact-head disposable-PostgreSQL
+integrations prove real killed-process restart, expired-lease CAS/fencing and
+deadline sweep, response-loss idempotence, and concurrent-sweeper exclusion.
+The concrete exact-key AWS provider control adapter and independently deployed
+controller remain intentionally absent, so create fails closed before protected
+writes. Provider-derived writer, account, bucket-owner, control, and auditor
+identity proof, provider persistence, live forced-termination evidence, IAM
+propagation, and live control/data-plane transcripts are still missing. Restore
+has providerless handler-level route source, but no live cookie/session
+HTTP/provider proof. The existing PostgreSQL-only proof remains valid for that
+limited scope, but `operationalReadiness.applicationObjectByteRecovery` remains
+`missing`. Nothing in Packet 100A is merged, deployed, configured, scheduled,
+provider-proved, or operationally approved.
+
 ## Targets
 
 - Backup cadence: every 12 hours.

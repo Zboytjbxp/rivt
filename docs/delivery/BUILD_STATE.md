@@ -1,21 +1,116 @@
 # RIVT Build State
 
-Last updated: 2026-08-16 America/New_York
+Last updated: 2026-08-17 America/New_York
 Current gate: Gate B controlled engagement
 Current phase: Emergency production credential containment; feature activation paused.
 Active product packet: none. Packet 86 is production verified; product feature
 work remains paused during incident containment.
+Active source-only operational work: Packet 100 application-object recovery
+tooling. Packet 100A's durable retirement-controller restart proof is accepted
+at its source-only boundary on candidate
+`14f0a6df7e445378d90bd62af7ef6812c0455694`. It is not merged, deployed,
+configured, scheduled, provider-proved, or operationally approved and does not
+activate a product packet.
 Active operational packet:
 `docs/operations/incidents/2026-07-29-production-credential-exposure.md`
 Repository branch: `master`
 Production product baseline: Packet 86 production verified; no feature release
 occurred during the 2026-08-16 backup closeout.
-Production operational source: backup-restore hotfix source
-`5071bdbfcff08de7d178ef088b2e3d5aefda0d88`, verified by public health and the
+Production operational source: PR #36 recovery-evidence source
+`1ee6f324e55a85ffda0538ab65cac25a859b7007`, verified by public health and the
 production monitor. The provider deployment identifier remains restricted.
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
+
+## Packet 100 source-only boundary
+
+- Packet 100A is accepted at its source-only restart-proof boundary. Its
+  candidate adds an injected PostgreSQL durable-store adapter, explicit nested
+  controller-only forward/rollback SQL, a bounded inert sweep helper, and a
+  disposable PostgreSQL/direct-subprocess proof harness. The exact candidate
+  passed database-backed process-kill/restart evidence in GitHub Actions. This
+  is isolated providerless persistence, not provider-backed persistence or an
+  independently deployed controller.
+
+- Packet 100 prepares provider-neutral database-plus-application-object
+  recovery source, adversarial tests, dormant provider adapters, least-
+  privilege IAM examples, and guarded local verification.
+- Source capture uses a shared/exclusive application-object mutation barrier,
+  and the protected set is constrained to three deterministic immutable keys:
+  database, one encrypted member archive, and completion. The normal command
+  now has a provider-neutral revocable authorization lease. Its exact-key
+  create and retention-read grants share one inclusive-start, exclusive-end
+  UTC window, while `If-None-Match` remains create-only. The exact plan is
+  durably recorded before any adapter factory opens. Option 2 adds a
+  provider-neutral crash-reconciliation source contract: an independent
+  controller registration is durable before writer authorization can begin,
+  the v2 reservation and final v5 restricted receipt bind that registration,
+  including only the SHA-256 identity of the controller-private retirement
+  descriptor. The ordered retirement, proof, and still-valid-session deadlines
+  and compare-and-swap revisions, fencing tokens, attempt leases, deadline
+  sweeps, quarantine, and retry rules prevent stale or conflicting controllers
+  from finalizing evidence. Packet 100A now proves real Node subprocess loss and
+  restart against disposable PostgreSQL in exact-head CI; ambiguous
+  registration and abandoned runs remain retirement work, not successful writer
+  evidence. The
+  configured retirement-control and auditor identities must be distinct from
+  each other and every data/application principal. Local controller evidence is
+  fixed to `providerless-injected-fake`; it cannot mint either AWS evidence
+  level. Attempted authority is retired on every later in-process failure, and
+  final evidence requires verified policy absence plus denied direct/multipart
+  writes. The command remains fail-closed because both the exact-key AWS
+  provider control adapter and an independently deployed retirement controller
+  are absent. Live use also still needs provider-derived writer/account/bucket-
+  owner identity, real control/auditor identity proof, independent forced-
+  termination evidence, and provider control/data-plane transcripts. Nonempty
+  restore now defaults to a
+  providerless isolated RIVT route-reader that rechecks the target database in
+  a read-only transaction, invokes the exact production upload-URL handler for
+  one authenticated-owner representative per completed scope, and verifies the
+  handler-selected restored bytes through an opaque injected capability.
+- Capture requires the application `DATABASE_URL` and read-only
+  `BACKUP_DATABASE_URL` to report one runtime PostgreSQL identity as
+  supplemental evidence, then proves live lock-manager contention with a fresh
+  random exclusive/shared advisory challenge before snapshot or provider
+  access. A physical replica, clone, or different database fails closed and
+  releases the challenge, both temporary pools, and the capture lease.
+- Before protected writes, source validates that every exact object key is
+  addressable under the configured isolated-restore prefix. Restricted
+  evidence binds all three exact versions, hashes, and accepted COMPLIANCE
+  retention timestamps; the exact archive body is not opened until the
+  isolated database restore has settled.
+- This source work performs no provider I/O, production-data read,
+  charge-bearing action, merge, deployment, or scheduler/workflow activation.
+- No live recovery-set artifact or provider evidence is claimed.
+  Application-object-byte recovery remains `missing` until a separately
+  approved bounded live set and complete isolated restore pass.
+- Local route-reader evidence is handler-level only. It does not exercise
+  cookie/session middleware, a live HTTP request, provider signing/delivery, or
+  production data and therefore cannot satisfy the live application-route
+  requirement. Local receipts record only
+  `applicationReadSmokeEvidenceLevel: handler-injected-store`; launch readiness
+  requires the distinct exact value
+  `live-cookie-session-http-provider-delivery` on a coordinated live restore.
+- Candidate `14f0a6df7e445378d90bd62af7ef6812c0455694` passes 296/296
+  focused Packet/recovery/readiness tests and 544/544 unit tests. GitHub Actions
+  push run `32077077458` and PR run `32077080310` both passed build, repository
+  lint, and the aggregate test step, including 30/30 integrations and all six
+  nested durable-controller cases in the disposable-PostgreSQL restart-proof
+  suite. Readiness then failed
+  closed only on `ACTIVE_LAUNCH_HOLD`, `RECURRING_BACKUP_INACTIVE`,
+  `BACKUP_FRESHNESS_MONITOR_INACTIVE`,
+  `APPLICATION_OBJECT_RECOVERY_MISSING`, and
+  `RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE`; CI therefore skipped E2E
+  and dependency audit. Final local source verification separately passed all
+  three browser journeys, `npm audit --omit=dev` with zero vulnerabilities,
+  repository JSON, diff integrity, security lint, and sensitive-pattern checks.
+  The guarded local harness remains providerless and reported
+  `providerIo: false`, `productionDataRead: false`, and
+  `chargeBearingAction: false`.
+- The production-credential incident remains governing. Packet 100 does not
+  clear the incident, the explicit launch hold, or any operational-readiness
+  blocker.
 
 ## 2026-08-16 backup-key recurrence proof
 

@@ -22,6 +22,7 @@ import {
   validate,
   z,
 } from "./api.js";
+import { createApplicationObjectMutationRuntime } from "./application-object-mutation-barrier.js";
 import { registerAlbumRoutes } from "./albums.js";
 import { registerBillingRoutes, registerStripeWebhookRoute } from "./billing.js";
 import { registerStripeConnectRoutes, registerStripeConnectWebhookRoute, stripeConnectProviderStatus } from "./stripe-connect.js";
@@ -322,6 +323,25 @@ const s3Client = s3Configured
         secretAccessKey: s3SecretAccessKey,
       },
     })
+  : null;
+const applicationObjectBarrierDatabase = databaseUrl
+  ? new Pool({
+      connectionString: databaseUrl,
+      max: 2,
+      connectionTimeoutMillis: 5_000,
+      ssl:
+        process.env.PGSSL === "disable" || databaseUrl.includes("localhost")
+          ? false
+          : { rejectUnauthorized: false },
+    })
+  : null;
+const applicationObjectMutationRuntime = createApplicationObjectMutationRuntime({
+  database: applicationObjectBarrierDatabase,
+  onReleaseError: (error) => logError("storage.object_mutation_barrier_release_failed", { error }),
+});
+const applicationObjectMutationBarrier = applicationObjectMutationRuntime.wrapRoute;
+const applicationObjectStoreClient = s3Client
+  ? applicationObjectMutationRuntime.guardClient(s3Client)
   : null;
 
 const app = express();
@@ -4423,7 +4443,7 @@ app.post(
   requireV1Actor,
   uploadRateLimit,
   upload.single("file"),
-  asyncRoute(async (request, response) => {
+  asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
     const projectId = validate(z.uuid(), request.params.id);
     if (!request.file) throw new ApiError(400, "UPLOAD_REQUIRED", "A file field named `file` is required.");
 
@@ -4512,14 +4532,14 @@ app.post(
         };
       }
 
-      if (!s3Client || !s3Bucket) {
+      if (!applicationObjectStoreClient || !s3Bucket) {
         throw new ApiError(503, "OBJECT_STORAGE_UNAVAILABLE", "Managed object storage is unavailable.");
       }
 
       const objectKey = `projects/${safeObjectName(projectId)}/${safeObjectName(request.actor.account.id)}/${new Date().toISOString().slice(0, 10)}/${uploadId}-${safeObjectName(
         request.file.originalname,
       )}`;
-      await s3Client.send(
+      await applicationObjectStoreClient.send(
         new PutObjectCommand({
           Bucket: s3Bucket,
           Key: objectKey,
@@ -4608,7 +4628,7 @@ app.post(
       };
     });
     sendIdempotentResult(response, result);
-  }),
+  })),
 );
 
 app.get("/api/v1/projects/:id/media/:mediaId/url", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
@@ -5086,10 +5106,11 @@ registerAlbumRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   sha256Buffer,
   detectUploadContent,
   signedObjectUrl,
-  s3Client,
+  s3Client: applicationObjectStoreClient,
   s3Bucket,
 });
 
@@ -5486,7 +5507,8 @@ registerShopTalkRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
-  s3Client,
+  applicationObjectMutationBarrier,
+  s3Client: applicationObjectStoreClient,
   s3Bucket,
   safeObjectName,
   signedObjectUrl,
@@ -5547,11 +5569,12 @@ registerDocumentBrandRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   sha256Buffer,
   detectUploadContent,
   signedObjectUrl,
   safeObjectName,
-  s3Client,
+  s3Client: applicationObjectStoreClient,
   s3Bucket,
 });
 
@@ -5584,11 +5607,12 @@ registerProfessionalProfileRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   sha256Buffer,
   detectUploadContent,
   signedObjectUrl,
   safeObjectName,
-  s3Client,
+  s3Client: applicationObjectStoreClient,
   s3Bucket,
   withTransaction,
   runIdempotentMutation,
@@ -5623,6 +5647,7 @@ registerMessagingContinuityRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   loadConversationById,
   loadConversationParticipantRows,
   assertConversationParticipantsCanInteract,
@@ -5630,7 +5655,7 @@ registerMessagingContinuityRoutes({
   sha256Buffer,
   safeObjectName,
   signedObjectUrl,
-  s3Client,
+  s3Client: applicationObjectStoreClient,
   s3Bucket,
   withTransaction,
   runIdempotentMutation,
@@ -6232,13 +6257,14 @@ registerLegacyIntegrationRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   runWithDatabase,
   mapUploadRow,
   signedObjectUrl,
   signedUrlSeconds,
   requireObjectStorage,
   safeObjectName,
-  s3Client,
+  s3Client: applicationObjectStoreClient,
   s3Bucket,
   integrationStatus,
   buildTwilioSmsStatus,
@@ -6391,6 +6417,9 @@ export async function startServer(listenPort = port) {
 
 export async function closeDatabase() {
   stopPushDeliveryWorker();
+  if (applicationObjectBarrierDatabase) {
+    await applicationObjectBarrierDatabase.end();
+  }
   if (database) {
     await database.end();
   }
