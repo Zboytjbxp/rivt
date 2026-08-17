@@ -514,6 +514,7 @@ export function registerProfessionalProfileRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   sha256Buffer,
   detectUploadContent,
   signedObjectUrl,
@@ -609,7 +610,7 @@ export function registerProfessionalProfileRoutes({
     requireV1Actor,
     uploadRateLimit,
     upload.single("file"),
-    asyncRoute(async (request, response) => {
+    asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
       const credentialId = validate(recordIdSchema, request.params.id);
       const expectedVersion = validate(z.coerce.number().int().positive(), request.body?.expectedVersion);
       if (!request.file) throw new ApiError(400, "CREDENTIAL_EVIDENCE_REQUIRED", "Choose an image or PDF to upload.");
@@ -689,10 +690,10 @@ export function registerProfessionalProfileRoutes({
         await s3Client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: objectKey })).catch(() => undefined);
         throw error;
       }
-    }),
+    })),
   );
 
-  app.delete("/api/v1/profile/credentials/:id/evidence", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  app.delete("/api/v1/profile/credentials/:id/evidence", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
     const credentialId = validate(recordIdSchema, request.params.id);
     const input = validate(versionSchema, request.body);
     const accountId = request.actor.account.id;
@@ -731,7 +732,7 @@ export function registerProfessionalProfileRoutes({
       await s3Client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: result.objectKey })).catch(() => undefined);
     }
     response.json({ data: { credential: mapCredential(result.credential) }, meta: { requestId: request.requestId } });
-  }));
+  })));
 
   app.delete("/api/v1/profile/credentials/:id", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     await archiveOrRestore({
@@ -816,7 +817,7 @@ export function registerProfessionalProfileRoutes({
     requireV1Actor,
     uploadRateLimit,
     upload.single("file"),
-    asyncRoute(async (request, response) => {
+    asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
       if (!request.file) throw new ApiError(400, "PORTFOLIO_IMAGE_REQUIRED", "Choose a work photo to upload.");
       if (!["image/jpeg", "image/png", "image/webp"].includes(request.file.mimetype)) {
         throw new ApiError(415, "PORTFOLIO_IMAGE_TYPE_UNSUPPORTED", "Use a PNG, JPG, or WebP work photo.");
@@ -893,7 +894,7 @@ export function registerProfessionalProfileRoutes({
         }
       });
       sendIdempotentResult(response, result);
-    }),
+    })),
   );
 
   app.patch("/api/v1/profile/portfolio/:id", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
@@ -955,7 +956,7 @@ export function registerProfessionalProfileRoutes({
     requireV1Actor,
     uploadRateLimit,
     upload.single("file"),
-    asyncRoute(async (request, response) => {
+    asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
       if (!request.file) throw new ApiError(400, "PROFILE_AVATAR_REQUIRED", "Choose a profile photo to upload.");
       if (!["image/jpeg", "image/png", "image/webp"].includes(request.file.mimetype)) {
         throw new ApiError(415, "PROFILE_AVATAR_TYPE_UNSUPPORTED", "Use a PNG, JPG, or WebP profile photo.");
@@ -1018,10 +1019,10 @@ export function registerProfessionalProfileRoutes({
         data: { avatarUploadId: uploadId, avatarUrl: await signedObjectUrl(objectKey) },
         meta: { requestId: request.requestId },
       });
-    }),
+    })),
   );
 
-  app.delete("/api/v1/profile/avatar", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  app.delete("/api/v1/profile/avatar", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
     const accountId = request.actor.account.id;
     const previous = await database.query(
       `SELECT p.avatar_upload_id, upload.object_key
@@ -1047,7 +1048,7 @@ export function registerProfessionalProfileRoutes({
       await s3Client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: previous.rows[0].object_key })).catch(() => undefined);
     }
     response.json({ data: { avatarUploadId: null, avatarUrl: null }, meta: { requestId: request.requestId } });
-  }));
+  })));
 }
 
 export const professionalProfileInternals = {

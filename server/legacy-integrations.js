@@ -19,6 +19,7 @@ export function registerLegacyIntegrationRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   runWithDatabase,
   mapUploadRow,
   signedObjectUrl,
@@ -112,7 +113,7 @@ export function registerLegacyIntegrationRoutes({
     });
   });
 
-  app.post("/api/uploads", requireAuthenticatedUser, requireV1Actor, uploadRateLimit, upload.single("file"), async (request, response, next) => {
+  app.post("/api/uploads", requireAuthenticatedUser, requireV1Actor, uploadRateLimit, upload.single("file"), applicationObjectMutationBarrier(async (request, response, next) => {
     if (!requireObjectStorage(response)) {
       return;
     }
@@ -171,7 +172,7 @@ export function registerLegacyIntegrationRoutes({
         upload: mapUploadRow(result.rows[0], await signedObjectUrl(objectKey)),
       });
     });
-  });
+  }));
 
   app.post("/api/identity/verify", requireAuthenticatedUser, writeRateLimit, (_request, response) => {
     const status = integrationStatus("identity", ["IDENTITY_PROVIDER_KEY"], "government ID verification");

@@ -1,0 +1,65 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ConfirmNeverVersionedNonproductionRestoreBucket",
+      "Effect": "Allow",
+      "Action": "s3:GetBucketVersioning",
+      "Resource": "arn:aws:s3:::<NONPRODUCTION_RESTORE_BUCKET>"
+    },
+    {
+      "Sid": "ListOnlyIsolatedNonproductionRestorePrefix",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::<NONPRODUCTION_RESTORE_BUCKET>",
+      "Condition": {
+        "StringEquals": {
+          "s3:prefix": "<ISOLATED_NONPRODUCTION_RESTORE_PREFIX>/"
+        },
+        "NumericLessThanEquals": {
+          "s3:max-keys": "1000"
+        }
+      }
+    },
+    {
+      "Sid": "CreateOnlyInsideIsolatedNonproductionRestorePrefix",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::<NONPRODUCTION_RESTORE_BUCKET>/<ISOLATED_NONPRODUCTION_RESTORE_PREFIX>/*",
+      "Condition": {
+        "Null": {
+          "s3:if-none-match": "false"
+        }
+      }
+    },
+    {
+      "Sid": "DenyMultipartRestoreWrites",
+      "Effect": "Deny",
+      "Action": "s3:PutObject",
+      "Resource": "arn:aws:s3:::<NONPRODUCTION_RESTORE_BUCKET>/<ISOLATED_NONPRODUCTION_RESTORE_PREFIX>/*",
+      "Condition": {
+        "Bool": {
+          "s3:ObjectCreationOperation": "false"
+        }
+      }
+    },
+    {
+      "Sid": "ReadRestoredObjectsForVerification",
+      "Effect": "Allow",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::<NONPRODUCTION_RESTORE_BUCKET>/<ISOLATED_NONPRODUCTION_RESTORE_PREFIX>/*"
+    },
+    {
+      "Sid": "CleanOnlyIsolatedNonproductionRestorePrefix",
+      "Effect": "Allow",
+      "Action": "s3:DeleteObject",
+      "Resource": "arn:aws:s3:::<NONPRODUCTION_RESTORE_BUCKET>/<ISOLATED_NONPRODUCTION_RESTORE_PREFIX>/*"
+    },
+    {
+      "Sid": "CleanUnexpectedVersionOnlyInsideIsolatedNonproductionRestorePrefix",
+      "Effect": "Allow",
+      "Action": "s3:DeleteObjectVersion",
+      "Resource": "arn:aws:s3:::<NONPRODUCTION_RESTORE_BUCKET>/<ISOLATED_NONPRODUCTION_RESTORE_PREFIX>/*"
+    }
+  ]
+}

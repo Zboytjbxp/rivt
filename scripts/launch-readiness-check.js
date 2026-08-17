@@ -6,6 +6,16 @@ import { evaluateIncidentReadiness, loadIncidentRoutingConfig } from "./incident
 const defaultIncidentPath = "docs/operations/incident-routing.json";
 const defaultRecoveryPath = "docs/operations/recovery-policy.json";
 const maxEvidenceAgeDays = 30;
+const applicationObjectRecoveryScopes = [
+  "album",
+  "contact-note",
+  "document-brand",
+  "legacy",
+  "message",
+  "professional-profile",
+  "project",
+  "shop-talk",
+];
 
 function hasValue(value) {
   return typeof value === "string" && value.trim() && value.trim().toUpperCase() !== "TBD";
@@ -47,13 +57,108 @@ function restrictedArtifactIdentityRecorded(identity) {
   return identity?.status === "recorded_restricted" && hasValue(identity.reference);
 }
 
-function currentOperationalApproval(approval, latestRestore, operationalReadiness, now) {
+function sha256Recorded(value) {
+  return typeof value === "string" && /^[a-f0-9]{64}$/i.test(value);
+}
+
+function exactSourceRevisionRecorded(value) {
+  return typeof value === "string" && /^[a-f0-9]{40}$/i.test(value);
+}
+
+function exactRecoveryScopesRecorded(scopes) {
+  return Array.isArray(scopes) &&
+    scopes.length === applicationObjectRecoveryScopes.length &&
+    [...scopes].sort().every((scope, index) => scope === applicationObjectRecoveryScopes[index]);
+}
+
+function coordinatedApplicationObjectRestoreReady(
+  applicationObjectRecovery,
+  backupRetention,
+  targets,
+  now,
+) {
+  const receipt = applicationObjectRecovery?.latestCoordinatedRestore;
+  const counts = receipt?.counts;
+  const bytes = receipt?.bytes;
+  const mismatches = receipt?.mismatches;
+  const binding = receipt?.binding;
+
+  return applicationObjectRecovery?.sourceCapability?.status === "verified_local_only" &&
+    hasValue(applicationObjectRecovery.sourceCapability.evidence) &&
+    applicationObjectRecovery.sourceCapability.providerIo === false &&
+    applicationObjectRecovery.sourceCapability.productionDataRead === false &&
+    applicationObjectRecovery.sourceCapability.chargeBearingAction === false &&
+    receipt?.status === "passed" &&
+    withinDays(receipt.completedAt, maxEvidenceAgeDays, now) &&
+    restrictedArtifactIdentityRecorded(receipt?.recoverySetIdentity) &&
+    restrictedArtifactIdentityRecorded(receipt?.databaseArtifactIdentity) &&
+    restrictedArtifactIdentityRecorded(receipt?.objectCompletionIdentity) &&
+    exactSourceRevisionRecorded(receipt?.sourceRevision) &&
+    exactSourceRevisionRecorded(applicationObjectRecovery?.expectedProductionSourceRevision) &&
+    receipt.sourceRevision === applicationObjectRecovery.expectedProductionSourceRevision &&
+    binding?.sourceRevision === receipt.sourceRevision &&
+    sha256Recorded(binding?.databaseManifestSha256) &&
+    sha256Recorded(binding?.databaseArtifactSha256) &&
+    sha256Recorded(binding?.objectManifestSha256) &&
+    sha256Recorded(binding?.sourceInventorySha256) &&
+    sha256Recorded(binding?.sourceStoreIdentitySha256) &&
+    sha256Recorded(binding?.recoverySetIdentitySha256) &&
+    receipt?.immutableVersionIdsRecorded === true &&
+    receipt?.complianceRetentionVerified === true &&
+    positiveNumber(receipt?.minimumRetentionDays) &&
+    positiveNumber(backupRetention?.days) &&
+    receipt.minimumRetentionDays >= backupRetention.days &&
+    receipt?.activeKeyOnly === true &&
+    receipt?.predecessorPresentDuringVerification === false &&
+    receipt?.identitySeparationVerified === true &&
+    positiveInteger(counts?.sourceObjects) &&
+    counts.sourceObjects === counts?.backedUpObjects &&
+    counts.sourceObjects === counts?.restoredObjects &&
+    nonNegativeInteger(bytes?.source) &&
+    bytes.source === bytes?.backedUp &&
+    bytes.source === bytes?.restored &&
+    mismatches?.missing === 0 &&
+    mismatches?.checksum === 0 &&
+    mismatches?.metadata === 0 &&
+    mismatches?.unresolved === 0 &&
+    mismatches?.unexpected === 0 &&
+    exactRecoveryScopesRecorded(receipt?.scopes) &&
+    receipt?.isolatedDatabaseRestoreVerified === true &&
+    receipt?.isolatedObjectRestoreVerified === true &&
+    receipt?.applicationReadSmokePassed === true &&
+    positiveNumber(receipt?.totalDurationMs) &&
+    positiveNumber(targets?.rtoMinutes) &&
+    receipt?.rtoMinutes === targets.rtoMinutes &&
+    receipt.totalDurationMs <= targets.rtoMinutes * 60_000 &&
+    receipt?.isolatedRestoreDatabaseDropped === true &&
+    receipt?.isolatedRestoreTargetCleared === true &&
+    receipt?.temporaryProviderCredentialsActiveAfterCloseout === false &&
+    receipt?.localRestoreProcessesStopped === true &&
+    receipt?.temporaryHelpersRemoved === true &&
+    receipt?.productionHealthVerified === true &&
+    receipt?.productionMonitorPassed === true;
+}
+
+function currentOperationalApproval(
+  approval,
+  latestRestore,
+  operationalReadiness,
+  applicationObjectRecovery,
+  now,
+) {
   if (approval?.status !== "approved" || !hasValue(approval.approvedBy)) return false;
   const approvedAt = dateTime(approval.approvedAt);
   const restoreEvidenceAt = dateTime(latestRestore?.completedAt);
   const operationalEvidenceAt = dateTime(operationalReadiness?.evidenceUpdatedAt);
   if (!approvedAt || !restoreEvidenceAt || !operationalEvidenceAt) return false;
-  const latestEvidenceAt = Math.max(restoreEvidenceAt.getTime(), operationalEvidenceAt.getTime());
+  const coordinatedRestoreAt = dateTime(
+    applicationObjectRecovery?.latestCoordinatedRestore?.completedAt,
+  );
+  const latestEvidenceAt = Math.max(
+    restoreEvidenceAt.getTime(),
+    operationalEvidenceAt.getTime(),
+    coordinatedRestoreAt?.getTime() ?? Number.NEGATIVE_INFINITY,
+  );
   return latestEvidenceAt <= now.getTime() &&
     approvedAt.getTime() >= latestEvidenceAt &&
     approvedAt.getTime() <= now.getTime();
@@ -297,11 +402,20 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
 
   const postgresqlLogicalRecoveryDeclared =
     operationalReadiness?.postgresqlLogicalRecovery === "passed";
+  const applicationObjectRecoveryDeclared =
+    operationalReadiness?.applicationObjectByteRecovery === "passed";
+  const applicationObjectRecoveryEvidenceReady = coordinatedApplicationObjectRestoreReady(
+    policy.applicationObjectRecovery,
+    policy.backupRetention,
+    policy.targets,
+    now,
+  );
   const recoveryLeaves = {
     postgresqlLogicalRecovery: postgresqlLogicalRecoveryDeclared && postgresqlRestoreEvidenceReady,
     recurringBackup: operationalReadiness?.recurringBackup === "active",
     backupFreshnessMonitor: operationalReadiness?.backupFreshnessMonitor === "active",
-    applicationObjectByteRecovery: operationalReadiness?.applicationObjectByteRecovery === "passed",
+    applicationObjectByteRecovery:
+      applicationObjectRecoveryDeclared && applicationObjectRecoveryEvidenceReady,
   };
 
   if (!postgresqlLogicalRecoveryDeclared) {
@@ -332,6 +446,13 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
     });
   }
 
+  if (applicationObjectRecoveryDeclared && !applicationObjectRecoveryEvidenceReady) {
+    findings.push({
+      code: "APPLICATION_OBJECT_RECOVERY_EVIDENCE_INVALID",
+      message: "A declared application-object recovery pass requires a recent, complete, immutable, active-key-only coordinated restore receipt.",
+    });
+  }
+
   const operationalLeavesReady = Object.values(recoveryLeaves).every(Boolean) &&
     operationalEvidenceTimestampValid;
   const expectedOperationalStatus = operationalLeavesReady ? "ready" : "blocked";
@@ -355,6 +476,7 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
     policy.operationalApproval,
     latestRestore,
     operationalReadiness,
+    policy.applicationObjectRecovery,
     now,
   );
   if (!operationalApprovalCurrent) {
@@ -401,6 +523,7 @@ function evaluateRecoveryPolicy(policy, { now = new Date() } = {}) {
       recurringBackupActive: recoveryLeaves.recurringBackup,
       backupFreshnessMonitorActive: recoveryLeaves.backupFreshnessMonitor,
       applicationObjectByteRecoveryPassed: recoveryLeaves.applicationObjectByteRecovery,
+      applicationObjectRecoveryEvidenceReady,
       operationalApprovalCurrent,
     },
   };

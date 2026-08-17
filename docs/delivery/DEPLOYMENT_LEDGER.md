@@ -1,5 +1,21 @@
 # Deployment Ledger
 
+## 2026-08-16 - PR #36 Recovery Evidence Production Source
+
+- Scope: PR #36 merged the recovery-evidence hardening from
+  `codex/backup-restore-evidence-20260816` into `master` as exact source
+  `1ee6f324e55a85ffda0538ab65cac25a859b7007`.
+- Deployment evidence: production public health served that exact source and
+  the production monitor passed. The provider deployment identifier remains
+  restricted and is not copied into repository evidence.
+- Runtime boundary: this deployment recorded and enforced the PostgreSQL-only
+  recovery evidence and readiness blockers. It did not add application-object
+  recovery, activate recurring backup or freshness monitoring, clear the
+  credential incident, clear the launch hold, or deploy a product feature.
+- Packet 100 is later source-only work. It is not part of this deployment and
+  no merge, provider change, scheduler activation, production-data read, or
+  charge is claimed for it.
+
 ## 2026-08-16 - Active-Key-Only Backup Restore Proof
 
 - Scope: one fresh encrypted PostgreSQL logical artifact was restored into an

@@ -5,17 +5,59 @@ Current gate: Gate B controlled engagement
 Current phase: Emergency production credential containment; feature activation paused.
 Active product packet: none. Packet 86 is production verified; product feature
 work remains paused during incident containment.
+Active source-only operational work: Packet 100 application-object recovery
+tooling. It is not merged, deployed, configured, scheduled, or live-proved and
+does not activate a product packet.
 Active operational packet:
 `docs/operations/incidents/2026-07-29-production-credential-exposure.md`
 Repository branch: `master`
 Production product baseline: Packet 86 production verified; no feature release
 occurred during the 2026-08-16 backup closeout.
-Production operational source: backup-restore hotfix source
-`5071bdbfcff08de7d178ef088b2e3d5aefda0d88`, verified by public health and the
+Production operational source: PR #36 recovery-evidence source
+`1ee6f324e55a85ffda0538ab65cac25a859b7007`, verified by public health and the
 production monitor. The provider deployment identifier remains restricted.
 
 Operational status: launch and Railway Stage 1 are paused while production
 credential-exposure containment is in progress.
+
+## Packet 100 source-only boundary
+
+- Packet 100 prepares provider-neutral database-plus-application-object
+  recovery source, adversarial tests, dormant provider adapters, least-
+  privilege IAM examples, and guarded local verification.
+- Source capture uses a shared/exclusive application-object mutation barrier,
+  and the protected set is constrained to three deterministic immutable keys:
+  database, one encrypted member archive, and completion. The normal command
+  remains fail-closed until an exact-key provider authorization adapter is
+  separately reviewed and supplied. Nonempty restore also remains fail-closed
+  until a separately reviewed isolated RIVT route-read adapter is supplied;
+  local reference-to-byte verification is not application-route evidence.
+- Capture requires the application `DATABASE_URL` and read-only
+  `BACKUP_DATABASE_URL` to report one runtime PostgreSQL identity as
+  supplemental evidence, then proves live lock-manager contention with a fresh
+  random exclusive/shared advisory challenge before snapshot or provider
+  access. A physical replica, clone, or different database fails closed and
+  releases the challenge, both temporary pools, and the capture lease.
+- Before protected writes, source validates that every exact object key is
+  addressable under the configured isolated-restore prefix. Restricted
+  evidence binds all three exact versions, hashes, and accepted COMPLIANCE
+  retention timestamps; the exact archive body is not opened until the
+  isolated database restore has settled.
+- This source work performs no provider I/O, production-data read,
+  charge-bearing action, merge, deployment, or scheduler/workflow activation.
+- No live recovery-set artifact or provider evidence is claimed.
+  Application-object-byte recovery remains `missing` until a separately
+  approved bounded live set and complete isolated restore pass.
+- Local verification passes: build, repository lint, 220/220 focused recovery
+  and readiness tests, 468/468 unit tests, three dependency-free integration
+  checks, all three browser E2E journeys, and a zero-vulnerability production
+  dependency audit. Twenty PostgreSQL integrations are explicitly skipped
+  because the clean worktree has no `TEST_DATABASE_URL`; no DB-backed aggregate
+  pass is claimed. The guarded harness reports `providerIo: false`,
+  `productionDataRead: false`, and `chargeBearingAction: false`.
+- The production-credential incident remains governing. Packet 100 does not
+  clear the incident, the explicit launch hold, or any operational-readiness
+  blocker.
 
 ## 2026-08-16 backup-key recurrence proof
 

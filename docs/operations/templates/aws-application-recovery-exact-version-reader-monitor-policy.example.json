@@ -1,0 +1,62 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListOnlyRecoverySetPrefixVersions",
+      "Effect": "Allow",
+      "Action": "s3:ListBucketVersions",
+      "Resource": "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>",
+      "Condition": {
+        "StringEquals": {
+          "s3:prefix": "<RECOVERY_SET_PREFIX>/"
+        },
+        "NumericLessThanEquals": {
+          "s3:max-keys": "1000"
+        }
+      }
+    },
+    {
+      "Sid": "ReadExactCompletionVersion",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectVersion",
+      "Resource": "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_COMPLETION_OBJECT_KEY>",
+      "Condition": {
+        "StringEquals": {
+          "s3:VersionId": "<EXACT_COMPLETION_VERSION_ID>"
+        }
+      }
+    },
+    {
+      "Sid": "ReadExactDatabaseVersion",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectVersion",
+      "Resource": "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_DATABASE_OBJECT_KEY>",
+      "Condition": {
+        "StringEquals": {
+          "s3:VersionId": "<EXACT_DATABASE_VERSION_ID>"
+        }
+      }
+    },
+    {
+      "Sid": "ReadExactArchiveVersion",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectVersion",
+      "Resource": "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_ARCHIVE_OBJECT_KEY>",
+      "Condition": {
+        "StringEquals": {
+          "s3:VersionId": "<EXACT_ARCHIVE_VERSION_ID>"
+        }
+      }
+    },
+    {
+      "Sid": "ReadExactRecoverySetRetention",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectRetention",
+      "Resource": [
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_DATABASE_OBJECT_KEY>",
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_ARCHIVE_OBJECT_KEY>",
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_COMPLETION_OBJECT_KEY>"
+      ]
+    }
+  ]
+}

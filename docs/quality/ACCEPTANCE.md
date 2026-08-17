@@ -15,6 +15,27 @@ production-credential incident's explicit `ACTIVE_LAUNCH_HOLD` also remains
 active. Historical `ready` results below are point-in-time evidence and do not
 override this current blocked state.
 
+Packet 100 is **source-in-progress and live-unproven**. It prepares coordinated
+database-plus-application-object manifests, client-side encryption, immutable
+version/retention verification, dormant provider adapters, complete isolated
+restore primitives, guarded local execution, and adversarial tests. The normal
+create remains inert without exact provider-writer authorization, and a
+nonempty restore remains inert without an isolated RIVT route-read adapter;
+raw restored-store readback is not application-route evidence. It
+performs no provider I/O or production-data read, incurs no charge, and is not
+merged, deployed, scheduled, or activated. Therefore GA-OPS-004 remains
+`Partial`, GA-OPS-008 is unchanged, and application-object-byte recovery
+remains `missing`.
+
+Packet 100 can advance only after its remaining source gates pass and a separate bounded
+live authorization results in one exact reviewed/deployed recovery set and one
+complete isolated restore. Required live evidence includes active-key-only
+decryption, all eight application-object scopes, exact database/object binding,
+exact immutable versions and retention, count/byte equality, zero missing,
+mismatched, unresolved, or unexpected entries, representative application
+route reads, measured RTO, cleanup, health, and monitor state. A source-only result,
+partial set, provider screenshot, or PostgreSQL-only restore is insufficient.
+
 ## Historical Evidence Snapshot - 2026-06-30 (superseded)
 
 At that time, Gate A machine readiness was approved for the recorded incident,

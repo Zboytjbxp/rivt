@@ -15,6 +15,23 @@
     "backupFreshnessMonitor": "inactive",
     "applicationObjectByteRecovery": "missing"
   },
+  "applicationObjectRecovery": {
+    "expectedProductionSourceRevision": "1ee6f324e55a85ffda0538ab65cac25a859b7007",
+    "sourceCapability": {
+      "status": "in_progress_local_only",
+      "evidence": "docs/delivery/packets/100_APPLICATION_OBJECT_RECOVERY_SOURCE.md",
+      "providerIo": false,
+      "productionDataRead": false,
+      "chargeBearingAction": false,
+      "intentionalBlockers": [
+        "provider_exact_writer_authorization_adapter_missing",
+        "isolated_application_route_reader_adapter_missing"
+      ]
+    },
+    "latestCoordinatedRestore": {
+      "status": "missing"
+    }
+  },
   "backupRetention": {
     "days": 30,
     "storage": "private S3-compatible managed object storage",

@@ -9,6 +9,14 @@ Prepared: 2026-06-22
 > `npm run launch:readiness -- --require-ready`. That gate currently remains
 > blocked by the active incident hold and incomplete operational-recovery
 > requirements.
+>
+> Packet 100 does not renew this approval. Its database-plus-application-object
+> recovery implementation is source-in-progress and live-unproven: no provider I/O,
+> production-data read, cost, merge, deployment, scheduler activation, or live
+> recovery-set/restore evidence is claimed. Application-object-byte recovery
+> remains missing. The checked-in commands intentionally lack the live writer-
+> authorization and isolated RIVT route-read adapters. A new complete-recovery operational approval must follow,
+> not precede, a separately authorized bounded live set and isolated restore.
 
 This packet is the final signoff aid for the first named Gate A customer cohort. It does not approve launch by itself. Approval is recorded only in `docs/operations/incident-routing.json` after the founder explicitly approves each required signoff.
 
@@ -29,6 +37,9 @@ This packet is the final signoff aid for the first named Gate A customer cohort.
 - Live Gate A smoke: `railway ssh --service RIVT --environment production -- npm run smoke:gate-a:live` passed inside Railway with zero seed/demo findings and seven anonymous private-route checks.
 - Incident rehearsal: Scenario A passed; Sentry accepted event `43fc7567f458490582db1f6642e2e0ea`.
 - Recovery: RPO 24 hours, RTO 4 hours, 30-day backup retention, 30-day restore-drill cadence, and named backup-artifact restore evidence are approved.
+- Complete-service recovery is not approved: current evidence covers
+  PostgreSQL logical records only. Packet 100 is source-only and does not prove
+  application photos, documents, or attachments recoverable.
 - Support owner: Michael at `support@rivt.pro`.
 - Backup owner: Anya Tingle, phone status recorded outside the repo.
 

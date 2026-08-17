@@ -32,6 +32,74 @@ const readyIncidentConfig = {
   },
 };
 
+const readyApplicationObjectRecovery = {
+  expectedProductionSourceRevision: "0123456789abcdef0123456789abcdef01234567",
+  sourceCapability: {
+    status: "verified_local_only",
+    evidence: "docs/delivery/packets/100_APPLICATION_OBJECT_RECOVERY_SOURCE.md",
+    providerIo: false,
+    productionDataRead: false,
+    chargeBearingAction: false,
+  },
+  latestCoordinatedRestore: {
+    status: "passed",
+    completedAt: "2026-06-21T10:30:00.000Z",
+    recoverySetIdentity: {
+      status: "recorded_restricted",
+      reference: "restricted-operational-evidence:test-recovery-set",
+    },
+    databaseArtifactIdentity: {
+      status: "recorded_restricted",
+      reference: "restricted-operational-evidence:test-database-artifact",
+    },
+    objectCompletionIdentity: {
+      status: "recorded_restricted",
+      reference: "restricted-operational-evidence:test-object-completion",
+    },
+    sourceRevision: "0123456789abcdef0123456789abcdef01234567",
+    binding: {
+      sourceRevision: "0123456789abcdef0123456789abcdef01234567",
+      databaseManifestSha256: "1".repeat(64),
+      databaseArtifactSha256: "2".repeat(64),
+      objectManifestSha256: "3".repeat(64),
+      sourceInventorySha256: "4".repeat(64),
+      sourceStoreIdentitySha256: "5".repeat(64),
+      recoverySetIdentitySha256: "6".repeat(64),
+    },
+    immutableVersionIdsRecorded: true,
+    complianceRetentionVerified: true,
+    minimumRetentionDays: 30,
+    activeKeyOnly: true,
+    predecessorPresentDuringVerification: false,
+    identitySeparationVerified: true,
+    counts: { sourceObjects: 8, backedUpObjects: 8, restoredObjects: 8 },
+    bytes: { source: 8192, backedUp: 8192, restored: 8192 },
+    mismatches: { missing: 0, checksum: 0, metadata: 0, unresolved: 0, unexpected: 0 },
+    scopes: [
+      "legacy",
+      "project",
+      "album",
+      "shop-talk",
+      "document-brand",
+      "professional-profile",
+      "message",
+      "contact-note",
+    ],
+    isolatedDatabaseRestoreVerified: true,
+    isolatedObjectRestoreVerified: true,
+    applicationReadSmokePassed: true,
+    totalDurationMs: 45_000,
+    rtoMinutes: 240,
+    isolatedRestoreDatabaseDropped: true,
+    isolatedRestoreTargetCleared: true,
+    temporaryProviderCredentialsActiveAfterCloseout: false,
+    localRestoreProcessesStopped: true,
+    temporaryHelpersRemoved: true,
+    productionHealthVerified: true,
+    productionMonitorPassed: true,
+  },
+};
+
 const readyRecoveryPolicy = {
   status: "approved",
   targets: {
@@ -48,6 +116,7 @@ const readyRecoveryPolicy = {
     backupFreshnessMonitor: "active",
     applicationObjectByteRecovery: "passed",
   },
+  applicationObjectRecovery: readyApplicationObjectRecovery,
   backupRetention: {
     days: 30,
     owner: "Michael",
@@ -102,6 +171,109 @@ test("launch readiness passes only when incident and recovery policy evidence ar
   assert.equal(result.ok, true);
   assert.equal(result.status, "ready");
   assert.deepEqual(result.findings, []);
+});
+
+test("local-only application-object source capability can never satisfy live recovery readiness", () => {
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: {
+      ...readyRecoveryPolicy,
+      applicationObjectRecovery: {
+        ...readyApplicationObjectRecovery,
+        latestCoordinatedRestore: { status: "missing" },
+      },
+    },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
+
+  assert.equal(result.summary.recovery.applicationObjectByteRecoveryPassed, false);
+  assert.equal(result.summary.recovery.applicationObjectRecoveryEvidenceReady, false);
+  assert.deepEqual(result.findings.map((finding) => finding.code), [
+    "APPLICATION_OBJECT_RECOVERY_MISSING",
+    "APPLICATION_OBJECT_RECOVERY_EVIDENCE_INVALID",
+    "RECOVERY_OPERATIONAL_STATUS_INCONSISTENT",
+  ]);
+});
+
+test("application-object recovery evidence fails closed on incomplete or contradictory receipts", () => {
+  const cases = [
+    ["provider I/O during source proof", (recovery) => { recovery.sourceCapability.providerIo = true; }],
+    ["failed live receipt", (recovery) => { recovery.latestCoordinatedRestore.status = "failed"; }],
+    ["unrestricted artifact reference", (recovery) => {
+      recovery.latestCoordinatedRestore.objectCompletionIdentity.status = "public";
+    }],
+    ["inexact source revision", (recovery) => { recovery.latestCoordinatedRestore.sourceRevision = "main"; }],
+    ["receipt differs from reviewed production source", (recovery) => {
+      recovery.expectedProductionSourceRevision = "f".repeat(40);
+    }],
+    ["missing binding", (recovery) => {
+      recovery.latestCoordinatedRestore.binding.objectManifestSha256 = null;
+    }],
+    ["unbound source revision", (recovery) => {
+      recovery.latestCoordinatedRestore.binding.sourceRevision = "f".repeat(40);
+    }],
+    ["unrecorded immutable versions", (recovery) => {
+      recovery.latestCoordinatedRestore.immutableVersionIdsRecorded = false;
+    }],
+    ["short retention", (recovery) => { recovery.latestCoordinatedRestore.minimumRetentionDays = 29; }],
+    ["predecessor-assisted restore", (recovery) => {
+      recovery.latestCoordinatedRestore.predecessorPresentDuringVerification = true;
+    }],
+    ["identity reuse", (recovery) => {
+      recovery.latestCoordinatedRestore.identitySeparationVerified = false;
+    }],
+    ["object-count mismatch", (recovery) => {
+      recovery.latestCoordinatedRestore.counts.restoredObjects = 7;
+    }],
+    ["empty object set", (recovery) => {
+      recovery.latestCoordinatedRestore.counts = {
+        sourceObjects: 0,
+        backedUpObjects: 0,
+        restoredObjects: 0,
+      };
+    }],
+    ["byte-count mismatch", (recovery) => {
+      recovery.latestCoordinatedRestore.bytes.backedUp = 8191;
+    }],
+    ["negative byte set", (recovery) => {
+      recovery.latestCoordinatedRestore.bytes = { source: -1, backedUp: -1, restored: -1 };
+    }],
+    ["unresolved object", (recovery) => {
+      recovery.latestCoordinatedRestore.mismatches.unresolved = 1;
+    }],
+    ["omitted storage scope", (recovery) => {
+      recovery.latestCoordinatedRestore.scopes = recovery.latestCoordinatedRestore.scopes.slice(1);
+    }],
+    ["missing object restore", (recovery) => {
+      recovery.latestCoordinatedRestore.isolatedObjectRestoreVerified = false;
+    }],
+    ["missing application read smoke", (recovery) => {
+      recovery.latestCoordinatedRestore.applicationReadSmokePassed = false;
+    }],
+    ["receipt RTO differs from policy", (recovery) => {
+      recovery.latestCoordinatedRestore.rtoMinutes = 480;
+    }],
+    ["restore target not cleared", (recovery) => {
+      recovery.latestCoordinatedRestore.isolatedRestoreTargetCleared = false;
+    }],
+    ["production monitor failed", (recovery) => {
+      recovery.latestCoordinatedRestore.productionMonitorPassed = false;
+    }],
+  ];
+
+  for (const [label, mutate] of cases) {
+    const applicationObjectRecovery = structuredClone(readyApplicationObjectRecovery);
+    mutate(applicationObjectRecovery);
+    const result = evaluateLaunchReadiness({
+      incidentConfig: readyIncidentConfig,
+      recoveryPolicy: { ...readyRecoveryPolicy, applicationObjectRecovery },
+    }, { now: new Date("2026-06-21T12:00:00.000Z") });
+    const codes = result.findings.map((finding) => finding.code);
+
+    assert.equal(result.ok, false, label);
+    assert.equal(result.summary.recovery.applicationObjectByteRecoveryPassed, false, label);
+    assert.equal(codes.includes("APPLICATION_OBJECT_RECOVERY_EVIDENCE_INVALID"), true, label);
+    assert.equal(codes.includes("RECOVERY_OPERATIONAL_STATUS_INCONSISTENT"), true, label);
+  }
 });
 
 test("launch readiness reports recovery policy gaps without hiding incident gaps", () => {
@@ -224,6 +396,28 @@ test("removing the explicit launch hold cannot hide inactive recovery capabiliti
   assert.equal(result.status, "blocked");
   assert.equal(result.findings.some((finding) => finding.code === "ACTIVE_LAUNCH_HOLD"), false);
   assert.deepEqual(result.findings.map((finding) => finding.code), [
+    "RECURRING_BACKUP_INACTIVE",
+    "BACKUP_FRESHNESS_MONITOR_INACTIVE",
+    "APPLICATION_OBJECT_RECOVERY_MISSING",
+    "RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE",
+  ]);
+});
+
+test("the checked-in policy retains exactly the five current launch blockers", () => {
+  const incidentConfig = JSON.parse(fs.readFileSync(
+    new URL("../docs/operations/incident-routing.json", import.meta.url),
+    "utf8",
+  ));
+  const recoveryPolicy = JSON.parse(fs.readFileSync(
+    new URL("../docs/operations/recovery-policy.json", import.meta.url),
+    "utf8",
+  ));
+  const result = evaluateLaunchReadiness({ incidentConfig, recoveryPolicy }, {
+    now: new Date("2026-08-16T22:00:00.000Z"),
+  });
+
+  assert.deepEqual(result.findings.map((finding) => finding.code), [
+    "ACTIVE_LAUNCH_HOLD",
     "RECURRING_BACKUP_INACTIVE",
     "BACKUP_FRESHNESS_MONITOR_INACTIVE",
     "APPLICATION_OBJECT_RECOVERY_MISSING",
@@ -426,6 +620,31 @@ test("current operational approval must postdate operational evidence changes", 
       },
     },
   }, { now: new Date("2026-06-21T13:00:00.000Z") });
+
+  assert.deepEqual(result.findings.map((finding) => finding.code), [
+    "RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE",
+  ]);
+});
+
+test("current operational approval must postdate coordinated object-restore evidence", () => {
+  const result = evaluateLaunchReadiness({
+    incidentConfig: readyIncidentConfig,
+    recoveryPolicy: {
+      ...readyRecoveryPolicy,
+      operationalApproval: {
+        status: "approved",
+        approvedBy: "Michael",
+        approvedAt: "2026-06-21T11:15:00.000Z",
+      },
+      applicationObjectRecovery: {
+        ...readyApplicationObjectRecovery,
+        latestCoordinatedRestore: {
+          ...readyApplicationObjectRecovery.latestCoordinatedRestore,
+          completedAt: "2026-06-21T11:30:00.000Z",
+        },
+      },
+    },
+  }, { now: new Date("2026-06-21T12:00:00.000Z") });
 
   assert.deepEqual(result.findings.map((finding) => finding.code), [
     "RECOVERY_OPERATIONAL_APPROVAL_MISSING_OR_STALE",

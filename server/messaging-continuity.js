@@ -179,6 +179,7 @@ export function registerMessagingContinuityRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   loadConversationById,
   loadConversationParticipantRows,
   assertConversationParticipantsCanInteract,
@@ -234,7 +235,7 @@ export function registerMessagingContinuityRoutes({
     }
   }
 
-  app.get("/api/v1/messaging/settings", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
+  app.get("/api/v1/messaging/settings", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
     const accountId = request.actor.account.id;
     await expirePendingMessageAttachments();
     const [preferences, templates] = await Promise.all([
@@ -254,7 +255,7 @@ export function registerMessagingContinuityRoutes({
       },
       meta: { requestId: request.requestId },
     });
-  }));
+  })));
 
   app.put("/api/v1/conversations/:id/preference", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
     const conversationId = validate(z.uuid(), request.params.id);
@@ -419,7 +420,7 @@ export function registerMessagingContinuityRoutes({
     requireV1Actor,
     uploadRateLimit,
     upload.single("file"),
-    asyncRoute(async (request, response) => {
+    asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
       await expirePendingMessageAttachments();
       const conversationId = validate(z.uuid(), request.params.id);
       const conversation = await loadConversationById(database, conversationId, request.actor);
@@ -485,10 +486,10 @@ export function registerMessagingContinuityRoutes({
         },
         meta: { requestId: request.requestId },
       });
-    }),
+    })),
   );
 
-  app.delete("/api/v1/conversations/:conversationId/attachments/:attachmentId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  app.delete("/api/v1/conversations/:conversationId/attachments/:attachmentId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
     const conversationId = validate(z.uuid(), request.params.conversationId);
     const attachmentId = validate(z.uuid(), request.params.attachmentId);
     const accountId = request.actor.account.id;
@@ -542,7 +543,7 @@ export function registerMessagingContinuityRoutes({
       await s3Client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: result.rows[0].object_key })).catch(() => undefined);
     }
     response.json({ data: { removed: true, attachmentId }, meta: { requestId: request.requestId } });
-  }));
+  })));
 
   app.get("/api/v1/contacts/:contactId/notes", requireV1AuthenticatedUser, requireV1Actor, asyncRoute(async (request, response) => {
     const contactId = validate(z.uuid(), request.params.contactId);
@@ -700,7 +701,7 @@ export function registerMessagingContinuityRoutes({
     requireV1Actor,
     uploadRateLimit,
     upload.single("file"),
-    asyncRoute(async (request, response) => {
+    asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
       const contactId = validate(z.uuid(), request.params.contactId);
       const noteId = validate(z.uuid(), request.params.noteId);
       const expectedVersion = validate(z.coerce.number().int().positive(), request.body?.expectedVersion);
@@ -763,10 +764,10 @@ export function registerMessagingContinuityRoutes({
         await s3Client.send(new DeleteObjectCommand({ Bucket: s3Bucket, Key: objectKey })).catch(() => undefined);
         throw error;
       }
-    }),
+    })),
   );
 
-  app.delete("/api/v1/contacts/:contactId/notes/:noteId/attachments/:attachmentId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  app.delete("/api/v1/contacts/:contactId/notes/:noteId/attachments/:attachmentId", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
     const contactId = validate(z.uuid(), request.params.contactId);
     const noteId = validate(z.uuid(), request.params.noteId);
     const attachmentId = validate(z.uuid(), request.params.attachmentId);
@@ -811,7 +812,7 @@ export function registerMessagingContinuityRoutes({
       data: { note: await mapNote(updated, attachments.get(noteId) ?? [], signedObjectUrl) },
       meta: { requestId: request.requestId },
     });
-  }));
+  })));
 }
 
 export const messagingContinuityInternals = {

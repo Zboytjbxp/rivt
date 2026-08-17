@@ -117,6 +117,16 @@ approval is pending. The explicit launch hold is also active. The approved RPO
 and RTO are targets for PostgreSQL logical records, not a complete-service
 recovery guarantee.
 
+Packet 100 adds provider-neutral coordinated database-plus-object recovery
+source and local adversarial verification. It is source-in-progress: it has not
+been merged, deployed, connected to a provider, run against production data,
+scheduled, or used to create or restore a live recovery set. It incurs no
+provider cost and does not change the blocked readiness conclusion. The normal
+create remains inert without a reviewed exact-three-key writer authorization
+adapter, and nonempty restore remains inert without a reviewed isolated RIVT
+route-read adapter. A raw target-reference byte check does not satisfy that
+application-route requirement.
+
 ## Operational Kill Switches
 
 Use these only during a real incident, launch pause, or controlled maintenance window:
@@ -181,6 +191,17 @@ active-key-only artifact restored 109 tables and 8,862 rows with zero
 count/content diffs in 53.956 seconds. It did not restore application photos,
 documents, or other object bytes and therefore does not satisfy the complete
 drill described in steps 1-2.
+
+The Packet 100 source path defines the missing complete drill. A future,
+separately approved run must bind one logical-v2 database artifact to a fully
+reconciled object-store inventory, create an authenticated immutable recovery
+set, and restore that exact set to an isolated database and empty isolated
+object prefix. It must verify all eight storage scopes, exact count/bytes and
+readback hashes, zero missing/mismatched/unresolved/unexpected objects,
+representative application reads, RTO, and cleanup. Do not run the dormant
+commands or create provider identities until that explicit bounded approval is
+recorded. See `docs/delivery/packets/100_APPLICATION_OBJECT_RECOVERY_SOURCE.md`
+and `docs/operations/PRODUCTION_BACKUP_RUNBOOK.md`.
 
 Follow `docs/operations/PRODUCTION_BACKUP_RUNBOOK.md`. Gate A requires proof
 that a named, immutable backup object can be restored; a direct database copy

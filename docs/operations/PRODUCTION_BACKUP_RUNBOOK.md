@@ -19,6 +19,108 @@ No successful command in this document clears launch readiness by itself.
 Provider evidence, a received alert, a named-version restore, and new approvals
 must all agree with the final deployed source.
 
+## Packet 100 coordinated recovery-set boundary
+
+Packet 100 prepares source for a database-plus-application-object recovery set.
+It is not merged, deployed, configured, scheduled, or approved for live use.
+Its guarded local harness and tests make no provider request, read no production
+data, incur no charge, and do not inspect ambient provider credentials.
+
+The source commands are intentionally dormant and detached from `npm start`,
+Railway service configuration, cron, and GitHub workflows. They may be invoked
+against a live environment only after a separately reviewed bounded approval
+names the exact source commit, source and destination coordinates, identities,
+write window, byte/object limits, interruption allowance, and cost ceiling.
+Configuration must use the active backup-encryption key only; an evidentiary
+complete-set restore must reject previous-key aliases.
+
+The coordinated source path is:
+
+1. acquire an exclusive application-object advisory barrier through the
+   read-only `BACKUP_DATABASE_URL`; require the application `DATABASE_URL` to
+   report the same PostgreSQL system identifier, database OID, and database
+   name as supplemental evidence; then hold a fresh random exclusive advisory
+   challenge through the backup URL and require a shared try through the app
+   URL to fail. Only that live contention proves one active lock manager and
+   rejects a same-identity physical replica. Capture one logical-v2 snapshot
+   while all runtime object and uploads-table mutations are paused;
+2. bind its encrypted artifact, logical manifest, uploads-table digest, and
+   exact reviewed source commit;
+3. enumerate the entire source object store twice, stream-hash every referenced
+   object, compute missing legacy hashes, and classify provider-only and
+   removed-but-still-present objects;
+4. fail before immutable writes if either inventory differs, any stored
+   reference is missing or mismatched, any item is unresolved, or a configured
+   count/byte/time limit is exceeded;
+5. preserve independent AES-GCM authentication for each object member and
+   concatenate those bounded ciphertext members into one encrypted archive
+   with contiguous authenticated offsets and no gaps or trailing bytes;
+6. conditionally create exactly three protected keys—database, archive, then
+   completion—and verify each exact immutable version, checksum, COMPLIANCE
+   retention, and retention floor; and
+7. write the authenticated encrypted completion record last.
+
+The source-reader, protected-writer, monitor/backup-reader, and isolated-
+restore identities must be distinct and must not be the RIVT web-service
+identity. Use only reviewed IAM fixtures. Normal command output must remain
+aggregate and secret-safe; exact object keys, provider coordinates, version
+IDs, and object-level metadata belong only in restricted operator evidence.
+The checked-in create CLI intentionally refuses protected writes until a
+separately reviewed adapter attests the rendered exact three-key writer policy,
+writer principal, and UTC window. Local tests inject only a no-provider fake;
+they do not authorize a live write.
+
+The checked-in restore command is independently inert for a nonempty set until
+a reviewed isolated RIVT route-read adapter is supplied. Its lower-level
+target-database-reference plus exact-byte readback is necessary integrity
+evidence, but it is not an application-route smoke and cannot close the live
+acceptance requirement.
+
+During a future bounded capture, prohibit deployments, schema/data migrations,
+direct SQL changes, provider-console object changes, and all out-of-repository
+storage mutations. The application barrier covers RIVT runtime and reviewed
+smoke-cleanup paths; it cannot coordinate an external administrator bypass.
+Do not waive either the supplemental runtime-identity comparison or the fresh
+cross-URL contention challenge. Never substitute a read replica whose
+advisory-lock namespace differs.
+
+Immediately before writer activation, use a separately reviewed control
+auditor to prove no incomplete multipart upload exists for any of the three
+exact keys and that multipart initiation/parts are denied. Both attestations
+must be present in the durable restricted receipt before the first protected
+write. The source also proves every captured key is addressable below the exact
+isolated-restore prefix before releasing the capture barrier.
+
+For a future approved live proof, preserve restricted exact references from the
+sanitized one-shot backup receipt. Restore that exact completion version into
+both a new isolated PostgreSQL database and an empty isolated object prefix.
+The restricted v3 receipt must bind the completion, database artifact, and
+archive versions, hashes, and accepted COMPLIANCE-retention timestamps. Render
+the reader policy with three exact key-to-version content grants plus only the
+exact-key retention metadata authority required by the verifier. Archive
+metadata may be inspected before database work, but open the exact archive
+body only after the database restore settles so an idle provider stream cannot
+expire during migrations.
+Acceptance requires all eight application scopes, active-key-only decryption,
+exact object count and bytes, zero missing/mismatched/unresolved/unexpected
+entries, exact readback hashes, representative isolated RIVT route reads,
+database manifest/content parity, measured recovery time, target cleanup,
+post-proof health, and monitor state. Cleanup is limited to the temporary
+restore database and objects created under the isolated restore prefix; never
+delete a protected backup version or production object.
+
+Stop immediately and preserve the launch hold if the database/object binding,
+source commit, coordinate identity, active key, source inventory, immutable
+version, checksum, retention, isolation, application read, limits, cleanup,
+health, or monitor evidence is absent or ambiguous. Partial component writes
+without an authenticated completion record are not a recovery set.
+
+Current state: source-in-progress and live-unproven. The exact-key writer
+authorization adapter and isolated RIVT route-read adapter are intentionally
+absent, so the normal commands fail closed before either live boundary. The existing PostgreSQL-only
+proof remains valid for that limited scope, but
+`operationalReadiness.applicationObjectByteRecovery` remains `missing`.
+
 ## Targets
 
 - Backup cadence: every 12 hours.

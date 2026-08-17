@@ -132,6 +132,7 @@ export function registerDocumentBrandRoutes({
   writeRateLimit,
   uploadRateLimit,
   upload,
+  applicationObjectMutationBarrier,
   sha256Buffer,
   detectUploadContent,
   signedObjectUrl,
@@ -203,7 +204,7 @@ export function registerDocumentBrandRoutes({
     requireV1Actor,
     uploadRateLimit,
     upload.single("file"),
-    asyncRoute(async (request, response) => {
+    asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
       if (!request.file) throw new ApiError(400, "DOCUMENT_LOGO_REQUIRED", "Choose a logo image to upload.");
       if (!["image/jpeg", "image/png", "image/webp"].includes(request.file.mimetype)) {
         throw new ApiError(415, "DOCUMENT_LOGO_TYPE_UNSUPPORTED", "Use a PNG, JPG, or WebP logo.");
@@ -273,10 +274,10 @@ export function registerDocumentBrandRoutes({
       );
       const brand = await loadDocumentBrand(database, request.actor, signedObjectUrl);
       response.status(201).json({ data: { brand }, meta: { requestId: request.requestId } });
-    }),
+    })),
   );
 
-  app.delete("/api/v1/document-brand/logo", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(async (request, response) => {
+  app.delete("/api/v1/document-brand/logo", requireV1AuthenticatedUser, requireV1Actor, writeRateLimit, asyncRoute(applicationObjectMutationBarrier(async (request, response) => {
     const previous = await documentBrandRow(database, request.actor.account.id);
     await database.query(
       `UPDATE document_brand_profiles
@@ -300,5 +301,5 @@ export function registerDocumentBrandRoutes({
     );
     const brand = await loadDocumentBrand(database, request.actor, signedObjectUrl);
     response.json({ data: { brand }, meta: { requestId: request.requestId } });
-  }));
+  })));
 }

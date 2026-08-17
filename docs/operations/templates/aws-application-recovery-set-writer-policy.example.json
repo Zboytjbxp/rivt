@@ -1,0 +1,51 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowExactConditionalRecoverySetCreates",
+      "Effect": "Allow",
+      "Action": "s3:PutObject",
+      "Resource": [
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_DATABASE_OBJECT_KEY>",
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_ARCHIVE_OBJECT_KEY>",
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_COMPLETION_OBJECT_KEY>"
+      ],
+      "Condition": {
+        "DateGreaterThanEquals": {
+          "aws:CurrentTime": "<WINDOW_START_ISO8601>"
+        },
+        "DateLessThan": {
+          "aws:CurrentTime": "<WINDOW_END_ISO8601>"
+        },
+        "StringEquals": {
+          "s3:if-none-match": "*"
+        }
+      }
+    },
+    {
+      "Sid": "DenyMultipartRecoverySetWrites",
+      "Effect": "Deny",
+      "Action": "s3:PutObject",
+      "Resource": [
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_DATABASE_OBJECT_KEY>",
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_ARCHIVE_OBJECT_KEY>",
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_COMPLETION_OBJECT_KEY>"
+      ],
+      "Condition": {
+        "Bool": {
+          "s3:ObjectCreationOperation": "false"
+        }
+      }
+    },
+    {
+      "Sid": "ReadExactRecoverySetRetentionMetadata",
+      "Effect": "Allow",
+      "Action": "s3:GetObjectRetention",
+      "Resource": [
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_DATABASE_OBJECT_KEY>",
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_ARCHIVE_OBJECT_KEY>",
+        "arn:aws:s3:::<RECOVERY_DESTINATION_BUCKET>/<EXACT_COMPLETION_OBJECT_KEY>"
+      ]
+    }
+  ]
+}
